@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.0.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Data Journalism with R and the Tidyverse - 18&nbsp; Data Cleaning</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./r-geographic-basics.html" rel="next">
+<link href="./r-join-bind.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit"
+  }
+}</script>
+
+
+</head>
+
+<body class="nav-sidebar floating">
+
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+    <div class="container-fluid d-flex justify-content-between">
+      <h1 class="quarto-secondary-nav-title"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">Data Cleaning</span></h1>
+      <button type="button" class="quarto-btn-toggle btn" aria-label="Show secondary navigation">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Data Journalism with R and the Tidyverse</a> 
+    </div>
+      </div>
+      <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+      </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Introduction</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./start-story.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Learn a new way to read</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./start-math.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Newsroom math</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./census_data.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Census Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-intro.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Spreadsheets</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-refresher.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Spreadsheet Refresher</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-filter-sort.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Sorting and filtering to find stories</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-formulas.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Spreadsheet Formulas</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-pivot.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Grouping with pivot tables</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-sheets_cleaning.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Cleaning data with Google Sheets</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-start.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Getting started with R and RStudio</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-load-analyze-visualize.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Loading and Analyzing Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./github.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Using GitHub</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r_aggregates_filters.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Aggregates &amp; Filters</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-mutating.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Mutating data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r_visualizing_reporting.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">Visualizing your data for reporting</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-join-bind.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Joins</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-data-cleaning.html" class="sidebar-item-text sidebar-link active"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">Data Cleaning</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-geographic-basics.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Geographic data basics</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-geographic-analysis.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Geographic data analysis</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-tidycensus-api.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Intro to APIs: The Census</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-scraping.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Scraping data with Rvest</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-publication.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">The top matter</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./appendix-math.html" class="sidebar-item-text sidebar-link">(APPENDIX) Appendix</a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#wrong-type" id="toc-wrong-type" class="nav-link active" data-scroll-target="#wrong-type"> <span class="header-section-number">18.1</span> Wrong Type</a></li>
+  <li><a href="#missing-data" id="toc-missing-data" class="nav-link" data-scroll-target="#missing-data"> <span class="header-section-number">18.2</span> Missing Data</a></li>
+  <li><a href="#gaps-in-data" id="toc-gaps-in-data" class="nav-link" data-scroll-target="#gaps-in-data"> <span class="header-section-number">18.3</span> Gaps in data</a></li>
+  <li><a href="#resources" id="toc-resources" class="nav-link" data-scroll-target="#resources"> <span class="header-section-number">18.4</span> Resources</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title d-none d-lg-block"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">Data Cleaning</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    
+  </div>
+  
+
+</header>
+
+<p>Any time you are given a dataset from anyone, you should immediately be suspicious. Is this data what I think it is? Does it include what I expect? Is there anything I need to know about it? Will it produce the information I expect?</p>
+<p>One of the first things you should do is give it the smell test.</p>
+<p>Failure to give data the smell test <a href="https://source.opennews.org/en-US/learning/handling-data-about-race-and-ethnicity/">can lead you to miss stories and get your butt kicked on a competitive story</a>.</p>
+<p>With data smells, we’re trying to find common mistakes in data. <a href="https://github.com/nikeiubel/data-smells/wiki/Ensuring-Accuracy-in-Data-Journalism">For more on data smells, read the GitHub wiki post that started it all</a>. Some common data smells are:</p>
+<ul>
+<li>Missing data or missing values</li>
+<li>Gaps in data</li>
+<li>Wrong type of data</li>
+<li>Outliers</li>
+<li>Sharp curves</li>
+<li>Conflicting information within a dataset</li>
+<li>Conflicting information across datasets</li>
+<li>Wrongly derived data</li>
+<li>Internal inconsistency</li>
+<li>External inconsistency</li>
+<li>Wrong spatial data</li>
+<li>Unusable data, including non-standard abbreviations, ambiguous data, extraneous data, inconsistent data</li>
+</ul>
+<p>Not all of these data smells are detectable in code. You may have to ask people about the data. You may have to compare it to another dataset yourself. Does the agency that uses the data produce reports from the data? Does your analysis match those reports? That will expose wrongly derived data, or wrong units, or mistakes you made with inclusion or exclusion.</p>
+<p>This chapter will take us through the first three, and look at common solutions.</p>
+<section id="wrong-type" class="level2" data-number="18.1">
+<h2 data-number="18.1" class="anchored" data-anchor-id="wrong-type"><span class="header-section-number">18.1</span> Wrong Type</h2>
+<p>First, let’s look at <strong>Wrong Type Of Data</strong>.</p>
+<p>Load the tidyverse.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Remove scientific notation</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">options</span>(<span class="at">scipen=</span><span class="dv">999</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Load the tidyverse</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'dplyr' was built under R version 4.2.3</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'stringr' was built under R version 4.2.3</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.4
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.4.2     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.0
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors</code></pre>
+</div>
+</div>
+<p>Then lets load a dataframe of Census population statistics, one row per state per year between the period of 2015 and 2020, with overall totals and totals by Census race categories. I have intentionally introduced some flaws that we’ll have to clean.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>state_population_dirty <span class="ot">&lt;-</span> <span class="fu">read_rds</span>(<span class="st">"assets/data/state_population_dirty.rds"</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">glimpse</span>(state_population_dirty)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Rows: 255
+Columns: 11
+$ geoid                        &lt;chr&gt; "01", "01", "01", "01", "01", "02", "02",…
+$ state                        &lt;chr&gt; "Alabama", "Alabama", "Alabama", "Alabama…
+$ year                         &lt;dbl&gt; 2015, 2016, 2017, 2018, 2020, 2015, 2016,…
+$ total_pop                    &lt;chr&gt; "4830620", "4841164", "4850771", "4864680…
+$ white_alone_pop              &lt;dbl&gt; 3325464, 3325037, 3317702, 3317453, 33028…
+$ black_alone_pop              &lt;dbl&gt; NA, NA, NA, NA, NA, 25022, 24443, 23702, …
+$ amer_ind_ak_native_alone_pop &lt;dbl&gt; 23850, 23919, 25098, 25576, 24764, 101313…
+$ asian_alone_pop              &lt;dbl&gt; 59599, 60744, 62815, 64609, 67909, 42921,…
+$ native_hi_alone_pop          &lt;dbl&gt; 2439, 2008, 2213, 2182, 2042, 8841, 8862,…
+$ other_race_alone_pop         &lt;dbl&gt; 61078, 61991, 66942, 70055, 74996, 9273, …
+$ two_or_more_races_pop        &lt;dbl&gt; 81646, 85412, 88834, 91619, 119322, 61755…</code></pre>
+</div>
+</div>
+<p>Let’s sort the dataframe by total population to identify the state with the largest population in 2020.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>state_population_dirty <span class="sc">%&gt;%</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(year <span class="sc">==</span> <span class="dv">2020</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(total_pop))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 51 × 11
+   geoid state                 year total_pop white_alone_pop black_alone_pop
+   &lt;chr&gt; &lt;chr&gt;                &lt;dbl&gt; &lt;chr&gt;               &lt;dbl&gt;           &lt;dbl&gt;
+ 1 26    Michigan              2020 9973907           7735902         1360149
+ 2 10    Delaware              2020 967679             652587          212795
+ 3 34    New Jersey            2020 8885418           5820147         1189681
+ 4 46    South Dakota          2020 879336             735228           18836
+ 5 51    Virginia              2020 8509358           5643436         1620649
+ 6 38    North Dakota          2020 760394             651470           23959
+ 7 53    Washington            2020 7512465           5523881          290245
+ 8 02    Alaska                2020 736990             466961           23894
+ 9 04    Arizona               2020 7174064           5292498          325105
+10 11    District of Columbia  2020 701974             288306          318631
+# ℹ 41 more rows
+# ℹ 5 more variables: amer_ind_ak_native_alone_pop &lt;dbl&gt;,
+#   asian_alone_pop &lt;dbl&gt;, native_hi_alone_pop &lt;dbl&gt;,
+#   other_race_alone_pop &lt;dbl&gt;, two_or_more_races_pop &lt;dbl&gt;</code></pre>
+</div>
+</div>
+<p>Something seems off. The largest U.S. states – New York, California, Texas – aren’t on this list. It’s topped by Michigan, with 9.9 million people, followed by Delaware with 967,000, followed by New Jersey with 8.8 million. It’s not treating the values in this column as numbers, but sorting them … alphabetically, in a sense.</p>
+<p>Let’s use glimpse to figure out why.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">glimpse</span>(state_population_dirty)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Rows: 255
+Columns: 11
+$ geoid                        &lt;chr&gt; "01", "01", "01", "01", "01", "02", "02",…
+$ state                        &lt;chr&gt; "Alabama", "Alabama", "Alabama", "Alabama…
+$ year                         &lt;dbl&gt; 2015, 2016, 2017, 2018, 2020, 2015, 2016,…
+$ total_pop                    &lt;chr&gt; "4830620", "4841164", "4850771", "4864680…
+$ white_alone_pop              &lt;dbl&gt; 3325464, 3325037, 3317702, 3317453, 33028…
+$ black_alone_pop              &lt;dbl&gt; NA, NA, NA, NA, NA, 25022, 24443, 23702, …
+$ amer_ind_ak_native_alone_pop &lt;dbl&gt; 23850, 23919, 25098, 25576, 24764, 101313…
+$ asian_alone_pop              &lt;dbl&gt; 59599, 60744, 62815, 64609, 67909, 42921,…
+$ native_hi_alone_pop          &lt;dbl&gt; 2439, 2008, 2213, 2182, 2042, 8841, 8862,…
+$ other_race_alone_pop         &lt;dbl&gt; 61078, 61991, 66942, 70055, 74996, 9273, …
+$ two_or_more_races_pop        &lt;dbl&gt; 81646, 85412, 88834, 91619, 119322, 61755…</code></pre>
+</div>
+</div>
+<p>Here we can see the column name, sample values, and the data type. Most of the number columns in this dataframe are stored as numbers (“dbl”). But not the value in total_pop. It’s stored as “character”. R is interpreting as a text string. To sort properly, we’ll need to change it. Let’s update the dataframe by mutating that column to change the data type to numeric.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>state_population_dirty <span class="ot">&lt;-</span> state_population_dirty <span class="sc">%&gt;%</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">total_pop =</span> <span class="fu">as.numeric</span>(total_pop))</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="fu">glimpse</span>(state_population_dirty)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Rows: 255
+Columns: 11
+$ geoid                        &lt;chr&gt; "01", "01", "01", "01", "01", "02", "02",…
+$ state                        &lt;chr&gt; "Alabama", "Alabama", "Alabama", "Alabama…
+$ year                         &lt;dbl&gt; 2015, 2016, 2017, 2018, 2020, 2015, 2016,…
+$ total_pop                    &lt;dbl&gt; 4830620, 4841164, 4850771, 4864680, 48931…
+$ white_alone_pop              &lt;dbl&gt; 3325464, 3325037, 3317702, 3317453, 33028…
+$ black_alone_pop              &lt;dbl&gt; NA, NA, NA, NA, NA, 25022, 24443, 23702, …
+$ amer_ind_ak_native_alone_pop &lt;dbl&gt; 23850, 23919, 25098, 25576, 24764, 101313…
+$ asian_alone_pop              &lt;dbl&gt; 59599, 60744, 62815, 64609, 67909, 42921,…
+$ native_hi_alone_pop          &lt;dbl&gt; 2439, 2008, 2213, 2182, 2042, 8841, 8862,…
+$ other_race_alone_pop         &lt;dbl&gt; 61078, 61991, 66942, 70055, 74996, 9273, …
+$ two_or_more_races_pop        &lt;dbl&gt; 81646, 85412, 88834, 91619, 119322, 61755…</code></pre>
+</div>
+</div>
+<p>Now when we sort, it works.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>state_population_dirty <span class="sc">%&gt;%</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(year <span class="sc">==</span> <span class="dv">2020</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(total_pop))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 51 × 11
+   geoid state           year total_pop white_alone_pop black_alone_pop
+   &lt;chr&gt; &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;           &lt;dbl&gt;           &lt;dbl&gt;
+ 1 06    California      2020  39346023        22053721         2250962
+ 2 48    Texas           2020  28635442        19805623         3464424
+ 3 12    Florida         2020  21216924        15199588         3381061
+ 4 36    New York        2020  19514849        12160045         3002401
+ 5 42    Pennsylvania    2020  12794885        10155004         1419582
+ 6 17    Illinois        2020  12716164         8874067         1796660
+ 7 39    Ohio            2020  11675275         9394878         1442655
+ 8 13    Georgia         2020  10516579         6020265         3319844
+ 9 37    North Carolina  2020  10386227         7019443         2217522
+10 26    Michigan        2020   9973907         7735902         1360149
+# ℹ 41 more rows
+# ℹ 5 more variables: amer_ind_ak_native_alone_pop &lt;dbl&gt;,
+#   asian_alone_pop &lt;dbl&gt;, native_hi_alone_pop &lt;dbl&gt;,
+#   other_race_alone_pop &lt;dbl&gt;, two_or_more_races_pop &lt;dbl&gt;</code></pre>
+</div>
+</div>
+</section>
+<section id="missing-data" class="level2" data-number="18.2">
+<h2 data-number="18.2" class="anchored" data-anchor-id="missing-data"><span class="header-section-number">18.2</span> Missing Data</h2>
+<p>The second smell we can find in code is <strong>missing data</strong>.</p>
+<p>Let’s try to calculate the total Black alone population for the U.S.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>state_population_dirty <span class="sc">%&gt;%</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(year <span class="sc">==</span> <span class="dv">2020</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">total_us_black_alone_population =</span> <span class="fu">sum</span>(black_alone_pop)</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 1
+  total_us_black_alone_population
+                            &lt;dbl&gt;
+1                              NA</code></pre>
+</div>
+</div>
+<p>We get an NA value, which isn’t correct. Let’s examine the values in that column to see why.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>state_population_dirty </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 255 × 11
+   geoid state    year total_pop white_alone_pop black_alone_pop
+   &lt;chr&gt; &lt;chr&gt;   &lt;dbl&gt;     &lt;dbl&gt;           &lt;dbl&gt;           &lt;dbl&gt;
+ 1 01    Alabama  2015   4830620         3325464              NA
+ 2 01    Alabama  2016   4841164         3325037              NA
+ 3 01    Alabama  2017   4850771         3317702              NA
+ 4 01    Alabama  2018   4864680         3317453              NA
+ 5 01    Alabama  2020   4893186         3302834              NA
+ 6 02    Alaska   2015    733375          484250           25022
+ 7 02    Alaska   2016    736855          483518           24443
+ 8 02    Alaska   2017    738565          481971           23702
+ 9 02    Alaska   2018    738516          478834           24129
+10 02    Alaska   2020    736990          466961           23894
+# ℹ 245 more rows
+# ℹ 5 more variables: amer_ind_ak_native_alone_pop &lt;dbl&gt;,
+#   asian_alone_pop &lt;dbl&gt;, native_hi_alone_pop &lt;dbl&gt;,
+#   other_race_alone_pop &lt;dbl&gt;, two_or_more_races_pop &lt;dbl&gt;</code></pre>
+</div>
+</div>
+<p>Ah, we see a missing value for Alabama. Because of that value, the summarise calculation won’t work. We could tell R to ignore NA values when doing the calculation, by adding na.rm=TRUE to the sum function.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>state_population_dirty <span class="sc">%&gt;%</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(year <span class="sc">==</span> <span class="dv">2020</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">total_us_black_alone_population =</span> <span class="fu">sum</span>(black_alone_pop, <span class="at">na.rm=</span><span class="cn">TRUE</span>)</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 1
+  total_us_black_alone_population
+                            &lt;dbl&gt;
+1                        39926065</code></pre>
+</div>
+</div>
+<p>But! That’s not the right answer. We want to know the total for the U.S. including Alabama in 2020. So, we need to fix that value. We look up the value on the Census website, and determine it’s 1,301,319 for 2020. So let’s update the column. This uses a function called case_when() with mutate().</p>
+<p>Here’s how to interpret what the function below says.</p>
+<p>“Overwrite the black_alone_pop column with new values in one of the rows, and the old values for every other row. If the state column equals Alabama AND (the &amp;) the year column equals 2020 THEN (the tilde or ~) put the value 1301319. In any other case (any other state, or Alabama in any other year than 2020), THEN keep the value that currently exists in the black_alone_pop column.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>state_population_dirty <span class="ot">&lt;-</span> state_population_dirty <span class="sc">%&gt;%</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">black_alone_pop =</span> <span class="fu">case_when</span>(</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    state <span class="sc">==</span> <span class="st">"Alabama"</span> <span class="sc">&amp;</span> year <span class="sc">==</span> <span class="dv">2020</span> <span class="sc">~</span> <span class="dv">1301319</span>,</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    <span class="cn">TRUE</span> <span class="sc">~</span> black_alone_pop</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  ))</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>state_population_dirty</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 255 × 11
+   geoid state    year total_pop white_alone_pop black_alone_pop
+   &lt;chr&gt; &lt;chr&gt;   &lt;dbl&gt;     &lt;dbl&gt;           &lt;dbl&gt;           &lt;dbl&gt;
+ 1 01    Alabama  2015   4830620         3325464              NA
+ 2 01    Alabama  2016   4841164         3325037              NA
+ 3 01    Alabama  2017   4850771         3317702              NA
+ 4 01    Alabama  2018   4864680         3317453              NA
+ 5 01    Alabama  2020   4893186         3302834         1301319
+ 6 02    Alaska   2015    733375          484250           25022
+ 7 02    Alaska   2016    736855          483518           24443
+ 8 02    Alaska   2017    738565          481971           23702
+ 9 02    Alaska   2018    738516          478834           24129
+10 02    Alaska   2020    736990          466961           23894
+# ℹ 245 more rows
+# ℹ 5 more variables: amer_ind_ak_native_alone_pop &lt;dbl&gt;,
+#   asian_alone_pop &lt;dbl&gt;, native_hi_alone_pop &lt;dbl&gt;,
+#   other_race_alone_pop &lt;dbl&gt;, two_or_more_races_pop &lt;dbl&gt;</code></pre>
+</div>
+</div>
+<p>Now when we run our summarization code, it works.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>state_population_dirty <span class="sc">%&gt;%</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(year <span class="sc">==</span> <span class="dv">2020</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">total_us_black_alone_population =</span> <span class="fu">sum</span>(black_alone_pop)</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 1
+  total_us_black_alone_population
+                            &lt;dbl&gt;
+1                        41227384</code></pre>
+</div>
+</div>
+</section>
+<section id="gaps-in-data" class="level2" data-number="18.3">
+<h2 data-number="18.3" class="anchored" data-anchor-id="gaps-in-data"><span class="header-section-number">18.3</span> Gaps in data</h2>
+<p>Let’s now look at <strong>gaps in data</strong>. One type of gap in data has to do with time.</p>
+<p>Let’s calculate the average white alone population in Maryland over the period represented in the data, which is 2015 to 2020.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>state_population_dirty <span class="sc">%&gt;%</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(state <span class="sc">==</span> <span class="st">"Maryland"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_white_alone_pop =</span> <span class="fu">mean</span>(white_alone_pop)</span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 1
+  mean_white_alone_pop
+                 &lt;dbl&gt;
+1             3373558.</code></pre>
+</div>
+</div>
+<p>Does this represent the average white population from 2015 to 2020? Let’s take a closer look at the years represented in the data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>state_population_dirty <span class="sc">%&gt;%</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(state <span class="sc">==</span> <span class="st">"Maryland"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(year)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 5 × 1
+   year
+  &lt;dbl&gt;
+1  2015
+2  2016
+3  2017
+4  2018
+5  2020</code></pre>
+</div>
+</div>
+<p>We have 2015, 2016, 2017, 2018 and 2020. We can’t accurately say this represents the average over this period without 2019. So let’s add it, using a function called add_row() to put in the correct value 3,343,003. Note that it adds a row for 2019.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>state_population_dirty <span class="sc">%&gt;%</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(state <span class="sc">==</span> <span class="st">"Maryland"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(state,year,white_alone_pop) <span class="sc">%&gt;%</span></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">add_row</span>(</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">state =</span> <span class="st">"Maryland"</span>,</span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> <span class="dv">2019</span>,</span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">white_alone_pop =</span> <span class="dv">3343003</span></span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 6 × 3
+  state     year white_alone_pop
+  &lt;chr&gt;    &lt;dbl&gt;           &lt;dbl&gt;
+1 Maryland  2015         3416107
+2 Maryland  2016         3408240
+3 Maryland  2017         3395212
+4 Maryland  2018         3373181
+5 Maryland  2020         3275048
+6 Maryland  2019         3343003</code></pre>
+</div>
+</div>
+<p>Now, when we take the average for Maryland, it’s accurate.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a>state_population_dirty <span class="sc">%&gt;%</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(state <span class="sc">==</span> <span class="st">"Maryland"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(state,year,white_alone_pop) <span class="sc">%&gt;%</span></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">add_row</span>(</span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">state =</span> <span class="st">"Maryland"</span>,</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">year =</span> <span class="dv">2019</span>,</span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">white_alone_pop =</span> <span class="dv">3343003</span></span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span>  </span>
+<span id="cb31-9"><a href="#cb31-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb31-10"><a href="#cb31-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">mean_white_alone_pop =</span> <span class="fu">mean</span>(white_alone_pop)</span>
+<span id="cb31-11"><a href="#cb31-11" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 1
+  mean_white_alone_pop
+                 &lt;dbl&gt;
+1             3368465.</code></pre>
+</div>
+</div>
+<p><strong>Question #1: </strong> Answer this question in English: Write in Elms</p>
+<p>You have a dataframe that contains population statistics for each of 24 counties in Maryland, and you want to group and summarize to determine the total population for the state.</p>
+<p>The first three rows of the data look like this:</p>
+<p>state | county | population Maryland | PG | 1000000 MD | Montgomery | 1100000 md | Baltimore city | 900000</p>
+<p>What tidyverse method described in this lab would you use to clean the state column so that the group and summarization works properly.</p>
+<p>You don’t need to write code, just explain in English on ELMS.</p>
+</section>
+<section id="resources" class="level2" data-number="18.4">
+<h2 data-number="18.4" class="anchored" data-anchor-id="resources"><span class="header-section-number">18.4</span> Resources</h2>
+<ul>
+<li><p>The “<a href="https://r4ds.had.co.nz/relational-data.html">Relational data</a>” chapter in the R for Data Science textbook has details on exactly how a complex data set might fit together.</p></li>
+<li><p><a href="https://stat545.com/join-cheatsheet.html#left_joinsuperheroes-publishers">An example using a superheroes dataset</a>, from Stat 545 at the University of British Columbia</p></li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    setTimeout(function() {
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      let href = ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const cites = ref.parentNode.getAttribute('data-cites').split(' ');
+    tippyHover(ref, function() {
+      var popup = window.document.createElement('div');
+      cites.forEach(function(cite) {
+        var citeDiv = window.document.createElement('div');
+        citeDiv.classList.add('hanging-indent');
+        citeDiv.classList.add('csl-entry');
+        var biblioDiv = window.document.getElementById('ref-' + cite);
+        if (biblioDiv) {
+          citeDiv.innerHTML = biblioDiv.innerHTML;
+        }
+        popup.appendChild(citeDiv);
+      });
+      return popup.innerHTML;
+    });
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./r-join-bind.html" class="pagination-link">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Joins</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./r-geographic-basics.html" class="pagination-link">
+        <span class="nav-page-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Geographic data basics</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+</body></html>

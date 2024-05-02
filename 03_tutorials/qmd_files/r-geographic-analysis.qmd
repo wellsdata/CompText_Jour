@@ -1,0 +1,190 @@
+# Geographic data analysis
+
+We're going to continue our work on geographic analysis by looking at how these methods can help us answer a slightly harder question. 
+
+Our motivating question for this chapter is this: how many homicides occur near schools in Washington, D.C.?
+
+## Loading libraries
+
+Load libraries as usual. 
+
+```{r}
+
+#install.packages('sf')
+#install.packages('leaflet')
+
+library(tidyverse)
+library(janitor)
+library(sf)
+library(leaflet)
+
+```
+
+## Data
+
+We're loading two dataframes to answer our question.
+
+* Washington Homicides | spatial points | location and details about each Washington homicide between 2007 and 2016. Details on the data: https://github.com/washingtonpost/data-homicides
+
+* Washington Schools | spatial points | locations of each Washington, D.C. school.  https://nces.ed.gov/programs/edge/geographic/schoollocations
+
+* Washington D.C. shapefile | shapefile | outline of Washington, D.C.
+
+```{r}
+
+
+###
+# Load dataframe of washington homicides
+###
+
+washington_homicides <- read_rds("assets/data/washington_homicides.rds")
+
+###
+# Load dataframe of washington schools
+###
+
+washington_schools <- read_rds("assets/data/washington_schools.rds")
+
+###
+# Load outline of DC
+###
+
+washington_shapefile <- read_rds("assets/data/washington_shapefile.rds")
+
+
+
+```
+
+Here are the 239 schools in Washington. 
+
+```{r}
+ggplot() +
+  geom_sf(data=washington_shapefile, fill="white") + 
+  geom_sf(data=washington_schools, color="purple")
+
+
+```
+
+Here are the 1345 homicides in Washington between 2007 and 2017. 
+
+```{r}
+ggplot() +
+  geom_sf(data=washington_shapefile, fill="white") + 
+  geom_sf(data=washington_homicides, color="red")
+
+```
+
+And here are both on a map.
+
+```{r}
+ggplot() +
+  geom_sf(data=washington_shapefile, fill="white") + 
+  geom_sf(data=washington_homicides, color="red") +
+  geom_sf(data=washington_schools, color="purple") 
+
+```
+
+Let's think back to our question: how many homicides occurred near schools?  
+
+In the prior lab, we used something called a "spatial join" to tie a school -- a geographic point -- to a Census tract -- a geographic polygon.  
+
+We could try something similar here. The code below says: create a new object called `schools_homicides` by attempting to connect each point in our schools table with each point in our homicides table.  If there's an overlap, return that match to our new table. 
+
+```{r}
+
+schools_homicides <- washington_schools %>%
+  st_join(washington_homicides, left="FALSE")
+
+schools_homicides
+
+```
+Notice that it returned zero rows.  That's because for there to be a match, a school point had to be essentially on top of a shooting point.  The points are very small, and it's unlikely there will be an exact match in our data. 
+
+We can fix that by making the size of the point bigger, by converting it to a polygon.  How do we define "near" for the purpose of our question? Let's use "within 100 meters" of the centerpoint of the school as our definition. 
+
+We're going to use a new function `st_buffer` to create a "buffer" around our latitude longitude point.  We're going to change our geometry from a small point to a circle with a radius of 100 meters centered on that point. 
+
+```{r}
+
+washington_schools_buffered <- washington_schools %>%
+  mutate(geometry = st_buffer(geometry, dist=100))
+
+washington_schools_buffered
+
+```
+
+Let's visualize it. It's hard to see the difference from this map, but those purple circles represent a 100 meter radius circle around our school point.
+
+```{r}
+
+ggplot() +
+  geom_sf(data=washington_shapefile, fill="white") + 
+  geom_sf(data=washington_schools_buffered, color="purple") 
+
+```
+
+It's easier to see with a leaflet map that shows both the points and the buffered circle.  Zoom in. 
+```{r}
+
+
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(data=washington_schools_buffered, weight=1, fill="purple") %>%
+  addCircles(data=washington_schools,
+             label=washington_schools$school_name)
+  
+
+
+```
+
+We can also see the difference in the geometry column between our buffered dataframe and our point dataframe. 
+
+Our washington_schools dataframe is a collection of points. 
+
+```{r}
+
+washington_schools$geometry
+
+```
+
+Our washington_schools_buffered dataframe is a collection of polygons
+
+```{r}
+
+washington_schools_buffered$geometry
+
+```
+
+Now that we have a buffered schools file, we can redo our spatial join.
+
+```{r}
+schools_homicides <- washington_schools_buffered %>%
+  st_join(washington_homicides, left="FALSE")
+
+schools_homicides
+
+```
+
+We get 87 rows.  This does NOT mean:
+
+* We had 87 homicides near schools.  Some individual homicides occurred within 100 meters of more than one school.
+* There were homicides near 87 schools.  Some schools had multiple homicides. 
+
+To answer our original question, "how many homicides occurred near (within 100 meters) of a DC school?", we need to distinct our list of schools and count them.  
+
+```{r}
+schools_homicides %>%
+  distinct(school_name) %>%
+  count()
+```
+There's our answer.  Out of 239 DC schools, 65 -- more than 25 percent -- had a homicide occur within 100 meters.
+
+
+**Question #1: **
+Answer this question in English: Write in Elms
+
+Develop two questions that you could answer with a spatial buffer as described in this chapter, outside of the domain of education and crime.  Briefly describe the two geographic dataframes you would need to answer each question.   
+
+
+
+

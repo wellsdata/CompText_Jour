@@ -1,0 +1,65 @@
+---
+title: "class_4_exercise"
+format: html
+editor: visual
+---
+
+## Load libraries
+```{r}
+library(tidyverse)
+library(googlesheets4)
+```
+
+
+## Load data
+```{r}
+housing_data <- read_sheet("https://docs.google.com/spreadsheets/d/1buohFYqpp0GhcIyrsqVKI0DUZWsya9jTgewDFEukXXA/edit#gid=2019436189")
+# 
+
+```
+
+
+## Analysis
+```{r}
+
+# Create a new dataframe that has only majority black neighborhoods. Use a filter to keep only those neighborhoods where black_percent > 50
+# Calculate the median home value for these majority black neighborhoods (removing NAs)
+
+# Do the same thing with no black residents < 0 
+
+majority_black <- housing_data %>%
+  filter(black_population_percent > 50) %>%
+  summarize(
+    median_home_value_2015 = median(median_home_value_2015)
+  )
+
+zero_black <- housing_data %>%
+  filter(black_population_percent == 0) %>%
+  summarize(
+    avg_home_value = median(median_home_value_2015)
+  )
+
+
+majority_black
+zero_black
+
+
+```
+
+
+```{r}
+neighborhood_comparison <- housing_data %>%
+  mutate(neighborhood_type =
+           case_when(
+             black_population_percent > 50 ~ "majority_black",
+             black_population_percent == 0 ~ "zero_black",
+             TRUE ~ "other"
+           )
+        ) %>%
+  group_by(neighborhood_type) %>%
+  summarize(
+    avg_home_value = median(median_home_value_2015)
+  )
+  
+
+```

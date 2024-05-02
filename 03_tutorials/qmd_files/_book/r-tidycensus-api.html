@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.0.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Data Journalism with R and the Tidyverse - 21&nbsp; Intro to APIs: The Census</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./r-scraping.html" rel="next">
+<link href="./r-geographic-analysis.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit"
+  }
+}</script>
+
+
+</head>
+
+<body class="nav-sidebar floating">
+
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+    <div class="container-fluid d-flex justify-content-between">
+      <h1 class="quarto-secondary-nav-title"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Intro to APIs: The Census</span></h1>
+      <button type="button" class="quarto-btn-toggle btn" aria-label="Show secondary navigation">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Data Journalism with R and the Tidyverse</a> 
+    </div>
+      </div>
+      <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+      </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Introduction</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./start-story.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Learn a new way to read</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./start-math.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Newsroom math</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./census_data.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Census Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-intro.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Spreadsheets</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-refresher.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Spreadsheet Refresher</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-filter-sort.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Sorting and filtering to find stories</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-formulas.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Spreadsheet Formulas</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-pivot.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Grouping with pivot tables</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-sheets_cleaning.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Cleaning data with Google Sheets</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-start.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Getting started with R and RStudio</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-load-analyze-visualize.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Loading and Analyzing Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./github.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Using GitHub</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r_aggregates_filters.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Aggregates &amp; Filters</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-mutating.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Mutating data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r_visualizing_reporting.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">Visualizing your data for reporting</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-join-bind.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Joins</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-data-cleaning.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">Data Cleaning</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-geographic-basics.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Geographic data basics</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-geographic-analysis.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Geographic data analysis</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-tidycensus-api.html" class="sidebar-item-text sidebar-link active"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Intro to APIs: The Census</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-scraping.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Scraping data with Rvest</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-publication.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">The top matter</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./appendix-math.html" class="sidebar-item-text sidebar-link">(APPENDIX) Appendix</a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#api-overview" id="toc-api-overview" class="nav-link active" data-scroll-target="#api-overview"> <span class="header-section-number">21.1</span> API overview</a></li>
+  <li><a href="#using-tidycensus" id="toc-using-tidycensus" class="nav-link" data-scroll-target="#using-tidycensus"> <span class="header-section-number">21.2</span> Using Tidycensus</a></li>
+  <li><a href="#the-acs" id="toc-the-acs" class="nav-link" data-scroll-target="#the-acs"> <span class="header-section-number">21.3</span> The ACS</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title d-none d-lg-block"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Intro to APIs: The Census</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    
+  </div>
+  
+
+</header>
+
+<section id="api-overview" class="level2" data-number="21.1">
+<h2 data-number="21.1" class="anchored" data-anchor-id="api-overview"><span class="header-section-number">21.1</span> API overview</h2>
+<p>When we’ve brought data in R to analyze up to this point, we’ve mostly been working with CSVs stored on our local computers or read them off the internet.</p>
+<p>But there are many, many ways to bring data into R. Today we’re going to learn a new method that will allow us to pull data stored in a third-party database using a thing called an API or application programming interface. API means different things in different contexts, but in this case it means “a way to get data we want stored in a third-party database, in specific ways that third-party allows.”<br>
+<a href="https://developer.twitter.com/en/docs">Twitter’s API</a> lets us pull in a user’s tweets for text analysis.</p>
+<p><a href="https://developer.spotify.com/documentation/web-api/">Spotify</a> lets us ingest a bunch of information about what people are listening to.</p>
+<p>You can access data available through pretty much any API, or application programming interface, by sending a “query” and getting back a response, using the excellent <a href="https://httr.r-lib.org/">HTTR package</a>. That process is a bit complicated for this introduction.</p>
+<p>Fortunately, users in the R communities have developed dozens of packages that allow us to pull data from APIs without learning a bunch of complex new programming concepts. These packages hide all the messy bits of connecting to an API inside of handy functions that are easier to use.</p>
+<p>Here are some great examples:</p>
+<p><em><a href="https://walkerke.github.io/tidycensus/index.html">Tidycensus</a>: for loading and working with all manner of U.S. Census Data. This is what we’ll work with today. </em><a href="https://rtweet.info/">RTweet</a>: want to analyze all of Trump’s tweets (before he got banned) this will help you. <em><a href="https://github.com/charlie86/spotifyr">SpotifyR</a>: want to know what key most Taylor Swift songs are in? This can help you. </em><a href="https://cfbfastr.sportsdataverse.org/">cfbfastR</a>: want to analyze play-by-play data for your favorite college football team? Look no further. <em><a href="https://github.com/sportsdataverse/wehoop/">wehoop</a>: want to know more about your favorite WNBA team? Here you go. </em><a href="https://sportsdataverse.org/">sportsdataverse</a>: is a collection of API wrappers for a dozen sports leagues, including hockey, soccer, baseball and even chess. <em><a href="https://github.com/wpinvestigative/arcos">ARCOS</a>: want to know where the most opioids were shipped by drug companies over the last decade. This API from the Post will help. </em><a href="https://cran.r-project.org/web/packages/gmailr/index.html">gmailr</a> Feel like ingesting your email inbox into R and analyzing it? Or sending emails from R Studio? This will help.</p>
+<p>We’ll be working with U.S. Census data today, and the tidycensus package.</p>
+</section>
+<section id="using-tidycensus" class="level2" data-number="21.2">
+<h2 data-number="21.2" class="anchored" data-anchor-id="using-tidycensus"><span class="header-section-number">21.2</span> Using Tidycensus</h2>
+<p>There is truly an astonishing amount of data collected by the US Census Bureau. First, there’s the Census that most people know – the every 10 year census. That’s the one mandated by the Constitution where the government attempts to count every person in the US. It’s a mind-boggling feat to even try, and billions get spent on it. That data is used first for determining how many representatives each state gets in Congress. From there, the Census gets used to divide up billions of dollars of federal spending.</p>
+<p>To answer the questions the government needs to do that, a ton of data gets collected. That, unfortunately, means the Census is exceedingly complicated to work with.</p>
+<p>The good news is, the Census has an API – an application programming interface. What that means is we can get data directly through the Census Bureau’s database via calls over the internet.</p>
+<p>Let’s demonstrate.</p>
+<p>We’re going to use a library called <code>tidycensus</code> which makes calls to the Census API in a very tidy way, and gives you back tidy data. That means we don’t have to go through the process of importing the data from a file.</p>
+<p>I can’t tell you how amazing this is, speaking from experience. The documentation for this library is <a href="https://walker-data.com/tidycensus/">here</a>.</p>
+<p>First we need to install <code>tidycensus</code> using the console: <code>install.packages("tidycensus")</code></p>
+<p>Now load both the tidyverse and tidycensus and janitor.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'dplyr' was built under R version 4.2.3</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'stringr' was built under R version 4.2.3</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.4
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.4.2     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.0
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidycensus)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(janitor)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'janitor'
+
+The following objects are masked from 'package:stats':
+
+    chisq.test, fisher.test</code></pre>
+</div>
+</div>
+<p>To use the API, you need an API key. An API key is just a password. You’ll run a function to get data from the Census, essentially knocking on the agency’s data door. Before it will let you know, it will ask for your password.</p>
+<p>Some APIs are open for access without a password. But most are like the Census, which require you to have some sort of authentication key.</p>
+<p>To get that for the Census, you need to <a href="https://api.census.gov/data/key_signup.html">apply for an API key with the Census Bureau</a>. It takes a few minutes and you need to activate your key via email. Once you have your key, you need to set that for this session. Just FYI: Your key is your key. Do not share it around.</p>
+<p>In the code block below, replace YOUR KEY HERE with your key you get by email. It’s a long string of letters and numbers, like this: 549950d36c22ff16455fe196bbbd01d63cf. Don’t use this one. It won’t work. Use your own.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">census_api_key</span>(<span class="st">"549950d36c22ff16455fe196bbbd01d63cfbe6cf"</span>, <span class="at">install=</span><span class="cn">TRUE</span>, <span class="at">overwrite =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Your original .Renviron will be backed up and stored in your R HOME directory if needed.</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Your API key has been stored in your .Renviron and can be accessed by Sys.getenv("CENSUS_API_KEY"). 
+To use now, restart R or run `readRenviron("~/.Renviron")`</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] "549950d36c22ff16455fe196bbbd01d63cfbe6cf"</code></pre>
+</div>
+</div>
+<p>The two main functions in tidycensus are <code>get_decennial</code>, which retrieves data from the 2000 and 2010 Censuses (and soon the 2020 Census), and <code>get_acs</code>, which pulls data from the American Community Survey, a between-Censuses annual survey that provides estimates, not hard counts, but asks more detailed questions.</p>
+<p>If you’re new to Census data, there’s <a href="http://walker-data.com/umich-workshop/census-data-in-r/slides/#1">a very good set of slides from Kyle Walker</a>, the creator of tidycensus, and he’s working on a <a href="https://walker-data.com/census-r/index.html">book</a> that you can read for free online.</p>
+<p>It’s important to keep in mind that Census data represents people - you, your neighbors and total strangers. It also requires some level of definitions, especially about race &amp; ethnicity, that may or may not match how you define yourself or how others define themselves.</p>
+<p>So to give you some idea of how complicated the data is, let’s pull up just one file from the decennial Census. We’ll use a file called “pl”, which is short for “public law”, which is named that for reasons too boring to delve into here. It represents the first set of data released from the 2020 Census, and it only contains basics about total population counts, counts by race, and housing information.</p>
+<p>This function <code>load_variables</code> returns a dataframe of all of the different variables available in the pl dataset. This table has three columns.</p>
+<ul>
+<li>name: a unique code for a given variable.</li>
+<li>label: a description of what that variable describes.</li>
+<li>concept: a larger category that the label sits under.</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>pl_2020 <span class="ot">&lt;-</span> <span class="fu">load_variables</span>(<span class="dv">2020</span>, <span class="st">"pl"</span>, <span class="at">cache =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>pl_2020</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 301 × 3
+   name    label                                                         concept
+   &lt;chr&gt;   &lt;chr&gt;                                                         &lt;chr&gt;  
+ 1 H1_001N " !!Total:"                                                   OCCUPA…
+ 2 H1_002N " !!Total:!!Occupied"                                         OCCUPA…
+ 3 H1_003N " !!Total:!!Vacant"                                           OCCUPA…
+ 4 P1_001N " !!Total:"                                                   RACE   
+ 5 P1_002N " !!Total:!!Population of one race:"                          RACE   
+ 6 P1_003N " !!Total:!!Population of one race:!!White alone"             RACE   
+ 7 P1_004N " !!Total:!!Population of one race:!!Black or African Americ… RACE   
+ 8 P1_005N " !!Total:!!Population of one race:!!American Indian and Ala… RACE   
+ 9 P1_006N " !!Total:!!Population of one race:!!Asian alone"             RACE   
+10 P1_007N " !!Total:!!Population of one race:!!Native Hawaiian and Oth… RACE   
+# ℹ 291 more rows</code></pre>
+</div>
+</div>
+<p>For example: P1_001N (row 4) represents the total population. P1_003N (row 5) represents the total white population.</p>
+<p>Let’s start by getting the total population of each state in 2020. For that we’ll use a function called <code>get_decennial</code> and we’re feeding it three arguments.</p>
+<ul>
+<li>geography: do we want the information for each state? for each county? for all the census tracts in a single county? Depending on what we geography we select, we get something else back. We’ll pick <code>state</code> here.</li>
+<li>variables: what information do we want from the Census. We used the <code>load_variables</code> function to identify the code for total population above, so we’ll plug it in here <code>P1_001N</code>.</li>
+<li>year: do we want 2020 data? 2010? We’ll pick 2020 here.</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>total_pop_2020 <span class="ot">&lt;-</span> <span class="fu">get_decennial</span>(<span class="at">geography=</span><span class="st">"state"</span>, <span class="at">variables=</span><span class="st">"P1_001N"</span>, <span class="at">year=</span><span class="dv">2020</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Getting data from the 2020 decennial Census</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Using the PL 94-171 Redistricting Data Summary File</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Note: 2020 decennial Census data use differential privacy, a technique that
+introduces errors into data to preserve respondent confidentiality.
+ℹ Small counts should be interpreted with caution.
+ℹ See https://www.census.gov/library/fact-sheets/2021/protecting-the-confidentiality-of-the-2020-census-redistricting-data.html for additional guidance.
+This message is displayed once per session.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>total_pop_2020</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 52 × 4
+   GEOID NAME                 variable    value
+   &lt;chr&gt; &lt;chr&gt;                &lt;chr&gt;       &lt;dbl&gt;
+ 1 42    Pennsylvania         P1_001N  13002700
+ 2 06    California           P1_001N  39538223
+ 3 54    West Virginia        P1_001N   1793716
+ 4 49    Utah                 P1_001N   3271616
+ 5 36    New York             P1_001N  20201249
+ 6 11    District of Columbia P1_001N    689545
+ 7 02    Alaska               P1_001N    733391
+ 8 12    Florida              P1_001N  21538187
+ 9 45    South Carolina       P1_001N   5118425
+10 38    North Dakota         P1_001N    779094
+# ℹ 42 more rows</code></pre>
+</div>
+</div>
+<p>What’s the biggest state by population? We can sort by the value column.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>total_pop_2020 <span class="ot">&lt;-</span> <span class="fu">get_decennial</span>(<span class="at">geography=</span><span class="st">"state"</span>, <span class="at">variables=</span><span class="st">"P1_001N"</span>, <span class="at">year=</span><span class="dv">2020</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(value))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Getting data from the 2020 decennial Census</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Using the PL 94-171 Redistricting Data Summary File</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>total_pop_2020</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 52 × 4
+   GEOID NAME           variable    value
+   &lt;chr&gt; &lt;chr&gt;          &lt;chr&gt;       &lt;dbl&gt;
+ 1 06    California     P1_001N  39538223
+ 2 48    Texas          P1_001N  29145505
+ 3 12    Florida        P1_001N  21538187
+ 4 36    New York       P1_001N  20201249
+ 5 42    Pennsylvania   P1_001N  13002700
+ 6 17    Illinois       P1_001N  12812508
+ 7 39    Ohio           P1_001N  11799448
+ 8 13    Georgia        P1_001N  10711908
+ 9 37    North Carolina P1_001N  10439388
+10 26    Michigan       P1_001N  10077331
+# ℹ 42 more rows</code></pre>
+</div>
+</div>
+<p>Let’s also clean those funky column names, rename <code>value</code> and <code>name</code> to what they actually represent, and get rid of the geoid and variable column.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>total_pop_2020 <span class="ot">&lt;-</span> <span class="fu">get_decennial</span>(<span class="at">geography=</span><span class="st">"state"</span>, <span class="at">variables=</span><span class="st">"P1_001N"</span>, <span class="at">year=</span><span class="dv">2020</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">clean_names</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(value)) <span class="sc">%&gt;%</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">total_population =</span> value,</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>         <span class="at">state =</span> name) <span class="sc">%&gt;%</span></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(state, total_population)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Getting data from the 2020 decennial Census</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Using the PL 94-171 Redistricting Data Summary File</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>total_pop_2020</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 52 × 2
+   state          total_population
+   &lt;chr&gt;                     &lt;dbl&gt;
+ 1 California             39538223
+ 2 Texas                  29145505
+ 3 Florida                21538187
+ 4 New York               20201249
+ 5 Pennsylvania           13002700
+ 6 Illinois               12812508
+ 7 Ohio                   11799448
+ 8 Georgia                10711908
+ 9 North Carolina         10439388
+10 Michigan               10077331
+# ℹ 42 more rows</code></pre>
+</div>
+</div>
+<p>What if we wanted to calculate the percentage of the population of the entire US that identified as white alone? We can write a slightly modified function. We’ll set the geography to <code>US</code> and add another variable code, the one for the white alone population <code>P1_003N</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>pct_white_2020 <span class="ot">&lt;-</span> <span class="fu">get_decennial</span>(<span class="at">geography=</span><span class="st">"us"</span>, <span class="at">variables=</span><span class="fu">c</span>(<span class="st">"P1_001N"</span>,<span class="st">"P1_003N"</span>), <span class="at">year=</span><span class="dv">2020</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Getting data from the 2020 decennial Census</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Using the PL 94-171 Redistricting Data Summary File</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>pct_white_2020</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 2 × 4
+  GEOID NAME          variable     value
+  &lt;chr&gt; &lt;chr&gt;         &lt;chr&gt;        &lt;dbl&gt;
+1 1     United States P1_001N  331449281
+2 1     United States P1_003N  204277273</code></pre>
+</div>
+</div>
+<p>It returns two rows, one for each variable. This “long” format will make it hard to answer our question, so we’re going to run our function again, but reshape the data a bit to make it “wide”. (Behind the scenes, they’re using <code>pivot_wider()</code>).</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a>pct_white_2020 <span class="ot">&lt;-</span> <span class="fu">get_decennial</span>(<span class="at">geography=</span><span class="st">"us"</span>, <span class="at">variables=</span><span class="fu">c</span>(<span class="st">"P1_001N"</span>,<span class="st">"P1_003N"</span>), <span class="at">year=</span><span class="dv">2020</span>, <span class="at">output=</span><span class="st">"wide"</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Getting data from the 2020 decennial Census</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Using the PL 94-171 Redistricting Data Summary File</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a>pct_white_2020</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 4
+  GEOID NAME            P1_001N   P1_003N
+  &lt;chr&gt; &lt;chr&gt;             &lt;dbl&gt;     &lt;dbl&gt;
+1 1     United States 331449281 204277273</code></pre>
+</div>
+</div>
+<p>Those column names are not helpful, so let’s rename them, and remove the GEOID.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a>pct_white_2020 <span class="ot">&lt;-</span> <span class="fu">get_decennial</span>(<span class="at">geography=</span><span class="st">"us"</span>, <span class="at">variables=</span><span class="fu">c</span>(<span class="st">"P1_001N"</span>,<span class="st">"P1_003N"</span>), <span class="at">year=</span><span class="dv">2020</span>, <span class="at">output=</span><span class="st">"wide"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">geography =</span> NAME,</span>
+<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a>         <span class="at">total_pop =</span> P1_001N,</span>
+<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a>         <span class="at">white_pop =</span> P1_003N) <span class="sc">%&gt;%</span></span>
+<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>GEOID)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Getting data from the 2020 decennial Census</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Using the PL 94-171 Redistricting Data Summary File</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb42"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb42-1"><a href="#cb42-1" aria-hidden="true" tabindex="-1"></a>pct_white_2020</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 3
+  geography     total_pop white_pop
+  &lt;chr&gt;             &lt;dbl&gt;     &lt;dbl&gt;
+1 United States 331449281 204277273</code></pre>
+</div>
+</div>
+<p>Finally, let’s calculate the percentage.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb44"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb44-1"><a href="#cb44-1" aria-hidden="true" tabindex="-1"></a>pct_white_2020 <span class="ot">&lt;-</span> <span class="fu">get_decennial</span>(<span class="at">geography=</span><span class="st">"us"</span>, <span class="at">variables=</span><span class="fu">c</span>(<span class="st">"P1_001N"</span>,<span class="st">"P1_003N"</span>), <span class="at">year=</span><span class="dv">2020</span>, <span class="at">output=</span><span class="st">"wide"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb44-2"><a href="#cb44-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">geography =</span> NAME,</span>
+<span id="cb44-3"><a href="#cb44-3" aria-hidden="true" tabindex="-1"></a>         <span class="at">total_pop =</span> P1_001N,</span>
+<span id="cb44-4"><a href="#cb44-4" aria-hidden="true" tabindex="-1"></a>         <span class="at">white_pop =</span> P1_003N) <span class="sc">%&gt;%</span></span>
+<span id="cb44-5"><a href="#cb44-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>GEOID) <span class="sc">%&gt;%</span></span>
+<span id="cb44-6"><a href="#cb44-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">pct_white =</span> white_pop<span class="sc">/</span>total_pop<span class="sc">*</span><span class="dv">100</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Getting data from the 2020 decennial Census</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Using the PL 94-171 Redistricting Data Summary File</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb47"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb47-1"><a href="#cb47-1" aria-hidden="true" tabindex="-1"></a>pct_white_2020</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 4
+  geography     total_pop white_pop pct_white
+  &lt;chr&gt;             &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;
+1 United States 331449281 204277273      61.6</code></pre>
+</div>
+</div>
+</section>
+<section id="the-acs" class="level2" data-number="21.3">
+<h2 data-number="21.3" class="anchored" data-anchor-id="the-acs"><span class="header-section-number">21.3</span> The ACS</h2>
+<p>Between the decennial censuses, the bureau releases results from the American Community Survey on a yearly schedule. It asks much more detailed questions than the decennial census.</p>
+<p>The bad news is that it’s more complicated because it’s more like survey data with a large sample. That means there’s margins of error and confidence intervals to worry about.</p>
+<p>By default, using <code>get_acs</code> fetches data from the 5-year average estimates (currently 2016-2021), but you can specify 1-year estimates for jurisdictions with at least 65,000 people (many counties and cities).</p>
+<p>Here’s an example using the 5-year ACS estimates. Let’s ask: what is Maryland’s richest county?</p>
+<p>One way we can measure this is by median household income. That variable is <code>B19013_001</code>, so we can get that data like this:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb49"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb49-1"><a href="#cb49-1" aria-hidden="true" tabindex="-1"></a>md <span class="ot">&lt;-</span> <span class="fu">get_acs</span>(<span class="at">geography =</span> <span class="st">"county"</span>,</span>
+<span id="cb49-2"><a href="#cb49-2" aria-hidden="true" tabindex="-1"></a>              <span class="at">variables =</span> <span class="fu">c</span>(<span class="at">median_income =</span> <span class="st">"B19013_001"</span>),</span>
+<span id="cb49-3"><a href="#cb49-3" aria-hidden="true" tabindex="-1"></a>              <span class="at">state =</span> <span class="st">"MD"</span>,</span>
+<span id="cb49-4"><a href="#cb49-4" aria-hidden="true" tabindex="-1"></a>              <span class="at">year =</span> <span class="dv">2020</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb49-5"><a href="#cb49-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(estimate))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Getting data from the 2016-2020 5-year ACS</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb51"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb51-1"><a href="#cb51-1" aria-hidden="true" tabindex="-1"></a>md</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 24 × 5
+   GEOID NAME                          variable      estimate   moe
+   &lt;chr&gt; &lt;chr&gt;                         &lt;chr&gt;            &lt;dbl&gt; &lt;dbl&gt;
+ 1 24027 Howard County, Maryland       median_income   124042  3448
+ 2 24009 Calvert County, Maryland      median_income   112696  3287
+ 3 24031 Montgomery County, Maryland   median_income   111812  1361
+ 4 24017 Charles County, Maryland      median_income   103678  1654
+ 5 24003 Anne Arundel County, Maryland median_income   103225  1817
+ 6 24021 Frederick County, Maryland    median_income   100685  1927
+ 7 24013 Carroll County, Maryland      median_income    99569  3051
+ 8 24035 Queen Anne's County, Maryland median_income    96467  4785
+ 9 24037 St. Mary's County, Maryland   median_income    95864  3872
+10 24025 Harford County, Maryland      median_income    94003  2398
+# ℹ 14 more rows</code></pre>
+</div>
+</div>
+<p>Howard, Calvert, Montgomery, Anne Arundel, Charles. What do they all have in common? Lots of suburban flight from DC and Baltimore.</p>
+<p>But do the margins of error – <code>moe</code> – let us say one county is richer than the other?</p>
+<p>We can find this out visually using error bars. Don’t worry much about the code here – we’ll cover that in a later lab.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb53"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb53-1"><a href="#cb53-1" aria-hidden="true" tabindex="-1"></a>md <span class="sc">%&gt;%</span></span>
+<span id="cb53-2"><a href="#cb53-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">NAME =</span> <span class="fu">gsub</span>(<span class="st">" County, Maryland"</span>, <span class="st">""</span>, NAME)) <span class="sc">%&gt;%</span></span>
+<span id="cb53-3"><a href="#cb53-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> estimate, <span class="at">y =</span> <span class="fu">reorder</span>(NAME, estimate))) <span class="sc">+</span></span>
+<span id="cb53-4"><a href="#cb53-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_errorbarh</span>(<span class="fu">aes</span>(<span class="at">xmin =</span> estimate <span class="sc">-</span> moe, <span class="at">xmax =</span> estimate <span class="sc">+</span> moe)) <span class="sc">+</span></span>
+<span id="cb53-5"><a href="#cb53-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">color =</span> <span class="st">"red"</span>) <span class="sc">+</span></span>
+<span id="cb53-6"><a href="#cb53-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Household income by county in Maryland"</span>,</span>
+<span id="cb53-7"><a href="#cb53-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">subtitle =</span> <span class="st">"2015-2019 American Community Survey"</span>,</span>
+<span id="cb53-8"><a href="#cb53-8" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">""</span>,</span>
+<span id="cb53-9"><a href="#cb53-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"ACS estimate (bars represent margin of error)"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="r-tidycensus-api_files/figure-html/unnamed-chunk-12-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>As you can see, some of the error bars are quite wide. Some are narrow. But if the bars overlap, it means the difference between the two counties is within the margin of error, and the differences aren’t statistically significant. So is the difference between Calvert and Montgomery significant? Nope. Is the difference between Howard and everyone else significant? Yes it is.</p>
+<p><strong>Question #1: </strong></p>
+<p>Run this code to load a table of variables available in the American Community Survey.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb54"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb54-1"><a href="#cb54-1" aria-hidden="true" tabindex="-1"></a>acs_variable <span class="ot">&lt;-</span> <span class="fu">load_variables</span>(<span class="at">dataset =</span> <span class="st">"acs5"</span>, <span class="at">year=</span><span class="dv">2020</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Write code to answer this question, from the American Community Survey.</p>
+<p>Which US state has the largest male population.</p>
+<p>What is the state and what is the percentage? Post the state, the population AND the code you wrote to produce it on ELMS. Use the American Community Survey for this.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    setTimeout(function() {
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      let href = ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const cites = ref.parentNode.getAttribute('data-cites').split(' ');
+    tippyHover(ref, function() {
+      var popup = window.document.createElement('div');
+      cites.forEach(function(cite) {
+        var citeDiv = window.document.createElement('div');
+        citeDiv.classList.add('hanging-indent');
+        citeDiv.classList.add('csl-entry');
+        var biblioDiv = window.document.getElementById('ref-' + cite);
+        if (biblioDiv) {
+          citeDiv.innerHTML = biblioDiv.innerHTML;
+        }
+        popup.appendChild(citeDiv);
+      });
+      return popup.innerHTML;
+    });
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./r-geographic-analysis.html" class="pagination-link">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Geographic data analysis</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./r-scraping.html" class="pagination-link">
+        <span class="nav-page-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Scraping data with Rvest</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+</body></html>

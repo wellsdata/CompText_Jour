@@ -1,0 +1,244 @@
+# Data Cleaning 
+
+Any time you are given a dataset from anyone, you should immediately be suspicious. Is this data what I think it is? Does it include what I expect? Is there anything I need to know about it? Will it produce the information I expect?
+
+One of the first things you should do is give it the smell test. 
+
+Failure to give data the smell test [can lead you to miss stories and get your butt kicked on a competitive story](https://source.opennews.org/en-US/learning/handling-data-about-race-and-ethnicity/).
+
+With data smells, we're trying to find common mistakes in data. [For more on data smells, read the GitHub wiki post that started it all](https://github.com/nikeiubel/data-smells/wiki/Ensuring-Accuracy-in-Data-Journalism). Some common data smells are:
+
+* Missing data or missing values
+* Gaps in data 
+* Wrong type of data 
+* Outliers 
+* Sharp curves
+* Conflicting information within a dataset
+* Conflicting information across datasets
+* Wrongly derived data
+* Internal inconsistency
+* External inconsistency
+* Wrong spatial data
+* Unusable data, including non-standard abbreviations, ambiguous data, extraneous data, inconsistent data
+
+Not all of these data smells are detectable in code. You may have to ask people about the data. You may have to compare it to another dataset yourself. Does the agency that uses the data produce reports from the data? Does your analysis match those reports? That will expose wrongly derived data, or wrong units, or mistakes you made with inclusion or exclusion.
+
+This chapter will take us through the first three, and look at common solutions.
+
+## Wrong Type
+
+First, let's look at **Wrong Type Of Data**. 
+
+Load the tidyverse. 
+
+```{r}
+
+# Remove scientific notation
+options(scipen=999)
+# Load the tidyverse
+library(tidyverse)
+
+```
+
+Then lets load a dataframe of Census population statistics, one row per state per year between the period of 2015 and 2020, with overall totals and totals by Census race categories. I have intentionally introduced some flaws that we'll have to clean. 
+
+```{r}
+
+state_population_dirty <- read_rds("assets/data/state_population_dirty.rds")
+
+glimpse(state_population_dirty)
+
+```
+
+Let's sort the dataframe by total population to identify the state with the largest population in 2020. 
+
+```{r}
+
+state_population_dirty %>%
+  filter(year == 2020) %>%
+  arrange(desc(total_pop))
+
+
+```
+Something seems off.  The largest U.S. states -- New York, California, Texas -- aren't on this list.  It's topped by Michigan, with 9.9 million people, followed by Delaware with 967,000, followed by New Jersey with 8.8 million.  It's not treating the values in this column as numbers, but sorting them ... alphabetically, in a sense. 
+
+Let's use glimpse to figure out why. 
+
+```{r}
+glimpse(state_population_dirty)
+
+```
+
+Here we can see the column name, sample values, and the data type.  Most of the number columns in this dataframe are stored as numbers ("dbl").  But not the value in total_pop. It's stored as "character". R is interpreting as a text string. To sort properly, we'll need to change it. Let's update the dataframe by mutating that column to change the data type to numeric.
+
+```{r}
+
+state_population_dirty <- state_population_dirty %>%
+  mutate(total_pop = as.numeric(total_pop))
+
+glimpse(state_population_dirty)
+
+```
+
+Now when we sort, it works.
+
+```{r}
+
+state_population_dirty %>%
+  filter(year == 2020) %>%
+  arrange(desc(total_pop))
+```
+
+
+## Missing Data
+
+The second smell we can find in code is **missing data**. 
+
+Let's try to calculate the total Black alone population for the U.S. 
+
+```{r}
+
+state_population_dirty %>%
+  filter(year == 2020) %>%
+  summarise(
+    total_us_black_alone_population = sum(black_alone_pop)
+  )
+
+```
+We get an NA value, which isn't correct. Let's examine the values in that column to see why. 
+
+```{r}
+state_population_dirty 
+
+```
+Ah, we see a missing value for Alabama.  Because of that value, the summarise calculation won't work. We could tell R to ignore NA values when doing the calculation, by adding na.rm=TRUE to the sum function. 
+
+```{r}
+state_population_dirty %>%
+  filter(year == 2020) %>%
+  summarise(
+    total_us_black_alone_population = sum(black_alone_pop, na.rm=TRUE)
+  )
+
+```
+But! That's not the right answer. We want to know the total for the U.S. including Alabama in 2020. So, we need to fix that value.  We look up the value on the Census website, and determine it's 1,301,319 for 2020.  So let's update the column. This uses a function called case_when() with mutate().  
+
+Here's how to interpret what the function below says. 
+
+"Overwrite the black_alone_pop column with new values in one of the rows, and the old values for every other row.  If the state column equals Alabama AND (the &) the year column equals 2020 THEN (the tilde or ~) put the value 1301319.  In any other case (any other state, or Alabama in any other year than 2020), THEN keep the value that currently exists in the black_alone_pop column.  
+
+```{r}
+
+state_population_dirty <- state_population_dirty %>%
+  mutate(black_alone_pop = case_when(
+    state == "Alabama" & year == 2020 ~ 1301319,
+    TRUE ~ black_alone_pop
+  ))
+
+state_population_dirty
+
+```
+
+Now when we run our summarization code, it works.
+
+```{r}
+
+state_population_dirty %>%
+  filter(year == 2020) %>%
+  summarise(
+    total_us_black_alone_population = sum(black_alone_pop)
+  )
+
+```
+
+
+## Gaps in data
+
+Let's now look at **gaps in data**. One type of gap in data has to do with time.  
+
+Let's calculate the average white alone population in Maryland over the period represented in the data, which is 2015 to 2020. 
+
+```{r}
+
+state_population_dirty %>%
+  filter(state == "Maryland") %>%
+  summarise(
+    mean_white_alone_pop = mean(white_alone_pop)
+  )
+
+```
+Does this represent the average white population from 2015 to 2020?  Let's take a closer look at the years represented in the data. 
+
+```{r}
+
+state_population_dirty %>%
+  filter(state == "Maryland") %>%
+  select(year)
+  
+```
+
+We have 2015, 2016, 2017, 2018 and 2020.  We can't accurately say this represents the average over this period without 2019.  So let's add it, using a function called add_row() to put in the correct value 3,343,003. Note that it adds a row for 2019.
+
+
+```{r}
+
+state_population_dirty %>%
+  filter(state == "Maryland") %>%
+  select(state,year,white_alone_pop) %>%
+  add_row(
+    state = "Maryland",
+    year = 2019,
+    white_alone_pop = 3343003
+  )
+
+
+
+
+```
+
+Now, when we take the average for Maryland, it's accurate.
+
+```{r}
+
+state_population_dirty %>%
+  filter(state == "Maryland") %>%
+  select(state,year,white_alone_pop) %>%
+  add_row(
+    state = "Maryland",
+    year = 2019,
+    white_alone_pop = 3343003
+  ) %>%  
+  summarise(
+    mean_white_alone_pop = mean(white_alone_pop)
+  )
+
+
+
+
+```
+
+
+**Question #1: **
+Answer this question in English: Write in Elms
+
+You have a dataframe that contains population statistics for each of 24 counties in Maryland, and you want to group and summarize to determine the total population for the state. 
+
+The first three rows of the data look like this:
+
+state | county | population
+Maryland | PG | 1000000
+MD | Montgomery | 1100000
+md | Baltimore city | 900000
+
+What tidyverse method described in this lab would you use to clean the state column so that the group and summarization works properly. 
+
+You don't need to write code, just explain in English on ELMS.
+
+## Resources
+
+-   The "[Relational data](https://r4ds.had.co.nz/relational-data.html)" chapter in the R for Data Science textbook has details on exactly how a complex data set might fit together.
+
+-   [An example using a superheroes dataset](https://stat545.com/join-cheatsheet.html#left_joinsuperheroes-publishers), from Stat 545 at the University of British Columbia
+
+
+

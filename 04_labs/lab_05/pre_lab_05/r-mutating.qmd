@@ -1,0 +1,224 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+# Mutating data {#r-mutating}
+
+Often the data will prompt questions that lack immediate answers. We're continuing to work with the Baltimore median income data and we want to know how incomes changed over time by census tract and the percentage change.
+
+To do that in R, we can use `dplyr` and `mutate` to calculate new metrics in a new field using existing fields of data. That's the essence of `mutate` - using the data you have to answer a new question.
+
+So first we'll import the tidyverse so we can work with it.
+
+```{r include=FALSE}
+library(tidyverse)
+```
+
+We'll import a dataset of median household income in Baltimore for the 2010, 2016 and 2020 surveys. The data is in the data folder in this chapter's pre-lab directory. We'll use this to explore ways to create new information from existing data.
+
+```{r message=FALSE}
+
+baltcity_income <- read_csv("assets/data/baltcity_income_clean.csv") %>% 
+  as.data.frame()
+
+#working on this with your laptop, uncomment and use this code below
+#baltcity_income<- read_csv("baltcity_income_clean.csv") %>% 
+#  as.data.frame()
+
+```
+
+One main question involves how the median income changed from 2010 to 2020. First, let's add a column called `diff_2010_2020` to see how median income changed for each census tract. The code is pretty simple. Remember, with `summarize`, we used `n()` to count things. With `mutate`, we use very similar syntax to calculate a new value -- a new column of data -- using other values in our dataset.
+
+```{r}
+  baltcity_income %>%
+  select(Census, Neighborhood, x2010, x2020) %>%
+  mutate(Diff_Income = (x2020-x2010)) %>% 
+  head()
+
+```
+
+Now we've got our `Diff_Income` column. Let's provide some context and use a percentage change calculation to compare the gains. We'll add a new column, `Diff_Pct_2020`. Remember the percentage change calculation is (New-Old)/Old
+
+```{r}
+baltcity_income %>%
+  select(Census, Neighborhood, x2010, x2020) %>%
+    mutate(Diff_Income = (x2020-x2010)) %>% 
+    mutate(Diff_Pct_2020 = (x2020-x2010)/x2010) %>% 
+    head()
+```
+
+Look at `Diff_Pct_2020`. Do those numbers look like we expect them to? No. They're a decimal expressed as a percentage. So let's fix that by multiplying by 100. We're also rounding the result to two digits from nine so it looks cleaner
+
+```{r}
+baltcity_income %>%
+  select(Census, Neighborhood, x2010, x2020) %>%
+  mutate(Diff_Income = (x2020-x2010)) %>% 
+  mutate(Diff_Pct_2020 = round((x2020-x2010)/x2010*100,2)) %>% 
+  head()
+  
+```
+
+Now, let's fix the ordering with arrange and sort descending on the percentage change column.
+
+```{r}
+baltcity_income %>%
+  select(Census, Neighborhood, x2010, x2020) %>%
+  mutate(Diff_Income = (x2020-x2010)) %>% 
+  mutate(Diff_Pct_2020 = round((x2020-x2010)/x2010*100,2)) %>% 
+  arrange(desc(Diff_Pct_2020)) %>% 
+  head()
+```
+
+So we know who the winners since the descending sort by `Diff_Pct_2020` shows us Census tracts by the highest percentage first. Now, which areas suffered the biggest declines in median income? We will copy the previous code and alter the arrange so it is ascending from the lowest value.
+
+```{r}
+baltcity_income %>%
+  select(Census, Neighborhood, x2010, x2020) %>%
+    mutate(Diff_Income = (x2020-x2010)) %>% 
+    mutate(Diff_Pct_2020 = round((x2020-x2010)/x2010*100,2)) %>% 
+    arrange(Diff_Pct_2020) %>% 
+    head()
+
+```
+
+### Using mutate to clean data
+
+For this example, we'll examine a dataset of loans small businesses obtained to stay afloat during the Covid-19 pandemic. It's called the PPP loan database which stands for Paycheck Protection Program loans.
+
+```{r include=FALSE}
+#ppp_applications_md_small <- read_csv("assets/data/ppp_applications_md.csv") %>%
+#  select(name, amount, city, servicing_lender_state)
+
+#write_csv(ppp_applications_md_small,"assets/data/ppp_applications_md_small.csv")
+
+maryland_ppp <- read_csv("assets/data/ppp_applications_md_small.csv")
+
+#working on this with your laptop, uncomment and use this code below
+#maryland_ppp <- read.csv("ppp_applications_md.csv")
+
+```
+
+Take a look at the `city` column in our data.
+
+```{r eval=FALSE}
+#uncomment below to see the entire dataframe
+#View(maryland_ppp)
+```
+
+You'll notice that there's a mix of styles: "Baltimore" and "BALTIMORE" for example. R will think those are two different cities, and that will mean that any aggregates we create based on city won't be accurate.
+
+How can we fix that? Mutate to the rescue! And a function called `str_to_upper` that will convert a character column into all uppercase.
+
+```{r}
+maryland_ppp %>%
+  mutate(
+    upper_city = str_to_upper(city)
+) %>% 
+   select(city, upper_city, name, amount) %>% 
+  head()
+```
+
+
+::: {.alert .alert-info .opacity-2}
+Pro Tip: 
+Notice we kept the original data in `city` and transformed it in a new column, `upper_city`. Always a good practice to keep your original data intact in case you make a coding mistake or need to change the original for reference.
+:::
+
+We could do the same thing with the `address` column in order to standardize that for analysis, too.
+
+Think of how easy this is compared to a similar data cleaning lesson in Google Sheets.
+
+### A more powerful use
+
+Mutate is even more useful when combined with some additional functions. Let's say you want to know if the servicing lender is located in Maryland or outside the state. There are three possible answers:
+
+1.  The lender is in Maryland
+2.  The lender is outside Maryland
+3.  The data doesn't tell us (`servicing_lender_state` is blank or NA)
+
+We can create a new column that accounts for these possibilities and populate it using mutate and `case_when`, which is like an if/else statement but for more than two options.
+
+```{r}
+maryland_with_in_out <- maryland_ppp %>%
+  mutate(
+    in_out = case_when(
+        servicing_lender_state == 'NA' ~ "NA",
+        servicing_lender_state == 'MD' ~ "IN",
+        servicing_lender_state != 'MD' ~ "OUT"
+      )
+  ) 
+
+maryland_with_in_out %>% 
+  select(name, amount, servicing_lender_state, in_out) %>% 
+  head()
+```
+
+We can then use our new `in_out` column in group_by statements to make summarizing easier.
+
+In this case there are no Maryland loans where `servicing_lender_state` has a value of 'NA', but you should never assume that will be the case for a dataset. If you know that the only options are the lender is in Maryland or is outside it, you can rewrite the previous code as an if/else statement:
+
+```{r}
+maryland_with_in_out <- maryland_ppp %>%
+  mutate(
+    in_out = if_else(
+        servicing_lender_state == 'MD', "IN", "OUT"
+      )
+  )
+
+maryland_with_in_out %>% 
+  select(name, amount, servicing_lender_state, in_out) %>% 
+  head()
+```
+
+Mutate is an essential tool to make your data more useful and allows you to ask more questions.
+
+# Pre-Lab Questions:
+
+Based on the skills you have learned above, use this [dataset of Maryland cities 'assets/data/city_md_income.csv'](%22assets/data/city_md_income.csv%22) (it is included in your prelab folder)
+
+And answer the following questions:
+
+**Question #1:**
+
+1)  Calculate the difference in median income from 2010 to 2020 for all places listed. Calculate the percentage change.
+
+```{r}
+ 
+```
+
+Which city had the highest absolute change? Which had the highest percentage change?
+
+```{r}
+ 
+```
+
+Produce a table with the top 25 places ranked by the highest percentage change.
+
+```{r}
+ 
+```
+
+Produce a second table with the top 25 places ranked by the lowest or negative percentage change.
+
+```{r}
+ 
+```
+
+**Question #2: **
+A) Determine the summary statistics of mdcities median income for 2020. Determine the value for the first quartile.
+
+B) Use mutate and case_when to create a column called "category." Within this, label cities in the first quartile as "lowest" and the remaining "above". Create a new table called "lowest" with your results
+
+```{r}
+
+
+```
+
+
+
+**Question #3: **
+Answer this question in English: Write in Elms
+
+Building on the previous lesson on filtering, describe how you would determine the median value of the percentage change and produce a table with the 10 neighborhoods with the highest change and the 10 with the lowest change.

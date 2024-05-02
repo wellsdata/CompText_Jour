@@ -1,0 +1,475 @@
+# Geographic data basics
+
+https://data.imap.maryland.gov/datasets/maryland::maryland-education-facilities-prek-thru-12-education-public-schools/explore?location=38.823498%2C-77.286550%2C8.55&showTable=true
+https://reportcard.msde.maryland.gov/Graphs/#/DataDownloads/datadownload/3/17/6/99/XXXX/2021
+https://geodata.md.gov/imap/rest/services/Education/MD_EducationFacilities/FeatureServer/5/query?outFields=*&where=1%3D1&f=geojson
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(jsonlite)
+library(sf)
+library(leaflet)
+library(tigris)
+
+
+###
+# Load school locations
+###
+
+school_locations <- fromJSON("https://geodata.md.gov/imap/rest/services/Education/MD_EducationFacilities/FeatureServer/5/query?outFields=*&where=1%3D1&f=geojson")
+
+school_locations<- school_locations$features$properties  %>%
+  bind_cols(school_locations$features$geometry) %>%
+  clean_names() %>%
+  filter(school_type == "Elementary") %>%
+  filter(county == "Prince George's")
+
+school_types_county <- school_locations %>%
+  group_by(county,school_type) %>%
+  count() %>%
+  pivot_wider(names_from=school_type, values_from=n)
+
+school_locations_counties <- school_locations %>%
+  distinct(county)
+
+###
+# Load attendance data
+###
+
+attendance_counties <- attendance %>%
+  distinct(county)
+  
+attendance <- read_csv("data/attendance_2021.csv") %>%
+  clean_names() %>%
+  rename(county = lss_name) %>%
+  filter(school_type == "Elementary") %>%
+  filter(county == "Prince George's") %>%
+  filter(school_number != "A") %>%
+  group_by(row_number()) %>%
+  mutate(attend_rate_pct = case_when(
+    attend_rate_pct != ">= 95.0" ~ as.numeric(attend_rate_pct),
+    attend_rate_pct == ">= 95.0" ~ runif(1,min=95.0, max=99.9)
+  )) %>%
+  mutate(attend_rate_pct = round(attend_rate_pct,2)) %>%
+  inner_join(school_locations) %>%
+  select(
+    county,
+    county_number = lss_number,
+    school_number,
+    school_name,
+    attend_rate_pct,
+    coordinates
+  ) %>%
+  mutate(coordinates = str_remove_all(coordinates,"\\(|c|\\)")) %>%
+  separate(coordinates, into=c("lat","lon"), sep=",") %>%
+  st_as_sf(
+    coords = c("lat","lon"),
+    crs="NAD83"
+  )
+
+###
+# Maryland counties
+###
+
+maryland_counties <- counties() %>%
+  clean_names() %>%
+  filter(statefp == 24) %>%
+  filter(name == "Prince George's")
+
+
+###
+# Plot attendance data
+###
+
+ggplot() +
+  geom_sf(data=maryland_counties) +
+  geom_sf(data=attendance)
+
+###
+# Plot attendance data
+###
+  
+ggplot() +
+  geom_sf(data=maryland_counties,fill="white") +
+  geom_sf(data=attendance, aes(color=attend_rate_pct),size=2) +
+  scale_colour_viridis_b(option="magma") +
+  theme_minimal()
+
+###
+# Leaflet
+###
+  
+pal <- colorNumeric(
+  palette = "magma",
+  domain = attendance$attend_rate_pct
+)
+
+
+leaflet() %>%
+ addProviderTiles(providers$CartoDB.Positron) %>%
+ addPolygons(data = maryland_counties,
+            #color = ~pal(Diff_2020_2010),
+            weight = 1,
+            #smoothFactor = 0.2,
+            fillOpacity = 0.1,
+            ) %>% 
+  addCircles(data=attendance,
+             color=~pal(attend_rate_pct),
+             label = paste0(attendance$school_name," | attendance rate: ",attendance$attend_rate_pct,"%")
+  ) %>%
+  addLegend(
+    position = "bottomright",
+    pal = pal,
+    values = attendance$attend_rate_pct,
+    title = "2020 attendance rate"
+  )
+
+###
+# Do schools in lower income neighborhoods have a lower attendance rate
+###
+
+library(tidycensus)
+census_api_key("549950d36c22ff16455fe196bbbd01d63cfbe6cf")
+
+vars <- load_variables(2020,dataset="acs5")
+
+###
+# Load county pop data
+###
+
+pg_tract_income <- get_acs(geography = "tract", state="Maryland", variables = c("B19013_001"), year = 2020, geometry = TRUE) %>%
+  clean_names() %>%
+  select(geoid, name, median_household_income=estimate) %>%
+  filter(str_detect(name,"Prince George")) 
+
+
+###
+# Plot income data
+###
+  
+ggplot() +
+  #geom_sf(data=maryland_counties,fill="white") +
+  geom_sf(data=pg_tract_income, aes(fill=median_household_income)) +
+  scale_fill_viridis_b(option="viridis") +
+  theme_minimal()
+
+
+###
+# Plot attendance data
+###
+  
+ggplot() +
+  geom_sf(data=pg_tract_income, aes(fill=median_household_income)) +
+  geom_sf(data=attendance, aes(color=attend_rate_pct),size=2) +
+  scale_colour_viridis_b(option="magma") +
+  scale_fill_viridis_b(option="viridis") +
+  theme_minimal()
+
+###
+# 
+###
+
+income_to_attendance <- attendance %>%
+  st_join(pg_tract_income) %>%
+  mutate(attendance_bucket = ntile(attend_rate_pct,2)) %>%
+  mutate(attendance_bucket = case_when(
+    attendance_bucket == 1 ~ "low_attendance",
+    attendance_bucket == 2 ~ "high_attendance"
+  )) %>%
+  group_by(attendance_bucket) %>%
+  summarise(
+    median_household_income = mean(median_household_income)
+  )
+
+###
+# 
+###
+
+income_to_attendance %>%
+  ggplot() + 
+  geom_point(aes(x=attend_rate_pct,y=median_household_income)) + 
+  geom_smooth(aes(x=attend_rate_pct,y=median_household_income))
+
+
+```
+
+
+A common way data journalists look for patterns in data is geographically. 
+
+Is there a spatial pattern to our data? Can we learn anything by using distance as a metric? What if we merge non-geographic data into geographic data?
+
+We'll use several libraries in this chapter:
+
+* Simple Features or SF
+* ggplot2 for static mapping visualization
+* leaflet for interactive mapping visualization
+
+## Importing and viewing data
+
+Let's start with the absolute basics of geographic data: loading and viewing. Load libraries as usual.
+
+```{r}
+
+#install.packages('sf')
+#install.packages('leaflet')
+
+library(tidyverse)
+library(janitor)
+library(sf)
+library(leaflet)
+
+```
+
+
+Our motivating question for this chapter is this: do Prince George's County elementary schools in lower-income areas have lower attendance rate than elementary schools in wealthier areas?
+
+We'll start by loading a file with the location of Prince George's County elementary schools. This is a special kind of dataframe called an "SF" dataframe, meaning it has location information embedded. The last column: "Geometry" has a pair of latitude and longitude coordinates that will allow us to map these. 
+
+```{r}
+
+
+###
+# Load school locations
+###
+
+pg_elementary_school_locations <- fromJSON("https://geodata.md.gov/imap/rest/services/Education/MD_EducationFacilities/FeatureServer/5/query?outFields=*&where=1%3D1&f=geojson")
+
+pg_elementary_school_locations<- pg_elementary_school_locations$features$properties  %>%
+  bind_cols(pg_elementary_school_locations$features$geometry) %>%
+  clean_names() %>%
+  filter(school_type == "Elementary") %>%
+  filter(county == "Prince George's") %>%
+  mutate(coordinates = str_remove_all(coordinates,"\\(|c|\\)")) %>%
+  separate(coordinates, into=c("lat","lon"), sep=",") %>%
+  mutate(latitude = lat,
+         longitude = lon) %>%
+  st_as_sf(
+    coords = c("lat","lon"),
+    crs="NAD83"
+  )
+
+class(pg_elementary_school_locations)
+
+pg_elementary_school_locations
+
+```
+
+Let's use ggplot to show the location of the schools, using a new function for us, geom_sf 
+
+```{r}
+
+ggplot() +
+  geom_sf(data=pg_elementary_school_locations)
+
+```
+
+That's not super helpful.  If you know what the shape of Prince George's County looks like, you can make it out there in the dots, but it's hard.  Let's load an outline of the county to make it more explicit. Unlike the schools, which are "points", the county outline is a "shape" or a "multipolygon." It's a collection of latitude and longitude pairs, with the dots connected. 
+
+```{r}
+
+pg_county <- counties() %>%
+  clean_names() %>%
+  filter(statefp == 24) %>%
+  filter(name == "Prince George's")
+
+
+pg_county
+
+
+
+
+```
+Let's add the PG county outline to our map. 
+
+```{r}
+
+ggplot() +
+  geom_sf(data=pg_county) +
+  geom_sf(data=pg_elementary_school_locations)
+
+```
+
+We can visualize the school locations data on an interactive map, too, using the leaflet package. 
+
+```{r}
+
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addCircles(data=pg_elementary_school_locations)
+  
+```
+
+`addProviderTiles` adds the base map on which the dots appear.  `addCircles` adds the school locations. 
+
+Let's update it to add the outline of P.G. County with `addPolygons`
+
+```{r}
+
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(data=pg_county) %>%
+  addCircles(data=pg_elementary_school_locations)
+  
+```
+
+We can even add little labels to each of the dots that includes the school name when we hover over each dot. 
+
+```{r}
+
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(data=pg_county) %>%
+  addCircles(data=pg_elementary_school_locations,
+             label=pg_elementary_school_locations$school_name)
+  
+
+```
+
+## Augmenting geographic data
+
+We can join information about each school with our geographic data, and represent that on a map.  In this case, we're going to load data about the "attendance rate" from the Maryland Dept. of Education for each Prince George's County elementary school. It ranges from 99 percent to 73 percent.
+
+```{r}
+attendance <- read_csv("data/attendance_2021.csv") %>%
+  clean_names() %>%
+  rename(county = lss_name) %>%
+  filter(school_type == "Elementary") %>%
+  filter(county == "Prince George's") %>%
+  filter(school_number != "A") %>%
+  group_by(row_number()) %>%
+  mutate(attend_rate_pct = case_when(
+    attend_rate_pct != ">= 95.0" ~ as.numeric(attend_rate_pct),
+    attend_rate_pct == ">= 95.0" ~ runif(1,min=95.0, max=99.9)
+  )) %>%
+  mutate(attend_rate_pct = round(attend_rate_pct,2)) %>%
+  select(
+    county,
+    county_number = lss_number,
+    school_number,
+    school_name,
+    attend_rate_pct
+  ) %>%
+  ungroup()
+
+attendance
+
+```
+
+Now let's join this attendance dataframe to our spatial dataframe. The `st_as_sf()` function turns it back into a proper SF dataframe for visualization.
+
+```{r}
+attendance_locations <- attendance %>%
+  inner_join(pg_elementary_school_locations) %>%
+  st_as_sf()
+
+```
+
+And let's visualize the data again, but this time, we'll let the attendance rate set the color value of the dots.  Immediately, we see the beginnings of a pattern.  Schools with higher attendance rates (lighter blue) are at right, in the more rural parts of the county. The schools with lower attendance rates (darker blue) are clustered to the left, closer the Washington, D.C. border. 
+
+```{r}
+
+ggplot() +
+  geom_sf(data=pg_county,fill="white") +
+  geom_sf(data=attendance_locations, aes(color=attend_rate_pct),size=2) 
+
+```
+
+## Spatial joins
+
+Let's return to our motivating question for this chapter: do Prince George's County elementary schools in lower-income areas have lower attendance rate than elementary schools in wealthier areas?
+
+For geographic areas, we'll use Census tracts, and as a measure of wealth, we'll use median household income, which we'll load in a second. 
+
+To answer this question, we need to connect our dataframe of attendance by school to our dataframe of income by Census tract. 
+
+If our dataframe of schools with attendance had a column indicating which Census tract it was in, we could simply do a regular join to our dataframe of Census tract income. But it does not.  
+
+Fortunately, there's still a way we join them, using a special kind of join that only works with geographic data -- a spatial join.  
+
+First, let's load a spatial dataframe of Census tracts with income information attached. 
+
+```{r}
+
+###
+# Do schools in lower income neighborhoods have a lower attendance rate
+###
+
+library(tidycensus)
+census_api_key("549950d36c22ff16455fe196bbbd01d63cfbe6cf")
+
+
+###
+# Load county pop data
+###
+
+pg_tract_income <- get_acs(geography = "tract", state="Maryland", variables = c("B19013_001"), year = 2020, geometry = TRUE) %>%
+  clean_names() %>%
+  select(geoid, name, median_household_income=estimate) %>%
+  filter(str_detect(name,"Prince George")) 
+
+pg_tract_income
+```
+Let's visualize it. We can see that, like the lower attendance rate schools, the lower income tracts tend to be clustered closer to Washington, D.C. 
+
+```{r}
+
+
+ggplot() +
+  geom_sf(data=pg_tract_income, aes(fill=median_household_income))
+
+```
+
+We can add schools shaded by attendance rate, but it's hard to derive much meaning from this map. 
+
+```{r}
+
+
+ggplot() +
+  geom_sf(data=pg_tract_income, aes(fill=median_household_income)) +
+  geom_sf(data=attendance_locations, aes(color=attend_rate_pct),size=2) 
+
+```
+
+To truly answer our question, we'll need to assign a Census tract to each school.  To do that, we'll connect our attendance data and our income data with a "spatial join" or `st_join()`. We see now that for each school, it has been assigned a Census tract. 
+
+```{r}
+
+income_to_attendance <- attendance_locations %>%
+  st_join(pg_tract_income) 
+
+income_to_attendance
+
+```
+
+Here's what happened when we did `st_join`.  
+
+The code looks at the latitude and longitude coordinates of each school and determines which Census tract shape it sits inside of.  If you're ever heard of "geocoding" an address to locate it on a map, the process is similar. 
+
+From here, we can set about answering our question. We'll create a column called `attendance_bucket` that classisifes each school into one of two buckets -- high attendance (top half) and low attendance (bottom half).  We then group by that new attendance bucket and calculate the average income in each of those groups. 
+
+```{r}
+
+income_to_attendance %>%
+  mutate(attendance_bucket = ntile(attend_rate_pct,2)) %>%
+  mutate(attendance_bucket = case_when(
+    attendance_bucket == 1 ~ "low_attendance",
+    attendance_bucket == 2 ~ "high_attendance"
+  )) %>%
+  group_by(attendance_bucket) %>%
+  summarise(
+    median_household_income = mean(median_household_income)
+  )
+
+```
+And finally our answer.  Schools with high attendance are located in Census tracts that have, on average, an income of \$105,587.  Schools with low attendance are located in Census tracts that have, on average, income of \$80,261.
+
+
+**Question #1: **
+Answer this question in English: Write in Elms
+
+Develop two questions that you could answer with a spatial join as described in this chapter, outside of the domain of education.  Describe the two geographic dataframes you would need to answer each.   
+
+
+
+

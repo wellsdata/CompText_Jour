@@ -1,0 +1,315 @@
+# Data Cleaning 
+
+Any time you are given a dataset from anyone, you should immediately be suspicious. Is this data what I think it is? Does it include what I expect? Is there anything I need to know about it? Will it produce the information I expect?
+
+One of the first things you should do is give it the smell test. 
+
+Failure to give data the smell test [can lead you to miss stories and get your butt kicked on a competitive story](https://source.opennews.org/en-US/learning/handling-data-about-race-and-ethnicity/).
+
+With data smells, we're trying to find common mistakes in data. [For more on data smells, read the GitHub wiki post that started it all](https://github.com/nikeiubel/data-smells/wiki/Ensuring-Accuracy-in-Data-Journalism). Some common data smells are:
+
+* Missing data or missing values
+* Gaps in data 
+* Wrong type of data 
+* Outliers 
+* Sharp curves
+* Conflicting information within a dataset
+* Conflicting information across datasets
+* Wrongly derived data
+* Internal inconsistency
+* External inconsistency
+* Wrong spatial data
+* Unusable data, including non-standard abbreviations, ambiguous data, extraneous data, inconsistent data
+
+Not all of these data smells are detectable in code. You may have to ask people about the data. You may have to compare it to another dataset yourself. Does the agency that uses the data produce reports from the data? Does your analysis match those reports? That will expose wrongly derived data, or wrong units, or mistakes you made with inclusion or exclusion.
+
+This chapter will take us through the first three, and look at common solutions.
+
+```{r}
+library(tidycensus)
+library(janitor)
+census_api_key("549950d36c22ff16455fe196bbbd01d63cfbe6cf")
+
+state_names <- append(state.name,"DC")
+#state_names <- state_names[1]
+years <- c(2015,2016,2017,2018,2020) 
+#state_names <- state_names[1]
+# Define function to get data
+get_state_pop <- function(state_name) {
+  
+  state_tibble <- tibble()
+  
+  for (year_value in years) {
+    state_population <- get_acs(
+                              survey = "acs5",
+                              geography = "state", 
+                              state=state_name,
+                              variables=c("B02001_001",
+                                          "B02001_002",
+                                          "B02001_003",
+                                          "B02001_004",
+                                          "B02001_005",
+                                          "B02001_006",
+                                          "B02001_007",
+                                          "B02001_008"
+                                          ), 
+                              year=year_value, 
+                              geometry = FALSE,
+                              output = "wide") %>%
+    clean_names() %>%
+    rename(
+      total_pop = b02001_001e,
+      white_alone_pop = b02001_002e,
+      black_alone_pop = b02001_003e,
+      amer_ind_ak_native_alone_pop = b02001_004e,
+      asian_alone_pop = b02001_005e,
+      native_hi_alone_pop = b02001_006e,
+      other_race_alone_pop = b02001_007e,
+      two_or_more_races_pop = b02001_008e) %>%
+    mutate(year = year_value) %>%
+    select(geoid, state = name, year, everything(),-ends_with("m")) 
+    
+    state_tibble <- state_tibble %>%
+      bind_rows(state_population)
+    
+  }
+  
+  return(state_tibble)
+  
+}
+
+  maryland_population_2019 <- get_acs(
+                                survey = "acs5",
+                                geography = "state", 
+                                state="Maryland",
+                                variables=c("B02001_001",
+                                            "B02001_002",
+                                            "B02001_003",
+                                            "B02001_004",
+                                            "B02001_005",
+                                            "B02001_006",
+                                            "B02001_007",
+                                            "B02001_008"
+                                            ), 
+                                year=2019, 
+                                geometry = FALSE,
+                                output = "wide") %>%
+      clean_names() %>%
+      rename(
+        total_pop = b02001_001e,
+        white_alone_pop = b02001_002e,
+        black_alone_pop = b02001_003e,
+        amer_ind_ak_native_alone_pop = b02001_004e,
+        asian_alone_pop = b02001_005e,
+        native_hi_alone_pop = b02001_006e,
+        other_race_alone_pop = b02001_007e,
+        two_or_more_races_pop = b02001_008e) %>%
+      mutate(year = 2019) %>%
+      select(geoid, state = name, year, everything(),-ends_with("m")) 
+
+
+# Get data
+state_population <- map_dfr(state_names, get_state_pop)
+
+write_rds(state_population,"state_population.rds")
+
+state_population_dirty <- read_rds("state_population.rds") %>%
+  mutate(total_pop = as.character(total_pop)) %>%
+  mutate(black_alone_pop = case_when(
+    state == "Alabama" ~ as.numeric(NA),
+    TRUE ~ black_alone_pop
+  ))
+
+write_rds(state_population_dirty,"state_population_dirty.rds")
+
+glimpse(state_population_dirty)
+
+```
+
+## Wrong Type
+
+First, let's look at **Wrong Type Of Data**. 
+
+```{r}
+
+# Remove scientific notation
+options(scipen=999)
+# Load the tidyverse
+library(tidyverse)
+
+```
+
+Then lets load a dataframe of Census population statistics, one row per state per year between the period of 2015 and 2020, with totals and race. 
+
+```{r}
+
+state_population_dirty <- read_rds("state_population_dirty.rds")
+
+state_population_dirty
+
+```
+
+Let's sort the dataframe by total population to identify the state with the largest population in 2020. 
+
+```{r}
+
+state_population_dirty %>%
+  filter(year == 2020) %>%
+  arrange(desc(total_pop))
+
+
+```
+Something seems off.  The largest U.S. states -- New York, California, Texas -- aren't on this list.  It's topped by Michigan, with 9.9 million people, followed by Delaware with 967,000, followed by New Jersey with 8.8 million.  It's not treating the values in this column as numbers, but sorting them ... alphabetically, in a sense. 
+
+Let's use glimpse to figure out why. 
+
+```{r}
+glimpse(state_population_dirty)
+
+```
+
+Here we can see the column name, sample values, and the data type.  Most of the number columns in this dataframe are stored as numbers ("dbl").  But not the value in total_pop. It's stored as "character". R is interpreting as a text string. To sort properly, we'll need to change it. Let's update the dataframe by mutating that column to change the data type to numeric.
+
+```{r}
+
+state_population_dirty <- state_population_dirty %>%
+  mutate(total_pop = as.numeric(total_pop))
+
+glimpse(state_population_dirty)
+
+```
+
+Now when we sort, it works.
+
+```{r}
+
+state_population_dirty %>%
+  filter(year == 2020) %>%
+  arrange(desc(total_pop))
+```
+
+
+## Missing Data
+
+The second smell we can find in code is **missing data**. 
+
+Let's try to calculate the total Black alone population for the U.S. 
+
+```{r}
+
+state_population_dirty %>%
+  filter(year == 2020) %>%
+  summarise(
+    total_us_black_alone_population = sum(black_alone_pop)
+  )
+
+```
+We get an NA value, which isn't correct. Let's examine the values in that column to see why. 
+
+```{r}
+state_population_dirty 
+
+```
+Ah, we see a missing value for Alabama.  Because of that value, the summarise calculation won't work. We could tell R to ignore NA values when doing the calculation, by adding na.rm=TRUE to the sum function. 
+
+```{r}
+state_population_dirty %>%
+  filter(year == 2020) %>%
+  summarise(
+    total_us_black_alone_population = sum(black_alone_pop, na.rm=TRUE)
+  )
+
+```
+But! That's not the right answer. We want to know the total for the U.S. including Alabama in 2020. So, we need to fix that value.  We look up the value on the Census website, and determine it's 1,301,319 for 2020 .  So let's update the column. This uses a function called case_when() with mutate().  
+
+Here's how to interpret what the function below says. 
+
+"Overwrite the black_alone_pop column with new values for each row.  If the state column equals Alabama AND (the &) the year column equals 2020 THEN (the tilde or ~) put the value 1301319.  In any other case (any other state, or Alabama in any other year than 2020), THEN keep the value that currently exists in the black_alone_pop column.  
+
+```{r}
+
+state_population_dirty <- state_population_dirty %>%
+  mutate(black_alone_pop = case_when(
+    state == "Alabama" & year == 2020 ~ 1301319,
+    TRUE ~ black_alone_pop
+  ))
+
+state_population_dirty
+
+```
+
+Now when we run our summarization code, it works.
+
+```{r}
+
+state_population_dirty %>%
+  filter(year == 2020) %>%
+  summarise(
+    total_us_black_alone_population = sum(black_alone_pop)
+  )
+
+```
+
+
+## Gaps in data
+
+Let's now look at **gaps in data**. One type of gap in data has to do with time.  
+
+Let's calculate the average white alone population in Maryland over the period represented in the data, which is 2015 to 2020. 
+
+```{r}
+
+state_population_dirty %>%
+  filter(state == "Maryland") %>%
+  summarise(
+    mean_white_alone_pop = mean(white_alone_pop)
+  )
+
+```
+Does this represent the average white population from 2015 to 2020?  Let's take a closer look at the years represented in the data. 
+
+```{r}
+
+state_population_dirty %>%
+  filter(state == "Maryland") %>%
+  select(year)
+  
+```
+
+We have 2015, 2016, 2017, 2018 and 2020.  We can't accurately say this represents the average over this period without 2019.  So let's add it, using a function called add_row() to put in the correct value 3,343,003.
+
+
+```{r}
+
+state_population_dirty %>%
+  filter(state == "Maryland") %>%
+  select(state,year,white_alone_pop) %>%
+  add_row(
+    state = "Maryland",
+    year = 2019,
+    white_alone_pop = 3343003
+  )
+
+
+
+
+```
+
+```{r}
+
+state_population_dirty %>%
+  filter(state == "Maryland") %>%
+  select(state,year,white_alone_pop) %>%
+  add_row(
+    state = "Maryland",
+    year = 2019,
+    white_alone_pop = 3343003
+  ) %>%  
+  summarise(
+    mean_white_alone_pop = mean(white_alone_pop)
+  )
+
+
+
+
+```

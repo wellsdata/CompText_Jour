@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.0.36">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Data Journalism with R and the Tidyverse - 17&nbsp; Joins</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./r-data-cleaning.html" rel="next">
+<link href="./r_visualizing_reporting.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 20,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit"
+  }
+}</script>
+
+
+</head>
+
+<body class="nav-sidebar floating">
+
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+    <div class="container-fluid d-flex justify-content-between">
+      <h1 class="quarto-secondary-nav-title"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Joins</span></h1>
+      <button type="button" class="quarto-btn-toggle btn" aria-label="Show secondary navigation">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Data Journalism with R and the Tidyverse</a> 
+    </div>
+      </div>
+      <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+      </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Introduction</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./start-story.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Learn a new way to read</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./start-math.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Newsroom math</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./census_data.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Census Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-intro.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Spreadsheets</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-refresher.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Spreadsheet Refresher</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-filter-sort.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Sorting and filtering to find stories</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-formulas.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Spreadsheet Formulas</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-pivot.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Grouping with pivot tables</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./xl-sheets_cleaning.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Cleaning data with Google Sheets</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-start.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Getting started with R and RStudio</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-load-analyze-visualize.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Loading and Analyzing Data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./github.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Using GitHub</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r_aggregates_filters.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Aggregates &amp; Filters</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-mutating.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Mutating data</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r_visualizing_reporting.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">Visualizing your data for reporting</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-join-bind.html" class="sidebar-item-text sidebar-link active"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Joins</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-data-cleaning.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">Data Cleaning</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-geographic-basics.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Geographic data basics</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-geographic-analysis.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Geographic data analysis</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-tidycensus-api.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Intro to APIs: The Census</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-scraping.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Scraping data with Rvest</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./r-publication.html" class="sidebar-item-text sidebar-link"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">The top matter</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./appendix-math.html" class="sidebar-item-text sidebar-link">(APPENDIX) Appendix</a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#join-basics" id="toc-join-basics" class="nav-link active" data-scroll-target="#join-basics"> <span class="header-section-number">17.1</span> Join basics</a></li>
+  <li><a href="#matchmaking-with-joins" id="toc-matchmaking-with-joins" class="nav-link" data-scroll-target="#matchmaking-with-joins"> <span class="header-section-number">17.2</span> Matchmaking with joins</a>
+  <ul class="collapse">
+  <li><a href="#enterprise-joins" id="toc-enterprise-joins" class="nav-link" data-scroll-target="#enterprise-joins">“Enterprise” joins</a></li>
+  <li><a href="#find-cases-with-interesting-characteristics" id="toc-find-cases-with-interesting-characteristics" class="nav-link" data-scroll-target="#find-cases-with-interesting-characteristics">Find cases with interesting characteristics</a></li>
+  <li><a href="#summarize-data-against-another-dataset" id="toc-summarize-data-against-another-dataset" class="nav-link" data-scroll-target="#summarize-data-against-another-dataset">Summarize data against another dataset</a></li>
+  <li><a href="#types-of-joins" id="toc-types-of-joins" class="nav-link" data-scroll-target="#types-of-joins"> <span class="header-section-number">17.2.1</span> Types of joins</a></li>
+  <li><a href="#load-libraries" id="toc-load-libraries" class="nav-link" data-scroll-target="#load-libraries"> <span class="header-section-number">17.2.2</span> Load libraries</a></li>
+  <li><a href="#load-data" id="toc-load-data" class="nav-link" data-scroll-target="#load-data"> <span class="header-section-number">17.2.3</span> Load data</a></li>
+  <li><a href="#inner-join" id="toc-inner-join" class="nav-link" data-scroll-target="#inner-join"> <span class="header-section-number">17.2.4</span> Inner Join</a></li>
+  <li><a href="#left-joins" id="toc-left-joins" class="nav-link" data-scroll-target="#left-joins"> <span class="header-section-number">17.2.5</span> Left Joins</a></li>
+  </ul></li>
+  <li><a href="#anti-joins" id="toc-anti-joins" class="nav-link" data-scroll-target="#anti-joins"> <span class="header-section-number">17.3</span> Anti joins</a></li>
+  <li><a href="#joining-risks" id="toc-joining-risks" class="nav-link" data-scroll-target="#joining-risks"> <span class="header-section-number">17.4</span> Joining risks</a>
+  <ul class="collapse">
+  <li><a href="#double-counting-with-joins" id="toc-double-counting-with-joins" class="nav-link" data-scroll-target="#double-counting-with-joins"> <span class="header-section-number">17.4.1</span> Double counting with joins</a></li>
+  <li><a href="#losing-rows-with-joins" id="toc-losing-rows-with-joins" class="nav-link" data-scroll-target="#losing-rows-with-joins"> <span class="header-section-number">17.4.2</span> Losing rows with joins</a></li>
+  <li><a href="#merging-or-binding" id="toc-merging-or-binding" class="nav-link" data-scroll-target="#merging-or-binding"> <span class="header-section-number">17.4.3</span> Merging or Binding</a></li>
+  </ul></li>
+  <li><a href="#resources" id="toc-resources" class="nav-link" data-scroll-target="#resources"> <span class="header-section-number">17.5</span> Resources</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span id="r-verb-join" class="quarto-section-identifier d-none d-lg-block"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Joins</span></span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+    
+  </div>
+  
+
+</header>
+
+<div class="alert alert-secondary">
+<p class="alert-heading font-weight-bolder fs-3">
+</p><p>In this chapter:</p>
+<p></p>
+<ul>
+<li>A <code>join</code> combines two or more tables (data frames) by column.</li>
+<li>joining to data frames requires exact matches on one or more columns. Close matches don’t count.</li>
+<li>Use codes in one data frame to “look up” information in another, and attach it to a row, such as the translation of codes to words or demographics of a Census tract.</li>
+<li>Many public records databases come with “lookup tables” or “code sheets”. Make sure to ask for the codes AND their translations in a data request.</li>
+<li>Reporters don’t always stick to matchmaking the way the database designers intended. “Enterprise” joins are those that let you find needles in a haystack, such as bus drivers with a history of DUIs.</li>
+<li>Matching one data frame against an entirely different one will always produce errors. You can minimize the <em>kind</em> of error you fear most – false positives or false negatives – but you likely will have to report out your findings on the ground.</li>
+</ul>
+</div>
+<section id="join-basics" class="level2" data-number="17.1">
+<h2 data-number="17.1" class="anchored" data-anchor-id="join-basics"><span class="header-section-number">17.1</span> Join basics</h2>
+<p>“Join” in computer programming mean adding columns to a data frame by combining it with another data frame or table. Reporters use it in many ways, some intended by the people who made the data source, and some not.</p>
+<p>From now on, we’ll start using the term “table” instead of “data frame”, since we can talk about several different ones at the same time.</p>
+<p>Many databases are created expecting you to join tables (data frames) because it’s a more efficient way to store and work with large databases. This is what’s called a “relational database”, and they’re everywhere.</p>
+<p>Here’s an example, using campaign finance information. The Federal Elections Commission distributes campaign contribution in <em>related</em> tables, each referring to a different noun. One table lists donations, the other lists candidates and other political action committees. They link together using a common code:</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="assets/r-verb-join-diagram.png" class="img-fluid figure-img" style="width:100.0%"></p>
+<p></p><figcaption class="figure-caption">Campaign finance join</figcaption><p></p>
+</figure>
+</div>
+<p>The reason to do this is that you never have to worry that any changes to the candidate information – the treasurer, the address or the office sought – carries over to the donation. It’s only listed once in the candidate table. Most large databases are constructed this way. For example:</p>
+<ul>
+<li>Your school records are held using your student ID, which means that your address and home email only needs to be changed once, not in every class or in every account you have with the school.</li>
+<li>Inspection records, such as those for restaurants, hospitals, housing code violations and workplace safety, typically have at least <em>three</em> tables: The establishment (like a restaurant or a workplace), an inspection (an event on a date), and a violation (something that they found). They’re linked together using establishment ID’s.</li>
+<li>A court database usually has many types of records: A master case record links to information on charges, defendants, lawyers, sentences and court hearings.</li>
+</ul>
+<p>Each table, then, is described using a different noun – candidates or contributions; defendants or cases; students or courses. This conforms to the <strong>tidy data</strong> principle that different types of information are stored in different tables.</p>
+</section>
+<section id="matchmaking-with-joins" class="level2" data-number="17.2">
+<h2 data-number="17.2" class="anchored" data-anchor-id="matchmaking-with-joins"><span class="header-section-number">17.2</span> Matchmaking with joins</h2>
+<p>The political data type of join described above is often referred to as a “lookup table”. You’ll match codes to their meanings in a way that was intended by the people who made the database. But there are other ways reporters use joins:</p>
+<section id="enterprise-joins" class="level3 unnumbered">
+<h3 class="unnumbered anchored" data-anchor-id="enterprise-joins">“Enterprise” joins</h3>
+<p>Journalists have taken to calling a specific kind of join “enterprise”, referring to the enterprising reporters who do this. Here, you’ll look for needles in a haystack. Some of the most famous data journalism investigations relied on joining two databases that started from completely different sources, such as:</p>
+<ul>
+<li>Bus drivers who had DUI citations</li>
+<li>Donors to a governor who got contracts from the state</li>
+<li>Day care workers with criminal records</li>
+<li>Small businesses that have defaulted on government backed loans that got a PPP loan anyway.</li>
+</ul>
+<p>When you match these kinds of datasets, you will always have some error. You always have to report out any suspected matches, so they are time consuming stories.</p>
+<p>In the mid-2000s, when some politicians insisted that dead people were voting and proposed measures to restrict registration, almost every regional news organization sent reporters on futile hunts for the dead voters. They got lists of people on the voter rolls, then lists of people who had died through the Social Security Death Index or local death certificates. I never met anyone who found a single actual dead voter, but months of reporter-hours were spent tracking down each lead.</p>
+<p>It’s very common for two people to have the same name in a city. In fact, it’s common to have two people at the same home with the same name – they’ve just left off “Jr.” and “Sr.” in the database. In this case, you’ll find matches that you shouldn’t. These are false positives, or Type I errors in statistics.</p>
+<p>Also, we rarely get dates of birth or Social Security Numbers in public records, so we have to join by name and sometimes location. If someone has moved, sometimes uses a nickname, or the government has recorded the spelling incorrectly, the join will fail – you’ll miss some of the possible matches. This is very common with company names, which can change with mergers and other changes in management, and can be listed in many different ways.</p>
+<p>These are false negatives, or Type II errors in statistics.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
+<p>In different contexts, you’ll want to minimize different kinds of errors. For example, if you are looking for something extremely rare, and you want to examine every possible case – like a child sex offender working in a day care center – you might choose to make a “loose” match and get lots of false positives, which you can check. If you want to limit your reporting only to the most promising leads, you’ll be willing to live with missing some cases in order to be more sure of the joins you find.</p>
+<p>You’ll see stories of this kind write around the lack of precision – they’ll often say, “we verified x cases of….” rather than pretend that they know of them all.</p>
+</section>
+<section id="find-cases-with-interesting-characteristics" class="level3 unnumbered">
+<h3 class="unnumbered anchored" data-anchor-id="find-cases-with-interesting-characteristics">Find cases with interesting characteristics</h3>
+<p>You’ll often want to learn more about a geographic area’s demographics or voting habits or other characteristics, and match it to other data. Sometimes it’s simple: Find the demographics of counties that switched from Trump to Biden as a way to isolate places you might want to visit. Another example from voting might be to find the precinct that has the highest percentage of Latino citizens in the county, then match that precinct against the voter registration rolls to get a list of people you might want to interview on election day. In these instances, the <code>join</code> is used for a <code>filter</code>.</p>
+<p>This is also common when you have data by zip code or some other geography, and you want to find clusters of interesting potential stories, such as PPP loans in minority neighborhoods.</p>
+</section>
+<section id="summarize-data-against-another-dataset" class="level3 unnumbered">
+<h3 class="unnumbered anchored" data-anchor-id="summarize-data-against-another-dataset">Summarize data against another dataset</h3>
+<p>The previous examples all result in lists of potential story people or places. If you use join on summarized data, you can characterize a broad range of activity across new columns. Simplified, this is how you can write that more PPP money went to predominantly white neighborhoods than those that were majority Black.</p>
+</section>
+<section id="types-of-joins" class="level3" data-number="17.2.1">
+<h3 data-number="17.2.1" class="anchored" data-anchor-id="types-of-joins"><span class="header-section-number">17.2.1</span> Types of joins</h3>
+<p>There are several types of joins, each connecting two tables in a slightly different matter. The most important ones are:</p>
+<ul>
+<li>inner_join</li>
+<li>left_join</li>
+<li>anti_join</li>
+</ul>
+<p>We’ll explore how each of these work in example code below:</p>
+</section>
+<section id="load-libraries" class="level3" data-number="17.2.2">
+<h3 data-number="17.2.2" class="anchored" data-anchor-id="load-libraries"><span class="header-section-number">17.2.2</span> Load libraries</h3>
+<div class="cell">
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'dplyr' was built under R version 4.2.3</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'stringr' was built under R version 4.2.3</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.1.4     ✔ readr     2.1.4
+✔ forcats   1.0.0     ✔ stringr   1.5.1
+✔ ggplot2   3.4.2     ✔ tibble    3.2.1
+✔ lubridate 1.9.3     ✔ tidyr     1.3.0
+✔ purrr     1.0.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors</code></pre>
+</div>
+</div>
+</section>
+<section id="load-data" class="level3" data-number="17.2.3">
+<h3 data-number="17.2.3" class="anchored" data-anchor-id="load-data"><span class="header-section-number">17.2.3</span> Load data</h3>
+<p>We’re going to load four tables to demonstrate different types of joins. All contain information from the U.S. Census 2019 American Community Survey for Maryland counties. Load and examine them.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="do">###</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Total population for each Maryland county </span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># County identified by GEOID (a 5-digit code), not name</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="do">###</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>maryland_county_population <span class="ot">&lt;-</span> <span class="fu">read_rds</span>(<span class="st">"assets/data/maryland_county_population.rds"</span>)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="do">###</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="co"># A lookup table that shows the name of each Maryland county, paired with GEOID</span></span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="do">###</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>maryland_county_lookup_table <span class="ot">&lt;-</span> <span class="fu">read_rds</span>(<span class="st">"assets/data/maryland_county_lookup_table.rds"</span>)</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="do">###</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Total population for each Maryland county, EXCEPT for Prince George's County</span></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="co"># County identified by GEOID (a 5-digit code), not name</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a><span class="do">###</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>maryland_county_population_no_pg <span class="ot">&lt;-</span> <span class="fu">read_rds</span>(<span class="st">"assets/data/maryland_county_population_no_pg.rds"</span>)</span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a><span class="do">###</span></span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Display the tables</span></span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a><span class="do">###</span></span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>maryland_county_population</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 24 × 2
+   geoid total_pop
+   &lt;chr&gt;     &lt;dbl&gt;
+ 1 24001     71002
+ 2 24003    575421
+ 3 24005    828193
+ 4 24009     92094
+ 5 24011     33260
+ 6 24013    168233
+ 7 24015    102889
+ 8 24017    161448
+ 9 24019     31994
+10 24021    255955
+# ℹ 14 more rows</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>maryland_county_lookup_table</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 24 × 2
+   geoid name                         
+   &lt;chr&gt; &lt;chr&gt;                        
+ 1 24001 Allegany County, Maryland    
+ 2 24003 Anne Arundel County, Maryland
+ 3 24005 Baltimore County, Maryland   
+ 4 24009 Calvert County, Maryland     
+ 5 24011 Caroline County, Maryland    
+ 6 24013 Carroll County, Maryland     
+ 7 24015 Cecil County, Maryland       
+ 8 24017 Charles County, Maryland     
+ 9 24019 Dorchester County, Maryland  
+10 24021 Frederick County, Maryland   
+# ℹ 14 more rows</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>maryland_county_population_no_pg </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 23 × 2
+   geoid total_pop
+   &lt;chr&gt;     &lt;dbl&gt;
+ 1 24001     71002
+ 2 24003    575421
+ 3 24005    828193
+ 4 24009     92094
+ 5 24011     33260
+ 6 24013    168233
+ 7 24015    102889
+ 8 24017    161448
+ 9 24019     31994
+10 24021    255955
+# ℹ 13 more rows</code></pre>
+</div>
+</div>
+</section>
+<section id="inner-join" class="level3" data-number="17.2.4">
+<h3 data-number="17.2.4" class="anchored" data-anchor-id="inner-join"><span class="header-section-number">17.2.4</span> Inner Join</h3>
+<p>The table <code>maryland_county_population</code> has two columns, one with a <code>geoid</code> code representing each Maryland county (and Baltimore city), and another with total population. The <code>maryland_county_lookup_table</code> is a classic example of a lookup table. It contains the same <code>geoid</code> representing each Maryland county, plus a name column with the proper name.</p>
+<p>We are going to join <code>maryland_county_population</code>, using the one column both share: <code>geoid</code>. We’ll use an <code>inner_join</code>. The code below says: “Connect the two tables on the <code>geoid</code> column. If a given <code>geoid</code> exists in both tables, include it in our new table. If it isn’t in both, don’t include it.”</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>updated_maryland_county_population <span class="ot">&lt;-</span> maryland_county_lookup_table <span class="sc">%&gt;%</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">inner_join</span>(maryland_county_population, <span class="at">by=</span><span class="st">"geoid"</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>updated_maryland_county_population </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 24 × 3
+   geoid name                          total_pop
+   &lt;chr&gt; &lt;chr&gt;                             &lt;dbl&gt;
+ 1 24001 Allegany County, Maryland         71002
+ 2 24003 Anne Arundel County, Maryland    575421
+ 3 24005 Baltimore County, Maryland       828193
+ 4 24009 Calvert County, Maryland          92094
+ 5 24011 Caroline County, Maryland         33260
+ 6 24013 Carroll County, Maryland         168233
+ 7 24015 Cecil County, Maryland           102889
+ 8 24017 Charles County, Maryland         161448
+ 9 24019 Dorchester County, Maryland       31994
+10 24021 Frederick County, Maryland       255955
+# ℹ 14 more rows</code></pre>
+</div>
+</div>
+<p>Because both tables contained the same 24 counties, our new table has 24 counties as well.</p>
+<p>(In this case, they have the same column name, but they don’t have to. As long as they CONTAIN the same thing, they can have different names. You can also join using more than one column).</p>
+<p>What happens when they aren’t identical?</p>
+<p>To illustrate what happens, let’s run the same code, but this time use population table that contains every Maryland county EXCEPT for Prince George’s County. This table only has 23 rows. The lookup table still has 24.</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 23 × 3
+   geoid name                          total_pop
+   &lt;chr&gt; &lt;chr&gt;                             &lt;dbl&gt;
+ 1 24001 Allegany County, Maryland         71002
+ 2 24003 Anne Arundel County, Maryland    575421
+ 3 24005 Baltimore County, Maryland       828193
+ 4 24009 Calvert County, Maryland          92094
+ 5 24011 Caroline County, Maryland         33260
+ 6 24013 Carroll County, Maryland         168233
+ 7 24015 Cecil County, Maryland           102889
+ 8 24017 Charles County, Maryland         161448
+ 9 24019 Dorchester County, Maryland       31994
+10 24021 Frederick County, Maryland       255955
+# ℹ 13 more rows</code></pre>
+</div>
+</div>
+<p>When we join, we get only 23 rows. One table had every Maryland county. The other had every county but Prince George’s. When we inner join, only values that both tables have in common are returned. Thus, we get a table without P.G.</p>
+<p>This gif from https://github.com/gadenbuie/tidyexplain shows what happens with inner_joins.</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="assets/inner-join.gif" class="img-fluid" style="width:100.0%"></p>
+</div>
+</div>
+</section>
+<section id="left-joins" class="level3" data-number="17.2.5">
+<h3 data-number="17.2.5" class="anchored" data-anchor-id="left-joins"><span class="header-section-number">17.2.5</span> Left Joins</h3>
+<p>Let’s stick with our mismatched tables to illustrate what happens with another type of join, a left join (and it’s cousin, the right join). The code is the same, but we’ve swapped <code>left_join</code> for <code>inner_join</code>. Remember, our population table is missing P.G. county, but the lookup table has it.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>updated_maryland_county_population_no_pg <span class="ot">&lt;-</span> maryland_county_lookup_table <span class="sc">%&gt;%</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(maryland_county_population_no_pg, <span class="at">by=</span><span class="st">"geoid"</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>updated_maryland_county_population_no_pg</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 24 × 3
+   geoid name                          total_pop
+   &lt;chr&gt; &lt;chr&gt;                             &lt;dbl&gt;
+ 1 24001 Allegany County, Maryland         71002
+ 2 24003 Anne Arundel County, Maryland    575421
+ 3 24005 Baltimore County, Maryland       828193
+ 4 24009 Calvert County, Maryland          92094
+ 5 24011 Caroline County, Maryland         33260
+ 6 24013 Carroll County, Maryland         168233
+ 7 24015 Cecil County, Maryland           102889
+ 8 24017 Charles County, Maryland         161448
+ 9 24019 Dorchester County, Maryland       31994
+10 24021 Frederick County, Maryland       255955
+# ℹ 14 more rows</code></pre>
+</div>
+</div>
+<p>What happens? Everywhere there’s a match on GEOID, the population value is returned.</p>
+<p>But look closely at Prince George’s County. Its value is NA.</p>
+<p>A <code>left_join</code> says “Return every single value from our first table – in this case the lookup table, with 24 rows. Where there’s a match with the population table, make the match. If there is no match, just put NA.”</p>
+<p>Unlike the <code>inner_join</code>, the <code>left_join</code> returned P.G. county despite it’s lack of a match.</p>
+<p>This gif from https://github.com/gadenbuie/tidyexplain shows what happens with left_joins.</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="assets/left-join.gif" class="img-fluid" style="width:100.0%"></p>
+</div>
+</div>
+<p>A note: <code>left_join</code> has a close cousin called the <code>right_join</code> which isn’t used very often, and we won’t delve into here. It’s basically the same thing, it just starts from the second table, not the first.</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="assets/right-join.gif" class="img-fluid" style="width:100.0%"></p>
+</div>
+</div>
+</section>
+</section>
+<section id="anti-joins" class="level2" data-number="17.3">
+<h2 data-number="17.3" class="anchored" data-anchor-id="anti-joins"><span class="header-section-number">17.3</span> Anti joins</h2>
+<p>An <code>anti_join</code> is useful for seeing what values exist in one table that are missing from another table. It comes in handy during data cleaning and when writing more advanced functions. The code below says: “Connect the two tables, but only show me rows that exist in the lookup table, but DO NOT exist in the population table.”</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>updated_maryland_county_population_no_pg <span class="ot">&lt;-</span> maryland_county_lookup_table <span class="sc">%&gt;%</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anti_join</span>(maryland_county_population_no_pg, <span class="at">by=</span><span class="st">"geoid"</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>updated_maryland_county_population_no_pg</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 1 × 2
+  geoid name                            
+  &lt;chr&gt; &lt;chr&gt;                           
+1 24033 Prince George's County, Maryland</code></pre>
+</div>
+</div>
+<p>This gif from https://github.com/gadenbuie/tidyexplain shows what happens with anti_joins.</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="assets/anti-join.gif" class="img-fluid" style="width:100.0%"></p>
+</div>
+</div>
+</section>
+<section id="joining-risks" class="level2" data-number="17.4">
+<h2 data-number="17.4" class="anchored" data-anchor-id="joining-risks"><span class="header-section-number">17.4</span> Joining risks</h2>
+<p>There are lots of risks in joining tables that you created yourself, or that were created outside a big relational database system. Keep an eye on the number of rows returned every time that you join – you should know what to expect.</p>
+<section id="double-counting-with-joins" class="level3" data-number="17.4.1">
+<h3 data-number="17.4.1" class="anchored" data-anchor-id="double-counting-with-joins"><span class="header-section-number">17.4.1</span> Double counting with joins</h3>
+<p>We won’t go into this in depth, but just be aware it’s easy to double-count rows when you join. Here’s a made-up example, in which a zip code is on the border and is in two counties:</p>
+<p>Say you want to use some data on zip codes :</p>
+<table class="table">
+<thead>
+<tr class="header">
+<th>zip code</th>
+<th>county</th>
+<th>info</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>21012</td>
+<td>PG</td>
+<td>some data</td>
+</tr>
+<tr class="even">
+<td>21012</td>
+<td>Baltimore</td>
+<td>some more data</td>
+</tr>
+</tbody>
+</table>
+<p>and match it to a list of restaurants in a zip code:</p>
+<table class="table">
+<thead>
+<tr class="header">
+<th>zip code</th>
+<th>restaurant name</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>21012</td>
+<td>My favorite restaurant</td>
+</tr>
+<tr class="even">
+<td>21012</td>
+<td>My second-favorite restaurant</td>
+</tr>
+</tbody>
+</table>
+<p>When you match these on zip code, you’ll get <strong>4</strong> rows:</p>
+<table class="table">
+<thead>
+<tr class="header">
+<th>zip code</th>
+<th>county</th>
+<th>info</th>
+<th>restaurant name</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>21012</td>
+<td>PG</td>
+<td>some data</td>
+<td>My favorite restaurant</td>
+</tr>
+<tr class="even">
+<td>21012</td>
+<td>Baltimore</td>
+<td>some more data</td>
+<td>My favorite restaurant</td>
+</tr>
+<tr class="odd">
+<td>21012</td>
+<td>PG</td>
+<td>some data</td>
+<td>My second-favorite restaurant</td>
+</tr>
+<tr class="even">
+<td>21012</td>
+<td>Baltimore</td>
+<td>some more data</td>
+<td>My second-favority restaurant</td>
+</tr>
+</tbody>
+</table>
+<p>Now, every time you try to count restaurants, these two will be double-counted.</p>
+<p>In computing, this is called a “many-to-many” relationship – there are many rows of zip codes and many rows of restaurants. In journalism, we call it spaghetti. It’s usually an unintended mess.</p>
+<p>Here’s a gif that shows the double counting in action.</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="assets/left-join-extra.gif" class="img-fluid" style="width:100.0%"></p>
+</div>
+</div>
+</section>
+<section id="losing-rows-with-joins" class="level3" data-number="17.4.2">
+<h3 data-number="17.4.2" class="anchored" data-anchor-id="losing-rows-with-joins"><span class="header-section-number">17.4.2</span> Losing rows with joins</h3>
+<p>The opposite can occur if you aren’t careful and there are items you want to keep that are missing in your reference table. That’s what happened in the immunization data above for the seven schools that I couldn’t find.</p>
+</section>
+<section id="merging-or-binding" class="level3" data-number="17.4.3">
+<h3 data-number="17.4.3" class="anchored" data-anchor-id="merging-or-binding"><span class="header-section-number">17.4.3</span> Merging or Binding</h3>
+<p>Joins are one way to combine two data sets, using shared values in one or more columns. Binding two data sets together is another way.</p>
+<p>Let’s suppose we have two tables with population information for Maryland counties, each with the same columns: geoid, name and total population.</p>
+<ul>
+<li>One has information for Maryland’s 10 largest counties by population</li>
+<li>The other has information for every other Maryland county.</li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="do">###</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Total population for each top-10 largest Maryland county </span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a><span class="co"># County identified by GEOID (a 5-digit code) and name</span></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a><span class="do">###</span></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>maryland_large_county_population <span class="ot">&lt;-</span> <span class="fu">read_rds</span>(<span class="st">"assets/data/maryland_large_county_population.rds"</span>)</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="do">###</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Total population for all other Maryland counties</span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a><span class="co"># County identified by GEOID (a 5-digit code) and name</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a><span class="do">###</span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>maryland_small_county_population <span class="ot">&lt;-</span> <span class="fu">read_rds</span>(<span class="st">"assets/data/maryland_small_county_population.rds"</span>)</span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Display</span></span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>maryland_large_county_population</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 10 × 3
+   geoid name                             total_pop
+   &lt;chr&gt; &lt;chr&gt;                                &lt;dbl&gt;
+ 1 24031 Montgomery County, Maryland        1047661
+ 2 24033 Prince George's County, Maryland    910551
+ 3 24005 Baltimore County, Maryland          828193
+ 4 24510 Baltimore city, Maryland            602274
+ 5 24003 Anne Arundel County, Maryland       575421
+ 6 24027 Howard County, Maryland             322407
+ 7 24021 Frederick County, Maryland          255955
+ 8 24025 Harford County, Maryland            253736
+ 9 24013 Carroll County, Maryland            168233
+10 24017 Charles County, Maryland            161448</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>maryland_small_county_population</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 14 × 3
+   geoid name                          total_pop
+   &lt;chr&gt; &lt;chr&gt;                             &lt;dbl&gt;
+ 1 24029 Kent County, Maryland             19456
+ 2 24039 Somerset County, Maryland         25699
+ 3 24023 Garrett County, Maryland          29155
+ 4 24019 Dorchester County, Maryland       31994
+ 5 24011 Caroline County, Maryland         33260
+ 6 24041 Talbot County, Maryland           37087
+ 7 24035 Queen Anne's County, Maryland     50163
+ 8 24047 Worcester County, Maryland        51967
+ 9 24001 Allegany County, Maryland         71002
+10 24009 Calvert County, Maryland          92094
+11 24015 Cecil County, Maryland           102889
+12 24045 Wicomico County, Maryland        103222
+13 24037 St. Mary's County, Maryland      113182
+14 24043 Washington County, Maryland      150575</code></pre>
+</div>
+</div>
+<p>If we want to combine these tables into one dataset with every county’s information, a join isn’t the way to go. For that, we’d use <code>bind_rows()</code>. Thick of bind_rows as stacking two tables on top of each other. This code gives us 24 rows.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>all_county_population <span class="ot">&lt;-</span> maryland_small_county_population <span class="sc">%&gt;%</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bind_rows</span>(maryland_large_county_population)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>all_county_population</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 24 × 3
+   geoid name                          total_pop
+   &lt;chr&gt; &lt;chr&gt;                             &lt;dbl&gt;
+ 1 24029 Kent County, Maryland             19456
+ 2 24039 Somerset County, Maryland         25699
+ 3 24023 Garrett County, Maryland          29155
+ 4 24019 Dorchester County, Maryland       31994
+ 5 24011 Caroline County, Maryland         33260
+ 6 24041 Talbot County, Maryland           37087
+ 7 24035 Queen Anne's County, Maryland     50163
+ 8 24047 Worcester County, Maryland        51967
+ 9 24001 Allegany County, Maryland         71002
+10 24009 Calvert County, Maryland          92094
+# ℹ 14 more rows</code></pre>
+</div>
+</div>
+<p><strong>Question #1: </strong> Answer this question in English: Write in Elms</p>
+<p>You have a dataframe that contains information on the population of each Maryland county, structured like this example (the column headers and one example row):</p>
+<p>geoid | name | total_pop 24029 | Kent County, Maryland | 19456</p>
+<p>You have another dataframe with a count of large employers (over 10000 workers) by county in Maryland, structured like this example (the column headers and one example row):</p>
+<p>name | number_of_large employers Kent County | 15</p>
+<p>You want to join these two dataframes to answer the question “which Maryland county has the highest number of large employees per person?”</p>
+<p>What do you think will happen when you attempt to “inner_join” these two tables?</p>
+</section>
+</section>
+<section id="resources" class="level2" data-number="17.5">
+<h2 data-number="17.5" class="anchored" data-anchor-id="resources"><span class="header-section-number">17.5</span> Resources</h2>
+<ul>
+<li><p>The “<a href="https://r4ds.had.co.nz/relational-data.html">Relational data</a>” chapter in the R for Data Science textbook has details on exactly how a complex data set might fit together.</p></li>
+<li><p><a href="https://stat545.com/join-cheatsheet.html#left_joinsuperheroes-publishers">An example using a superheroes dataset</a>, from Stat 545 at the University of British Columbia</p></li>
+</ul>
+
+
+</section>
+<section class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn1" role="doc-endnote"><p>I remember them by thinking of the boy who cried wolf. When the village came running and there was no wolf, it was a Type I error, or false positive ; when the village ignored the boy and there was a wolf, it was a Type II error, or false negative.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    target: function(trigger) {
+      return trigger.previousElementSibling;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    setTimeout(function() {
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      let href = ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const cites = ref.parentNode.getAttribute('data-cites').split(' ');
+    tippyHover(ref, function() {
+      var popup = window.document.createElement('div');
+      cites.forEach(function(cite) {
+        var citeDiv = window.document.createElement('div');
+        citeDiv.classList.add('hanging-indent');
+        citeDiv.classList.add('csl-entry');
+        var biblioDiv = window.document.getElementById('ref-' + cite);
+        if (biblioDiv) {
+          citeDiv.innerHTML = biblioDiv.innerHTML;
+        }
+        popup.appendChild(citeDiv);
+      });
+      return popup.innerHTML;
+    });
+  }
+});
+</script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./r_visualizing_reporting.html" class="pagination-link">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">Visualizing your data for reporting</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./r-data-cleaning.html" class="pagination-link">
+        <span class="nav-page-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">Data Cleaning</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+</body></html>

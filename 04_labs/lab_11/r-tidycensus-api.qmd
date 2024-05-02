@@ -1,0 +1,240 @@
+# Intro to APIs: The Census
+
+## API overview
+
+When we've brought data in R to analyze up to this point, we've mostly been working with CSVs stored on our local computers or read them off the internet. 
+
+But there are many, many ways to bring data into R. Today we're going to learn a new method that will allow us to pull data stored in a third-party database using a thing called an API or application programming interface.  API means different things in different contexts, but in this case it means "a way to get data we want stored in a third-party database, in specific ways that third-party allows."     
+[Twitter's API](https://developer.twitter.com/en/docs) lets us pull in a user's tweets for text analysis. 
+
+[Spotify](https://developer.spotify.com/documentation/web-api/) lets us ingest a bunch of information about what people are listening to. 
+
+You can access data available through pretty much any API, or application programming interface, by sending a "query" and getting back a response, using the excellent [HTTR package](https://httr.r-lib.org/). That process is a bit complicated for this introduction.
+
+Fortunately, users in the R communities have developed dozens of packages that allow us to pull data from APIs without learning a bunch of complex new programming concepts. These packages hide all the messy bits of connecting to an API inside of handy functions that are easier to use. 
+
+Here are some great examples:
+
+*[Tidycensus](https://walkerke.github.io/tidycensus/index.html): for loading and working with all manner of U.S. Census Data. This is what we'll work with today.
+*[RTweet](https://rtweet.info/): want to analyze all of Trump's tweets (before he got banned) this will help you.
+*[SpotifyR](https://github.com/charlie86/spotifyr): want to know what key most Taylor Swift songs are in?  This can help you. 
+*[cfbfastR](https://cfbfastr.sportsdataverse.org/): want to analyze play-by-play data for your favorite college football team? Look no further.
+*[wehoop](https://github.com/sportsdataverse/wehoop/): want to know more about your favorite WNBA team? Here you go. 
+*[sportsdataverse](https://sportsdataverse.org/): is a collection of API wrappers for a dozen sports leagues, including hockey, soccer, baseball and even chess.
+*[ARCOS](https://github.com/wpinvestigative/arcos): want to know where the most opioids were shipped by drug companies over the last decade. This API from the Post will help.
+*[gmailr](https://cran.r-project.org/web/packages/gmailr/index.html) Feel like ingesting your email inbox into R and analyzing it?  Or sending emails from R Studio? This will help.
+
+We'll be working with U.S. Census data today, and the tidycensus package.
+
+## Using Tidycensus
+
+There is truly an astonishing amount of data collected by the US Census Bureau. First, there's the Census that most people know -- the every 10 year census. That's the one mandated by the Constitution where the government attempts to count every person in the US. It's a mind-boggling feat to even try, and billions get spent on it. That data is used first for determining how many representatives each state gets in Congress. From there, the Census gets used to divide up billions of dollars of federal spending.
+
+To answer the questions the government needs to do that, a ton of data gets collected. That, unfortunately, means the Census is exceedingly complicated to work with. 
+
+The good news is, the Census has an API -- an application programming interface. What that means is we can get data directly through the Census Bureau's database via calls over the internet.
+
+Let's demonstrate.
+
+We're going to use a library called `tidycensus` which makes calls to the Census API in a very tidy way, and gives you back tidy data. That means we don't have to go through the process of importing the data from a file. 
+
+I can't tell you how amazing this is, speaking from experience. The documentation for this library is [here](https://walker-data.com/tidycensus/). 
+
+First we need to install `tidycensus` using the console: `install.packages("tidycensus")`
+
+Now load both the tidyverse and tidycensus and janitor.
+
+```{r}
+library(tidyverse)
+library(tidycensus)
+library(janitor)
+```
+
+To use the API, you need an API key. An API key is just a password.  You'll run a function to get data from the Census, essentially knocking on the agency's data door. Before it will let you know, it will ask for your password.  
+
+Some APIs are open for access without a password. But most are like the Census, which require you to have some sort of authentication key. 
+
+To get that for the Census, you need to [apply for an API key with the Census Bureau](https://api.census.gov/data/key_signup.html). It takes a few minutes and you need to activate your key via email. Once you have your key, you need to set that for this session. Just FYI: Your key is your key. Do not share it around.
+
+In the code block below, replace YOUR KEY HERE with your key you get by email.  It's a long string of letters and numbers, like this: 549950d36c22ff16455fe196bbbd01d63cf. Don't use this one. It won't work. Use your own. 
+
+```{r}
+census_api_key("PUT YOUR OWN KEY HERE!!!", install=TRUE, overwrite = TRUE)
+
+
+```
+
+The two main functions in tidycensus are `get_decennial`, which retrieves data from the 2000 and 2010 Censuses (and soon the 2020 Census), and `get_acs`, which pulls data from the American Community Survey, a between-Censuses annual survey that provides estimates, not hard counts, but asks more detailed questions. 
+
+If you're new to Census data, there's [a very good set of slides from Kyle Walker](http://walker-data.com/umich-workshop/census-data-in-r/slides/#1), the creator of tidycensus, and he's working on a [book](https://walker-data.com/census-r/index.html) that you can read for free online.
+
+It's important to keep in mind that Census data represents people - you, your neighbors and total strangers. It also requires some level of definitions, especially about race & ethnicity, that may or may not match how you define yourself or how others define themselves.
+
+So to give you some idea of how complicated the data is, let's pull up just one file from the decennial Census. We'll use a file called "pl", which is short for "public law", which is named that for reasons too boring to delve into here. It represents the first set of data released from the 2020 Census, and it only contains basics about total population counts, counts by race, and housing information. 
+
+This function `load_variables` returns a dataframe of all of the different variables available in the pl dataset.  This table has three columns.  
+
+* name: a unique code for a given variable. 
+* label: a description of what that variable describes.
+* concept: a larger category that the label sits under. 
+
+```{r}
+pl_2020 <- load_variables(2020, "pl", cache = TRUE)
+
+pl_2020
+```
+
+For example: P1_001N (row 4) represents the total population. P1_003N (row 5) represents the total white population.  
+
+Let's start by getting the total population of each state in 2020. For that we'll use a function called `get_decennial` and we're feeding it three arguments. 
+
+* geography: do we want the information for each state? for each county? for all the census tracts in a single county? Depending on what we geography we select, we get something else back. We'll pick `state` here.
+* variables: what information do we want from the Census.  We used the `load_variables` function to identify the code for total population above, so we'll plug it in here `P1_001N`.
+* year: do we want 2020 data? 2010? We'll pick 2020 here.
+
+```{r}
+
+total_pop_2020 <- get_decennial(geography="state", variables="P1_001N", year=2020)
+
+total_pop_2020
+```
+
+What's the biggest state by population?  We can sort by the value column.
+
+```{r}
+
+total_pop_2020 <- get_decennial(geography="state", variables="P1_001N", year=2020) %>%
+  arrange(desc(value))
+
+total_pop_2020
+```
+
+Let's also clean those funky column names, rename `value` and `name` to what they actually represent, and get rid of the geoid and variable column.
+
+```{r}
+
+total_pop_2020 <- get_decennial(geography="state", variables="P1_001N", year=2020) %>%
+  clean_names() %>%
+  arrange(desc(value)) %>%
+  rename(total_population = value,
+         state = name) %>%
+  select(state, total_population)
+
+total_pop_2020
+```
+
+What if we wanted to calculate the percentage of the population of the entire US that identified as white alone? We can write a slightly modified function. We'll set the geography to `US` and add another variable code, the one for the white alone population `P1_003N`.  
+
+```{r}
+
+pct_white_2020 <- get_decennial(geography="us", variables=c("P1_001N","P1_003N"), year=2020) 
+
+pct_white_2020
+```
+
+It returns two rows, one for each variable.  This "long" format will make it hard to answer our question, so we're going to run our function again, but reshape the data a bit to make it "wide". (Behind the scenes, they're using `pivot_wider()`).
+
+```{r}
+
+pct_white_2020 <- get_decennial(geography="us", variables=c("P1_001N","P1_003N"), year=2020, output="wide") 
+
+pct_white_2020
+
+```
+Those column names are not helpful, so let's rename them, and remove the GEOID.   
+
+```{r}
+
+pct_white_2020 <- get_decennial(geography="us", variables=c("P1_001N","P1_003N"), year=2020, output="wide") %>%
+  rename(geography = NAME,
+         total_pop = P1_001N,
+         white_pop = P1_003N) %>%
+  select(-GEOID)
+
+pct_white_2020
+
+```
+
+Finally, let's calculate the percentage.
+
+```{r}
+
+pct_white_2020 <- get_decennial(geography="us", variables=c("P1_001N","P1_003N"), year=2020, output="wide") %>%
+  rename(geography = NAME,
+         total_pop = P1_001N,
+         white_pop = P1_003N) %>%
+  select(-GEOID) %>%
+  mutate(pct_white = white_pop/total_pop*100)
+
+pct_white_2020
+
+```
+## The ACS
+
+Between the decennial censuses, the bureau releases results from the American Community Survey on a yearly schedule. It asks much more detailed questions than the decennial census.  
+
+The bad news is that it's more complicated because it's more like survey data with a large sample. That means there's margins of error and confidence intervals to worry about. 
+
+By default, using `get_acs` fetches data from the 5-year average estimates (currently 2016-2021), but you can specify 1-year estimates for jurisdictions with at least 65,000 people (many counties and cities).
+
+Here's an example using the 5-year ACS estimates. Let's ask: what is Maryland's richest county?
+
+One way we can measure this is by median household income. That variable is `B19013_001`, so we can get that data like this:
+```{r}
+md <- get_acs(geography = "county",
+              variables = c(median_income = "B19013_001"),
+              state = "MD",
+              year = 2020) %>%
+  arrange(desc(estimate))
+
+md
+
+```
+
+Howard, Calvert, Montgomery, Anne Arundel, Charles. What do they all have in common? Lots of suburban flight from DC and Baltimore. 
+
+But do the margins of error -- `moe` -- let us say one county is richer than the other? 
+
+We can find this out visually using error bars. Don't worry much about the code here --  we'll cover that in a later lab.
+
+```{r}
+md %>%
+  mutate(NAME = gsub(" County, Maryland", "", NAME)) %>%
+  ggplot(aes(x = estimate, y = reorder(NAME, estimate))) +
+  geom_errorbarh(aes(xmin = estimate - moe, xmax = estimate + moe)) +
+  geom_point(color = "red") +
+  labs(title = "Household income by county in Maryland",
+       subtitle = "2015-2019 American Community Survey",
+       y = "",
+       x = "ACS estimate (bars represent margin of error)")
+```
+
+As you can see, some of the error bars are quite wide. Some are narrow. But if the bars overlap, it means the difference between the two counties is within the margin of error, and the differences aren't statistically significant. So is the difference between Calvert and Montgomery significant? Nope. Is the difference between Howard and everyone else significant? Yes it is.
+
+
+**Question #1: **
+
+Run this code to load a table of variables available in the American Community Survey.
+
+```{r}
+
+acs_variable <- load_variables(dataset = "acs5", year=2020)
+
+```
+
+Write code to answer this question, from the American Community Survey. 
+
+Which US state has the largest male population. 
+
+What is the state and what is the percentage? Post the state, the population AND the code you wrote to produce it on ELMS. Use the American Community Survey for this.
+
+```{r}
+male <- get_acs(geography = "state",
+              variables = c(male_population = "B01001_002", "B01001_001"),
+              year = 2020) %>%
+  arrange(desc(estimate))
+
+md
+
+#B01001 SEX BY AGE
+```
