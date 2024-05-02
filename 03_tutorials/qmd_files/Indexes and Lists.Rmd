@@ -1,0 +1,333 @@
+---
+title: "Indexes and Lists"
+author: "Wells"
+date: "2024-04-18"
+output: html_document
+---
+
+
+```{r}
+#install.packages("here")
+here::here()
+library(tidyverse)
+library(tidyr)
+#install.packages("ggmap")
+library(ggmap)
+#register_google(key = "YOUR KEY HERE")
+library(googlesheets4)
+#install.packages("geosphere")
+library(geosphere)
+#install.packages("tigris")
+#install.packages("zoo")
+library(tigris)
+library(stringr)
+library(janitor)
+library(zoo)
+library(lubridate)
+library(readtext)
+
+```
+
+# master_article_index_4_20.csv
+April 20 data cleaning and compiling
+master_article_index_4_18 has 12,579 articles
+--add 714 articles from proquest and howard university
+--1089 LOC articles are from the black press
+--Total now is 13,311 articles
+
+```{r}
+#13,311 variables
+master_article_index_4_20 <- read.csv("../data/master_article_index_4_20.csv")  
+```
+
+##Fix URL
+```{r}
+#april 23 2024
+#fix date field
+
+master_article_index_4_20$date2 <- as.character(master_article_index_4_20$date)
+master_article_index_4_20$date2 <- gsub("-", "/", master_article_index_4_20$date2)
+
+#strip url down to sn
+
+master_article_index_4_20$url_fixed <- sub("sn\\d+/\\K.*", "", master_article_index_4_20$url2, perl = TRUE)
+
+
+# master_article_index_4_20$url_fixed <- sub("/$", "", master_article_index_4_20$url_fixed)
+
+
+#paste it back
+master_article_index_4_20 <- master_article_index_4_20 %>% 
+  mutate(url_final = paste(url_fixed, date2, edition, page, "0?user_id=6", sep="/")) 
+
+#kill crap
+master_article_index_4_20 <- subset(master_article_index_4_20, select = -c(X, x1, x, url2, url_fixed, abstract, store_id, pages))
+
+
+master_article_index_4_20 <- master_article_index_4_20 %>% 
+  rename(url_backup = url, url = url_final) 
+
+#april 23 2024
+write_csv(master_article_index_4_20, "../data/master_article_index_4_20.csv")
+
+
+
+```
+
+
+
+
+# Counting the years
+```{r}
+years_4_20 <- master_article_index_4_20 %>% 
+  count(year) %>% 
+  rename(count = n) %>% 
+  mutate(pct_whole = round(count/sum(count)*100,2)) %>% 
+  arrange(desc(pct_whole)) %>% 
+  mutate(rank_new = dense_rank(desc(pct_whole)))
+
+years_10_19 <- old_master_article_index_10.19 %>% 
+  count(year) %>% 
+  rename(count = n) %>% 
+  mutate(pct_whole = round(count/sum(count)*100,2)) %>% 
+  arrange(desc(pct_whole)) %>% 
+  rename(pct_whole_old = pct_whole, count_old = count) %>%   mutate(rank_old = dense_rank(desc(pct_whole_old)))
+
+#join and compare dfs
+
+
+year_compare <- years_4_20 %>% 
+  inner_join(years_10_19, by="year") %>% 
+  mutate(diff = (count-count_old)) %>% 
+  mutate(pct_chg = round(count-count_old)/count_old*100) %>% 
+  mutate(pct_chg = round(pct_chg,2))
+         
+#NY, MA, no difference; PA, 1; DE, 6; ME, 7; SC, 8
+#Biggest changes were IN, AZ, IA, CO, ID, CT, AL, A, HI, SC, AK
+
+```
+
+## fact checking years new vs old
+```{r}
+year_compare %>% 
+  filter(count_old > count)
+
+
+```
+
+#---------------------------------------------------------
+
+# Counting the states
+```{r}
+totals_4_18 <- master_article_index_4_20 %>% 
+  count(newspaper_state) %>% 
+  rename(count = n) %>% 
+  mutate(pct_whole = round(count/sum(count)*100,2)) %>% 
+  arrange(desc(pct_whole)) %>% 
+  mutate(rank_new = dense_rank(desc(pct_whole)))
+
+
+```
+
+
+
+Oct 29 data cleaning and updating:
+master_article_index_10.19 has 7,162 articles
+--contains 714 articles from proquest and howard university
+--331 of the LOC articles are from the black press
+--total 1,045 articles from the black press
+--the 7162 is about 12% of the total corpus
+--the 1045 Black press articles are about 1.7% of the total corpus
+
+New folder: black_press_all = 1066 black press articles
+
+```{r}
+#7162 articles with the fixed URL. Includes Black Press
+old_master_article_index_10.19 <- read.csv("../data/master_article_index_10.19.csv")
+
+totals_10_19 <- old_master_article_index_10.19 %>% 
+  count(newspaper_state) %>% 
+  rename(count = n) %>% 
+  mutate(pct_whole = round(count/sum(count)*100,2)) %>% 
+  arrange(desc(pct_whole)) %>% 
+  rename(pct_whole_old = pct_whole, count_old = count) %>% 
+  mutate(rank_old = dense_rank(desc(pct_whole_old)))
+
+```
+
+## join and compare dfs
+
+
+```{r}
+compare <- totals_4_18 %>% 
+  inner_join(totals_10_19, by="newspaper_state") %>% 
+  mutate(diff = (count-count_old)) %>% 
+  mutate(pct_chg = round(count-count_old)/count_old*100) %>% 
+  mutate(pct_chg = round(pct_chg,2))
+         
+#NY, MA, no difference; PA, 1; DE, 6; ME, 7; SC, 8
+#Biggest changes were IN, AZ, IA, CO, ID, CT, AL, A, HI, SC, AK
+
+```
+### fact checking to see how the new db compares to the previous
+```{r}
+compare %>% 
+  filter(count_old > count)
+
+```
+
+### count of new pre-civil war stories
+
+```{r}
+#304 new pre-civil war articles extracted.
+year_compare %>% 
+filter(year < "1862") %>% 
+summarize(sum(diff))
+
+```
+
+
+
+# Full Library of Congress Newspaper List
+```{r}
+
+
+#Code from Khushboo Rathore
+download_loc <- "../data/newspapers_list.txt"
+download.file("https://chroniclingamerica.loc.gov/newspapers.txt", download_loc)
+
+newspaper_list <- read_delim(download_loc, delim = "|")
+
+clean_newspaper_list <- newspaper_list %>% 
+  clean_names() %>% 
+  select(state, title, lccn, oclc, issn, no_of_issues, first_issue_date, last_issue_date) %>% 
+  rename(newspaper = title, no_issues = no_of_issues, earliest_issue = first_issue_date, latest_issue = last_issue_date) %>% 
+  mutate_all(str_squish) %>% 
+  mutate(earliest_issue = lubridate::mdy(earliest_issue)) %>% 
+  mutate(latest_issue = lubridate::mdy(latest_issue))
+
+#write_csv(clean_newspaper_list, "../data/newspaper_list.csv")
+```
+
+# Printing Hate Main Index of Newspapers
+
+```{r}
+#new_main_index <- read.csv("../data/mainindex_10_30.csv")
+#full_list_clean <- read.csv("../data/main_index_with_names_111323.csv")
+#dec_28 with cleaned names, all but 1,170 newspapers named
+full_list_clean <- read.csv("../data/main_index_dec_28_2023.csv")
+
+```
+
+
+# Tolnay and Beck Lynching Inventory
+```{r}
+
+tolnay_beck <- read_csv("../data/Bailey_Beck_lynching_list_8_1_2022.csv") %>% 
+  as.data.frame()
+
+tolnay_beck <- janitor::clean_names(tolnay_beck)
+
+```
+
+
+# Text data
+
+```{r}
+
+
+#152766 rows of text data for tokenization (6448 predominantly white press articles)
+articles_oct_19 <- read.csv("../data/articles_oct_19.csv")
+#Consists of this folder
+lynch1 <- readtext("~/Code/hcij_lynching_phase_two/articles_10_19")
+
+#76020 rows of BP text data for tokenization 
+bp_text <- read.csv("../data/black_press_article_text_oct_19.csv")
+#from this folder
+bp_lynch <- readtext("~/Code/hcij_lynching_phase_two/black_press_all")
+
+#text for just the 714 bp articles
+onlybptext <- read.csv("../data/only_bp_text.csv")
+
+```
+
+
+#------------------------------------------------------
+#------------------------------------------------------
+
+# Notes on cleaning of the 4_18_2024 new master index
+###Main index of all extracted articles
+
+
+
+```{r}
+master_article_index_4_18 <- read_csv("../data/master_article_index_4_18.csv") %>% 
+  clean_names() %>% 
+  mutate(date = as_date(paste(year,month,day, sep ="/"))) %>% 
+   mutate(file_id2 = (paste(file_id, article_id, sep = '_')))
+
+#Add 1803 black press articles ( 714 bp articles + 1,089 LOC articles)
+blackindex_master <- read.csv("../data/blackindex_master.csv")
+
+#13,311 articles
+master_article_index_4_20 <- master_article_index_4_18 %>% 
+  full_join(blackindex_master, by=c("file_id2"="file_name", "newspaper_name", "newspaper_state", "date", "year", "url", "sn", "file_id", "article_id", "page", "edition", "month", "day", "mod_id"))
+
+write.csv(master_article_index_4_20, "../data/master_article_index_4_20.csv")
+
+```
+
+```{r}
+#12579 articles from LOC only. April 18 2024
+master_article_index_4_18 <- read.csv("../data/extracted_database_index_april_16.csv") %>% 
+  clean_names()
+
+
+master_article_index_4_18$url_fixed <- sub("sn\\d+/\\K.*", "", master_article_index_4_18$url, perl = TRUE)
+master_article_index_4_18$url_fixed  <- sub("/$", "", master_article_index_4_18$url_fixed)
+
+#date fixed for url
+master_article_index_4_18$date2 <- as.character(master_article_index_4_18$date)
+master_article_index_4_18$date2 <- gsub("-", "/", master_article_index_4_18$date2)
+
+
+#create sequence column
+master_article_index_4_18$seq <- sub(".*/(seq-\\d+).*", "\\1", master_article_index_4_18$url)
+
+master_article_index_4_18 <- master_article_index_4_18 %>% 
+  mutate(url2 = paste(url_fixed, year, month, day, edition, seq, "0?user_id=6", sep="/"))
+
+
+write.csv(master_article_index_4_18, "../data/master_article_index_4_18.csv") 
+
+#next: compare the dates to the first index
+
+```
+
+### Oct 19 index
+```{r}
+
+#7162 articles with the fixed URL. Includes Black Press
+master_article_index_10.19 <- read.csv("../data/master_article_index_10.19.csv")
+
+#1045 black press articles. join 714 articles + 358 LOC articles
+blackindex_master <- read.csv("../data/blackindex_master.csv")
+
+```
+
+
+# Geocoded articles
+#Analysis
+```{r}
+#2783 articles all geocoded
+lynch_geocoded_10.8 <- read.csv("../data/lynch_geocoded_10.8.csv")
+```
+
+
+
+
+```{r}
+ga_lynchings <- tolnay_beck %>% 
+  filter()
+```
+

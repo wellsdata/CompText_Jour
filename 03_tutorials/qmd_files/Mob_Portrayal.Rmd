@@ -1,0 +1,157 @@
+---
+title: "Mob Analysis"
+author: "Rob Wells"
+date: "2023-11-15"
+output: html_document
+---
+```{r message=FALSE, warning=FALSE}
+#install.packages("here")
+here::here()
+library(tidyverse)
+library(tidyr)
+#install.packages("ggmap")
+library(ggmap)
+#register_google(key = "XXXX")
+library(googlesheets4)
+library(googledrive)
+#install.packages("geosphere")
+library(geosphere)
+#install.packages("janitor")
+library(stringr)
+```
+
+```{r}
+
+googledrive::drive_auth()
+# 
+googlesheets4::gs4_deauth()
+
+#mob <- read_sheet("https://docs.google.com/spreadsheets/d/1oKkRSInN8tO6Z-kyMoIUYOX1uHQhP7FdrR1xie4O-XQ/edit?usp=sharing")
+
+#updates with Rachel McCrea's corrections
+mob <- read_sheet("https://docs.google.com/spreadsheets/d/1-zwBtcpdH1Hnb5WROJVuPdm_HC9nTmDl-dbiSHE5tJ8/edit#gid=10206338")
+```
+
+
+```{r}
+
+mob <- mob %>% 
+  janitor::clean_names() 
+
+#strip commas
+mob <- mob %>% 
+  mutate(code = str_replace_all(code, ","," ")) 
+
+#new column, assign a 1 for any instance per row
+mob <- mob %>%
+  mutate(
+    hostile = ifelse(grepl("\\bHostile\\b", code), 1, 0),
+    neutral = ifelse(grepl("\\bNeutral\\b", code), 1, 0),
+    orderly = ifelse(grepl("\\bOrderly\\b", code), 1, 0),
+    justice = ifelse(grepl("\\bJustice\\b", code), 1, 0),
+    identified = ifelse(grepl("\\bIdentified\\b", code), 1, 0),
+    unsure = ifelse(grepl("\\bUnsure\\b", code), 1, 0),
+    other = ifelse(grepl("\\bOther\\b", code), 1, 0)
+  )
+```
+
+### Counting progress
+```{r}
+mob %>% 
+  count(your_name) %>% 
+  arrange(your_name)
+
+
+
+```
+
+
+
+#add decade, year
+```{r}
+mob <- mob %>% 
+  mutate(date1 = lubridate::ymd(date)) %>% 
+  mutate(year = lubridate::year(date1))
+
+
+
+mob <- mob %>% 
+    mutate(decade = case_when(
+      year < 1800 ~ "pre1800",
+      year >= 1800 & year <=1809 ~ "1800s",
+      year >= 1810 & year <=1819 ~ "1810s",
+      year >= 1820 & year <=1829 ~ "1820s",
+      year >= 1830 & year <=1839 ~ "1830s",
+      year >= 1840 & year <=1849 ~ "1840s",
+      year >= 1850 & year <=1859 ~ "1850s",
+      year >= 1860 & year <=1869 ~ "1860s",
+      year >= 1870 & year <=1879 ~ "1870s",
+      year >= 1880 & year <=1889 ~ "1880s",
+      year >= 1890 & year <=1899 ~ "1890s",
+      year >= 1900 & year <=1909 ~ "1900s",
+      year >= 1910 & year <=1919 ~ "1910s",
+      year >= 1920 & year <=1929 ~ "1920s",
+      year >= 1930 & year <=1939 ~ "1930s",
+      year >= 1940 & year <=1949 ~ "1940s",
+      year >= 1950 & year <=1959 ~ "1950s",
+      year >= 1960 & year <=1969 ~ "1960s",
+      year >= 1970 ~ "post1970s"
+         ))
+
+```
+
+
+
+```{r}
+lynch_geocoded_10.8 <- read.csv("../data/lynch_geocoded_10.8.csv")
+
+
+mob1 <- mob %>% 
+  select(docname, newspaper, date, url, hostile, neutral, orderly, justice, identified, unsure, other) %>% 
+  as.data.frame()
+
+mob2 <- mob1 %>% 
+  left_join(lynch_geocoded_10.8, by=c("docname"="file_id", "url"))
+
+write.csv(mob2, "../output/mob_full_11_15.csv")
+/Users/robwells/Code/Jour389L/output
+write.csv(mob2, "/Users/robwells/Code/Jour389L/output/mob_full_11_15.csv")
+
+mob3 <- mob2 %>% 
+  group_by(decade) %>% 
+  summarize(
+    total_hostile = sum(hostile, na.rm = TRUE),
+    total_neutral = sum(neutral, na.rm = TRUE),
+    total_orderly = sum(orderly, na.rm = TRUE)
+    ) %>% 
+        mutate(
+    grand_total = total_hostile + total_neutral + total_orderly,
+    percent_hostile = total_hostile / grand_total * 100,
+    percent_neutral = total_neutral / grand_total * 100,
+    percent_orderly = total_orderly / grand_total * 100
+  )
+
+write.csv(mob3, "../output/mob3_11_15.csv")
+write.csv(mob3, "/Users/robwells/Code/Jour389L/output/mob3_11_15.csv")
+
+# Reshape the data
+library(reshape2)
+mob_melt <- melt(mob3, id.vars = "decade", 
+                measure.vars = c("percent_hostile", "percent_neutral", "percent_orderly"))
+
+write.csv(mob_melt, "../output/mob_melt_11_15.csv")
+write.csv(mob_melt, "/Users/robwells/Code/Jour389L/output/mob_melt_11_15.csv")
+# Create the plot
+ggplot(mob_melt, aes(x = decade, y = value, fill = variable)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(x = "Decade", y = "Percentage", fill = "Variable") +
+  theme_minimal()
+  
+
+# mob2 <- mob2 %>% 
+#   select(docname, newspaper_name, date.x, url, hostile, neutral, orderly, justice, identified, unsure, other, lynch_address, newspaper_state_code, year, city_lynch, state_lynch, miles, decade, Newspaper_Region, total_words)
+
+
+
+```
+

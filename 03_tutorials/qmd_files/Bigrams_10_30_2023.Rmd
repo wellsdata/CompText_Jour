@@ -1,0 +1,1419 @@
+---
+title: "Lynching Text Analysis"
+author: "Rob Wells"
+date: '2022-09-27'
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+#install.packages("tidytext")
+library(tidytext)
+library(rio)
+#install.packages("quanteda") 
+library(quanteda)
+```
+
+```{r}
+#import df 
+#lynch <- read_csv("articles_df.csv")
+
+lynch <- read_csv("../data/articles_oct_19.csv")
+
+```
+
+
+# plot of years covered
+```{r}
+
+#Range of years covered
+years_ct <- lynch %>%
+  distinct(filename, .keep_all = TRUE) %>% 
+  count(year)
+
+y <- lynch %>%
+  distinct(filename, .keep_all = TRUE)
+
+#Chart of years
+ggplot(years_ct,aes(x = year, y = n,
+             fill = n)) +
+  geom_col(position = "dodge") + 
+  theme(legend.position = "none") +
+  labs(title = "Years of Lynching Coverage",
+       subtitle = "Based in 7,162 extracted articles",
+       caption = "Graphic by Rob Wells, 10-30-2023",
+       y="Articles",
+       x="Year")
+
+# ggsave("../output_images_tables/Figure2_years_lynching_coverage_10.30.23.png",device = "png",width=9,height=6, dpi=800)
+```
+# By decade
+
+## pre1850s
+```{r}
+pre1850 <- lynch %>% 
+  filter(year < 1850)
+
+pre1850 %>% 
+  select(filename) %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  count(filename) %>% 
+  summarize(total =sum(n)) 
+#132 articles prior to 1850
+
+statespre1850s <- pre1850 %>% 
+  select(newspaper_state, filename) %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  count(newspaper_state) %>% 
+  arrange(desc(n))
+
+statespre1850s %>% 
+  select(newspaper_state, n) %>% 
+slice_max(n, n=10)
+
+# Most of the coverage in northern states, but Virginia and West Virginia were notable
+# Vermont	22			
+# New York	15			
+# Wisconsin	14			
+# West Virginia	12			
+# Virginia	11			
+# District of Columbia	10			
+# Ohio	10	
+
+#Fact Check
+#sum(statespre1850s$n)
+x <- pre1850 %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  arrange(date)
+
+#write_csv(x, "../output/pre1850s_index.csv")
+```
+##1850s
+
+```{r}
+the1850s <-  lynch %>% 
+  filter(year >= 1850 & year <=1859)
+
+the1850s %>% 
+  select(filename) %>% 
+ distinct(filename, .keep_all = TRUE) %>% 
+  count(filename) %>% 
+  summarize(total =sum(n)) 
+#469 articles prior to 1880s
+
+statesthe1850s <- the1850s %>% 
+  select(newspaper_state, filename) %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  count(newspaper_state) %>% 
+  arrange(desc(n))
+
+statesthe1850s %>% 
+  select(newspaper_state, n) %>% 
+slice_max(n, n=15)
+# Southern state coverage is prominent
+# Virginia	106			
+# Ohio	77			
+# North Carolina	29			
+# District of Columbia	28			
+# Louisiana	28			
+# Vermont	22			
+# Iowa	20			
+# Indiana	19			
+# Wisconsin	19			
+# New York	16	
+
+#Fact Check
+#sum(statesthe1850s$n)
+
+x <- the1850s %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  arrange(date)
+
+write_csv(x, "../output/the1850s_index.csv")
+```
+
+##1860s
+
+```{r}
+the1860s <-  lynch %>% 
+  filter(year >= 1860 & year <=1869)
+
+the1860s %>% 
+  select(filename) %>% 
+ distinct(filename, .keep_all = TRUE) %>% 
+  count(filename) %>% 
+  summarize(total =sum(n)) 
+#108 articles 
+
+statesthe1860s <- the1860s %>% 
+  select(newspaper_state, filename) %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  count(newspaper_state) %>% 
+  arrange(desc(n))
+
+statesthe1860s %>% 
+  select(newspaper_state, n) %>% 
+slice_max(n, n=10)
+newspaper_state
+
+# Ohio	14			
+# Virginia	13			
+# New York	10			
+# Illinois	9			
+# District of Columbia	7			
+# Iowa	7			
+# North Carolina	7			
+# West Virginia	7			
+# Delaware	5			
+# Wisconsin	5	
+
+#Fact Check
+#sum(statesthe1850s$n)
+
+x <- the1860s %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  arrange(date)
+
+write_csv(x, "../output/the1860s_index.csv")
+```
+
+##1870s
+
+```{r}
+the1870s <-  lynch %>% 
+  filter(year >= 1870 & year <=1879)
+
+the1870s %>% 
+  select(filename) %>% 
+ distinct(filename, .keep_all = TRUE) %>% 
+  count(filename) %>% 
+  summarize(total =sum(n)) 
+#188 articles 
+
+statesthe1870s <- the1870s %>% 
+  select(newspaper_state, filename) %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  count(newspaper_state) %>% 
+  arrange(desc(n))
+
+statesthe1870s %>% 
+  select(newspaper_state, n) %>% 
+slice_max(n, n=10)
+#newspaper_state
+
+# Ohio	26			
+# Louisiana	16			
+# Tennessee	16			
+# Illinois	13			
+# Vermont	10			
+# Maryland	9			
+# West Virginia	9			
+# Alabama	8			
+# Nevada	7			
+# Delaware	6	
+
+#Fact Check
+#sum(statesthe1850s$n)
+
+x <- the1870s %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  arrange(date)
+
+write_csv(x, "../output/the1870s_index.csv")
+```
+##1880s
+
+```{r}
+the1880s <-  lynch %>% 
+  filter(year >= 1880 & year <=1889)
+
+the1880s %>% 
+  select(filename) %>% 
+ distinct(filename, .keep_all = TRUE) %>% 
+  count(filename) %>% 
+  summarize(total =sum(n)) 
+#826 articles 
+
+statesthe1880s <- the1880s %>% 
+  select(newspaper_state, filename) %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  count(newspaper_state) %>% 
+  arrange(desc(n))
+
+statesthe1880s %>% 
+  select(newspaper_state, n) %>% 
+slice_max(n, n=10)
+#newspaper_state
+
+# Wisconsin	62			
+# Minnesota	61			
+# Kansas	51			
+# Ohio	48			
+# Mississippi	36			
+# Montana	36			
+# Kentucky	35			
+# Alabama	33			
+# Georgia	30			
+# Tennessee	26	
+
+#Fact Check
+#sum(statesthe1850s$n)
+
+x <- the1880s %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  arrange(date)
+
+write_csv(x, "../output/the1880s_index.csv")
+```
+##1890s
+
+```{r}
+the1890s <-  lynch %>% 
+  filter(year >= 1890 & year <=1899)
+
+the1890s %>% 
+  select(filename) %>% 
+ distinct(filename, .keep_all = TRUE) %>% 
+  count(filename) %>% 
+  summarize(total =sum(n)) 
+#1637 articles 
+
+statesthe1890s <- the1890s %>% 
+  select(newspaper_state, filename) %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  count(newspaper_state) %>% 
+  arrange(desc(n))
+
+statesthe1890s %>% 
+  select(newspaper_state, n) %>% 
+slice_max(n, n=10)
+#newspaper_state
+
+# Kansas	115			
+# Wisconsin	102			
+# Missouri	86			
+# Kentucky	83			
+# Minnesota	83			
+# North Dakota	75			
+# Georgia	73			
+# South Dakota	71			
+# North Carolina	57			
+# Mississippi	54	
+
+#Fact Check
+#sum(statesthe1850s$n)
+
+x <- the1890s %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  arrange(date)
+
+#write_csv(x, "../output/the1890s_index.csv")
+```
+
+##1900s
+
+```{r}
+the1900s <-  lynch %>% 
+  filter(year >= 1900 & year <=1909)
+
+the1900s %>% 
+  select(filename) %>% 
+ distinct(filename, .keep_all = TRUE) %>% 
+  count(filename) %>% 
+  summarize(total =sum(n)) 
+#1627 articles 
+
+statesthe1900s <- the1900s %>% 
+  select(newspaper_state, filename) %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  count(newspaper_state) %>% 
+  arrange(desc(n))
+
+statesthe1900s %>% 
+  select(newspaper_state, n) %>% 
+slice_max(n, n=10)
+#newspaper_state
+
+# Wisconsin	88			
+# Mississippi	87			
+# Nebraska	83			
+# Missouri	77			
+# Utah	76			
+# Arkansas	72			
+# North Carolina	69			
+# South Dakota	66			
+# Kentucky	64			
+# Alabama	62		
+
+#Fact Check
+#sum(statesthe1850s$n)
+
+x <- the1900s %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  arrange(date)
+
+#write_csv(x, "../output/the1900s_index.csv")
+```
+##1910s
+
+```{r}
+the1910s <-  lynch %>% 
+  filter(year >= 1910 & year <=1919)
+
+the1910s %>% 
+  select(filename) %>% 
+ distinct(filename, .keep_all = TRUE) %>% 
+  count(filename) %>% 
+  summarize(total =sum(n)) 
+#840 articles 
+
+statesthe1910s <- the1910s %>% 
+  select(newspaper_state, filename) %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  count(newspaper_state) %>% 
+  arrange(desc(n))
+
+statesthe1910s %>% 
+  select(newspaper_state, n) %>% 
+slice_max(n, n=10)
+#newspaper_state
+
+# Alaska	85			
+# Arkansas	68			
+# Nebraska	56			
+# Illinois	41			
+# Alabama	34			
+# Wisconsin	29			
+# North Dakota	27			
+# Colorado	23			
+# Texas	23			
+# West Virginia	23			
+
+#Fact Check
+#sum(statesthe1850s$n)
+
+x <- the1910s %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  arrange(date)
+
+write_csv(x, "../output/the1910s_index.csv")
+```
+
+##1920s
+
+```{r}
+the1920s <-  lynch %>% 
+  filter(year >= 1920 & year <=1929)
+
+the1920s %>% 
+  select(filename) %>% 
+ distinct(filename, .keep_all = TRUE) %>% 
+  count(filename) %>% 
+  summarize(total =sum(n)) 
+#357 articles 
+
+statesthe1920s <- the1920s %>% 
+  select(newspaper_state, filename) %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  count(newspaper_state) %>% 
+  arrange(desc(n))
+
+statesthe1920s %>% 
+  select(newspaper_state, n) %>% 
+slice_max(n, n=10)
+#newspaper_state
+
+# Alaska	60			
+# Illinois	34			
+# Wyoming	22			
+# Nebraska	19			
+# Arizona	15			
+# Oklahoma	14			
+# District of Columbia	12			
+# North Dakota	12			
+# Texas	12			
+# Montana	11			
+
+#Fact Check
+#sum(statesthe1850s$n)
+
+x <- the1920s %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  arrange(date)
+
+write_csv(x, "../output/the1920s_index.csv")
+```
+
+##1930s
+```{r}
+the1930s <-  lynch %>% 
+  filter(year >= 1930 & year <=1939)
+
+the1930s %>% 
+  select(filename) %>% 
+ distinct(filename, .keep_all = TRUE) %>% 
+  count(filename) %>% 
+  summarize(total =sum(n)) 
+#202 articles 
+
+statesthe1930s <- the1930s %>% 
+  select(newspaper_state, filename) %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  count(newspaper_state) %>% 
+  arrange(desc(n))
+
+statesthe1930s %>% 
+  select(newspaper_state, n) %>% 
+slice_max(n, n=10)
+#newspaper_state
+
+# Illinois	101			
+# North Carolina	18			
+# Nebraska	12			
+# Alaska	11			
+# Indiana	11			
+# Washington	11			
+# Texas	10			
+# Minnesota	6			
+# District of Columbia	5			
+# Michigan	5			
+
+#Fact Check
+#sum(statesthe1850s$n)
+
+x <- the1930s %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  arrange(date)
+
+write_csv(x, "../output/the1930s_index.csv")
+```
+
+##post1940
+```{r}
+post1940 <-  lynch %>% 
+  filter(year >= 1940)
+
+post1940 %>% 
+  select(filename) %>% 
+ distinct(filename, .keep_all = TRUE) %>% 
+  count(filename) %>% 
+  summarize(total =sum(n)) 
+#62 articles 
+
+statespost1940 <- post1940 %>% 
+  select(newspaper_state, filename) %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  count(newspaper_state) %>% 
+  arrange(desc(n))
+
+statespost1940 %>% 
+  select(newspaper_state, n) %>% 
+slice_max(n, n=10)
+#newspaper_state
+
+# Michigan	20			
+# Minnesota	18			
+# District of Columbia	5			
+# Nebraska	4			
+# Illinois	3			
+# Mississippi	2			
+# North Carolina	2			
+# Washington	2			
+# Alaska	1			
+# Arizona	1	
+
+#Fact Check
+#sum(statesthe1850s$n)
+
+x <- post1940 %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  arrange(date)
+
+write_csv(x, "../output/post1940_index.csv")
+```
+
+# Tokenize
+
+```{r}
+
+stories <- str_replace_all(post1940$sentence, "- ", "")
+stories_df <- tibble(stories,)
+
+# unnest includes lower, punct removal
+
+stories_tokenized <- stories_df %>%
+  unnest_tokens(word,stories)
+
+stories_tokenized
+
+#Remove stopwords
+
+data(stop_words)
+
+stories_tokenized <- stories_tokenized %>%
+  anti_join(stop_words, by = c("word" = "word")) %>%
+  filter(word != "temp_file") %>%
+  #NOT SURE IF THIS LINE SHOULD REMAIN
+  filter(word != "stories_corpus") %>%
+  filter(!grepl('[0-9]', word))
+
+# fix the script so it doesn't pick up these file names, numbers  
+# forcibly removing for now
+
+
+# Word Count
+
+story_word_ct <- stories_tokenized %>%
+  count(word, sort=TRUE)
+
+#write_csv(lynch_word_ct, "lynching_corpus_word_count.csv")
+
+```
+
+
+
+# Bigrams
+
+```{r}
+stories_bigrams <- stories_df %>%
+  unnest_tokens(bigram, stories, token="ngrams", n=2)
+
+stories_bigrams
+
+#Filter out stop words.
+
+
+stories_bigrams_separated <- stories_bigrams %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+
+stories_bigrams_filtered <- stories_bigrams_separated %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word)
+
+stories_bigram_cts <- stories_bigrams_filtered %>%
+  count(word1, word2, sort = TRUE)
+
+# put back into bigram form if we want to use them
+stories_bigrams_united <- stories_bigrams_filtered %>%
+  unite(bigram, word1, word2, sep = " ")
+
+#replace Date for the decade analyzed
+stories_bigram_cts_post1940 <- stories_bigram_cts %>% 
+  mutate(decade = "post1940")
+
+write_csv(stories_bigram_cts_post1940, "../output/post1940_lynch_bigram_count.csv")
+
+```
+
+# Trigrams
+
+```{r}
+stories_trigrams <- stories_df %>%
+  unnest_tokens(trigram, stories, token="ngrams", n=3)
+
+stories_trigrams_separated <- stories_trigrams %>%
+  separate(trigram, c("word1", "word2", "word3"), sep = " ")
+
+stories_trigrams_ct <- stories_trigrams_separated %>%
+  count(word1, word2, word3, sort = TRUE)
+
+#filtered
+# stories_trigrams_filtered <- stories_trigrams_separated %>%
+#   filter(!word1 %in% stop_words$word) %>%
+#   filter(!word2 %in% stop_words$word) %>%
+#   filter(!word3 %in% stop_words$word)
+# 
+# stories_trigrams_ct <- stories_trigrams_filtered %>%
+#   count(word1, word2, word3, sort = TRUE)
+
+#replace Date for the decade analyzed
+stories_trigrams_ct_post1940 <- stories_trigrams_ct %>% 
+  mutate(decade = "post1940")
+
+write_csv(stories_trigrams_ct_post1940, "../output/post1940_lynch_trigram_count.csv")
+
+
+```
+
+#Compile DFs 
+
+```{r}
+stories_bigram_cts_pre1850s <- read.csv("../output/pre1850s_lynch_bigram_count.csv")
+stories_bigram_cts_the1850s <- read.csv("../output/the1850s_lynch_bigram_count.csv")
+stories_bigram_cts_the1860s <- read.csv("../output/1860s_lynch_bigram_count.csv")
+stories_bigram_cts_the1870s <- read.csv("../output/1870s_lynch_bigram_count.csv")
+stories_bigram_cts_the1880s <- read.csv("../output/1880s_lynch_bigram_count.csv")
+stories_bigram_cts_the1890s <- read.csv("../output/1890s_lynch_bigram_count.csv")
+stories_bigram_cts_the1900s <- read.csv("../output/1900s_lynch_bigram_count.csv")
+stories_bigram_cts_the1910  <- read.csv("../output/1910s_lynch_bigram_count.csv")
+stories_bigram_cts_the1920s <- read.csv("../output/1920s_lynch_bigram_count.csv")
+```
+
+
+
+
+```{r}
+#Compile DFs
+
+bigrams_all <- rbind(stories_bigram_cts_pre1850s,stories_bigram_cts_the1850s, stories_bigram_cts_the1860s, stories_bigram_cts_the1870s, stories_bigram_cts_the1880s, stories_bigram_cts_the1890s, stories_bigram_cts_the1900s, stories_bigram_cts_the1910,stories_bigram_cts_the1920s, stories_bigram_cts_1930s, stories_bigram_cts_post1940) 
+
+
+write.csv(bigrams_all, "../output/all_bigrams_11.10.csv")
+```
+
+# Fix URLs
+
+```{r}
+lynch$url_fixed <- sub("sn\\d+/\\K.*", "", lynch$url, perl = TRUE)
+lynch$url_fixed <- sub("/$", "", lynch$url_fixed)
+
+#date fixed for url
+lynch$date2 <- as.character(lynch$date)
+lynch$date2 <- gsub("-", "/", lynch$date2)
+
+
+#create sequence column
+lynch$seq <- sub(".*/(seq-\\d+).*", "\\1", lynch$url)
+
+lynch <- lynch %>% 
+  mutate(url2 = paste(url_fixed, date2, edition, seq, "0?user_id=6", sep="/"))
+
+write_csv(lynch, "../data/lynch_11.9.csv")
+
+```
+
+
+```{r}
+
+new_main_index$url_fixed <- sub("sn\\d+/\\K.*", "", new_main_index$URL, perl = TRUE)
+new_main_index$url_fixed <- sub("/$", "", new_main_index$url_fixed)
+# This regular expression breaks down as follows:
+# 
+#     sn\\d+/: Matches "sn" followed by one or more digits, and the following slash.
+#     \\K: Resets the start of the match, so only the part after the last slash is replaced.
+#     .*: Matches any characters after the last slash.
+# 
+# So, this code will replace everything after the first slash after the "sn" number with an empty string.
+
+#date fixed for url
+new_main_index$date2 <- as.character(new_main_index$date)
+new_main_index$date2 <- gsub("-", "/", new_main_index$date2)
+
+#create sequence column
+new_main_index$seq <- sub(".*/(seq-\\d+).*", "\\1", new_main_index$URL)
+
+new_main_index <- new_main_index %>% 
+  mutate(url2 = paste(url_fixed, date2, edition, seq, "0?user_id=6", sep="/"))
+
+write_csv(new_main_index, "../data/new_main_index_11.9.csv")
+
+```
+
+```{r}
+lynch_URL <- lynch %>% 
+  select(filename, url2) %>% 
+  distinct(filename, .keep_all = TRUE)
+
+the1920s_index <- read.csv("../output/the1920s_index.csv")
+
+
+the1920s_index <- the1920s_index %>% 
+  inner_join(lynch_URL, by=c("filename"))
+
+the1920s_index <- subset(the1920s_index, select =-url)
+
+write_csv(the1920s_index, "/Users/robwells/Code/Jour389L/output/the1920s_index.csv")
+
+
+```
+
+### repeat fix
+```{r}
+pre1850s_index <- read.csv("../output/pre1850s_index.csv")
+
+
+pre1850s_index <- pre1850s_index %>% 
+  inner_join(lynch_URL, by=c("filename"))
+
+pre1850s_index <- subset(pre1850s_index, select =-url)
+
+write_csv(pre1850s_index, "../output/pre1850s_index.csv")
+
+
+```
+
+
+
+# Quintgrams
+
+```{r}
+stories_QUINTgrams <- stories_df %>%
+  unnest_tokens(phrase, stories, token="ngrams", n=5)
+
+stories_QUINTgrams_ct <- stories_QUINTgrams %>%
+  count(phrase, sort=TRUE)
+
+#write_csv(stories_QUINTgrams_ct, "stories_corpus_quintgram_count.csv")
+
+stories_QUINTgrams_ct
+
+```
+
+
+
+
+```{r}
+# plotting for fun and profit
+#NEEDS TO BE FIXED
+story_word_ct %>%
+  filter(n >= 5000) %>%
+  mutate(word = reorder(word,n)) %>%
+  ggplot(aes(n, word)) + 
+  geom_col() +
+  labs(y = NULL) + 
+  ggtitle("Words mentioned 5000 times or more in identified lynching articles")
+
+```
+
+*If we want to look at trigrams for narrative, maybe we don't drop the stop words? Might be more likely to catch turns of phrase.*
+
+# Quanteda
+
+```{r}
+#install.packages("readtext")
+library(quanteda)
+library(readtext)
+lynch1 <- readtext("../narratives/article_text_test")
+```
+
+### creates index with metadata
+```{r}
+###
+# List out text files that match pattern .txt, create DF
+###
+
+files <- list.files("../article_text_7_15/article_text/", pattern="*.txt") %>% 
+  as.data.frame() %>%
+  rename(filename = 1) %>%
+  filter(!str_detect(filename,"log"))
+
+
+###
+# Load 638 stories provided by jack, create join column, join to files list
+###
+
+jackindex <- read_csv("../article_text_7_15/article_text/LayoutBoxes_index.csv") %>%
+  mutate(filename = paste0(file_id,"_",article_id,".txt")) %>%
+  inner_join(files) %>%
+  mutate(filepath = paste0("../article_text_7_15/article_text/",filename))
+```
+
+### adds metadata to corpus
+```{r}
+lynch1 <- lynch1 %>% 
+  inner_join(jackindex, by=c("doc_id"="filename"))
+
+
+#Other options
+#summary(corpus_subset(data_corpus_inaugural, President == "Adams"))
+
+```
+
+
+```{r}
+
+my_corpus <- corpus(lynch1)  # build a new corpus from the texts
+summary(my_corpus)
+
+
+```
+
+
+### subset corpus
+
+```{r}
+
+x1920s <- summary(corpus_subset(my_corpus, year > 1920))
+
+```
+
+## kwic
+
+```{r}
+
+quanteda_test <- kwic(my_corpus, "lynch", valuetype = "regex") %>% as.data.frame()
+
+
+quanteda_test <- kwic(my_corpus, "torture", valuetype = "regex") %>% as.data.frame()
+
+quanteda_test <- kwic(my_corpus, "watts", valuetype = "regex") %>% as.data.frame()
+
+  
+#write.csv(quanteda_test, "quanteda_test.csv")
+
+```
+
+
+
+### topic modeling doesn't work yet
+```{r}
+
+my_corpus1 <- tokens(my_corpus, remove_numbers = TRUE,  remove_punct = TRUE)
+
+quant_dfm <- dfm(my_corpus1, 
+                remove_punct = TRUE, remove_numbers = TRUE, remove = stopwords("english"))
+
+#dfm_remove = stopwords("english"))
+# quant_dfm <- dfm_trim(quant_dfm, min_termfreq = 4, max_docfreq = 10)
+quant_dfm
+
+topfeatures(quant_dfm, 50)
+
+```
+```{r}
+#install.packages("stm")
+set.seed(100)
+if (require(stm)) {
+    my_lda_fit20 <- stm(quant_dfm, K = 20, verbose = FALSE)
+    plot(my_lda_fit20)    
+}
+
+```
+
+
+
+Quanteda Notes
+https://quanteda.io/articles/pkgdown/quickstart.html
+Similarities between texts
+
+pres_dfm <- dfm(corpus_subset(data_corpus_inaugural, Year > 1980), 
+               remove = stopwords("english"), stem = TRUE, remove_punct = TRUE)
+obama_simil <- textstat_simil(pres_dfm, pres_dfm[c("2009-Obama" , "2013-Obama"),], 
+                             margin = "documents", method = "cosine")
+obama_simil
+
+
+Topic models
+
+#Stopped June 19
+#Notes Below
+#Notes Below
+#Notes Below
+#Notes Below
+
+#sample index with six entries to extract
+test <- head(rob_index)
+
+common_path <- "/Users/robwells/Code/hcij_lynching_phase_two/data_cleaning/data/timely_match_pages"
+primary_dirs <- list.files(common_path, recursive=T, pattern="\\.txt$", full.names = TRUE)
+primary_dirs <- as.data.frame(primary_dirs)
+
+#index and path for six articles
+rob_extracted <- test %>% 
+  inner_join(primary_dirs, by=c("filepath1"="primary_dirs"))
+
+
+```{r}
+#library(readr)
+#Extract the actual text here
+df <- readr::read_lines(rob_extracted$filepath1)
+df <- as.data.frame(df)
+
+write_delim(df, "test.txt", delim="")
+
+check <- ("/Users/robwells/Code/hcij_lynching_phase_two/data_cleaning/data/timely_match_pages/in_indianapolisolympians_ver02/sn82015679/1887/06/03/ed-1/seq-2/ocr.txt")
+
+check <- readr::read_lines(check)
+check <- as.data.frame(check)
+write_delim(check, "check.txt", delim="")
+```
+
+
+
+#Misc
+filenames <- list.files("path/to/files", recursive=TRUE)
+
+text.files  <- list.files(path="/home/ricardo/MultiClass/data/",                            recursive=T, pattern="*.txt",full.names=T)      
+
+readDatFile <- function(f) {   
+dat.fl <- readLines(f)   } 
+text.data <- sapply(text.files, readDatFile) 
+cls <- names(text.data)
+
+
+
+
+```{r}
+
+paths <- Sys.glob("/Users/robwells/Code/hcij_lynching_phase_two/data_cleaning/data/timely_match_pages/*/*.txt")
+L <- Map(read.csv, paths)
+
+
+for(filepath2 in rob_extracted) {
+    ## read in data 
+    #temp_data = read_file(file.path("/Users/robwells/Code/hcij_lynching_phase_two/data_cleaning/data/timely_match_pages/sdhi_goshawk_ver03/sn2001063112/1897/08/20/ed-1/seq-5/ocr.txt"))
+  temp_data = read_lines(file.path(filepath2("oct.txt"),"*"))
+    ## append
+    rob_extracted = cbind(rob_extracted,temp_data);
+} 
+
+
+#https://stackoverflow.com/questions/43900965/read-several-files-in-different-directories-in-r
+for(dir in primary_dirs) {
+  sub_folders = list.files(paste(common_path,dir,sep = ""))
+  if (any(sub_folders %in% "files.csv")) {
+    ## there is files.csv in this directory read it in and append to a data.frame.
+    ## read in data 
+    temp_data = read.csv(file = paste(common_path,dir,"/files.csv",sep = ""))
+    ## append
+    main_data = cbind(main_data,temp_data);
+  } else {
+    ## try go one more directory deeper
+    for(sub_dir in sub_folders) {
+      sub_sub_files = list.files(paste(common_path,dir,"/",sub_dir,sep = ""))             
+      if (any(sub_sub_files %in% "files.csv")) {
+        ## found files.csv read it in and append it
+        temp_data = read.csv(file = paste(common_path,dir,"/",sub_dir,"/files.csv",sep = ""))
+        main_data = cbind(main_data,temp_data);
+      } else {
+        warning("could not find the file 'files.csv' two directories deep")
+      }
+    } 
+  }
+}
+
+
+```
+
+
+
+
+
+
+# Data Prep
+
+Load and clean text. 
+
+```{r}
+# setwd("lynching_stories/")
+# 
+# file_list <- list.files()
+# 
+# for (file in file_list){
+#   
+#   if(!exists("lynching_corpus")){
+#     lynching_corpus <- read_file(file)
+#   }
+#   if(exists("lynching_corpus")){
+#     temp_file <- read_file(file)
+#     lynching_corpus <- rbind(lynching_corpus, temp_file)
+#     rm(temp_file)
+#   }
+# }
+# write.csv(lynching_corpus, "lynching_corpus.txt")
+
+
+```
+
+
+
+
+
+
+```{r}
+# Uses "lynch_merge" script to build lynching_corpus.txt.
+
+#lynching <- read_file("lynching_stories/lynching_corpus.txt")
+lynching <- read_file("https://raw.githubusercontent.com/Howard-Center-Investigations/hcij_lynching_phase_two/main/lynching_corpus.txt?token=GHSAT0AAAAAABSCMOMHCZGQFCHQ3CWKC7ECYRSGC2Q")
+# close hyphenated line breaks (handling -^ but not ^-^ per review of hyphenation patterns)
+lynching <- str_replace_all(lynching, "- ", "")
+
+# lynching
+
+```
+
+
+# NRC Sentiment Analysis
+
+Proof of concept.
+
+"The nrc lexicon categorizes words in a binary fashion (“yes”/“no”) into categories of positive, negative, anger, anticipation, disgust, fear, joy, sadness, surprise, and trust."
+
+This is going to run on the whole corpus (just curious how this turns out.)
+
+(Also available AFINN and bing, both measures of positive and negative. Interesting approach in "Text Mining with R" where sentiment measured by chapters of books; possible application to time segments? May not be enough change in sentiment over time to make the juice worth the squeeze.)
+
+
+```{r}
+# if we use this, cite this lexicon
+#install.packages("textdata")
+nrc_sentiments <- get_sentiments("nrc")
+
+```
+
+```{r}
+# Anger
+
+nrc_anger <- nrc_sentiments %>%
+  filter(sentiment == "anger")
+
+lynching_anger <- lynching_tokenized %>%
+  inner_join(nrc_anger) %>%
+  count(word, sort = TRUE)
+
+lynching_anger
+
+```
+
+```{r}
+# Anticipation
+# results / themes not as clear as anger
+
+nrc_anticipation <- nrc_sentiments %>%
+  filter(sentiment == "anticipation")
+
+lynching_anticipation <- lynching_tokenized %>%
+  inner_join(nrc_anticipation) %>%
+  count(word, sort = TRUE)
+
+lynching_anticipation
+
+```
+
+
+
+```{r}
+# Fear
+# see a reflection of the basic word count in these results
+
+nrc_fear <- nrc_sentiments %>%
+  filter(sentiment == "fear")
+
+lynching_fear <- lynching_tokenized %>%
+  inner_join(nrc_fear) %>%
+  count(word, sort = TRUE)
+
+lynching_fear
+
+```
+
+
+```{r}
+# Disgust
+# see a reflection of the basic word count in these results
+
+nrc_disgust <- nrc_sentiments %>%
+  filter(sentiment == "disgust")
+
+lynching_disgust <- lynching_tokenized %>%
+  inner_join(nrc_disgust) %>%
+  count(word, sort = TRUE)
+
+lynching_disgust
+
+```
+
+## NRC Sentiment Dictionary Analysis
+
+Need to recognize these are modern dictionaries, so looking here at words in corpus that are excluded from analysis.
+
+Interesting findings - white, lynching, brown, colored. We'd likely have to modify a dictionary if sentiment analysis is a desired approach.
+
+```{r}
+excluded <- lynching_tokenized %>%
+  anti_join(nrc_sentiments) %>%
+  count(word, sort = TRUE)
+
+excluded
+
+```
+
+# TF-IDF
+
+```{r}
+
+lynching_words <- lynching_tokenized %>%
+  count(word, sort = TRUE)
+
+lynching_words$document <- c("lynching")
+
+lynching_words
+  
+```
+
+Load in not-lynching articles.
+
+Load and clean text. 
+
+```{r}
+# Uses "notlynch_merge" script to build lynching_corpus.txt.
+
+not_lynching <- read_file("not_lynching/not_lynching.txt")
+
+# close hyphenated line breaks (handling -^ but not ^-^ per review of hyphenation patterns)
+not_lynching <- str_replace_all(not_lynching, "- ", "")
+
+# not_lynching
+
+```
+
+Convert to df for tokenization
+
+```{r}
+not_lynching_df <- tibble(not_lynching,)
+not_lynching_df
+```
+
+```{r}
+# unnest includes lower, punct removal
+
+not_lynching_tokenized <- not_lynching_df %>%
+  unnest_tokens(word,not_lynching)
+
+not_lynching_tokenized
+
+```
+
+Remove stopwords
+
+```{r}
+
+not_lynching_tokenized <- not_lynching_tokenized %>%
+  anti_join(stop_words, by = c("word" = "word")) %>%
+  filter(word != "temp_file") %>%
+  filter(word != "not_lynching") %>%
+  filter(!grepl('[0-9]', word))
+
+# fix the script so it doesn't pick up these file names, numbers  
+# forcibly removing for now
+
+not_lynching_tokenized
+
+```
+
+```{r}
+
+not_lynching_words <- not_lynching_tokenized %>%
+  count(word, sort=TRUE)
+
+not_lynching_words$document <- c("not_lynching")
+
+not_lynching_words
+
+```
+
+```{r}
+coded_for_tfidf <- rbind(lynching_words, not_lynching_words)
+coded_for_tfidf
+```
+
+
+```{r}
+
+lynching_tf_idf <- coded_for_tfidf %>%
+  bind_tf_idf(word, document, n) %>%
+  arrange(desc(tf_idf))
+
+lynching_tf_idf
+
+```
+
+```{r}
+library(forcats)
+
+lynching_tf_idf %>%
+  group_by(document) %>%
+  slice_max(tf_idf, n = 20) %>%
+  ungroup() %>%
+  ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = document)) +
+  geom_col(show.legend = FALSE) + 
+  facet_wrap(~document, ncol = 2, scales = "free") + 
+  labs (x = "tf-idf", y = NULL)
+
+```
+
+Ideally, this would have given us a set of words that could distinguish lynching from not-lynching articles after the first cut by keyword. (Values so small, not sure this is useful, but worth diffing the output perhaps?)
+
+
+
+###Old code - my attempt at looping
+```{r}
+#simplify as an index file
+index <- count_results 
+
+#This path was set on my local machine. it will need to be set for a local machine that isn't my home computer
+main_path <- "/Users/robwells/Dropbox/Current_Projects/Lynching UMD Sp 2022/article_text_7_15/"
+index$filepath1 <- paste(main_path,index$file_id,sep="")
+index$filepath1 <- paste(index$filepath1,index$article_id,sep="_")
+index$filepath1 <- paste(index$filepath1,"txt",sep=".")
+```
+
+
+```{r}
+#Other attempts to extract the text and create an index
+
+#14 Importing plain text files
+#https://www.r4epi.com/importing-plain-text-files.html
+stories <- read_fwf(file = clean_results$filepath1, 
+                    col_positions = fwf_widths(
+                      widths = c(64, 10),
+                      col_names = c("text", "filename")
+                    ))
+
+#this fails
+raw.data <- raw.file.paths %>%
+  # 'do' the function for each row in turn
+  rowwise() %>%
+  do(., read_lines(file=.$filepath))
+
+#this works but creates a messy csv
+raw.data <- raw.file.paths %>%
+  # 'do' the function for each row in turn
+  rowwise() %>%
+  do(., read_csv(file=.$filepath))
+
+#This reads in a df with 19076 lines, all of the stories but no index
+raw.data <- raw.file.paths %>%
+  rowwise() %>%
+  do(data.frame(read_lines(file=.$filepath1)))
+```
+
+
+```{r}
+
+
+```
+
+#Extract From Data Files
+```{r}
+
+```
+
+```{r}
+#Extract the actual text here: all 636 files into a df, 19076 lines of text
+
+```
+
+```{r}
+#example of what I want to achieve with the data
+
+sample <- read_lines("../article_text_7_15/article_text/1872_0.txt") %>% 
+  as.data.frame() %>% 
+  mutate(index = "1872_0") 
+colnames(sample)[1] <- "text"  
+
+#need to loop this through the corpus of articles
+```
+
+
+```{r message=FALSE, warning=FALSE}
+#This process creates a messy df but it does provide an index row for the text 
+#thanks to: https://benwhalley.github.io/just-enough-r/multiple-raw-data-files.html
+#
+raw.files <- data_frame(filename = list.files('/Users/robwells/Dropbox/Current_Projects/Lynching UMD Sp 2022/article_text_7_15/'))
+
+raw.file.paths <- clean_results %>% 
+  select(filepath1, filename) %>% 
+  as.data.frame()
+
+#This creates a messy df but does have an index
+raw.data <- raw.file.paths %>%
+  rowwise() %>%
+  do(.,data.frame(read_lines(file=.$filepath1)))
+
+read.csv.and.add.filename <- function(filepath){
+  read_csv(filepath) %>%
+    mutate(filepath=filepath)
+}
+
+stories_with_paths <- raw.file.paths %>%
+  rowwise() %>%
+  do(., read.csv.and.add.filename(.$filepath))
+
+
+```
+
+
+
+#Stopped July 17
+#Stopped July 17
+#Stopped July 17
+```{r}
+ # econ_sum <- list()
+ #   for (i in unique(econ_totals$source)){
+ #     econ_sum_hold <- econ_totals %>% 
+ #       filter(source == i) %>% 
+ #       select(year, article_nmbr) %>% 
+ #       group_by(year) %>% 
+ #       count(article_nmbr) %>% 
+ #       summarise(total = sum(n))
+ #     econ_sum_hold$source <- i
+ #     
+ #     econ_sum <- rbind(econ_sum_hold,econ_sum)
+ #   }
+
+primes_list <- list(2, 3, 5, 7, 11, 13)
+# loop version 1
+for (p in primes_list) {
+  print(p)
+}
+
+
+for (i in unique(clean_results$filename)) {
+  print(i)
+}
+
+# loop version 2
+for (i in 1:length(primes_list)) {
+  print(primes_list[[i]])
+}
+
+
+lynch_test <- list()
+   for (i in unique(clean_results$filename)){
+     lynch_hold <- clean_results %>% 
+       filter(filename == i) %>% 
+       read_lines(i) %>% 
+  as.data.frame() %>% 
+  mutate(index = "i") 
+       
+     lynch_hold$source <- i
+     
+     lynch_test <- rbind(lynch_hold,lynch_test)
+   }
+
+
+```
+
+
+
+```{r}
+#Smaller sample of 25 articles to test the script 
+test_path <- "https://github.com/profrobwells/Test/tree/master/Test_Data/Sample_Articles_7_14/"
+
+clean_results$testfilepath <- paste(test_path,clean_results$filename,sep="")
+
+testfiles <- list.files("https://github.com/profrobwells/Test/tree/master/Test_Data/Sample_Articles_7_14/") %>% 
+  as.data.frame()
+
+colnames(testfiles)[1] <- "filename"
+
+```
+
+```{r}
+#simplify as an index file
+jackindex <- count_results 
+
+jackindex$filename <- paste(jackindex$file_id,"_",jackindex$article_id,".txt",sep="")
+
+clean_results <- jackindex %>% 
+  inner_join(files, by="filename")
+
+
+
+
+teststories <- read_lines(clean_results$testfilepath) 
+
+```
+
+
