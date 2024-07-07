@@ -1,0 +1,206 @@
+---
+title: "OCR a PDF - Chad Day tutorial"
+author: "Rob Wells"
+date: "2024-07-07"
+output: html_document
+---
+# Install required packages
+
+```{r}
+
+install.packages("pdftools")
+install.packages("tesseract")
+install.packages("magick")
+
+```
+
+#Load Libraries
+```{r}
+library(pdftools)
+library(tesseract)
+library(magick)
+
+```
+
+#Example: Extract Text from a PDF
+
+
+```{r}
+# Extract text from a single PDF file
+pdf_text <- pdf_text("/Users/robwells/Code/CompText_Jour/code/nicar_ocr-master/Chad_OCR_rsw_notes/pdfs/perspective__1952-03-03_newsweek.pdf")
+writeLines(pdf_text, "liberty.txt")
+
+```
+
+#Loop Through PDFs in a Directory
+
+```{r}
+# Define paths
+pdf_folder <- "/Users/robwells/Code/CompText_Jour/code/nicar_ocr-master/Chad_OCR_rsw_notes/pdfs"
+extracted_folder <- "/Users/robwells/Code/CompText_Jour/code/nicar_ocr-master/Chad_OCR_rsw_notes/extracted2"
+
+# Create extracted folder if it doesn't exist
+if (!dir.exists(extracted_folder)) {
+  dir.create(extracted_folder)
+}
+
+# Loop through all files in the PDF folder
+pdf_files <- list.files(pdf_folder, pattern = "\\.pdf$", full.names = TRUE)
+for (pdf_file in pdf_files) {
+  output_file <- file.path(extracted_folder, paste0(tools::file_path_sans_ext(basename(pdf_file)), ".txt"))
+  pdf_text <- pdf_text(pdf_file)
+  writeLines(pdf_text, output_file)
+  cat("Text extracted from", pdf_file, "and saved to", output_file, "\n")
+}
+
+```
+
+```{r}
+
+# Path to the folder containing PDFs
+pdf_folder <- '/Users/robwells/Code/CompText_Jour/code/nicar_ocr-master/Chad_OCR_rsw_notes/pdfs'
+
+# Path to the folder where extracted text will be saved
+extracted_folder <- '/Users/robwells/Code/CompText_Jour/code/nicar_ocr-master/Chad_OCR_rsw_notes/extracted2'
+
+# Create the extracted folder if it doesn't exist
+if (!dir.exists(extracted_folder)) {
+  dir.create(extracted_folder)
+}
+
+# Loop through all files in the PDF folder
+pdf_files <- list.files(pdf_folder, pattern = "\\.pdf$|\\.png$", full.names = TRUE)
+for (file_path in pdf_files) {
+  # Construct the output path
+  output_filename <- paste0(tools::file_path_sans_ext(basename(file_path)), ".txt")
+  output_path <- file.path(extracted_folder, output_filename)
+  
+  # Check the file extension and process accordingly
+  if (grepl("\\.pdf$", file_path)) {
+    # Extract text from PDF
+    text <- pdf_text(file_path)
+    writeLines(text, output_path)
+  } else if (grepl("\\.png$", file_path)) {
+    # Extract text from PNG using tesseract
+    text <- ocr(file_path)
+    writeLines(text, output_path)
+  }
+  
+  cat("Text extracted from", basename(file_path), "and saved to", output_filename, "\n")
+}
+
+```
+
+
+
+#Tesseract OCR Example
+
+```{r}
+# Perform OCR on an image
+ocr_result <- ocr("/Users/robwells/Code/CompText_Jour/code/nicar_ocr-master/Chad_OCR_rsw_notes/pdfs/perspective__1952-03-03_newsweek.pdf")
+writeLines(ocr_result, "ocr_output.txt")
+
+```
+
+Advanced: Using magick and tesseract Together
+```{r}
+# Example of using magick to preprocess image before OCR
+image <- image_read("/Users/robwells/Code/CompText_Jour/code/nicar_ocr-master/Chad_OCR_rsw_notes/pdfs/533629148_1.pdf")
+image <- image_resize(image, "200%") # Resize image for better OCR accuracy
+ocr_result <- ocr(image)
+writeLines(ocr_result, "panther.txt")
+
+```
+
+# Scan columns separately
+```{r}
+
+# Read the image
+image <- image_read("/Users/robwells/Code/CompText_Jour/code/nicar_ocr-master/Chad_OCR_rsw_notes/pdfs/perspectiveX__1952-03-03_newsweek.pdf")
+
+# Resize the image for better OCR accuracy
+image <- image_resize(image, "200%")
+
+# Split the image into two halves (columns)
+# Get the image dimensions
+image_info <- image_info(image)
+width <- image_info$width
+height <- image_info$height
+
+# Define the dimensions of the left and right columns
+left_column <- image_crop(image, geometry = paste0(width / 2, "x", height, "+0+0"))
+right_column <- image_crop(image, geometry = paste0(width / 2, "x", height, "+", width / 2, "+0"))
+
+# Perform OCR on each column
+left_ocr_result <- ocr(left_column)
+right_ocr_result <- ocr(right_column)
+
+# Combine the results, with left column first, then right column
+combined_ocr_result <- paste(left_ocr_result, right_ocr_result, sep = "\n")
+
+# Write the combined result to a text file
+writeLines(combined_ocr_result, "ocr_output_columns.txt")
+
+```
+
+```{r}
+# Load necessary libraries
+library(magick)
+library(tesseract)
+
+# Function to detect large gaps in the first line of the image
+find_column_split <- function(image) {
+  # Crop the first line of the image
+  image_info <- image_info(image)
+  width <- image_info$width
+  height <- image_info$height
+  first_line <- image_crop(image, geometry = paste0(width, "x", height / 20, "+0+0"))
+  
+  # Convert to grayscale and edge detect to find gaps
+  edges <- image_convert(first_line, colorspace = "gray")
+  edges <- image_edge(edges)
+  
+  # Get the pixel data and convert it to a numeric matrix
+  edges_data <- as.numeric(image_data(edges)[,,1])
+  
+  # Find large gaps
+  threshold <- mean(edges_data) + 2 * sd(edges_data)
+  gap_indices <- which(edges_data < threshold)
+  
+  # Find the largest gap
+  gap_diffs <- diff(gap_indices)
+  largest_gap_index <- which.max(gap_diffs)
+  split_index <- gap_indices[largest_gap_index] + gap_diffs[largest_gap_index] / 2
+  
+  return(split_index)
+}
+
+# Read the image
+image <- image_read("/Users/robwells/Code/CompText_Jour/code/nicar_ocr-master/Chad_OCR_rsw_notes/pdfs/perspectiveX__1952-03-03_newsweek.pdf")
+
+# Resize the image for better OCR accuracy
+image <- image_resize(image, "200%")
+
+# Detect the column split
+split_index <- find_column_split(image)
+
+# Split the image into two columns
+image_info <- image_info(image)
+width <- image_info$width
+height <- image_info$height
+left_column <- image_crop(image, geometry = paste0(split_index, "x", height, "+0+0"))
+right_column <- image_crop(image, geometry = paste0(width - split_index, "x", height, "+", split_index, "+0"))
+
+# Perform OCR on each column
+left_ocr_result <- ocr(left_column)
+right_ocr_result <- ocr(right_column)
+
+# Combine the results, with left column first, then right column
+combined_ocr_result <- paste(left_ocr_result, right_ocr_result, sep = "\n")
+
+# Write the combined result to a text file
+writeLines(combined_ocr_result, "ocr_output_columns.txt")
+
+
+```
+
