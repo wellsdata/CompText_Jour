@@ -1,0 +1,120 @@
+#Tutorial, April 16, 2024
+
+
+```{r}
+library(tidyverse)
+library(janitor)
+
+###
+# tidycensus
+###
+library(tidycensus)
+
+```
+
+
+```{r}
+census_api_key("xyz", install=TRUE, overwrite=TRUE)
+```
+
+```{r}
+
+###
+# Load ACS variables
+###
+
+acs_vars <- load_variables("acs5", year=2020)
+
+###
+# Get median household income for Maryland 2020
+###
+
+md <- get_acs(geography = "county",
+              variables = c(median_income = "B19013_001"),
+              state = "MD",
+              year = 2020) 
+
+
+```
+
+#Load Data
+```{r}
+
+asian_2020 <- get_acs(geography = "state",
+              variables = c(asian_divide = "B02001_005"),
+              year = 2020) %>% 
+  rename(estimate_2020 = estimate)
+
+asian_2010 <- get_acs(geography = "state",
+              variables = c(asian_divide = "B02001_005"),
+              year = 2010) %>% 
+  rename(estimate_2010 = estimate)
+
+```
+
+
+#Join the two data frames together, create a percentage change column
+```{r}
+#You want to avoid this:
+#(estimate.y-estimate.x)/(estimate.x)
+total_asian <- asian_2010 %>%
+  inner_join(asian_2020, by="GEOID")
+
+
+total_asian <-total_asian %>% 
+  mutate(change_asian = (estimate.y-estimate.x)/(estimate.x)*100) %>% 
+  arrange(desc(change_asian))
+
+
+total_asian2 <- asian_2010 %>%
+  inner_join(asian_2020, by=c("GEOID", "NAME")) %>% 
+  select(GEOID, NAME, estimate_2010, estimate_2020)
+
+#then you get a cleaner calculation
+
+total_asian2 <-total_asian2 %>% 
+  mutate(change_asian = (estimate_2020-estimate_2010)/(estimate_2010)*100) %>% 
+  arrange(desc(change_asian))
+
+```
+
+#Pivot Wider
+```{r}
+
+# See vignette("pivot") for examples and explanation
+
+# Generate column names from multiple variables
+us_rent_income
+us_rent_income %>%
+  pivot_wider(
+    names_from = variable,
+    values_from = c(estimate, moe)
+  )
+
+# You can control whether `names_from` values vary fastest or slowest
+# relative to the `values_from` column names using `names_vary`.
+us_rent_income %>%
+  pivot_wider(
+    names_from = variable,
+    values_from = c(estimate, moe),
+    names_vary = "slowest"
+  )
+
+
+```
+
+
+#2: Male Population and Pivot Wider
+
+```{r}
+#Calculate the males percentage of the total population
+# male_population = "B01001_002"
+# total_pop = "B01001_001"
+
+
+
+
+
+```
+
+

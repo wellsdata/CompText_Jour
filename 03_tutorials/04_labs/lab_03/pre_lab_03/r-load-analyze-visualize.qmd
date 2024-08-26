@@ -1,0 +1,444 @@
+---
+editor: 
+  markdown: 
+    wrap: 72
+---
+
+# Loading and Analyzing Data {#r-load-analyze-visualize}
+
+This tutorial, based on my 2024 presentation for the National Institute
+for Computer Assisted Reporting (NICAR), will show you the essential
+workflow for any data analysis project in R. You will learn to import
+data, explore it, use basic commands to sort and filter and build
+summary tables. You will build a basic data visualization from your work
+-- all in R code.
+
+You will be executing commands in this document that are contained in
+"chunks," which are separate from the text and contain live R code.
+**Click the green arrow at the right on line 6** and run the
+help.start() command
+
+```{r}
+help.start()
+```
+
+<br> <br> In the bottom right window of R Studio, you will see a Help
+window that displays basic help commands for the program. 
+
+### Install software to grab data
+
+```         
+Tidyverse: Eight separate software packages to perform
+data import, tidying, manipulation, visualisation, and            programming
+
+Rio: Easy importing features 
+Janitor: Data cleaning
+```
+
+You should have installed tidyverse already. If not, then delete the
+hashtag in front of install.packages("tidyverse") and run the code chunk
+at line 22.
+
+```{r}
+options(repos = "https://cloud.r-project.org") 
+install.packages("tidyverse")
+install.packages("rio")
+install.packages("janitor")
+```
+
+Remember, package installation usually is a one-time thing on your hard
+drive. But when you need to load the software libraries each time you
+start a script. Libraries are bits of software you will have to load
+each time into R to make things run.
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(rio)
+library(janitor)
+```
+
+Check to see what's installed by clicking on "Packages" tab in File
+Manager, lower right pane <br>
+
+### Data
+
+We will work with a dataset of MediaSalaries that I cleaned and modified
+slightly for this tutorial. Some of the detail has been removed so we
+can make calculations. This MediaSalaries sheet was a crowdsourced
+project involving reporters worldwide to share information about
+salaries and benefits. Open this [file in Google
+Sheets](https://docs.google.com/spreadsheets/d/1jkbQFwIdaWv8K00Ad6Wq7ZxFTUPFQA-g/edit#gid=1655992481)
+
+```         
+1) Select Salaries tab
+
+IRE Old School: Four Corners Test!
+13 Columns
+1658 Rows
+
+Numberic data in Salary, Years Experience
+Mixed string data in Gender Identity / Ethnicity, Job duties
+```
+
+<br> <br>
+
+### Import Data
+
+```         
+We'll now load this data into R. You can load spreadsheets from the Internet as follows:
+```
+
+```{r}
+MediaBucks <- rio::import("https://docs.google.com/spreadsheets/d/1jkbQFwIdaWv8K00Ad6Wq7ZxFTUPFQA-g/edit#gid=1655992481", which = "RealMediaSalaries2")
+```
+
+<br> What happened? Look at the table
+
+```{r}
+View(MediaBucks)
+```
+
+What happened?
+
+R grabbed the spreadsheet from the folder\
+We told R to grab the first sheet, RealMediaSalaries2\
+R created a dataframe called MediaBucks\
+basics of R: \<- is known as an "assignment operator."\
+It means: "Make the object named to the left equal to the output of the
+code to the right."
+
+<br> <br>
+
+### Explore Data
+
+**Click the green arrow code chunk to get the answers below.**
+
+How many rows?
+
+```{r}
+nrow(MediaBucks)
+```
+
+How many columns?
+
+```{r}
+ncol(MediaBucks)
+```
+
+Dimensions: Gives number rows, then columns
+
+```{r}
+dim(MediaBucks)
+```
+
+Names of your columns
+
+```{r}
+colnames(MediaBucks)
+```
+
+OR
+
+```{r}
+names(MediaBucks)
+```
+
+Check data types
+
+```{r}
+str(MediaBucks)
+```
+
+Let's look at the first six rows
+
+```{r}
+head(MediaBucks)
+```
+
+Here is a quick way to view the range of your data
+
+```{r}
+summary(MediaBucks$Salary)
+```
+
+Size and scope
+
+```{r}
+sum(MediaBucks$Salary, na.rm=TRUE)
+```
+
+\$106 million! for 1,658 journalists
+
+Context: NYT earnings in 2020 = \$100 m Facebook profit for one day:
+\$114 million (Q42021=\$10.3B)
+
+average
+
+```{r}
+mean(MediaBucks$Salary, na.rm=TRUE)
+```
+
+Distribution
+
+```{r}
+quantile(MediaBucks$Salary, c(0.1, 0.2, 0.3, 0.4,0.5, 0.6, 0.7, 0.8, 0.9), na.rm=TRUE)
+```
+
+```{r}
+quantile(MediaBucks$Salary, c(0.25, 0.50, 0.75, 0.9, 0.99), na.rm=TRUE)
+```
+
+<br>
+
+### Navigation Tips
+
+```         
+Shortcut Commands
+Tab - Autocomplete
+In Console Window (lower left) 
+--Control (or Command) + UP arrow - last lines run
+Control (or Command) + Enter - Runs current or selected lines of code in the top left box of RStudio
+Shift + Control (or Command) +P - Reruns previous region code
+```
+
+<br> <br>
+
+### Dplyr
+
+```         
+dplyr has many tools for data analysis   
+select Choose which columns to include  
+filter Filter the data 
+arrange Sort the data, by size for continuous variables, by date, or alphabetically 
+group_by Group the data by a categorical variable 
+```
+
+<br>
+
+Build a simple summary table by Gender
+
+```{r}
+MediaBucks %>% 
+  select(Gender, Salary) %>% 
+  group_by(Gender) %>% 
+  summarize(Total = sum(Salary, na.rm=TRUE))
+```
+
+What is the sample size?
+
+```{r}
+MediaBucks %>% 
+  count(Gender) %>% 
+  arrange(desc(n))
+```
+
+Better idea: Check Averages!
+
+Build a simple summary table by Gender
+
+```{r}
+MediaBucks %>% 
+  select(Gender, Salary) %>% 
+  group_by(Gender) %>% 
+  summarize(Avg_Salary = mean(Salary, na.rm=TRUE))
+```
+
+Quick filter out hourly workers
+
+```{r}
+MediaSalary <- MediaBucks %>% 
+  filter(Salary >= 1000)
+```
+
+Just give me a list of the top 10 salaries and companies: use slice_max.
+slice_max and slice_min are features in the Dplyr library (part of
+Tidyverse) that produce quick summary tables. See what else you can do
+with [the slice
+commands.](https://dplyr.tidyverse.org/reference/slice.html)
+
+```{r}
+MediaBucks %>% 
+  select(COMPANY, Salary) %>% 
+  slice_max(Salary, n = 10)
+
+```
+
+Questions:
+
+```         
+1: View the range of your data    
+2: Number of rows  
+3: Number of rows cut with filter  
+```
+
+<br>
+
+### Find Your News Organization
+
+Filter
+
+```{r}
+WSJ <- subset(MediaBucks, COMPANY=="WallStreetJournal")  
+```
+
+```{r}
+summary(WSJ$Salary)
+```
+
+Using Wildcards
+
+```{r}
+Journal <- subset(MediaBucks, grepl("?Journal", COMPANY))
+```
+
+```{r}
+Bloom <- subset(MediaBucks, grepl("?Bloomberg", COMPANY))
+```
+
+<br> \### More Tables
+
+Build a table with several companies of your choice
+
+```{r}
+BigBoys <- filter(MediaSalary, COMPANY %in% c("NewYorkTimes", "WallStreetJournal", "Bloomberg"))    
+```
+
+Table with just reporter salaries
+
+```{r}
+Reporters <- subset(MediaBucks, grepl("?reporter", TITLE))
+summary(Reporters$Salary)
+```
+
+Questions:
+
+```         
+1: Who is making $230,504 as a reporter???   
+2: Make a table for editors, figure out medians.   
+3: Find highest paid editor. Resent them.   
+4: Make a table for any position involving data  
+```
+
+Table with Black reporters at Wall Street Journal
+
+```{r}
+WSJ_Black <- MediaBucks %>% filter(Race =="black", COMPANY == "WallStreetJournal")
+```
+
+Build a simple summary table by Race
+
+```{r}
+Race <- MediaBucks %>% 
+  select(Race, Salary) %>% 
+  group_by(Race) %>% 
+  summarize(Avg_Salary = mean(Salary, na.rm=TRUE)) %>% 
+  arrange(desc(Avg_Salary))
+Race
+```
+
+Wait! What are the totals by race?
+
+```{r}
+MediaBucks %>% 
+  count(Race) %>% 
+  arrange(desc(n))
+```
+
+Advanced: Build a summary table and count by race
+
+```{r}
+MediaBucks %>% 
+  select(Race, Salary) %>% 
+ group_by(Race) %>% 
+  summarize(Total=n(),
+            Avg = mean(Salary, na.rm=TRUE)) %>% 
+  arrange(desc(Total))
+
+#details: https://stackoverflow.com/questions/36183601/average-and-count-with-aggregation-in-r-with-dplyr
+```
+
+### Visualize
+
+Let's make a simple chart of our salaries by race.
+
+```{r}
+Race %>% 
+ggplot(aes(x = Race, y = Avg_Salary, fill = Avg_Salary)) +
+  geom_col(position = "dodge") + 
+  theme(legend.position = "none") +
+  labs(title = "Sample chart of race and salary using MediaSalaries", 
+       caption = "1658 records, sample data. Graphic by Rob Wells, 8/11/2022",
+       y="Average Salary",
+       x="Race / Ethnicity")
+
+
+```
+
+This is a basic chart using ggplot. To break down the code: - These
+lines: Race %\>% ggplot(aes(x = Race, y = Avg_Salary, fill =
+Avg_Salary)) + -- Uses the Race table, calls the ggplot program, assigns
+the x axis to Race, y axis to Avg_Salary and fills the color according
+to Avg_Salary - These lines: geom_col(position = "dodge") +
+theme(legend.position = "none") + -- creates a chart of columns, and
+removes a legend box. - These lines: labs(title = Assign the headline
+and captions.
+
+### What You Have Learned So Far
+
+```         
+How to navigate in R studio   
+How to install libraries and packages    
+How to import a .xlsx file into R   
+How to obtain summary statistics (summary)   
+How to build basic tables from a dataset   
+How to conduct filter queries from a dataset   
+```
+
+### Questions
+
+```         
+1: Build a table for NewYorkTimes employees, and determine median salary of NewYorkTimes employees   
+```
+
+```{r}
+#your answer here
+```
+
+```         
+  2: Identify title, gender and race of the highest paid position at NYT  
+```
+
+```{r}
+#your answer here
+```
+
+```         
+3: Search for Bloomberg,  check median salary, compare to NYT results above.
+```
+
+```{r}
+#your answer here
+
+```
+
+### Tutorials
+
+MaryJo Webster tutorials
+<https://sites.google.com/view/mj-basic-data-academy/intro-to-r?authuser=0>
+
+Merrill College eBook: Data Journalism with R and the Tidyverse
+<https://wellsdata.github.io/data_journalism_class/_book/>
+
+Excellent book by Sharon Machlis
+<https://www.routledge.com/Practical-R-for-Mass-Communication-and-Journalism/Machlis/p/book/9781138726918>
+
+First five chapters are free on her website. My recommendation: buy the
+book. <https://www.machlis.com/R4Journalists/>
+
+All Cheat Sheets <https://www.rstudio.com/resources/cheatsheets/>
+
+Andrew Ba Tran first Data Analysis Steps Using R
+<https://docs.google.com/presentation/d/1O0eFLypJLP-PAC63Ghq2QURAnhFo6Dxc7nGt4y_l90s/edit#slide=id.p>
+
+Base R Cheat Sheet
+<https://www.povertyactionlab.org/sites/default/files/r-cheat-sheet.pdf>

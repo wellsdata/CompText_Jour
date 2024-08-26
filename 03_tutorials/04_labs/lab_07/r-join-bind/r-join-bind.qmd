@@ -1,0 +1,385 @@
+# Joins {#r-verb-join}
+
+::: {.alert .alert-secondary}
+<p class="alert-heading font-weight-bolder fs-3">
+
+In this chapter:
+
+</p>
+
+-   A `join` combines two or more tables (data frames) by column.
+-   joining to data frames requires exact matches on one or more columns. Close matches don't count.
+-   Use codes in one data frame to "look up" information in another, and attach it to a row, such as the translation of codes to words or demographics of a Census tract.
+-   Many public records databases come with "lookup tables" or "code sheets". Make sure to ask for the codes AND their translations in a data request.
+-   Reporters don't always stick to matchmaking the way the database designers intended. "Enterprise" joins are those that let you find needles in a haystack, such as bus drivers with a history of DUIs.
+-   Matching one data frame against an entirely different one will always produce errors. You can minimize the *kind* of error you fear most -- false positives or false negatives -- but you likely will have to report out your findings on the ground.
+:::
+
+## Join basics
+
+"Join" in computer programming mean adding columns to a data frame by combining it with another data frame or table. Reporters use it in many ways, some intended by the people who made the data source, and some not.
+
+From now on, we'll start using the term "table" instead of "data frame", since we can talk about several different ones at the same time.
+
+Many databases are created expecting you to join tables (data frames) because it's a more efficient way to store and work with large databases. This is what's called a "relational database", and they're everywhere.
+
+Here's an example, using campaign finance information. The Federal Elections Commission distributes campaign contribution in *related* tables, each referring to a different noun. One table lists donations, the other lists candidates and other political action committees. They link together using a common code:
+
+![Campaign finance join](assets/r-verb-join-diagram.png){width="100%"}
+
+The reason to do this is that you never have to worry that any changes to the candidate information -- the treasurer, the address or the office sought -- carries over to the donation. It's only listed once in the candidate table. Most large databases are constructed this way. For example:
+
+-   Your school records are held using your student ID, which means that your address and home email only needs to be changed once, not in every class or in every account you have with the school.
+-   Inspection records, such as those for restaurants, hospitals, housing code violations and workplace safety, typically have at least *three* tables: The establishment (like a restaurant or a workplace), an inspection (an event on a date), and a violation (something that they found). They're linked together using establishment ID's.
+-   A court database usually has many types of records: A master case record links to information on charges, defendants, lawyers, sentences and court hearings.
+
+Each table, then, is described using a different noun -- candidates or contributions; defendants or cases; students or courses. This conforms to the **tidy data** principle that different types of information are stored in different tables.
+
+## Matchmaking with joins
+
+The political data type of join described above is often referred to as a "lookup table". You'll match codes to their meanings in a way that was intended by the people who made the database. But there are other ways reporters use joins:
+
+### "Enterprise" joins {.unnumbered}
+
+Journalists have taken to calling a specific kind of join "enterprise", referring to the enterprising reporters who do this. Here, you'll look for needles in a haystack. Some of the most famous data journalism investigations relied on joining two databases that started from completely different sources, such as:
+
+-   Bus drivers who had DUI citations
+-   Donors to a governor who got contracts from the state
+-   Day care workers with criminal records
+-   Small businesses that have defaulted on government backed loans that got a PPP loan anyway.
+
+When you match these kinds of datasets, you will always have some error. You always have to report out any suspected matches, so they are time consuming stories.
+
+In the mid-2000s, when some politicians insisted that dead people were voting and proposed measures to restrict registration, almost every regional news organization sent reporters on futile hunts for the dead voters. They got lists of people on the voter rolls, then lists of people who had died through the Social Security Death Index or local death certificates. I never met anyone who found a single actual dead voter, but months of reporter-hours were spent tracking down each lead.
+
+It's very common for two people to have the same name in a city. In fact, it's common to have two people at the same home with the same name -- they've just left off "Jr." and "Sr." in the database. In this case, you'll find matches that you shouldn't. These are false positives, or Type I errors in statistics.
+
+Also, we rarely get dates of birth or Social Security Numbers in public records, so we have to join by name and sometimes location. If someone has moved, sometimes uses a nickname, or the government has recorded the spelling incorrectly, the join will fail -- you'll miss some of the possible matches. This is very common with company names, which can change with mergers and other changes in management, and can be listed in many different ways.
+
+These are false negatives, or Type II errors in statistics.[^r-verb-join-1]
+
+[^r-verb-join-1]: I remember them by thinking of the boy who cried wolf. When the village came running and there was no wolf, it was a Type I error, or false positive ; when the village ignored the boy and there was a wolf, it was a Type II error, or false negative.
+
+In different contexts, you'll want to minimize different kinds of errors. For example, if you are looking for something extremely rare, and you want to examine every possible case -- like a child sex offender working in a day care center -- you might choose to make a "loose" match and get lots of false positives, which you can check. If you want to limit your reporting only to the most promising leads, you'll be willing to live with missing some cases in order to be more sure of the joins you find.
+
+You'll see stories of this kind write around the lack of precision -- they'll often say, "we verified x cases of...." rather than pretend that they know of them all.
+
+### Find cases with interesting characteristics {.unnumbered}
+
+You'll often want to learn more about a geographic area's demographics or voting habits or other characteristics, and match it to other data. Sometimes it's simple: Find the demographics of counties that switched from Trump to Biden as a way to isolate places you might want to visit. Another example from voting might be to find the precinct that has the highest percentage of Latino citizens in the county, then match that precinct against the voter registration rolls to get a list of people you might want to interview on election day. In these instances, the `join` is used for a `filter`.
+
+This is also common when you have data by zip code or some other geography, and you want to find clusters of interesting potential stories, such as PPP loans in minority neighborhoods.
+
+### Summarize data against another dataset {.unnumbered}
+
+The previous examples all result in lists of potential story people or places. If you use join on summarized data, you can characterize a broad range of activity across new columns. Simplified, this is how you can write that more PPP money went to predominantly white neighborhoods than those that were majority Black.
+
+### Types of joins
+
+There are several types of joins, each connecting two tables in a slightly different matter. The most important ones are:
+
+-   inner_join
+-   left_join
+-   anti_join
+
+We'll explore how each of these work in example code below:
+
+### Load libraries
+
+```{r setup, echo=FALSE}
+library(tidyverse)
+```
+
+### Load data
+
+We're going to load four tables to demonstrate different types of joins. All contain information from the U.S. Census 2019 American Community Survey for Maryland counties. Load and examine them.
+
+```{r}
+
+###
+# Total population for each Maryland county 
+# County identified by GEOID (a 5-digit code), not name
+###
+
+maryland_county_population <- read_rds("assets/data/maryland_county_population.rds")
+
+###
+# A lookup table that shows the name of each Maryland county, paired with GEOID
+###
+
+
+maryland_county_lookup_table <- read_rds("assets/data/maryland_county_lookup_table.rds")
+
+###
+# Total population for each Maryland county, EXCEPT for Prince George's County
+# County identified by GEOID (a 5-digit code), not name
+###
+
+maryland_county_population_no_pg <- read_rds("assets/data/maryland_county_population_no_pg.rds")
+
+###
+# Display the tables
+###
+
+maryland_county_population
+maryland_county_lookup_table
+maryland_county_population_no_pg 
+
+
+```
+
+### Inner Join
+
+The table `maryland_county_population` has two columns, one with a `geoid` code representing each Maryland county (and Baltimore city), and another with total population. The `maryland_county_lookup_table` is a classic example of a lookup table. It contains the same `geoid` representing each Maryland county, plus a name column with the proper name.
+
+We are going to join `maryland_county_population`, using the one column both share: `geoid`. We'll use an `inner_join`. The code below says: "Connect the two tables on the `geoid` column. If a given `geoid` exists in both tables, include it in our new table. If it isn't in both, don't include it."
+
+```{r}
+
+updated_maryland_county_population <- maryland_county_lookup_table %>%
+  inner_join(maryland_county_population, by="geoid")
+
+updated_maryland_county_population 
+
+```
+
+Because both tables contained the same 24 counties, our new table has 24 counties as well.
+
+(In this case, they have the same column name, but they don't have to. As long as they CONTAIN the same thing, they can have different names. You can also join using more than one column).
+
+What happens when they aren't identical?
+
+To illustrate what happens, let's run the same code, but this time use population table that contains every Maryland county EXCEPT for Prince George's County. This table only has 23 rows. The lookup table still has 24.
+
+```{r print-loans, echo=FALSE}
+
+
+updated_maryland_county_population_no_pg <- maryland_county_lookup_table %>%
+  inner_join(maryland_county_population_no_pg, by="geoid")
+
+updated_maryland_county_population_no_pg
+
+```
+
+When we join, we get only 23 rows. One table had every Maryland county. The other had every county but Prince George's. When we inner join, only values that both tables have in common are returned. Thus, we get a table without P.G.
+
+This gif from https://github.com/gadenbuie/tidyexplain shows what happens with inner_joins.
+
+
+
+```{r inner_join_gif, out.width="100%", echo=FALSE}
+
+if (knitr::is_html_output()) 
+  knitr::include_graphics("assets/inner-join.gif")
+
+
+
+# ![inner join](assets/inner-join.gif){width="100%"}
+
+```
+
+
+
+### Left Joins
+
+Let's stick with our mismatched tables to illustrate what happens with another type of join, a left join (and it's cousin, the right join). The code is the same, but we've swapped `left_join` for `inner_join`. Remember, our population table is missing P.G. county, but the lookup table has it.
+
+```{r}
+
+updated_maryland_county_population_no_pg <- maryland_county_lookup_table %>%
+  left_join(maryland_county_population_no_pg, by="geoid")
+
+updated_maryland_county_population_no_pg
+```
+
+What happens? Everywhere there's a match on GEOID, the population value is returned. 
+
+But look closely at Prince George's County. Its value is NA.
+
+A `left_join` says "Return every single value from our first table -- in this case the lookup table, with 24 rows. Where there's a match with the population table, make the match. If there is no match, just put NA." 
+
+Unlike the `inner_join`, the `left_join` returned P.G. county despite it's lack of a match.
+
+This gif from https://github.com/gadenbuie/tidyexplain shows what happens with left_joins.
+
+```{r left_join_gif, out.width="100%", echo=FALSE}
+
+if (knitr::is_html_output()) 
+  knitr::include_graphics("assets/left-join.gif")
+
+```
+
+
+A note: `left_join` has a close cousin called the `right_join` which isn't used very often, and we won't delve into here. It's basically the same thing, it just starts from the second table, not the first.
+
+```{r right_join_gif, out.width="100%", echo=FALSE}
+
+if (knitr::is_html_output()) 
+  knitr::include_graphics("assets/right-join.gif")
+
+```
+
+
+## Anti joins
+
+An `anti_join` is useful for seeing what values exist in one table that are missing from another table. It comes in handy during data cleaning and when writing more advanced functions. The code below says: "Connect the two tables, but only show me rows that exist in the lookup table, but DO NOT exist in the population table."
+
+```{r}
+
+
+updated_maryland_county_population_no_pg <- maryland_county_lookup_table %>%
+  anti_join(maryland_county_population_no_pg, by="geoid")
+
+updated_maryland_county_population_no_pg
+```
+
+This gif from https://github.com/gadenbuie/tidyexplain shows what happens with anti_joins.
+
+```{r anti_join_gif, out.width="100%", echo=FALSE}
+
+if (knitr::is_html_output()) 
+  knitr::include_graphics("assets/anti-join.gif")
+
+```
+
+## Joining risks
+
+There are lots of risks in joining tables that you created yourself, or that were created outside a big relational database system. Keep an eye on the number of rows returned every time that you join -- you should know what to expect.
+
+### Double counting with joins
+
+We won't go into this in depth, but just be aware it's easy to double-count rows when you join. Here's a made-up example, in which a zip code is on the border and is in two counties:
+
+Say you want to use some data on zip codes :
+
+| zip code | county    | info           |
+|----------|-----------|----------------|
+| 21012    | PG        | some data      |
+| 21012    | Baltimore | some more data |
+
+and match it to a list of restaurants in a zip code:
+
+| zip code | restaurant name               |
+|----------|-------------------------------|
+| 21012    | My favorite restaurant        |
+| 21012    | My second-favorite restaurant |
+
+When you match these on zip code, you'll get **4** rows:
+
+| zip code | county   | info           | restaurant name               |
+|----------|----------|----------------|-------------------------------|
+| 21012    | PG       | some data      | My favorite restaurant        |
+| 21012    | Baltimore| some more data | My favorite restaurant        |
+| 21012    | PG       | some data      | My second-favorite restaurant |
+| 21012    | Baltimore| some more data | My second-favority restaurant |
+
+Now, every time you try to count restaurants, these two will be double-counted.
+
+In computing, this is called a "many-to-many" relationship -- there are many rows of zip codes and many rows of restaurants. In journalism, we call it spaghetti. It's usually an unintended mess.
+
+Here's a gif that shows the double counting in action.
+
+```{r left_join_extra_gif, out.width="100%", echo=FALSE}
+
+if (knitr::is_html_output()) 
+  knitr::include_graphics("assets/left-join-extra.gif")
+
+```
+
+
+### Losing rows with joins
+
+The opposite can occur if you aren't careful and there are items you want to keep that are missing in your reference table. That's what happened in the immunization data above for the seven schools that I couldn't find.
+
+### Merging or Binding
+
+Joins are one way to combine two data sets, using shared values in one or more columns. Binding two data sets together is another way.  
+
+Let's suppose we have two tables with population information for Maryland counties, each with the same columns: geoid, name and total population.
+
+* One has information for Maryland's 10 largest counties by population
+* The other has information for every other Maryland county.
+
+```{r}
+
+###
+# Total population for each top-10 largest Maryland county 
+# County identified by GEOID (a 5-digit code) and name
+###
+
+maryland_large_county_population <- read_rds("assets/data/maryland_large_county_population.rds")
+
+
+###
+# Total population for all other Maryland counties
+# County identified by GEOID (a 5-digit code) and name
+###
+maryland_small_county_population <- read_rds("assets/data/maryland_small_county_population.rds")
+
+
+# Display
+maryland_large_county_population
+maryland_small_county_population
+
+```
+
+If we want to combine these tables into one dataset with every county's information, a join isn't the way to go. For that, we'd use `bind_rows()`.  Thick of bind_rows as stacking two tables on top of each other. This code gives us 24 rows.
+
+```{r}
+all_county_population <- maryland_small_county_population %>%
+  bind_rows(maryland_large_county_population)
+
+all_county_population
+```
+
+**Question #1: **
+
+Import maryland_tracts.xls and then md_counties_geoids.txt
+Perform an inner_join on maryland_tracts and md_counties on the common identifier. 
+
+TIP: when the columns you want to join have different names:
+table1 %>% 
+  inner_join(table2, by=c("table1_column"="table2_column"))
+  
+Name the new table "md_smith_data"
+```{r}
+
+
+
+```
+
+
+With your maryland_smith_data table, produce a summary table showing the county name and the average census response rate for 2020. arrange the table in descending order. 
+Identify the county with the highest average census response rate for 2020 and the county with the lowest.
+```{r}
+
+
+
+```
+
+
+
+**Question #2: **
+Answer this question in English: Write in Elms
+
+You have a dataframe that contains information on the population of each Maryland county, structured like this example (the column headers and one example row):
+
+geoid | name | total_pop
+24029 | Kent County, Maryland | 19456
+
+You have another dataframe with a count of large employers (over 10000 workers) by county in Maryland, structured like this example (the column headers and one example row):
+
+name | number_of_large employers
+Kent County | 15
+
+You want to join these two dataframes to answer the question "which Maryland county has the highest number of large employees per person?"
+
+What do you think will happen when you attempt to "inner_join" these two tables?
+
+## Resources
+
+-   The "[Relational data](https://r4ds.had.co.nz/relational-data.html)" chapter in the R for Data Science textbook has details on exactly how a complex data set might fit together.
+
+-   [An example using a superheroes dataset](https://stat545.com/join-cheatsheet.html#left_joinsuperheroes-publishers), from Stat 545 at the University of British Columbia
+
+
