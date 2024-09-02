@@ -10,16 +10,6 @@ editor_options:
 
 # Workbook
 
-## Dow Jones News Fund \@ Merrill College
-
-### Data Driven Investigative Reporting Training
-:::
-
-::: {style="text-align: center;"}
-<img src="DJNF_Logo.png" width="300" height="150"/>
-<img src="merrill-logo-dark.png" width="300" height="50"/>
-:::
-
 ```         
 Rob Wells, Ph.D.
 Philip Merrill College of Journalism
@@ -251,7 +241,7 @@ Stenhaug](https://www.youtube.com/watch?v=6xbGZDUu5W4) <br>\
 **Export to spreadsheet**
 
 ```{r}
-write.csv(Days,"Days.csv")
+#write.csv(Days,"Days.csv")
 ```
 
 <br>
@@ -399,6 +389,147 @@ ggsave("bubble.png",device = "png",width=9,height=6, dpi=800)
 ```
 
 <br>
+
+
+# Part 5: Additional exercises with PPP data
+
+(Thanks to Sean Mussenden for the material below)
+
+```{r}
+ppp_maryland <- read_csv("../CompText_Jour/03_tutorials/qmd_files/assets/data/ppp_loans_md.csv.zip")
+```
+
+First, we'll create a dataframe of those top 10, called maryland_ppp_top_counties.
+
+```{r}
+maryland_ppp_top_counties <- ppp_maryland %>%
+  group_by(project_county_name) %>%
+  summarise(
+    total_loans = n()
+  ) %>% 
+  arrange(desc(total_loans)) %>%
+  head(10)
+
+maryland_ppp_top_counties
+```
+
+Now let's create a bar chart using ggplot. 
+
+
+In a bar chart, we first pass in the data to the geometry, then set the aesthetic. 
+
+In the codeblock below, we've added a new function, geom_bar().  
+
+Using geom_bar() -- as opposed to geom_line() -- says we're making a bar chart.  
+
+Inside of that function, the asthetic, aes, says which columns to use in drawing the chart. 
+
+We're setting the values on the x axis (horizontal) to be the name of the county. We set weight to total loans, and it uses that value to "weight" or set the height of each bar. 
+
+```{r}
+maryland_ppp_top_counties %>%
+  ggplot() +
+  geom_bar(aes(x=project_county_name, weight=total_loans))
+```
+
+
+This is a very basic chart.  But it's hard to derive much meaning from this chart, because the counties aren't ordered from highest to lowest by total_loans. We can fix that by using the reorder() function to do just that:
+
+```{r}
+maryland_ppp_top_counties %>%
+  ggplot() +
+  geom_bar(aes(x=reorder(project_county_name,total_loans), weight=total_loans))
+```
+
+This is a little more useful. But the bottom is kind of a mess, with overlapping names.  We can fix that by flipping it from a vertical bar chart (also called a column chart) to a horizontal one. coord_flip() does that for you.
+
+```{r}
+maryland_ppp_top_counties %>%
+  ggplot() +
+  geom_bar(aes(x=reorder(project_county_name,total_loans), weight=total_loans)) +
+  coord_flip()
+```
+
+It's kind of like applying CSS to html. Here I'm changing the theme slightly to remove the gray background with one of ggplot's built in themes, theme_minimal() 
+
+```{r}
+maryland_ppp_top_counties %>%
+  ggplot() +
+  geom_bar(aes(x=reorder(project_county_name,total_loans), weight=total_loans)) +
+  coord_flip() + 
+  theme_minimal()
+```
+
+The ggplot universe is pretty big, and lots of people have made and released cool themes for you to use.  Want to make your graphics look kind of like [The Economist's](https://www.economist.com/) graphics?  There's a theme for that.  
+
+First, you have to install and load a package that contains lots of extra themes, called [ggthemes](https://yutannihilation.github.io/allYourFigureAreBelongToUs/ggthemes/).
+
+```{r}
+#install.packages('ggthemes')
+library(ggthemes)
+```
+
+And now we'll apply the economist theme from that package with theme_economist()
+```{r}
+maryland_ppp_top_counties %>%
+  ggplot() +
+  geom_bar(aes(x=reorder(project_county_name,total_loans), weight=total_loans)) +
+  coord_flip() + 
+  theme_economist()
+```
+
+#### Line charts
+
+Let's look at how to make another common chart type that will help you understand patterns in your data. 
+
+Line charts can show change over time. It works much the same as a bar chart, code wise, but instead of a weight, it uses a y.
+
+So, let's create a dataframe with a count of Maryland loans for each date in our dataframe.
+```{r}
+
+ppp_maryland_loans_by_date <- ppp_maryland %>%
+  group_by(date_approved) %>%
+  summarise(
+    total_loans=n()
+  )
+
+ppp_maryland_loans_by_date 
+```
+
+We'll put the date on the x axis and total loans on the y axis. 
+
+```{r}
+ppp_maryland_loans_by_date %>%
+  ggplot() + 
+  geom_line(aes(x=date_approved, y=total_loans))
+
+
+```
+
+We'll set the date_breaks to appear for every month; if we wanted every week, we'd say date_breaks = "1 week". We can set the date to appear as month abbreviated name (%b) and four-digit year (%Y). 
+
+```{r}
+ppp_maryland_loans_by_date %>%
+  ggplot() + 
+  geom_line(aes(x=date_approved, y=total_loans)) + 
+  scale_x_date(date_breaks = "1 month", date_labels = "%b-%Y")
+
+
+```
+
+Those are a little hard to read, so we can turn them 45 degrees to remove the overlap using the theme() function for styling.  With "axis.text.x = element_text(angle = 45,  hjust=1)" we're saying, turn the date labels 45 degrees.
+
+```{r}
+ppp_maryland_loans_by_date %>%
+  ggplot() + 
+  geom_line(aes(x=date_approved, y=total_loans)) + 
+  scale_x_date(date_breaks = "1 month", date_labels = "%b-%Y") +
+  theme(
+    axis.text.x = element_text(angle = 45,  hjust=1)
+  )
+
+```
+
 
 **Ready for More?** Check out [Gathering and Cleaning Data, which
 describes
