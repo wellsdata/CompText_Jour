@@ -13,7 +13,7 @@ To use a library, you need to import it. Put all your library steps at the top o
 
 #load the tidyverse library
 ```{r}
-
+library(tidyverse)
 ```
 
 ## Importing data
@@ -56,12 +56,14 @@ If we run `glimpse(baltcity_income)`, it will give us a list of the columns, the
 
 ```{r}
 glimpse(baltcity_income)
+
 ```
 
 If we type `head(baltcity_income)`, it will print out the columns and the first six rows of data. 
 
 ```{r}
 head(baltcity_income)
+
 ```
 We can also click on the data name in the R Studio environment window to explore it interactively. 
 
@@ -102,7 +104,7 @@ So we'll add another "and then do this" symbol -- %>% -- and use a new function 
 ```{r}
 baltcity_income %>%
   group_by(Neighborhood) %>%
-  summarise(
+  summarize(
     count_tracts = n()
   ) %>% 
   arrange(desc(count_tracts))
@@ -138,7 +140,7 @@ baltcity_income %>%
 ```
 Here we see the typical median household income is `$49,875` by census tract for Baltimore City in 2020 (see result for x2020 median). The lowest median income was `$13,559` and the highest was `$199,531`. From another Census analysis, we know hat citywide, the median household income was `$52,164` for 2016-2020. The **`na.rm=TRUE`** argument lets R knock out any empty rows from the calculation.
 
-Here's another quick way to determine the distribution of a particular column of data
+Use summary to determine the distribution the x2020 column in the baltcity_income dataframe
 ```{r}
 summary(baltcity_income$x2020)
 
@@ -153,8 +155,6 @@ Let's filter for the lowest value, $13,559, and find out where it is
 
 ```{r}
 baltcity_income %>%
-  #temp code - remove later
-  as.data.frame() %>% 
   select(Neighborhood, x2020) %>% 
   filter(x2020 ==13559) 
 ```
@@ -163,11 +163,12 @@ It is part of the Upton/Druid Heights neighborhood in West Baltimore.
 
 **YOUR TURN**
 
-Provide a list of all neighborhoods at or above $100,000 median income income in 2020
+Provide a list of all neighborhoods at or above $100,000 in median income income in 2020
 
 ```{r}
-
-
+baltcity_income %>%
+  select(Neighborhood, x2020) %>% 
+  filter(x2020 >=100000) 
 
 ```
 
@@ -188,8 +189,12 @@ Now we know in one report the wealthiest neighborhood, North Baltimore/Guilford/
 Show the neighborhoods between the second quartile and the median of income in 2020
 
 ```{r}
+mydata <- baltcity_income %>% 
+  select(Neighborhood, x2020) %>% 
+  filter(x2020 >=  35702 & x2020 <= 49875 )
 
-
+write.csv(mydata, "mydata.csv")
+ 
 ```
 
 
@@ -283,7 +288,13 @@ baltcity_race %>%
 summarize the asian, hispanic and pacific islander
 
 ```{r}
-
+baltcity_race %>% 
+  select(x2020_asian, x2020_hispanic, x2020_pac_islander) %>% 
+  summarize(
+    asian_total = sum(x2020_asian, na.rm = TRUE),
+    hispanic_total = sum(x2020_hispanic, na.rm = TRUE),
+    pac_island_total = sum(x2020_pac_islander, na.rm = TRUE)
+  )
 
 
 ```
@@ -317,9 +328,22 @@ Count them.
 What percentage of the city's census tracts are below the average? Put that in code too.
 
 ```{r}
+mean(baltcity_income$x2020, na.rm= TRUE)
+```
+
+```{r}
 
 
+baltcity_income %>%
+  select(x2020) %>% 
+  filter(x2020 <= 56311.21) %>%
+  count()
 
+```
+
+```{r}
+
+(121/200)*100
 ```
 
 
