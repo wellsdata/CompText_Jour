@@ -1,8 +1,10 @@
 # This page is ripped from Text Mining with R A Tidy Approach Julia Silge and David Robinson  2018-12-21, Ch. 1, https://www.tidytextmining.com/, 
 
-#1: Install tidytext package and then Load libraries: tidyverse, tidytext
+#1: Load libraries: tidyverse, tidytext
 ```{r}
-
+#install.packages("tidytext")
+library(tidyverse)
+library(tidytext)
 
 
 ```
@@ -12,7 +14,7 @@
 
 Emily Dickinson wrote some lovely text in her time.
 
-```{r}
+```{r text}
 text <- c("Because I could not stop for Death -",
           "He kindly stopped for me -",
           "The Carriage held but just Ourselves -",
@@ -23,7 +25,7 @@ text
 
 This is a typical character vector that we might want to analyze. In order to turn it into a tidy text dataset, we first need to put it into a data frame.
 
-```{r}
+```{r text_df, dependson = "text"}
 
 text_df <- tibble(line = 1:4, text = text)
 
@@ -70,6 +72,7 @@ original_books
 To work with this as a tidy dataset, we need to restructure it in the **one-token-per-row** format, which as we saw earlier is done with the `unnest_tokens()` function.
 
 ```{r}
+
 tidy_books <- original_books %>%
   unnest_tokens(word, text)
 
@@ -99,7 +102,6 @@ tidy_books %>%
 Because we've been using tidy tools, our word counts are stored in a tidy data frame. This allows us to pipe this directly to the ggplot2 package, for example to create a visualization of the most common words (Figure \@ref(fig:plotcount)).
 
 ```{r}
-library(ggplot2)
 
 tidy_books %>%
   count(word, sort = TRUE) %>%
@@ -132,9 +134,10 @@ library(gutenbergr)
 hgwells <- gutenberg_download(c(35, 36, 5230, 159))
 ```
 
-```{r}
-
+```{r hgwells, echo = FALSE}
 load("assets/data/hgwells.rda")
+
+
 ```
 
 ```{r }
@@ -145,14 +148,14 @@ tidy_hgwells <- hgwells %>%
 
 Just for kicks, what are the most common words in these novels of H.G. Wells?
 
-```{r dependson = "tidy_hgwells"}
+```{r}
 tidy_hgwells %>%
   count(word, sort = TRUE)
 ```
 
 Now let's get some well-known works of the Brontë sisters, whose lives overlapped with Jane Austen's somewhat but who wrote in a rather different style. Let's get [*Jane Eyre*](https://www.gutenberg.org/ebooks/1260), [*Wuthering Heights*](https://www.gutenberg.org/ebooks/768), [*The Tenant of Wildfell Hall*](https://www.gutenberg.org/ebooks/969), [*Villette*](https://www.gutenberg.org/ebooks/9182), and [*Agnes Grey*](https://www.gutenberg.org/ebooks/767). We will again use the Project Gutenberg ID numbers for each novel and access the texts using `gutenberg_download()`.
 
-```{r eval = FALSE}
+```{r}
 bronte <- gutenberg_download(c(1260, 768, 969, 9182, 767))
 ```
 
@@ -160,7 +163,7 @@ bronte <- gutenberg_download(c(1260, 768, 969, 9182, 767))
 load("assets/data/bronte.rda")
 ```
 
-```{r }
+```{r}
 tidy_bronte <- bronte %>%
   unnest_tokens(word, text) %>%
   anti_join(stop_words)
@@ -223,7 +226,7 @@ Overall, notice in Figure \@ref(fig:plotcompare) that the words in the Austen-Br
 
 Let's quantify how similar and different these sets of word frequencies are using a correlation test. How correlated are the word frequencies between Austen and the Brontë sisters, and between Austen and Wells?
 
-```{r}
+```{r }
 cor.test(data = frequency[frequency$author == "Brontë Sisters",],
          ~ proportion + `Jane Austen`)
 cor.test(data = frequency[frequency$author == "H.G. Wells",], 
