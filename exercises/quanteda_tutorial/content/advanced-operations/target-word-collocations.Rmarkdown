@@ -1,0 +1,47 @@
+---
+title: Identify related words of keywords
+weight: 40
+draft: false
+---
+
+We can identify related words of keywords based on their distance in the documents. In this example, we created a list of words related to the European Union by comparing frequency of words inside and outside of their contexts.
+
+```{r message=FALSE}
+require(quanteda)
+require(quanteda.textstats)
+```
+
+This corpus contains 6,000 Guardian news articles from 2012 to 2016.
+
+```{r eval=FALSE}
+corp_news <- download("data_corpus_guardian")
+```
+
+```{r include=FALSE}
+# This code is only for website generation
+corp_news <- readRDS("../data/data_corpus_guardian.rds")
+```
+
+```{r}
+toks_news <- tokens(corp_news, remove_punct = TRUE)
+```
+
+We will select two tokens objects for words inside and outside of the 10-word windows of the keywords (`eu`). 
+
+```{r}
+eu <- c("EU", "europ*", "european union")
+toks_inside <- tokens_keep(toks_news, pattern = eu, window = 10)
+toks_inside <- tokens_remove(toks_inside, pattern = eu) # remove the keywords
+toks_outside <- tokens_remove(toks_news, pattern = eu, window = 10)
+```
+
+We can compute words' association with the keywords using `textstat_keyness()`.
+
+```{r}
+dfmat_inside <- dfm(toks_inside)
+dfmat_outside <- dfm(toks_outside)
+
+tstat_key_inside <- textstat_keyness(rbind(dfmat_inside, dfmat_outside), 
+                                     target = seq_len(ndoc(dfmat_inside)))
+head(tstat_key_inside, 50)
+```
