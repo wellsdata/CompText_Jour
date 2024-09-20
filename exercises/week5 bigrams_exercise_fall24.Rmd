@@ -1,0 +1,138 @@
+---
+title: "Bigrams Exercise Sept 24"
+author: "Rob Wells"
+date: '2024-09-20'
+output: html_document
+---
+
+# Jour 389/689 Fall 2024:
+
+
+```{r}
+#load tidyverse, tidytext, rio and quanteda libraries
+
+```
+
+```{r}
+#Import dataframe 
+
+lynch <- read_csv("../data/articles_oct_19.csv")
+
+```
+
+
+# Create a new dataframe that filters articles for 1900 to 1910
+
+```{r}
+
+
+```
+
+
+# Count the number of distinct articles in 1900 dataframe
+```{r}
+
+```
+
+# Count the number of newspaper_states in the 1900 corpus
+```{r}
+
+
+
+```
+
+# Tokenize the 1900 lynching stories
+
+```{r}
+
+
+```
+
+
+#Remove stopwords
+The tidytext package includes the stop_words dataset.It contains, as of this writing, 1,149 words that data scientists and linguistic nerds felt could be removed from sentences because they don't add meaning. Filtering out these words can help focus on the more meaningful content, making it easier to uncover trends, themes, and key information in large amounts of text. Obviously, we have different priorities and we may or may not want to use stop_words or we have want to provide a customized list of stop words.
+
+The stop_words list is derived from three separate lists, or lexicons: SMART (571 words), onix (404 words), and snowball (174 words)
+
+The ONIX lexicon comes from the Open Information Exchange and is often used in text mining and natural language processing. 
+
+The Snowball lexicon is part of a broader project that has algorithms that simplify words in different languages by reducing them to their root form. It's best known for the Porter stemming algorithm, which, for example, changes "running" to "run." 
+
+Lastly, the SMART lexicon is a set of common words, like "and," "the," and "is," and it comes from the SMART Information Retrieval System, created at Cornell University in the 1960s.
+
+```{r}
+data(stop_words)
+
+test <- stop_words %>% 
+  as.data.frame()
+
+head(test)
+```
+# Strip out stop words
+
+```{r}
+
+stories_tokenized <- stories_tokenized %>%
+  anti_join(stop_words, by = c("word" = "word")) %>%
+  filter(word != "temp_file") %>%
+  filter(word != "stories_corpus") %>%
+  filter(!grepl('[0-9]', word))
+
+# Word Count
+
+story_word_ct <- stories_tokenized %>%
+  count(word, sort=TRUE)
+
+head(story_word_ct)
+
+
+```
+
+# Bigrams
+## We are now creating two word phrases but before the stop words are taken out
+
+```{r}
+stories_bigrams <- stories_df %>%
+  unnest_tokens(bigram, stories, token="ngrams", n=2)
+
+stories_bigrams_separated <- stories_bigrams %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+```
+
+# Create a new dataframe with counts of the bigrams
+```{r}
+
+```
+
+## Now filter the counts 
+```{r}
+
+stories_bigrams_filtered <- stories_bigrams_separated %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word)
+
+stories_bigram_cts2 <- stories_bigrams_filtered %>%
+  count(word1, word2, sort = TRUE) %>% 
+  filter(!is.na(word1))
+
+stories_bigram_cts2
+```
+
+# Add a "1900" decade column
+
+Hint: use mutate
+
+```{r}
+
+
+```
+
+
+# YOUR TURN
+
+Create one dataframe with black press articles
+Create a second dataframe without black press articles
+Produce the top 20 bigrams for the black press and non-black press coverage
+Compare and discuss!
+
+
