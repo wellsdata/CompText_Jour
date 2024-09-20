@@ -115,6 +115,11 @@ data(stop_words)
 test <- stop_words %>% 
   as.data.frame()
 
+head(test)
+```
+
+```{r}
+
 stories_tokenized <- stories_tokenized %>%
   anti_join(stop_words, by = c("word" = "word")) %>%
   filter(word != "temp_file") %>%
@@ -126,42 +131,61 @@ stories_tokenized <- stories_tokenized %>%
 story_word_ct <- stories_tokenized %>%
   count(word, sort=TRUE)
 
+head(story_word_ct)
+
 #write_csv(lynch_word_ct, "lynching_corpus_word_count.csv")
 
 ```
 
 # Bigrams
+## We are now creating two word phrases but before the stop words are taken out
 
 ```{r}
 stories_bigrams <- stories_df %>%
   unnest_tokens(bigram, stories, token="ngrams", n=2)
 
-stories_bigrams
-
-#Filter out stop words.
-
-
 stories_bigrams_separated <- stories_bigrams %>%
   separate(bigram, c("word1", "word2"), sep = " ")
+
+stories_bigram_cts <- stories_bigrams_separated %>%
+  count(word1, word2, sort = TRUE)
+stories_bigram_cts
+```
+
+## Now the counts with the filter
+```{r}
 
 stories_bigrams_filtered <- stories_bigrams_separated %>%
   filter(!word1 %in% stop_words$word) %>%
   filter(!word2 %in% stop_words$word)
 
-stories_bigram_cts <- stories_bigrams_filtered %>%
-  count(word1, word2, sort = TRUE)
+stories_bigram_cts2 <- stories_bigrams_filtered %>%
+  count(word1, word2, sort = TRUE) %>% 
+  filter(!is.na(word1))
 
-# put back into bigram form if we want to use them
-stories_bigrams_united <- stories_bigrams_filtered %>%
-  unite(bigram, word1, word2, sep = " ")
+stories_bigram_cts2
+```
+
+
+```{r}
 
 #replace Date for the decade analyzed
-stories_bigram_cts_post1940 <- stories_bigram_cts %>% 
-  mutate(decade = "post1940")
+stories_bigram_cts_1900 <- stories_bigram_cts %>% 
+  mutate(decade = "1900s")
 
 #write_csv(stories_bigram_cts_post1940, "../output/post1940_lynch_bigram_count.csv")
 
 ```
+
+
+# YOUR TURN
+
+Create one dataframe with black press articles
+Create a second dataframe without black press articles
+Produce the top 20 bigrams for the black press and non-black press coverage
+Compare and discuss!
+
+
 
 # Trigrams
 
