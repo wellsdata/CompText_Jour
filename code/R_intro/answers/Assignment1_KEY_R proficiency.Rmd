@@ -1,0 +1,127 @@
+---
+title: "Key for R Proficiency Assignment Sept 21"
+author: "Rob Wells"
+date: "2024-09-19"
+output: html_document
+---
+
+#1: --Load relevant software libraries
+```{r}
+library(tidyverse)
+library(rio)
+library(janitor)
+```
+
+#2: Load the data: https://github.com/wellsdata/CompText_Jour/raw/main/data/blackindex_master.csv
+```{r}
+
+test <- rio::import("https://github.com/wellsdata/CompText_Jour/raw/main/data/blackindex_master.csv") 
+
+```
+
+#3: Using code, describe the number of rows and columns in the dataset
+
+```{r}
+dim(test)
+
+
+# in this data set there are 1803 rows and 30 columns.. 
+
+
+# Here's how Sean did it
+print(paste0("This dataset has ", nrow(test), " rows and ", ncol(test), " columns. Each row in this dataset appears to describe a single article that appeared in a Black newspaper between ", min(test$year), " and ", max(test$year), ". The articles appear to have been sourced from several historical newspaper databases and archives. Many of the article headlines reference racial terror lynching."))
+
+```
+
+#4: Create a table that displays a count of the top 5 newspaper_city entries
+```{r}
+test %>% 
+  count(newspaper_city) %>% 
+ slice_max(order_by = n, n = 5)
+
+```
+
+#5: Create a table that counts all newspaper_city entries by year. UPDATE: Filter out the NA values
+```{r}
+#entries_year <- test %>% 
+test %>% 
+  filter(!is.na(newspaper_city)) %>% 
+  count(newspaper_city, year) %>% 
+  arrange(desc(n)) 
+  
+
+
+```
+
+
+#6: --Create a simple column ggplot chart that shows the total entries by year
+```{r}
+ggplot(entries_year, aes(x = year, y = n,
+             fill = n)) +
+  geom_col(position = "dodge") + 
+  theme(legend.position = "none") +
+  labs(title = "Years of Lynching Coverage",
+       caption = "By Rob Wells",
+       y="Articles",
+       x="Year")
+
+
+#Second option
+test %>%
+  group_by(year) %>%
+count(year) %>%
+  ggplot(aes(x=year, y=n, fill=n))+
+  geom_col(position = "dodge")+
+    theme(legend.position = "none") +
+labs(title = "Years of Lynching Coverage",
+       caption = "By Rob Wells")
+
+#thire option
+test %>%
+  count(year) %>% 
+  ggplot(aes(x = year, y = n)) +
+  geom_col() +
+  labs(title = "Total Articles by Year in Black Index Master",
+       subtitle = "There are more articles from 1920 in this dataset than any other year",
+       x = "Year",
+       y = "Total Articles",
+       caption = "Source: Black Index Master Dataset, Via Prof. Rob Wells") +
+  scale_x_continuous(breaks = seq(1850, 2020, 10)) +
+  #rotate x axis labels 45 degrees
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+
+# Extra items for discussion in class
+
+```{r}
+
+test %>% 
+  filter(newspaper_city == c("Chicago", "Pittsburgh", "Atlanta")) %>% 
+  count(newspaper_city, year) %>% 
+  arrange(desc(n)) 
+
+```
+#Filter out a city
+```{r}
+
+test %>% 
+  filter(newspaper_city != "Chicago") %>% 
+  count(newspaper_city, year) %>% 
+  arrange(desc(n)) 
+
+```
+
+--Create a table that counts all newspaper_city entries by year
+```{r}
+
+entries_year <- test %>% 
+  filter(!is.na(newspaper_city)) %>% 
+  select(year, newspaper_city) %>% 
+  group_by(year, newspaper_city) %>% 
+  count(year) 
+
+```
+
