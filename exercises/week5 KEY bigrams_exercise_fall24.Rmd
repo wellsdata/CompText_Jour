@@ -1,17 +1,34 @@
 ---
-title: "Lynching Text Analysis"
+title: "Bigrams Exercise Sept 24"
 author: "Rob Wells"
-date: '2022-09-27'
+date: '2024-09-20'
 output: html_document
 ---
 
 # Jour 389/689 Fall 2024:
 
+Use the following code as a template with a new dataset:
+
+black_press_extracted_text_june_22_2024.csv
+
+See the blue hashtag instructions in the code chunks, such as:
+
+#import df
+
+#Show range of years covered
+
+#Create chart of years
+
+And do the same with the new dataset: black_press_extracted_text_june_22_2024.csv
+
+Hand in your completed assignment by uploading to your personal GitHub repository, obtaining the URL and submitting that to Elms
+
 ```{r}
 #load tidyverse, tidytext, rio and quanteda libraries
-
 library(tidyverse)
+library(rio)
 library(tidytext)
+library(quanteda)
 
 
 ```
@@ -19,90 +36,57 @@ library(tidytext)
 ```{r}
 #Import dataframe 
 
-
 lynch <- read_csv("../data/articles_oct_19.csv")
 
 ```
 
-# plot of years covered
+
+# Create a new dataframe that filters articles for 1900 to 1910
 
 ```{r}
 
-#Show range of years covered
-years_ct <- lynch %>%
-  distinct(filename, .keep_all = TRUE) %>% 
-  count(year)
-
-y <- lynch %>%
-  distinct(filename, .keep_all = TRUE)
-
-#Create chart of years
-ggplot(years_ct,aes(x = year, y = n,
-             fill = n)) +
-  geom_col(position = "dodge") + 
-  theme(legend.position = "none") +
-  labs(title = "Years of Lynching Coverage",
-       subtitle = "Based in 7,162 extracted articles",
-       caption = "Graphic by Rob Wells, 10-30-2023",
-       y="Articles",
-       x="Year")
-
-# ggsave("../output_images_tables/Figure2_years_lynching_coverage_10.30.23.png",device = "png",width=9,height=6, dpi=800)
+lynch1910 <-  lynch %>% 
+  filter(year >= 1900 & year <= 1910)
 ```
 
-# By decade
 
-## post1940
-
+# Count the number of distinct articles in 1910
 ```{r}
-#Filter articles from 1940s forward
-post1940 <-  lynch %>% 
-  filter(year >= 1940)
-
-post1940 %>% 
+lynch1910 %>% 
   select(filename) %>% 
  distinct(filename, .keep_all = TRUE) %>% 
   count(filename) %>% 
   summarize(total =sum(n)) 
-#62 articles 
+#There are 1,732 distinct articles in the dataset for the 1900-1910 
+```
 
-statespost1940 <- post1940 %>% 
+# Count the number of newspaper_states in the 1900 corpus
+```{r}
+
+states1900 <- lynch1910 %>% 
   select(newspaper_state, filename) %>% 
   distinct(filename, .keep_all = TRUE) %>% 
   count(newspaper_state) %>% 
   arrange(desc(n))
 
-statespost1940 %>% 
+#and now provide code to list the top five states
+states1900 %>% 
   select(newspaper_state, n) %>% 
 slice_max(n, n=10)
-#newspaper_state
 
-# Michigan	20			
-# Minnesota	18			
-# District of Columbia	5			
-# Nebraska	4			
-# Illinois	3			
-# Mississippi	2			
-# North Carolina	2			
-# Washington	2			
-# Alaska	1			
-# Arizona	1	
+ # 1 Wisconsin          91
+ # 2 Arkansas           90
+ # 3 Mississippi        89
+ # 4 Nebraska           83
+ # 5 Utah               80
 
-#Fact Check
-#sum(statesthe1850s$n)
-
-x <- post1940 %>% 
-  distinct(filename, .keep_all = TRUE) %>% 
-  arrange(date)
-
-#write_csv(x, "post1940_index.csv")
 ```
 
-# Tokenize
+# Tokenize the 1900 lynching stories
 
 ```{r}
 
-stories <- str_replace_all(post1940$sentence, "- ", "")
+stories <- str_replace_all(lynch1910$sentence, "- ", "")
 stories_df <- tibble(stories,)
 
 # unnest includes lower, punct removal
@@ -115,9 +99,9 @@ stories_tokenized
 
 
 #Remove stopwords
-The tidytext package includes the stop_words dataset.It contains, as of this writing, 1,149 words that data scientists and linguistic nerds felt could be removed from sentences because they don't add meaning. Filtering out these words can help focus on the more meaningful content, making it easier to uncover trends, themes, and key information in large amounts of text. Obviously, we have different priorities and we may or may not want to use stop_words or we have want to provide a customized list of stop words.
+The tidytext package includes the stop_words dataset. We will load it below. It contains, as of this writing, 1,149 words that data scientist and linguistic nerds felt could be removed from sentences because they don't add meaning. Filtering out these words can help focus on the more meaningful content, making it easier to uncover trends, themes, and key information in large amounts of text. Obviously, we have different priorities and we may or may not want to use stop_words or we have want to provide a customized list.
 
-The stop_words list is derived from three separate lists, or lexicons: SMART (571 words), onix (404 words), and snowball (174 words)
+The list is derived from three separate lists, or lexicons: SMART (571 words), onix (404 words), and snowball (174 words)
 
 The ONIX lexicon comes from the Open Information Exchange and is often used in text mining and natural language processing. 
 
@@ -134,10 +118,7 @@ test <- stop_words %>%
 head(test)
 ```
 
-#Remove stopwords
 ```{r}
-
-data(stop_words)
 
 stories_tokenized <- stories_tokenized %>%
   anti_join(stop_words, by = c("word" = "word")) %>%
@@ -150,49 +131,72 @@ stories_tokenized <- stories_tokenized %>%
 story_word_ct <- stories_tokenized %>%
   count(word, sort=TRUE)
 
+head(story_word_ct)
+
 #write_csv(lynch_word_ct, "lynching_corpus_word_count.csv")
 
 ```
 
 # Bigrams
+## We are now creating two word phrases but before the stop words are taken out
 
 ```{r}
-bigrams <- stories_df %>%
+stories_bigrams <- stories_df %>%
   unnest_tokens(bigram, stories, token="ngrams", n=2)
 
-bigrams
-
-#Filter out stop words.
-
-
-bigrams1 <- bigrams %>%
+stories_bigrams_separated <- stories_bigrams %>%
   separate(bigram, c("word1", "word2"), sep = " ")
 
-bigrams2 <- bigrams1 %>%
+stories_bigram_cts <- stories_bigrams_separated %>%
+  count(word1, word2, sort = TRUE)
+stories_bigram_cts
+```
+
+## Now the counts with the filter
+```{r}
+
+stories_bigrams_filtered <- stories_bigrams_separated %>%
   filter(!word1 %in% stop_words$word) %>%
   filter(!word2 %in% stop_words$word)
 
-bigram3 <- bigrams2 %>%
-  count(word1, word2, sort = TRUE)
+stories_bigram_cts2 <- stories_bigrams_filtered %>%
+  count(word1, word2, sort = TRUE) %>% 
+  filter(!is.na(word1))
+
+stories_bigram_cts2
+```
+
+
+```{r}
 
 #replace Date for the decade analyzed
-bigram3 <- bigram3 %>% 
-  mutate(decade = "post1940")
+stories_bigram_cts_1900 <- stories_bigram_cts %>% 
+  mutate(decade = "1900s")
 
 #write_csv(stories_bigram_cts_post1940, "../output/post1940_lynch_bigram_count.csv")
 
 ```
 
+
+# YOUR TURN
+
+Create one dataframe with black press articles
+Create a second dataframe without black press articles
+Produce the top 20 bigrams for the black press and non-black press coverage
+Compare and discuss!
+
+
+
 # Trigrams
 
 ```{r}
-trigrams <- stories_df %>%
+stories_trigrams <- stories_df %>%
   unnest_tokens(trigram, stories, token="ngrams", n=3)
 
-trigrams2 <- trigrams %>%
+stories_trigrams_separated <- stories_trigrams %>%
   separate(trigram, c("word1", "word2", "word3"), sep = " ")
 
-trigrams3 <- trigrams2 %>%
+stories_trigrams_ct <- stories_trigrams_separated %>%
   count(word1, word2, word3, sort = TRUE)
 
 #filtered
@@ -208,16 +212,10 @@ trigrams3 <- trigrams2 %>%
 stories_trigrams_ct_post1940 <- stories_trigrams_ct %>% 
   mutate(decade = "post1940")
 
-#write_csv(stories_trigrams_ct_post1940, "../output/post1940_lynch_trigram_count.csv")
+write_csv(stories_trigrams_ct_post1940, "../output/post1940_lynch_trigram_count.csv")
 
 
 ```
-
-
-#Notes Below#
-
-#-------------------------------------------------------------------------------
-
 
 #Compile DFs
 
