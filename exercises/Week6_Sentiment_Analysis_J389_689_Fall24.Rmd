@@ -18,44 +18,23 @@ load the following libraries: tidyverse, textdata, tidytext, quanteda, rio
 
 ```
 
-# Tokenizing data
 
-## Replace the lynch data with "black_press_extracted_text_june_22_2024.csv" and follow the script
+#import "articles_oct_19.csv" as a dataframe
 
 ```{r}
 #import df created from sequence below
 
-lynch <- read.csv("../data/articles_oct_19.csv")
+```
 
-#update to the file path for your code folder
-#black <- read.csv("~/Code/CompText_Jour/data/black_press_extracted_text_june_22_2024.csv")
-
-
-all_text <- str_replace_all(lynch$sentence, "- ", "")
-text_df <- tibble(all_text,)
-
-# unnest includes lower, punct removal
-
-text_tokenized <- text_df %>%
-  unnest_tokens(word,all_text)
-
-text_tokenized
-
-#Remove stopwords
-
-data(stop_words)
-
-text_tokenized<- text_tokenized %>%
-  anti_join(stop_words, by = c("word" = "word")) %>%
-  filter(word != "temp_file") %>%
-  #NOT SURE IF THIS LINE SHOULD REMAIN
-  filter(word != "stories_corpus") %>%
-  filter(!grepl('[0-9]', word))
-
-# fix the script so it doesn't pick up these file names, numbers  
-# forcibly removing for now
+#Tokenize sentence into a df, remove stopwords
 
 
+```{r}
+```
+
+
+# Count the words in descending order
+```{r}
 # Word Count
 
 text_word_ct <- text_tokenized %>%
@@ -71,29 +50,14 @@ NRC Lexicon on Whole Corpus
 #install.packages("textdata")
 nrc_sentiments <- get_sentiments("nrc")
 afinn_sentiments <- get_sentiments("afinn")
-
-nrc_sentiments %>% count(sentiment)
-
-#sentiment & count
-# anger	1246			
-# anticipation	837			
-# disgust	1056			
-# fear	1474			
-# joy	687			
-# negative	3318			
-# positive	2308			
-# sadness	1187			
-# surprise	532			
-# trust	1230	
-
-nrc_sentiments %>% 
-  group_by(word) %>% 
-  count() %>% 
-  arrange(desc(n)) %>% 
-  distinct()
 ```
 
-### Review NRC Overall Sentiment
+#Count the NRC sentiments
+```{r}
+
+```
+
+### Join the NRC Sentiments with the tokenized data
 
 
 ```{r}
@@ -101,272 +65,25 @@ nrc_sentiments %>%
 sentiments_all <- text_tokenized %>%
   inner_join(nrc_sentiments) 
 
-#this dictionary assigns different values to the same word. negro is negative, sadness whereas lynch is anger, disgust, fear, negative and sadness.
-
-
-
-x <- sentiments_all %>% 
-  group_by(word) %>% 
-    count(sentiment)
-
 ```
 
 ### Count Overall Sentiment with NRC
 
 ```{r}
-sentiments_all <- text_tokenized %>%
-  inner_join(nrc_sentiments) %>%
-  count(sentiment, sort = TRUE) %>% 
-  mutate(pct_total =round(n/sum(n), digits=2))
-
-sentiments_all
-
 
 ```
 
-
-
-## Figure 5: Sentiment chart
-```{r}
-library(ggplot2)
-
-
-afinn_plot <- ggplot(sentiments_all,aes(x = sentiment, y = n,fill = n)) +
-  geom_col(position = "dodge") + 
-  theme(legend.position = "none") +
-  labs(title = "Total Sentiment in Black Press Lynching News Coverage",
-       subtitle = " ",
-       caption = "NRC Sentiment analysis. Graphic by Rob Wells, 8-25-2024",
-       y="Score",
-       x="total sentiment score")
-
-afinn_plot + scico::scale_fill_scico(palette = "vik")
-
-# ggsave("Figure5_afinn_sentiment_jan2.png",device = "png",width=9,height=6, dpi=800)
-
-
-```
+## Use ggplot to chart Sentiments with the tokenized data
 
 ```{r}
-# Anger
-
-nrc_anger <- nrc_sentiments %>%
-  filter(sentiment == "anger")
-
-lynching_anger <- text_tokenized %>%
-  inner_join(nrc_anger) %>%
-  count(word, sort = TRUE)
-
-lynching_anger
 
 ```
 
+
+
+# Create a new dataframe just with the NRC "anger" sentiment
 ```{r}
-# Anticipation
-# results / themes not as clear as anger
-
-nrc_anticipation <- nrc_sentiments %>%
-  filter(sentiment == "anticipation")
-
-lynching_anticipation <-text_tokenized%>%
-  inner_join(nrc_anticipation) %>%
-  count(word, sort = TRUE)
-
-lynching_anticipation
-
-```
-
-
-
-```{r}
-# Fear
-# see a reflection of the basic word count in these results
-
-nrc_fear <- nrc_sentiments %>%
-  filter(sentiment == "fear")
-
-lynching_fear <-text_tokenized%>%
-  inner_join(nrc_fear) %>%
-  count(word, sort = TRUE)
-
-lynching_fear
-
-```
-
-
-```{r}
-# Disgust
-# see a reflection of the basic word count in these results
-
-nrc_disgust <- nrc_sentiments %>%
-  filter(sentiment == "disgust")
-
-lynching_disgust <-text_tokenized%>%
-  inner_join(nrc_disgust) %>%
-  count(word, sort = TRUE)
-
-lynching_disgust
-
-```
-
-### Create custom dictionary
-
-```{r}
-#We should do our own custom sentiment dictionary based on the top 500 words. 
-
-text_500 <- text_word_ct %>% 
-  filter(n >= 29)
-
-custom_dictionary <- text_500 %>%
-  inner_join(nrc_sentiments)
-
-#write.csv(custom_dictionary, "custom_dictionary.csv")
-
-```
-
-# Extra Content: 
-### Here are some ideas on what you can do by decade and region
-
-# Sentiment by decade
-```{r}
-#before 1870
-pre1870 <- lynch %>% 
-  filter(year < 1870)
-
-#1870-1879
-the1870s <-  lynch %>% 
-  filter(year >= 1870 & year <=1879)
-
-#1880-1889
-the1880s <-  lynch %>% 
-  filter(year >= 1880 & year <=1889)
-
-#1890-1899
-the1890s <-  lynch %>% 
-  filter(year >= 1890 & year <=1899)
-
-#1900-1909
-the1900s <-  lynch %>% 
-  filter(year >= 1900 & year <=1909)
-
-#1910-1919
-the1910s <-  lynch %>% 
-  filter(year >= 1910 & year <=1919)
-
-#1920-1929
-the1920s <-  lynch %>% 
-  filter(year >= 1920 & year <=1929)
-
-#1930-1960
-post1930s <-  lynch %>% 
-  filter(year >= 1930)
-
-```
-
-#### Compile by decade
-```{r}
-lynch_decade <- lynch %>% 
-  mutate(decade = case_when(
-         year < 1870 ~ "pre1870",
-        year >= 1870 & year <=1879 ~ "1870s",
-         year >= 1880 & year <=1889 ~ "1880s",
-         year >= 1890 & year <=1899 ~ "1890s",
-        year >= 1900 & year <=1909 ~ "1900s",
-        year >= 1910 & year <=1919 ~ "1910s",
-        year >= 1920 & year <=1929 ~ "1920s",
-        year >= 1930 ~ "post1930s"
-         ))
-
-```
-
-### Regional classification
-```{r}
-# lynch_decade %>% 
-#   count(newspaper_state)
-lynch_decade <- lynch_decade %>% 
-  mutate(region=newspaper_state) %>% 
-  mutate(region = case_when(region=="South Carolina" ~ "South",
-                            region=="Texas" ~ "South",
-                            region=="Louisiana" ~ "South",
-                            region=="Tennessee" ~ "South",
-                            region=="Mississippi" ~ "South",
-                            region=="Arkansas" ~ "South",
-                            region=="Alabama" ~ "South",
-                            region=="Georgia" ~ "South",
-                            region=="Virginia" ~ "South",
-                            region=="Florida" ~ "South",
-                            region=="North Carolina" ~ "South",
-                            region=="Maryland" ~ "Border",
-                            region=="Delaware" ~ "Border",
-                            region=="West Virginia" ~ "Border",
-                            region=="Kentucky" ~ "Border",
-                            region=="Missouri" ~ "Border",
-                            region=="Maine" ~ "North",
-                            region=="New York" ~ "North",
-                            region=="New Hampshire" ~ "North",
-                            region=="Vermont" ~ "North",
-                            region=="Massassachusetts" ~ "North",
-                            region=="Connecticut" ~ "North",
-                            region=="Rhode Island" ~ "North",
-                            region=="Pennsylvania" ~ "North",
-                            region=="New Jersey" ~ "North",
-                            region=="Ohio" ~ "North",
-                            region=="Indiana" ~ "North",
-                            region=="Kansas" ~ "North",
-                            region=="Michigan" ~ "North",
-                             region=="Wisconsin" ~ "North",
-                             region=="Minnesota" ~ "North",
-                             region=="Iowa" ~ "North",
-                             region=="California" ~ "North",
-                             region=="Nevada" ~ "North",
-                             region=="Oregon" ~ "North",
-                            region=="Illinois" ~ "North",
-                            region=="Nebraska" ~ "Misc",
-                            region=="Colorado" ~ "Misc",
-                            region=="North Dakota" ~ "Misc",
-                            region=="South Dakota" ~ "Misc",
-                            region=="Montana" ~ "Misc",
-                            region=="Washington" ~ "Misc",
-                            region=="Idaho" ~ "Misc",
-                            region=="Wyoming" ~ "Misc",
-                            region=="Utah" ~ "Misc",
-                            region=="Oklahoma" ~ "Misc",
-                            region=="New Mexico" ~ "Misc",
-                            region=="Arizona" ~ "Misc",
-                            region=="Alaska" ~ "Misc",
-                            region=="Hawaii" ~ "Misc",
-                            region=="District of Columbia" ~ "Misc",
-                            region=="Virgin Islands" ~ "Misc",
-                                                     TRUE~region)) 
 
 
 ```
-
-
-Overall, negative sentiment was 70% of the Southern newspaper coverage but just 69% of the Northern newspaper coverage.
-
-```{r}
-sentiments_south <- sentiments_south %>% 
-  rename(south_n = n, south_pct = pct_total)
-
-sentiments_north <- sentiments_north %>% 
-  rename(north_n = n, north_pct = pct_total)
-
-sentiments_border <- sentiments_border %>% 
-  rename(border_n = n, border_pct = pct_total)
-
-sentiments_misc <- sentiments_misc %>% 
-  rename(misc_n = n, misc_pct = pct_total)
-
-
-
-sent_regions <- sentiments_south %>% 
-  inner_join(sentiments_north) %>% 
-  inner_join(sentiments_border) %>% 
-  inner_join(sentiments_misc)
-
-#write.csv(sent_regions, "sent_regions_jan6.csv")
-```
-
-
 
