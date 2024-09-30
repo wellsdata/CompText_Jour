@@ -61,6 +61,8 @@ lynch1910 %>%
   count(filename) %>% 
   summarize(total =sum(n)) 
 #There are 1,732 distinct articles in the dataset for the 1900-1910 
+#or the Marilyn Harbert method!:
+n_distinct(lynch1910$filename)
 ```
 
 # Count the number of newspaper_states in the 1900 corpus
@@ -181,6 +183,22 @@ stories_bigram_cts_1900 <- stories_bigram_cts %>%
 ```
 
 
+# And here is a MUCH tighter version of the process above:
+```{r}
+stories_bigrams_cts3 <- lynch1910 %>% 
+  select(sentence) %>% 
+  mutate(sentence = str_replace_all(sentence, "- ", "")) %>% 
+  unnest_tokens(bigram, sentence, token="ngrams", n=2 ) %>% 
+  separate(bigram, c("word1", "word2"), sep = " ") %>% 
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>% 
+  count(word1, word2, sort = TRUE) %>% 
+  filter(!is.na(word1)) %>% 
+   mutate(decade = "1900s")
+
+  stories_bigrams_cts3 
+```
+
 # YOUR TURN
 
 Create one dataframe with black press articles
@@ -192,24 +210,7 @@ bp <- lynch %>%
 ```
 
 
-Produce the top 20 bigrams for the black press and non-black press coverage
-# Tokenize the 1900 lynching stories
-
-```{r}
-
-stories <- str_replace_all(bp$sentence, "- ", "")
-stories_df <- tibble(stories,)
-
-# unnest includes lower, punct removal
-
-stories_tokenized <- stories_df %>%
-  unnest_tokens(word,stories)
-
-stories_tokenized
-```
-# Bigrams
-## We are now creating two word phrases but before the stop words are taken out
-
+#BP bigrams
 ```{r}
 bp_stories_bigrams <- stories_df %>%
   unnest_tokens(bigram, stories, token="ngrams", n=2)
@@ -238,6 +239,8 @@ wp <- lynch %>%
 #to eliminate leading and trailing spaces
 # lynch <- lynch %>%
 #   mutate(black_press = trimws(black_press)) 
+
+
 ```
 
 
@@ -246,38 +249,23 @@ Produce the top 20 bigrams for the black press and non-black press coverage
 
 ```{r}
 
-stories <- str_replace_all(wp$sentence, "- ", "")
-stories_df <- tibble(stories,)
-
-# unnest includes lower, punct removal
-
-stories_tokenized <- stories_df %>%
-  unnest_tokens(word,stories)
-
-stories_tokenized
-```
-# Bigrams
-## We are now creating two word phrases but before the stop words are taken out
-
-```{r}
-wp_stories_bigrams <- stories_df %>%
-  unnest_tokens(bigram, stories, token="ngrams", n=2)
-
-wp_stories_bigrams_separated <- wp_stories_bigrams %>%
+wp_stories_bigrams <- wp %>% 
+  select(sentence) %>% 
+  mutate(sentence = str_replace_all(sentence, "- ", "")) %>% 
+  unnest_tokens(bigram, sentence, token="ngrams", n=2 ) %>% 
   separate(bigram, c("word1", "word2"), sep = " ") %>% 
   filter(!word1 %in% stop_words$word) %>%
   filter(!word2 %in% stop_words$word) %>% 
   count(word1, word2, sort = TRUE) %>% 
   filter(!is.na(word1))
 
-wp_stories_bigrams_separated
-
+wp_stories_bigrams 
 ```
 
 Compare and discuss!
 #top BP Bigrams
 ```{r}
-bp_top5 <- head(bp_stories_bigrams_separated, 5)
+bp_top5 <- head(bp_stories_bigrams, 5)
 
 cat("The top five Black press bigrams were:\n")
 print(bp_top5)
@@ -286,7 +274,7 @@ print(bp_top5)
 
 #top WP Bigrams
 ```{r}
-wp_top5 <- head(wp_stories_bigrams_separated, 5)
+wp_top5 <- head(wp_stories_bigrams, 5)
 
 cat("The top five white press bigrams were:\n")
 print(wp_top5)
@@ -330,7 +318,6 @@ kable(results_table,
   column_spec(1, bold = TRUE, border_right = TRUE) %>%
   row_spec(1:5, background = "white", color = "black")
 ```
-
 
 
 # Trigrams
