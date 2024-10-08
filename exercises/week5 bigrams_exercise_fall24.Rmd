@@ -1,7 +1,7 @@
 ---
 title: "Bigrams Exercise Sept 24"
-author: "Rob Wells"
-date: '2024-09-20'
+author: "Bridget Lang"
+date: '2024-09-28'
 output: html_document
 ---
 
@@ -10,6 +10,8 @@ output: html_document
 
 ```{r}
 #load tidyverse, tidytext, rio and quanteda libraries
+library(tidyverse)
+library(tidytext)
 
 ```
 
@@ -25,18 +27,29 @@ lynch <- read_csv("../data/articles_oct_19.csv")
 
 ```{r}
 
-
+firstDecade <- lynch %>%
+  filter(year >= 1900) %>%
+  filter(year <= 1910)
 ```
 
 
 # Count the number of distinct articles in 1900 dataframe
 ```{r}
-
+firstDecade %>% 
+  select(filename) %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  count(filename) %>% 
+  summarize(total =sum(n)) 
+#1732 distinct articles
 ```
 
 # Count the number of newspaper_states in the 1900 corpus
 ```{r}
-
+firstDecade %>% 
+  select(newspaper_state, filename) %>% 
+  distinct(filename, .keep_all = TRUE) %>% 
+  count(newspaper_state) %>% 
+  arrange(desc(n))
 
 
 ```
@@ -44,7 +57,13 @@ lynch <- read_csv("../data/articles_oct_19.csv")
 # Tokenize the 1900 lynching stories
 
 ```{r}
+stories <- str_replace_all(firstDecade$sentence, "- ", "")
+stories_df <- tibble(stories,)
 
+stories_tokenized <- stories_df %>%
+  unnest_tokens(word,stories)
+
+stories_tokenized
 
 ```
 
@@ -102,6 +121,9 @@ stories_bigrams_separated <- stories_bigrams %>%
 # Create a new dataframe with counts of the bigrams
 ```{r}
 
+stories_bigrams_count <- stories_bigrams %>%
+  count(bigram, sort=TRUE)
+
 ```
 
 ## Now filter the counts 
@@ -123,7 +145,9 @@ stories_bigram_cts2
 Hint: use mutate
 
 ```{r}
-
+library(dplyr)
+lynch <- lynch %>%
+  mutate(firstDecade = ifelse(year >= 1900 & year <= 1910, 'Y', "N"))
 
 ```
 
@@ -135,4 +159,138 @@ Create a second dataframe without black press articles
 Produce the top 20 bigrams for the black press and non-black press coverage
 Compare and discuss!
 
+```{r}
+#black press
+black_press <- lynch %>%
+  filter(!is.na(black_press))
+```
 
+```{r}
+#tokenize
+black_press_stories <- str_replace_all(black_press$sentence, "- ", "")
+black_press_stories_df <- tibble(black_press_stories,)
+
+black_press_stories_tokenized <- black_press_stories_df %>%
+  unnest_tokens(word,black_press_stories)
+
+black_press_stories_tokenized
+
+```
+
+```{r}
+#strip out stop words
+data(stop_words)
+
+black_press_stories_tokenized <- black_press_stories_tokenized %>%
+  anti_join(stop_words, by = c("word" = "word")) %>%
+  filter(word != "temp_file") %>%
+  filter(word != "stories_corpus") %>%
+  filter(!grepl('[0-9]', word))
+
+# Word Count
+
+black_press_story_word_ct <- black_press_stories_tokenized %>%
+  count(word, sort=TRUE)
+
+```
+
+```{r}
+#bigrams before stripping stop words
+
+black_press_stories_bigrams <- black_press_stories_df %>%
+  unnest_tokens(bigram, black_press_stories, token="ngrams", n=2)
+
+black_press_stories_bigrams_separated <- black_press_stories_bigrams %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+
+```
+
+```{r}
+black_press_stories_bigrams_count <- black_press_stories_bigrams %>%
+  count(bigram, sort=TRUE)
+```
+
+```{r}
+#bigrams with stpo worfs filtered
+black_press_stories_bigrams_filtered <- black_press_stories_bigrams_separated %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word)
+
+black_press_stories_bigram_cts2 <- black_press_stories_bigrams_filtered %>%
+  count(word1, word2, sort = TRUE) %>% 
+  filter(!is.na(word1))
+
+```
+
+```{r}
+#not black press
+not_black_press <- lynch %>%
+  filter(is.na(black_press))
+```
+
+```{r}
+#tokenize
+not_black_press_stories <- str_replace_all(not_black_press$sentence, "- ", "")
+not_black_press_stories_df <- tibble(not_black_press_stories,)
+
+not_black_press_stories_tokenized <- not_black_press_stories_df %>%
+  unnest_tokens(word, not_black_press_stories)
+
+```
+
+```{r}
+#strip out stop words
+
+not_black_press_stories_tokenized <- not_black_press_stories_tokenized %>%
+  anti_join(stop_words, by = c("word" = "word")) %>%
+  filter(word != "temp_file") %>%
+  filter(word != "stories_corpus") %>%
+  filter(!grepl('[0-9]', word))
+
+# Word Count
+
+not_black_press_story_word_ct <- not_black_press_stories_tokenized %>%
+  count(word, sort=TRUE)
+
+```
+
+```{r}
+#bigrams before stripping stop words
+
+not_black_press_stories_bigrams <- not_black_press_stories_df %>%
+  unnest_tokens(bigram, not_black_press_stories, token="ngrams", n=2)
+
+not_black_press_stories_bigrams_separated <- not_black_press_stories_bigrams %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+
+```
+
+```{r}
+not_black_press_stories_bigrams_count <- not_black_press_stories_bigrams %>%
+  count(bigram, sort=TRUE)
+```
+
+```{r}
+#bigrams with stop words filtered
+not_black_press_stories_bigrams_filtered <- not_black_press_stories_bigrams_separated %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word)
+
+not_black_press_stories_bigram_cts2 <- not_black_press_stories_bigrams_filtered %>%
+  count(word1, word2, sort = TRUE) %>% 
+  filter(!is.na(word1))
+
+```
+# Top 20 bigrams for black press 
+```{r}
+head(black_press_stories_bigram_cts2, 20)
+```
+# Top 20 bigrams for non-black press 
+```{r}
+#top 20 bigrams for non black press 
+head(not_black_press_stories_bigram_cts2, 20)
+```
+
+The black press seem to cover more about people of color in general, with there obviously being a higher number of articles about any of these topics. The most used bigram by the black press is "negro lynched" which indicates a very high coverage of individual lynchings or crimes again black people. The second most common bigram is "county jail" which indicated a high amount of coverage of black people being incarcerated or accused of crimes. The third most common is "white woman", which is interesting given the role that white women and their accusation have played in the historical (and current) persecution of black men in particular. 
+
+The non-black press's most used bigram was "colored people", followed by "lynch law", then "national association". The terms more often used by the non-black press seem as though they would be used in a more general context, as if describing a group of people or a common issue rather than reporting on specific incidents. The bigram "national association" is likely the beginning of the NAACP. According to blackpast.org, "lynch law" describes a set of beliefs or unwritten rules that people believed justified the use of violence against black people, as they felt the government did not do enough (https://www.blackpast.org/african-american-history/1900-ida-b-wells-lynch-law-america/) The fact that this is a primarily used phrase in the non-black press could lead one to make the conclusion that the non-black press are justifying the act or use of lynching. However, it is imporant to remember that it is simply a quantitative piece of data, and looking into the context of the use of this specific bigram is important before drawing any specific conlusions from this information 
