@@ -1,7 +1,7 @@
 ---
 title: "Text Compiler"
 author: "Rob Wells"
-date: "2024-8-25-24"
+date: "2024-10-14-24"
 output: html_document
 ---
 
@@ -10,67 +10,17 @@ output: html_document
 
 ### Adapt this code for the course exercise
 
-
 ```{r}
 library(tidyverse)
 here::i_am("Week8_Text_Compiler_Article_Filter_10_29.rmd")
 
 ```
 
+#Run Week7_split_pdfs_text.Rmd first for this demonstration to work
 
-#Filtering and combining indexes
-```{r}
-#import Oct 19 extraction index of 6507 articles (Aug 23: 3,385 articles)
-#matches the number of articles in /Users/robwells/Code/hcij_lynching_phase_two/articles_10_19
-
-jackindex_oct19 <- read_csv("../data/articles_oct_19.csv")
-
-```
-
-```{r}
-
-#This tutorial shows how to copy files from one directory to another
-# https://stackoverflow.com/questions/68995687/r-move-files-to-folder-based-on-list-or-column
-
-inputdir  <- "/Users/robwells/Code/hcij_lynching_phase_two/narratives/data/articles_june_22_2024" 
-
-#targetdir <- "/Users/robwells/Code/hcij_lynching_phase_two/narratives/code/articles_oct_19/" 
-
-targetdir <- "../exercises/assets/extracted_text" 
-
-jackindex_oct19  <- jackindex_oct19  %>% 
-   mutate(filename = paste(file_id2, ".txt", sep = ''))
-
-#df <- extracted_articles_aug25$filename 
-
-#creates new directory with 6448 articles: code/latest_articles/
-filestocopy <- list.files(inputdir, full.names = TRUE) %>% 
-  as_tibble() %>% 
-  mutate(filename=(sub(".*/", "", value))) %>% 
-  inner_join(jackindex_oct19, by=c("filename")) 
-  #create a new column mutate = string-extract. keep everything after the last slash
-  #inner_join to extracted articles aug 25
-vector <- filestocopy$value
-  #take that file path, select only filepath column and turn into a vector
-  
-filetocopy <- filestocopy[[1]]
-#df_single <- df[[1]]
-file.copy(from = filetocopy, to = targetdir)
-map(vector, ~file.copy(from = inputdir, to=targetdir))
-
-#map(filestocopy, ~file.copy(from = ., to=targetdir))
-
-
-```
-
-
-
-### Sean Mussenden's raw text compiler 
+# Raw text compiler 
 ```{r include=FALSE}
-
 #This creates an index with the file path to the stories. And then it compiles the stories into a dataframe
-
-
 #####################
 # Begin SM Code #####
 #####################
@@ -78,14 +28,6 @@ map(vector, ~file.copy(from = inputdir, to=targetdir))
 ###
 # List out text files that match pattern .txt, create DF
 ###
-#Sample code from previous use
-# files <- list.files("~/Code/hcij_lynching_phase_two/narratives/code/articles_oct_19", pattern="*.txt") %>% 
-#   as.data.frame() %>%
-#   rename(filename = 1) 
-#   filter(!str_detect(filename,"_bak"))
-
-
-
 
 files <- list.files("../exercises/assets/extracted_text", pattern="*.txt") %>% 
   as.data.frame() |> 
@@ -98,8 +40,12 @@ files <- list.files("../exercises/assets/extracted_text", pattern="*.txt") %>%
 
 #Join the file list to the index
 
+#load final data if you haven't already
+#final_data <- read.csv("assets/final_data.csv")
+
 final_index <- final_data |> 
   inner_join(files, c("index")) |> 
+#you need the actual hard-coded path on this line below to the text
   mutate(filepath = paste0("/Users/robwells/Code/CompText_Jour/exercises/assets/extracted_text/", filename))
 
 head(final_index)
@@ -108,7 +54,7 @@ head(final_index)
 #Text compiler
 ```{r}
 ###
-# Define function to loop through each text file referenced in jackindex df
+# Define function to loop through each text file 
 ###
 
 create_article_text <- function(row_value) {
@@ -151,13 +97,6 @@ row_values <- 1:nrow(final_index)
 
 lapply(row_values, create_article_text)
 
-# Error: The size of the connection buffer (131072) was not large enough
-# to fit a complete line:
-# * Increase it by setting `Sys.setenv("VROOM_CONNECTION_SIZE")`
-#https://github.com/tidyverse/vroom/issues/364
-#Sys.setenv(VROOM_CONNECTION_SIZE = 10000000)
-
-
 ###
 # Clean up articles_df and join to index dataframe
 ###
@@ -173,132 +112,56 @@ articles_df <- articles_df %>%
   #gets rid of blank rows
     filter(trimws(sentence) != "") 
 
-write.csv(articles_df, "../exercises/assets/extracted_text/kemi_df.csv")
+write.csv(articles_df, "../exercises/assets/extracted_text/kemi_df2.csv")
 
 ```
 
+# Notes Below
 
+### Previous code to compile an index and add txt extensions
+```{r}
+#This tutorial shows how to copy files from one directory to another
+# https://stackoverflow.com/questions/68995687/r-move-files-to-folder-based-on-list-or-column
 
-# Edit below, may not be necessary
+inputdir  <- "/Users/robwells/Code/hcij_lynching_phase_two/narratives/data/articles_june_22_2024" 
 
-
-# Fix URLs
+targetdir <- "../exercises/assets/extracted_text" 
+```
 
 ```{r}
-# Fix URLs
 
-jackindex_oct19$url_fixed <- sub("sn\\d+/\\K.*", "", jackindex_oct19$URL, perl = TRUE)
-jackindex_oct19$url_fixed <- sub("/$", "", jackindex_oct19$url_fixed)
+#List out files : Sample code from previous use
+# files <- list.files("~/Code/hcij_lynching_phase_two/narratives/code/articles_oct_19", pattern="*.txt") %>% 
+#   as.data.frame() %>%
+#   rename(filename = 1) 
+#   filter(!str_detect(filename,"_bak"))
+jackindex_oct19  <- jackindex_oct19  %>% 
+   mutate(filename = paste(file_id2, ".txt", sep = ''))
 
-#create date
-jackindex_oct19 <- jackindex_oct19 %>% 
-  mutate(date = paste(month,day,year, sep="/")) %>% 
-  mutate(date = lubridate::mdy(date)) 
+#df <- extracted_articles_aug25$filename 
 
-#date fixed for url
-jackindex_oct19$date2 <- as.character(jackindex_oct19$date)
-jackindex_oct19$date2 <- gsub("-", "/", jackindex_oct19$date2)
+#creates new directory with 6448 articles: code/latest_articles/
+filestocopy <- list.files(inputdir, full.names = TRUE) %>% 
+  as_tibble() %>% 
+  mutate(filename=(sub(".*/", "", value))) %>% 
+  inner_join(jackindex_oct19, by=c("filename")) 
+  #create a new column mutate = string-extract. keep everything after the last slash
+  #inner_join to extracted articles aug 25
+vector <- filestocopy$value
+  #take that file path, select only filepath column and turn into a vector
+  
+filetocopy <- filestocopy[[1]]
+#df_single <- df[[1]]
+file.copy(from = filetocopy, to = targetdir)
+map(vector, ~file.copy(from = inputdir, to=targetdir))
 
-
-#create sequence column
-# jackindex_oct19$seq <- sub(".*/(seq-\\d+).*", "\\1", jackindex_oct19$url)
-
-jackindex_oct19 <- jackindex_oct19 %>% 
-  mutate(url2 = paste(url_fixed, date2, edition, page, "0?user_id=6", sep="/")) 
-
-jackindex_oct19 <- subset(jackindex_oct19, select =-URL)
-
-jackindex_oct19 <- jackindex_oct19 %>% 
-  rename(URL = url2) 
-
-#write_csv(jackindex_oct19, "../data/jackindex_fixed_oct19.csv")
+#map(filestocopy, ~file.copy(from = ., to=targetdir))
 
 
-
+# Error: The size of the connection buffer (131072) was not large enough
+# to fit a complete line:
+# * Increase it by setting `Sys.setenv("VROOM_CONNECTION_SIZE")`
+#https://github.com/tidyverse/vroom/issues/364
+#Sys.setenv(VROOM_CONNECTION_SIZE = 10000000)
 ```
 
-
-
-
-
-#Checking discrepancy between index and files
-```{r}
-#list of all 6507 articles in folder
-folder_files <- list.files("/Users/robwells/Code/hcij_lynching_phase_two/articles_10_19/", pattern="*.txt") %>%
-  as.data.frame() %>%
-  rename(file_id = 1) %>% 
-  mutate(index = 1:length(file_id)) 
-
-#cut .txt
-folder_files$file_id <- gsub(".txt", "", folder_files$file_id)
-
-#merge the file_id in jackindex_aug23
-jackindex_oct19 <- jackindex_oct19 %>% 
-  mutate(file_id2 = (paste(file_id, article_id, sep = '_')))
-
-#6507 files in the folder and the index
-files_in <- jackindex_oct19 %>% 
-  inner_join(folder_files, by=c("file_id2"="file_id"))
-
-#0 files not in the folder but in the index
-files_out <- jackindex_oct19 %>% 
-  anti_join(folder_files, by=c("file_id2"="file_id"))
-
-jackindex_oct19 <- jackindex_oct19 %>% 
-  janitor::clean_names()
-
-jackindex_oct19 <- jackindex_oct19 %>% 
-  mutate(date = paste(month,day,year, sep="/")) %>% 
-  mutate(date = lubridate::mdy(date)) 
-
-jackindex_oct19 <- jackindex_oct19 %>% 
-  select(file_id2, newspaper_name, newspaper_state, date, year, month, day, page, edition, mod_id, unnamed_0, file_id, article_id, sn, url)
-
-
-#write_csv(jackindex_oct19, "../data/articles_10_19.csv")
-
-```
-
-
-```{r}
-#Remove articles cleaned out previously
-#this file shows the 281 articles dropped during my March 8 and July 17 cleaning process
-anti_jack <- read.csv("../Output/dropped_articles_July_17.csv")
-#clean this file
-anti_jack <- anti_jack %>% 
- select(2:14)
-#clean article_id
-anti_jack$article_id <- gsub("-", "", anti_jack$article_id)
-#merge the file_id 
-anti_jack <- anti_jack %>% 
-  mutate(file_id2 = (paste(file_id, article_id, sep = '_')))
-
-#59 removed
-cleaned_articles_oct19 <- jackindex_oct19 %>% 
-  anti_join(anti_jack, by=c("file_id2"))
-#new index is 6448 files
-
-
-#Assign a black press designator
-black_papers <- read_csv("../data/black_papers.csv") %>% 
-  rename(newspaper_name = Title) %>% 
-  as.data.frame()
-
-
-black_papers1 <- black_papers %>% 
-  mutate(black_press = "Y") %>% 
-  select(newspaper_name, LCCN, black_press) %>% 
-  distinct(LCCN, .keep_all = TRUE)
-
-cleaned_articles_oct19 <- cleaned_articles_oct19 %>%
-   left_join(black_papers1, by=c("sn"="LCCN")) %>% 
-  rename(newspaper_name = newspaper_name.x) %>% 
-  distinct(file_id2, .keep_all = TRUE)
-
-df <- cleaned_articles_oct19[-c(17, 18, 19,20), ] 
-
-# cleaned_articles_oct19 <- subset(cleaned_articles_oct19, select = - c(black_press.x, newspaper_name.y.y, black_press.y, newspaper_name.y))
-cleaned_articles_oct19 <- subset(cleaned_articles_oct19, select = - c(newspaper_name.y))
-
-#write.csv(cleaned_articles_oct19, "../output/cleaned_articles_index_urlfixed_oct19.csv")
-```
