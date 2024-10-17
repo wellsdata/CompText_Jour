@@ -1,0 +1,123 @@
+---
+title: "Bigrams Exercise Sept 24"
+author: "Rob Wells"
+date: '2024-09-20'
+output: html_document
+---
+
+# Jour 389/689 Fall 2024:
+
+```{r message=FALSE, warning=FALSE}
+#load tidyverse, tidytext, rio and quanteda libraries
+library(tidyverse)
+library(rio)
+library(tidytext)
+#install.packages("quanteda")
+library(quanteda)
+library(knitr)
+
+
+```
+
+```{r}
+#Import dataframe 
+
+dataframe <- read_csv("./data/ChinaFDI-LAT_tidy.csv")
+
+#wells only
+#lynch <- read_csv("/Users/robwells/Code/CompText_Jour/data/articles_oct_19.csv")
+```
+
+
+# Use code to count the number of unique articles in the dataset
+
+```{r}
+n_distinct(dataframe$headline)
+#36
+```
+
+#Remove useless metadata such as "Los Angeles Times" and "ISSN".
+```{r}
+
+dataframe <- dataframe %>% mutate(text = str_squish(text)) |> 
+  mutate(text = tolower(text)) |>  
+  mutate(text = gsub("\\d+", "", text)) |>
+  mutate(text = str_replace_all(text, "search.proquest.com|issn|proquest|info times|info|caption|photo|periodicals|publication|los angeles|los angeles times|calif|url|https|docview|copyright|id|los angeles, calif\\.", ""))
+```
+#Tokenize the data, remove stop words, remove the phrase "los angeles," and create a dataframe of one word per row
+
+```{r}
+
+one_word_per_row <- dataframe %>% 
+  select(text, linenumber, headline) %>% 
+  mutate(text = str_replace_all(text, "- ", "")) %>% 
+  unnest_tokens(word, text, token="ngrams", n=1 ) %>%
+  filter(!word %in% stop_words$word) %>%
+  filter(!is.na(word)) %>%
+  filter(!word == "los angeles")
+  
+one_word_per_row
+
+```
+#Generate a list of the top 20 bigrams
+
+```{r}
+stories_bigrams_cts3 <- dataframe %>% 
+  select(text) %>% 
+  mutate(text = str_replace_all(text, "- ", "")) %>% 
+  unnest_tokens(bigram, text, token="ngrams", n=2 ) %>% 
+  separate(bigram, c("word1", "word2"), sep = " ") %>% 
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>% 
+  count(word1, word2, sort = TRUE) %>% 
+  filter(!is.na(word1)) %>% 
+  mutate(decade = "1900s")
+
+
+stories_bigrams_cts3
+
+top20 <- head(stories_bigrams_cts3, 20)
+top20 <- top20 %>%
+  mutate(bigram = str_c(str_c(word1, ' '), word2))
+cat("The top twenty bigrams were:\n")
+print(top20)
+```
+#Make a graph of the top 20 bigrams 
+```{r}
+top20 %>%
+  ggplot(aes(n)) + 
+  geom_col(aes(bigram,n)) +
+  ggtitle("Top 20 Bigrams") + 
+  theme(axis.text.x = element_text(size = 14, angle = 90, hjust = 1)) + 
+  xlab("Bigram")
+
+```
+
+
+#Sentiment analysis using afinn
+```{r}
+
+afinn_by_linenumber <- one_word_per_row %>% 
+  inner_join(get_sentiments("afinn")) %>% 
+  group_by(index = linenumber) %>% 
+  summarise(sentiment = sum(value)) %>% 
+  mutate(method = "AFINN")
+
+afinn_by_linenumber
+
+afinn_by_headline <- one_word_per_row %>% 
+  inner_join(get_sentiments("afinn")) %>% 
+  group_by(index = headline) %>% 
+  summarise(sentiment = sum(value)) %>% 
+  mutate(method = "AFINN")
+
+afinn_by_headline
+```
+#Memo
+<!--
+This activity was definitely a challenge as I had to each step on my own. I found it difficult to decide what specific phrases should be filtered out prior to making the bigrams, but I found that creating bigrams and seeing which irrelevant words came up the most were good ones to filter out. I find it interesting that the most common bigram was "real estate", which implies there is a lot of Chinese people involved in the US real estate industry. I also find it interesting that the second most common bigram was "national security", which is not surprising given the increase in suspicions that the US government holds toward the Chinese government when it comes to technology and data, as well as other national security concerns. However, I wonder what this has to do with the discussion of business, and if this indicates a level of biases in these articles. Although this is a question I have, further research would need to be done before reaching this conclusion.
+
+I had a lot of trouble with the sentiment analysis. I am not sure if I chose good ways the group the data, so the numbers are a bit confusing. One article has a score of -42, which I do not know if that is a sum of different scores or if it is just very negative according to the Afinn lexicon. I definitely will need some more progress with sentiment analysis prior to the final project.
+-->
+
+### 
