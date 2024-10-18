@@ -45,13 +45,84 @@ quanteda_test <- kwic(my_tokens, pattern = "journalist", valuetype = "regex") %>
 
 ```
 
-### Notes Below
-
-### subset corpus
-
+# Using KWIC for Mob analysis
+### Load and tokenize data
 ```{r}
+extracted_articles_index_oct_16_2024 <- read.csv("https://osf.io/download/uxw3a/?view_only=6c106acd6cb54f6f849e8c6f9098809f")
 
-x1920s <- summary(corpus_subset(my_corpus, year > 1920))
+#trim down the index for this exercise
+index <- extracted_articles_index_oct_16_2024 |> 
+  
+
+
+extracted_text_oct_16_2024 <- read_csv("https://osf.io/download/gw5dk/?view_only=6c106acd6cb54f6f849e8c6f9098809f")
+
+#create a subset to speed the tutorial process: 1875-1900
+lynch <- extracted_text_oct_16_2024 |> 
+  filter(year > 1890 & year < 1895)
+```
+
+#Tokenize 
+```{r}
+lynch <- lynch %>%
+  mutate(unique_file_id = paste0(file_id, "_", row_number()))
+
+# Now create the corpus with the new unique identifier
+lynch_corpus <- corpus(lynch, text_field = "sentence", 
+                       docid_field = "unique_file_id")
+
+# Tokenize the corpus
+lynch_tokens <- tokens(lynch_corpus)
+```
+
+# Perform KWIC search
+```{r}
+kwic_results <- kwic(
+  lynch_tokens,
+  phrase(c("mob", "masked men", "mask", "captors", "a party of", 
+           "mob attacked", "mob caught", "overpowered by a mob", 
+           "law into their own hands", "law unto themselves")),
+  window = 50, valuetype = "regex"
+) %>% 
+  as.data.frame() 
 
 ```
 
+# Link the results with the metadata
+```{r}
+#Strips out unique file name from article index 
+kwic_results <- kwic_results |>  
+    mutate(matchrow = str_extract(docname, "^[^_]+_[^_]+"))
+
+# Join KWIC results with metadata 
+kwic_with_metadata <- kwic_results %>%
+  inner_join(metadata, by = c("matchrow"="file_id")) |> 
+  distinct(docname, .keep_all= TRUE) |> 
+  select(filename, date, from, to, pre, keyword, post, pattern, newspaper_name, matchrow, docname, newspaper_city, newspaper_state,black_press,url)
+```
+
+
+# Housecleaning
+```{r}
+#cut useless returns
+mobjunk <- c("mobile",  "automobile",  "automobiles", "mobilize", "mobley", "mobilizing", "democratic party of", "mobe", "moberly",  "mobil", "mobiles", "mobilized", "mobold")
+kwic_with_metadata <- kwic_with_metadata %>%
+  filter(!keyword %in% mobjunk)
+
+
+#Eliminate duplication
+kwic_with_metadata  <- kwic_with_metadata  %>% 
+  distinct(docname, pre, keyword, post, newspaper_name, date, url) %>% 
+  rename('Beginning of Passage' = pre, 'End of Passage' = post, Newspaper = newspaper_name, Date = date) 
+
+kwic_with_metadata_csv <- kwic_with_metadata  %>%
+  add_column(Code = NA) %>% 
+  add_column(Comments = NA) %>% 
+  select(docname, Newspaper, Date, 'Beginning of Passage', keyword, 'End of Passage', Code, Comments)
+
+write_csv(kwic_with_metadata_csv, "../exercises/assets/data/kwic_with_metadata.csv")
+
+```
+
+
+### Then import the data into a google form and code away
