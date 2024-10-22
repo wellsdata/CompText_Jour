@@ -47,9 +47,12 @@ dataframe <- dataframe %>% mutate(text = str_squish(text)) |>
 #Tokenize the data, remove stop words, remove the phrase "los angeles," and create a dataframe of one word per row
 
 ```{r}
-
-one_word_per_row <- dataframe %>% 
-  select(text, linenumber, headline) %>% 
+data(stop_words)
+one_word_per_row <- dataframe %>% mutate(text = str_squish(text)) |> 
+  mutate(text = tolower(text)) |>  
+  mutate(text = gsub("\\d+", "", text)) |>
+  mutate(text = str_replace_all(text, "startofarticle|search.proquest.com|issn|proquest|info times|info|caption|photo|periodicals|publication|los angeles|los angeles times|calif|url|https|docview|copyright|id|los angeles, calif\\.", "")) |>
+  select(article_nmbr, text) %>% 
   mutate(text = str_replace_all(text, "- ", "")) %>% 
   unnest_tokens(word, text, token="ngrams", n=1 ) %>%
   filter(!word %in% stop_words$word) %>%
@@ -97,21 +100,15 @@ top20 %>%
 #Sentiment analysis using afinn
 ```{r}
 
-afinn_by_linenumber <- one_word_per_row %>% 
-  inner_join(get_sentiments("afinn")) %>% 
-  group_by(index = linenumber) %>% 
-  summarise(sentiment = sum(value)) %>% 
-  mutate(method = "AFINN")
+afinn <- get_sentiments("afinn")
 
-afinn_by_linenumber
 
-afinn_by_headline <- one_word_per_row %>% 
-  inner_join(get_sentiments("afinn")) %>% 
-  group_by(index = headline) %>% 
-  summarise(sentiment = sum(value)) %>% 
-  mutate(method = "AFINN")
+sentiment_analysis <- one_word_per_row %>%
+  inner_join(afinn, by=c("tokens"="word")) %>%
+  group_by(article_nmbr) %>%
+  summarize(sentiment = sum(value), .groups="drop")
 
-afinn_by_headline
+sentiment_analysis
 ```
 #Memo
 <!--
