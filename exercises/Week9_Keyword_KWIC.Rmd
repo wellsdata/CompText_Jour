@@ -16,7 +16,7 @@ library(tidyverse)
 
 #Import your article text dataframe
 ```{r}
-articles <- read.csv("../exercises/assets/data/kemi_df2.csv")
+articles <- read.csv("https://raw.githubusercontent.com/wellsdata/CompText_Jour/refs/heads/main/exercises/assets/data/kemi_df2.csv")
 ```
 
 
@@ -41,23 +41,19 @@ my_tokens <- tokens(my_corpus)
 quanteda_test <- kwic(my_tokens, pattern = "journalist", valuetype = "regex") %>% 
   as.data.frame()
 
+quanteda_test2 <- kwic(my_tokens, phrase(c("journalist", "reporter", "newspaper", "killer", "murdered", "killed", "investigate crimes against")), window = 50, valuetype = "regex") %>% as.data.frame() 
+
 #write.csv(quanteda_test, "quanteda_test.csv")
 
 ```
 
 # Using KWIC for Mob analysis
-### Load and tokenize data
+### Load and tokenize lynching data
 ```{r}
 extracted_articles_index_oct_16_2024 <- read.csv("https://osf.io/download/uxw3a/?view_only=6c106acd6cb54f6f849e8c6f9098809f")
 
-#trim down the index for this exercise
-index <- extracted_articles_index_oct_16_2024 |> 
-  
-
-
 extracted_text_oct_16_2024 <- read_csv("https://osf.io/download/gw5dk/?view_only=6c106acd6cb54f6f849e8c6f9098809f")
 
-#create a subset to speed the tutorial process: 1875-1900
 lynch <- extracted_text_oct_16_2024 |> 
   filter(year > 1890 & year < 1895)
 ```
@@ -94,11 +90,13 @@ kwic_results <- kwic(
 kwic_results <- kwic_results |>  
     mutate(matchrow = str_extract(docname, "^[^_]+_[^_]+"))
 
+metadata <- extracted_articles_index_oct_16_2024
+
 # Join KWIC results with metadata 
 kwic_with_metadata <- kwic_results %>%
   inner_join(metadata, by = c("matchrow"="file_id")) |> 
   distinct(docname, .keep_all= TRUE) |> 
-  select(filename, date, from, to, pre, keyword, post, pattern, newspaper_name, matchrow, docname, newspaper_city, newspaper_state,black_press,url)
+  select(matchrow, date, from, to, pre, keyword, post, pattern, newspaper_name, newspaper_city, newspaper_state,black_press,url, docname)
 ```
 
 
@@ -126,3 +124,37 @@ write_csv(kwic_with_metadata_csv, "../exercises/assets/data/kwic_with_metadata.c
 
 
 ### Then import the data into a google form and code away
+
+Sample Google Form:
+https://docs.google.com/forms/d/1iT49Tz6ZfJ67eURsVI79OVjbH8fWcIozFXZyhL7dXCY/edit
+
+
+
+Steps to link to a Google form
+1) Create a Google Form with the fields you want to import from the spreadsheet (kwic_with_metadata.csv)
+Create Paragraph questions
+"docname"              
+"Beginning of Passage" 
+"keyword"              
+"End of Passage"      
+"Newspaper"            
+"Date"
+"url"    
+
+2) Get link
+https://docs.google.com/forms/d/e/1FAIpQLScJR-6mffrc17ZdoCc1qjpvRUL6H71EeW1h5qz_2LvILPb6Wg/viewform?usp=pp_url&entry.1101824497=Rob+Wells&entry.972664370=TODAY&entry.1301433784=WASHINGTON+POST&entry.91443670=START&entry.1665018793=WORD&entry.1496202882=FINISH
+
+
+Create a column where the link for each student project will go. The formula you want to use is =HYPERLINK(“URL”,”Click Here”).
+
+It will look something like this:
+=HYPERLINK(“https://docs.google.com/forms/d/e/1FAIpQLSc_I4u1oPbNpUFx9FT9qcq-AW1w7y1v0k5T-9virJg3XH6G9A/viewform?entry.792046611=Zada+Howarth%C2%A0&entry.189967737=How+relevant+is+Shakespeare?+Make+the+pop-culture+connections&entry.128488987″,”Click Here”)
+
+
+
+https://alicekeeler.com/2018/03/19/google-forms-pre-fill-answer/
+
+
+
+
+=HYPERLINK("https://docs.google.com/forms/d/e/1FAIpQLSek1beVd-ckbiX3w1AaIHSj3AjeTOtTmHd2ZM08mb5BBDTBFQ/viewform?usp=pp_url&entry.262647990=Rob&entry.1021580155="&E2&"&entry.847834668="&G2&"&entry.1352133755="&D2&"&entry.1266675087="&I2&"","Click for form")
