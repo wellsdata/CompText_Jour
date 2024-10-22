@@ -1,0 +1,60 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+## Quarto
+
+```{r}
+# install packages for reading feather files
+install.packages("feather")
+install.packages("arrow")
+library(feather)
+library(arrow)
+library(tidyverse)
+library(tidytext)
+# read in the feather file
+df <- arrow::read_feather("~/Code/CompText_Jour/code/sean_final_project/build_american_stories_dataset/data_by_year/arrow/articles_1922.feather")
+
+df_clean <- df %>%
+  # make article lowercase, remove all punctuation and numbers
+  mutate(article = str_to_lower(article)) %>%
+  # remove punct
+  mutate(article = str_replace_all(article, "[[:punct:]]", " ")) %>%
+  # remove numbers
+  mutate(article = str_replace_all(article, "[[:digit:]]", " ")) %>%
+  # remove internal whitespace
+  mutate(article = str_squish(article)) 
+
+lynch <- df_clean %>%
+  filter(str_detect(article, " lynch |lynching"))
+
+x <- lynch %>%
+  mutate(lynch_count = str_count(article, "lynching")) 
+
+df_tokens <- df_clean %>%
+  unnest_tokens(word, article) 
+
+df_tokens_count <- df_tokens %>%
+  count(word, sort = TRUE) 
+
+df_tokens_count_no_stop <- df_tokens_count %>%
+  anti_join(stop_words)
+
+lynch <- df_tokens_count_no_stop %>%
+  filter(str_detect(word, "lynch"))
+
+lynch <- df %>%
+  filter(str_detect(str_to_lower(article), " lynch "))
+
+lynch_tokens <- lynch %>%
+  unnest_tokens(word, article) %>%
+  group_by(word) %>%
+  count() %>%
+  anti_join(stop_words) %>%
+  filter(str_detect(word,"lynch"))
+
+
+
+```
