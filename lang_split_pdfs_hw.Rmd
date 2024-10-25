@@ -1,39 +1,38 @@
 ---
 title: "Split PDFs and text"
-author: "Rob Wells"
-date: "2024-10-13"
+author: "Bridget Lang"
+date: "2024-10-26"
 output: html_document
 ---
 ```{r}
 #install.packages("pdftools")
 library(tidyverse)
 library(pdftools)
+library(dplyr)
+library(rio)
+library(tidytext)
+library(quanteda)
+library(knitr)
+
 ```
 
 # Convert PDF to text
 
-Using 10 articles downloaded from NexisUni for Kemi Busari's research
 ```{r}
 #Using pdftools package. Good for basic PDF extraction
-#Oct 17: removed split_file folder in a cleanup
-text <- pdf_text("../exercises/assets/pdfs/kemi.PDF")
+text <- pdf_text("./exercises/assets/pdfs/AI_yao_taufiq.PDF")
 #pdf_text reads the text from a PDF file.
-writeLines(text, "assets/extracted_text/kemi_text.txt")
+writeLines(text, "./exercises/assets/extracted_text/AI_yao_taufiq_text.txt")
 #writeLines writes this text to a text file
 ```
 
 
 # Split text to separate articles on common identifier
 
-In this case, NexisUni makes life easy for us. At the end of each document, there are the words "End of Document". Convenient! We search for "End of Document" and then instruct R to split the file and dump it into a standalone text file.
 ```{r}
 # Step 1: Read the entire text file into R
-#You will need to alter this for your computer
-#For Mac: In Finder, Cntl + click on the filename, NOW hold down Alt/Option, and an item to copy file path will appear as Copy "Filename" as Pathname 
-#https://stackoverflow.com/questions/52695546/how-to-copy-path-of-a-file-in-mac-os
 
-
-file_path <- "../exercises/assets/extracted_text/kemi_text.txt"
+file_path <- "./exercises/assets/extracted_text/AI_yao_taufiq_text.txt"
 text_data <- readLines(file_path)
 
 # Step 2: Combine lines into one single string
@@ -43,9 +42,9 @@ text_combined <- paste(text_data, collapse = "\n")
 documents <- strsplit(text_combined, "End of Document")[[1]]
 
 # Step 4: Write each section to a new file
-output_dir <- "../exercises/assets/extracted_text/"
+output_dir <- "./exercises/assets/extracted_text/"
 for (i in seq_along(documents)) {
-  output_file <- file.path(output_dir, paste0("kemi_extracted_", i, ".txt"))
+  output_file <- file.path(output_dir, paste0("AI_yao_taufiq_extracted_", i, ".txt"))
   writeLines(documents[[i]], output_file)
 }
 
@@ -55,9 +54,9 @@ cat("Files created:", length(documents), "\n")
 # Create an index from the first extracted page
 --We are just grabbing the index of the 10 listed items and creating a dataframe
 ```{r}
-kemi_index <- read_lines("../exercises/assets/extracted_text/kemi_extracted_1.txt")
-# Extract lines 16 to 58
-extracted_lines <- kemi_index[16:58]
+AI_yao_taufiq_index <- read_lines("./exercises/assets/extracted_text/AI_yao_taufiq_extracted_1.txt")
+# Extract lines 17 to 538
+extracted_lines <- AI_yao_taufiq_index[17:538]
 
 
 # Print the extracted lines to the console
@@ -68,7 +67,9 @@ extracted_lines <- extracted_lines |>
 
 
 extracted_lines <- extracted_lines |> 
-  mutate(extracted_lines = str_remove(extracted_lines, "\\| About LexisNexis \\| Privacy Policy \\| Terms & Conditions \\| Copyright © 2020 LexisNexis"))
+  mutate(extracted_lines = str_remove_all(extracted_lines, "\\| About LexisNexis \\| Privacy Policy \\| Terms & Conditions \\| Copyright © 2020 LexisNexis |"))
+
+extracted_lines
 ```
 
 #Build a final dataframe index
@@ -87,7 +88,13 @@ cleaned_data <- extracted_lines |>
     is_date = str_detect(trimmed_line, "\\b\\w{3} \\d{1,2}, \\d{4}\\b")
   )
 
+print(cleaned_data) 
+
+
 # Step 2: Shift dates to align with corresponding titles
+
+#some titles are getting cut off here and I am not sure why
+#I think it has to do with the lead() function, as some titles are more than one line 
 aligned_data <- cleaned_data |>
   mutate(
     date = ifelse(lead(is_date, 1), lead(trimmed_line, 1), NA_character_)  # Shift date to title's row
@@ -96,6 +103,7 @@ aligned_data <- cleaned_data |>
   select(trimmed_line, date)  # Keep only the relevant columns
 
 # Step 3: Rename columns for clarity
+
 final_data <- aligned_data |>
   rename(
     title = trimmed_line,
@@ -105,39 +113,123 @@ final_data <- aligned_data |>
 #Step 4: Date and Publication in separate columns, and formatted
 final_data <- separate(data = final_data, col = date, into = c("date2", "publication"), sep = "  ", extra = "merge", fill = "right")
 
-
-#Step 5: Format date, clean headline
-final_data <- final_data |> 
-  mutate(date = as.Date(date2,format = "%b %d, %Y")) |> 
-  mutate(title =str_remove(title, "^\\d+\\. ")) |> 
-  subset(select = -(date2)) |> 
-  mutate(index = row_number()) |> 
+#Step 5
+final_data <- final_data |>
+  mutate(date = as.Date(date2,format = "%b %d, %Y")) |>
+  mutate(title =str_remove(title, "^\\d+\\. ")) |>
+  subset(select = -(date2)) |>
+  mutate(index = row_number()) |>
   select(index, date, title, publication)
 
-write_csv(final_data, "assets/final_data.csv")
+ 
+#i noticed some of the titles were duplicated just written in all 
+#caps so I am attempting to delete duplicates but it does
+#not work because duplicated titles are cut off at 
+#different points
+ 
+final_data <- final_data %>%
+  mutate(title2 = title)
+
+final_data <- final_data %>%
+  mutate(title2 = tolower(title2))
+
+final_data <- final_data %>% distinct(title2, .keep_all = TRUE)
+
+write_csv(final_data, "./exercises/assets/AI_yao_taufiq_final_data2.csv")
+
+files <- list.files("./exercises/assets/extracted_text", pattern="*.txt") %>% 
+  as.data.frame() |> 
+  rename(filename = 1) |> 
+  #create an index with the file name
+ mutate(index = str_extract(filename, "\\d+")) |> 
+  mutate(index = as.numeric(index))
+
+#the actual path: #~/Code/CompText_Jour/exercises/assets/extracted_text
+
+#Join the file list to the index
+
+#load final data if you haven't already
+#final_data <- read.csv("assets/final_data.csv")
+
+final_index <- final_data |> 
+  inner_join(files, c("index")) |> 
+#you need the actual hard-coded path on this line below to the text
+  mutate(filepath = paste0("./exercises/assets/extracted_text/", filename))
+
+final_index
+###
+# Define function to loop through each text file 
+###
+```
+#Text compiling
+```{r}
+create_article_text <- function(row_value) {
   
+  #row_value is the single argument that is passed to the function
+  # Take each row of the dataframe
+  temp <- final_index %>%
+    slice(row_value)
+  
+  # Store the filename for  use in constructing articles dataframe
+  temp_filename <- temp$filename
+  
+  # Create a dataframe by reading in lines of a given textfile
+  # Add a filename column 
+  articles_df_temp <- read_lines(temp$filepath) %>%
+    as_tibble() %>%
+    mutate(filename = temp_filename)
+  
+  # Bind results to master articles_df
+  # <<- returns to global environment
+  articles_df <<- articles_df %>%
+    bind_rows(articles_df_temp)
+}
+
+###
+# Create elements needed to run function
+###
+
+# Create empty tibble to store results
+articles_df <- tibble()
+#running once to test
+#create_article_text(2) 
+# Create an array of numbers to loop through, from 1 to the number of rows in our index dataframe 
+row_values <- 1:nrow(final_index)
+
+###
+# Execute function using lapply
+# This loops through each row of the dataframe and append results to master file
+###
+
+lapply(row_values, create_article_text)
+
+###
+# Clean up articles_df and join to index dataframe
+###
+
+articles_df <- articles_df %>%
+  select(filename, sentence=value) %>%
+  inner_join(final_index)
+
+articles_df <- articles_df %>%  filter(row_number() >= 562 )
+
+write.csv(articles_df, "./exercises/assets/extracted_text/AI_yao_taufiq.csv")
+
 ```
-
-
-#Part 2: Complex PDFs
-
-### For more complicated PDFs, bring in the Big Guns
-
+#Tokenize and stuff 
 ```{r}
-#Install Required Tools
-#Using the system() function to execute a command-line operation directly from within R.
-system("brew install tesseract")
-system("brew install xpdf")
-system("xcode-select --install")
-system("brew install libtiff")
-system("brew install ghostscript")
-system("brew install imagemagick")
-```
 
-#Convert PDF to Text
-```{r}
-#Executes pdftotext, a command-line tool used to convert PDF files to plain text.
-system("pdftotext /Users/robwells/Code/CompText_Jour/exercises/assets/pdfs/kemi.PDF ../exercises/assets/extracted_text/kemi3.txt")
-```
+article_text <-  read.csv("./exercises/assets/extracted_text/AI_yao_taufiq.csv")
 
+data(stop_words)
+one_word_per_row <- article_text %>% mutate(sentence= str_squish(sentence)) |> 
+  mutate(text = tolower(sentence)) |>  
+  mutate(text = gsub("\\d+", "", text)) |>
+  mutate(text = str_replace_all(text, "- ", "")) %>% 
+  unnest_tokens(word, text, token="ngrams", n=1 ) %>%
+  filter(!word %in% stop_words$word) %>%
+  filter(!is.na(word))
+one_word_per_row
+
+```
 
