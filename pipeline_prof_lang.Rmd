@@ -96,6 +96,17 @@ top20 %>%
 
 ```
 
+```{r}
+ggplot(top20, aes(x = reorder(bigram, n), y = n, fill=n)) +
+  geom_bar(stat = "identity") +
+  theme(legend.position = "none") +
+  coord_flip() +  
+  labs(title = "Top Two-Word phrases about Chinese investment in U.S.",
+       caption = "n=36 articles. Graphic by Rob Wells. 10-21-2024",
+       x = "Phrase",
+       y = "Count of terms")
+```
+
 
 #Sentiment analysis using afinn
 ```{r}
@@ -104,11 +115,26 @@ afinn <- get_sentiments("afinn")
 
 
 sentiment_analysis <- one_word_per_row %>%
-  inner_join(afinn, by=c("tokens"="word")) %>%
+  inner_join(afinn, by=c("word"="word")) %>%
   group_by(article_nmbr) %>%
   summarize(sentiment = sum(value), .groups="drop")
 
+sentiment_analysis <- sentiment_analysis %>%
+   group_by(article_nmbr) %>% 
+  mutate(sentiment_type = ifelse(sentiment >= 0, "Positive", "Negative"))
+
 sentiment_analysis
+```
+
+```{r}
+# Visualize the sentiment scores
+ggplot(sentiment_analysis, aes(x = article_nmbr, y = sentiment, fill = sentiment_type)) +
+  geom_col(position = "dodge", stat = "identity") +
+  scale_fill_manual(values = c("Positive" = "darkgreen", "Negative" = "red")) + 
+  labs(title = "Sentiment Analysis Using AFINN Lexicon",
+       caption = "n=36 articles. Graphic by Rob Wells 10-20-2024",
+       x = "Articles",
+       y = "Sentiment Score") 
 ```
 #Memo
 <!--

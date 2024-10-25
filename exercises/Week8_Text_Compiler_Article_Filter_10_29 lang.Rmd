@@ -1,0 +1,168 @@
+---
+title: "Text Compiler"
+author: "Rob Wells"
+date: "2024-10-14-24"
+output: html_document
+---
+
+#Jour 389/689
+### This code, largely written by the famous **Sean Mussenden**, takes separate text files and compiles them into a single dataframe for analysis.
+
+### Adapt this code for the course exercise
+
+```{r}
+install.packages("here")
+library(tidyverse)
+here::i_am("Week8_Text_Compiler_Article_Filter_10_29.rmd")
+
+```
+
+#Run Week7_split_pdfs_text.Rmd first for this demonstration to work
+
+# Raw text compiler 
+```{r include=FALSE}
+#This creates an index with the file path to the stories. And then it compiles the stories into a dataframe
+#####################
+# Begin SM Code #####
+#####################
+
+###
+# List out text files that match pattern .txt, create DF
+###
+
+files <- list.files("../exercises/assets/extracted_text", pattern="*.txt") %>% 
+  as.data.frame() |> 
+  rename(filename = 1) |> 
+  #create an index with the file name
+ mutate(index = str_extract(filename, "\\d+")) |> 
+  mutate(index = as.numeric(index))
+
+#the actual path: #~/Code/CompText_Jour/exercises/assets/extracted_text
+
+#Join the file list to the index
+
+#load final data if you haven't already
+#final_data <- read.csv("assets/final_data.csv")
+
+final_index <- final_data |> 
+  inner_join(files, c("index")) |> 
+#you need the actual hard-coded path on this line below to the text
+  mutate(filepath = paste0("assets/extracted_text/", filename))
+
+head(final_index)
+```
+
+#Text compiler
+```{r}
+###
+# Define function to loop through each text file 
+###
+
+create_article_text <- function(row_value) {
+  
+  #row_value is the single argument that is passed to the function
+  # Take each row of the dataframe
+  temp <- final_index %>%
+    slice(row_value)
+  
+  # Store the filename for  use in constructing articles dataframe
+  temp_filename <- temp$filename
+  
+  # Create a dataframe by reading in lines of a given textfile
+  # Add a filename column 
+  articles_df_temp <- read_lines(temp$filepath) %>%
+    as_tibble() %>%
+    mutate(filename = temp_filename)
+  
+  # Bind results to master articles_df
+  # <<- returns to global environment
+  articles_df <<- articles_df %>%
+    bind_rows(articles_df_temp)
+}
+
+###
+# Create elements needed to run function
+###
+
+# Create empty tibble to store results
+articles_df <- tibble()
+#running once to test
+#create_article_text(2) 
+# Create an array of numbers to loop through, from 1 to the number of rows in our index dataframe 
+row_values <- 1:nrow(final_index)
+
+###
+# Execute function using lapply
+# This loops through each row of the dataframe and append results to master file
+###
+
+lapply(row_values, create_article_text)
+
+###
+# Clean up articles_df and join to index dataframe
+###
+
+articles_df <- articles_df %>%
+  select(filename, sentence=value) %>%
+  inner_join(final_index)
+
+#After viewing articles_df, I see 64 lines from the index that I don't need. Cutting them 
+
+articles_df <- articles_df %>%
+  slice(-c(1:64)) |> 
+  #gets rid of blank rows
+    filter(trimws(sentence) != "") 
+
+write.csv(articles_df, "../exercises/assets/extracted_text/kemi_df2.csv")
+
+```
+
+# Notes Below
+
+### Previous code to compile an index and add txt extensions
+```{r}
+#This tutorial shows how to copy files from one directory to another
+# https://stackoverflow.com/questions/68995687/r-move-files-to-folder-based-on-list-or-column
+
+inputdir  <- "/Users/robwells/Code/hcij_lynching_phase_two/narratives/data/articles_june_22_2024" 
+
+targetdir <- "../exercises/assets/extracted_text" 
+```
+
+```{r}
+
+#List out files : Sample code from previous use
+# files <- list.files("~/Code/hcij_lynching_phase_two/narratives/code/articles_oct_19", pattern="*.txt") %>% 
+#   as.data.frame() %>%
+#   rename(filename = 1) 
+#   filter(!str_detect(filename,"_bak"))
+jackindex_oct19  <- jackindex_oct19  %>% 
+   mutate(filename = paste(file_id2, ".txt", sep = ''))
+
+#df <- extracted_articles_aug25$filename 
+
+#creates new directory with 6448 articles: code/latest_articles/
+filestocopy <- list.files(inputdir, full.names = TRUE) %>% 
+  as_tibble() %>% 
+  mutate(filename=(sub(".*/", "", value))) %>% 
+  inner_join(jackindex_oct19, by=c("filename")) 
+  #create a new column mutate = string-extract. keep everything after the last slash
+  #inner_join to extracted articles aug 25
+vector <- filestocopy$value
+  #take that file path, select only filepath column and turn into a vector
+  
+filetocopy <- filestocopy[[1]]
+#df_single <- df[[1]]
+file.copy(from = filetocopy, to = targetdir)
+map(vector, ~file.copy(from = inputdir, to=targetdir))
+
+#map(filestocopy, ~file.copy(from = ., to=targetdir))
+
+
+# Error: The size of the connection buffer (131072) was not large enough
+# to fit a complete line:
+# * Increase it by setting `Sys.setenv("VROOM_CONNECTION_SIZE")`
+#https://github.com/tidyverse/vroom/issues/364
+#Sys.setenv(VROOM_CONNECTION_SIZE = 10000000)
+```
+
