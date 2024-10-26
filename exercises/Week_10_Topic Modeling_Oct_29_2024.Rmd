@@ -7,7 +7,7 @@ output: html_document
 #---------------------------------------------
 # Mainstream Papers Topic Modeling
 #---------------------------------------------
-This notebook will import 11,223 text files and related metadata files and execute basic topic modeling with LADAL Method
+This notebook will import 11,194 text files and related metadata files and execute basic topic modeling with LADAL Method
 I've adapted this LADAL tutorial for the lynching research: https://ladal.edu.au/topicmodels.html
 
 Load up the packages if you haven't already....
@@ -16,11 +16,10 @@ Load up the packages if you haven't already....
 # install.packages("here")
 # install.packages("tidytext")
 # install.packages("quanteda")
-# # install packages
 # install.packages("tm")
 # install.packages("topicmodels")
 # install.packages("reshape2")
-# #install.packages("ggplot2")
+# install.packages("ggplot2")
 # install.packages("wordcloud")
 # install.packages("pals")
 # install.packages("SnowballC")
@@ -29,9 +28,12 @@ Load up the packages if you haven't already....
 # install.packages("kableExtra")
 # install.packages("DT")
 # install.packages("flextable")
-# # install klippy for copy-to-clipboard button in code chunks
 # install.packages("remotes")
 # remotes::install_github("rlesur/klippy")
+#install.packages("rio")
+#install.packages("readtext")
+#install.packages("formattable")
+
 
 ```
 
@@ -233,6 +235,38 @@ vizDataFrame <- melt(topic_proportion_per_decade, id.vars = "decade")
 vizDataFrame <- vizDataFrame %>% 
    filter(!decade==1960)
 ```
+#Examine topic names
+
+```{r}
+#enframe(): Converts a named list into a dataframe.
+topics <- enframe(topicNames, name = "number", value = "text") %>% 
+  unnest(cols = c(text)) 
+  
+topics
+```
+
+### Review the topics and determine a 1-2 word label after reading the source documents.
+
+```{r}
+
+#Topic 1	counti citi night mile jail day town morn march juli
+
+theta2 <- as.data.frame(theta)
+
+topic1 <- theta2 %>% 
+  rownames_to_column(var = "file") |> # putting the rownames into a new column called file
+  mutate(file = str_remove(file, "^X"),  # Remove leading 'X'
+         line = str_extract(file, "(?<=\\.txt)\\.\\d+")) |>   # Extract number after .txt
+  mutate(file = str_remove(file, "\\.\\d+$")) |> 
+  rename(topic1 = '1') |> # looking at first topic: ounti citi night mile jail day town morn march juli
+  top_n(20, topic1) |> 
+  arrange(desc(topic1)) |>  
+  select(file, line, topic1) 
+
+
+```
+
+
 
 ```{r}
 
