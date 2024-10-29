@@ -1,0 +1,163 @@
+---
+title: "Homework_Basic_pipeline_proficiency"
+author: "Marilyn Harbert"
+date: "2024-10-21"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+Homework components
+1. Load the relevant software libraries
+2. Import the data
+3. Use code to count the number of unique articles in the dataset
+4. Remove useless metadata such as "Los Angeles Times" and "ISSN". See sample code below
+5. Tokenize the data, remove stop words, remove the phrase "los angeles," and create a dataframe of one word per row
+6. Generate a list of the top 20 bigrams
+7. Create a ggplot chart showing the top 20 bigrams
+8. Run a sentiment analysis using the Afinn lexicon
+9. At the bottom of the R markdown document, write a 250 word memo describing your key findings. Describe any problems you encountered in this process.
+
+```{r}
+# 1. Load the relevant software libraries
+
+library(quanteda)
+library(tidyverse)
+library(tidytext)
+library(rio)
+
+```
+
+```{r}
+#2. Import the data
+
+RawChinaData <- read_csv("ChinaFDI-LAT_tidy.csv") #rsw comment: please use relative file paths so someone looking at your code can run it without having to modify the file path
+#RawChinaData <- read_csv("~/Code/CompText_Jour/data/ChinaFDI-LAT_tidy.csv")
+
+
+```
+
+```{r}
+# 3. Use code to count the number of unique articles in the dataset
+
+n_distinct(RawChinaData$article_nmbr) 
+
+```
+#rsw comment - this cleaning sequence is awesome. nice job!
+```{r}
+#4. Remove useless metadata such as "Los Angeles Times" and "ISSN". See sample code below
+ChinaData_nometa <- RawChinaData %>%
+  mutate(text = str_squish(text)) %>% #gets rid of leading and trailing spaces + double spaces
+  mutate(text = tolower(text)) %>%
+  mutate(text = str_replace(text, "startofarticle", "")) %>%
+  mutate(text = gsub("issn:\\s+\\S+", "", text)) %>%
+  mutate(text = str_replace_all(text, c(
+    "copyright" = "",
+    "database: proquest central" = "",
+    "language of publication: english" = "",
+    "document url:\\s+\\S+" = "",
+    "proquest document id:\\s+\\S+" = "",
+    "publication subject:\\s+\\S+" = "",
+    "publication date:\\s+\\S+" = "",
+    "pages:\\s+\\S+" = "",
+    "publication info" = "",
+    "last updated:\\s+\\S+" = "",
+    "interest periodicals--united states" = ""
+  ))) %>%
+  mutate(text = str_replace_all(text, c(
+    "search.proquest.com" = "",
+    "los angeles times" = "",
+    "los angeles" = "",
+    "calif" = ""))) 
+
+```
+
+```{r}
+#5. Tokenize the data, remove stop words, remove the phrase "los angeles," and create a dataframe of one word per row
+
+#Tokenize the data
+chinadata_tokenized <- ChinaData_nometa %>%
+  unnest_tokens(bigram,text, token="ngrams", n=2)
+
+china_bigrams_separated <- chinadata_tokenized %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+
+#remove stop words and 
+data(stop_words)
+china_bigrams_separated <- china_bigrams_separated %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>%
+  filter(word1  != "https") %>%
+  filter(word2  != "https") %>%
+  filter(!grepl('[0-9]', word2)) %>%
+  filter(!grepl('[0-9]',word2))
+
+#create a dataframe of one word per row
+
+chinadata_tokenized_fortibble <- ChinaData_nometa %>%
+  unnest_tokens(word,text)
+
+chinadata_tokenized_fortibble <- str_replace_all(chinadata_tokenized_fortibble$word, "- ", "")
+chinadata_tokenized_fortibble <- tibble(chinadata_tokenized_fortibble,)
+
+```
+
+```{r}
+# 6. Generate a list of the top 20 bigrams
+
+count_china_bigrams <- china_bigrams_separated %>%
+  count(word1, word2, sort = TRUE) %>% 
+  filter(!is.na(word1))
+
+top_20_bigrams_china <- head(count_china_bigrams, 20)
+
+```
+
+
+```{r}
+#7. Create a ggplot chart showing the top 20 bigrams
+library(ggplot2)
+
+# join the bigrams into one column for ease
+top_20_bigrams_china <- top_20_bigrams_china %>%
+  unite("bigram", word1:word2, remove = FALSE)
+
+top_20_plot <- ggplot(
+  top_20_bigrams_china,
+  aes(x = reorder(bigram,n), y = n, fill = n)) +
+  geom_col(position = "dodge") + 
+  theme(legend.position = "none") +
+  labs(title = "Top 20 bigrams in Los Angeles Times articles about Chinese businesses in the US",
+       subtitle = " ",
+       caption = "Graphic by Marilyn Harbert. 2024-10-21",
+       y="n",
+       x="bigram") + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+
+top_20_plot
+
+```
+
+```{r}
+#8. Run a sentiment analysis using the Afinn lexicon
+
+afinn_sentiments <- get_sentiments("afinn")
+
+sent_china <- china_bigrams_separated %>%
+  unite("bigram", word1:word2, remove = FALSE, sep = " ") %>%
+  unnest_tokens(word, bigram) %>%
+  filter(!word %in% stop_words$word) %>%
+  inner_join(afinn_sentiments) %>%
+  select(linenumber, word, value) 
+
+
+```
+
+9. At the bottom of the R markdown document, write a 250 word memo describing your key findings. Describe any problems you encountered in this process.
+
+In this case, I think the bigram analysis tells us more than the sentiment analysis. From the top 20 bigrams of LA Times articles about Chinese businesses in the US we can see by the presence of "Chinese government" and "US government" that these stories are not just being framed in terms of Chinese businesses in the US, but that the stories look at the roles of both governments in this case. The national security bigram highlights the national security conversation ongoing around the role of Chinese investment in the US. And the several "chinese investment" bigrams show that narratives don't just seem concerned with Chinese owned businesses, but also where money from Chinese investment is going. 
+
+I found this process harder than I thought it would be! Taking out stop words and meta data felt like a constant upward battle that I still probably didn't fully win. And everytime I wanted to do something new to the data, making sure it was in the form I needed for the new action took a lot of consideration. 
+
