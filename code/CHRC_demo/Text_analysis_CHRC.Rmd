@@ -1,20 +1,19 @@
 ---
-title: "Week_10_Scrape_PDF_Compile_DB"
+title: "CHRC_Workshop"
 author: "Rob Wells"
-date: "2024-11-8"
+date: "2024-11-15"
 output: html_document
 ---
 
-#Basic Computational Analysis
+# Basic Computational Analysis
 
-##Center for Health Risk Communication Workshop
+Center for Health Risk Communication Workshop
+Nov. 15, 2024
 
-###Nov. 15, 2024
-
-This code demonstrates basic text processing and cleaning and the creation of bigrams and sentiment analysis of a group of newspaper articles about vaccine disinformation.
+This code demonstrates basic text processing, cleaning and the creation of bigrams and sentiment analysis from a group of newspaper articles about vaccine disinformation.
 
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(tidyverse)
 library(pdftools)
 library(stringr) # tools to extract text, data cleaning
@@ -22,35 +21,27 @@ library(tidytext) # create bigrams
 #install.packages("textdata") # sentiment analysis
 ```
 
-## Convert PDF to text
-
-```{r}
-#Using pdftools package. Good for basic PDF extraction
-text <- pdf_text("../FILE PATH TO YOUR PDF FILE.pdf")
-#pdf_text reads the text from a PDF file.
-writeLines(text, "extracted_pdf_text.txt")
-#writeLines writes this text to a text file
-```
-
 
 ## Split text to separate articles on common identifier
 
-The following file contains results from a search of 74 newspaper databases in ProQuest using the terms "(vaccine disinformation) /5 Maryland". I downloaded the first 100 results as text; one was dropped as an error, leaving 99 articles.
+The following file contains results from a search of 74 newspaper databases in ProQuest using the terms "((vaccine disinformation) or (vaccine hoax)) /5 Maryland". I downloaded 76 results as text.
 
 CHRC_demo/extracted_text/ProQuest_vaccines_disinfo.txt
 
-#Import, clean metadata
+## Import, clean metadata
 
 ```{r}
-#This code loads the entire text file, cleans out the metadata and dumps the text into a dataframe, one row per article
-#using library(stringr) # tools to extract text, data cleaning
-
-# Read text file
+#This code loads the entire text file
 text <- readLines("extracted_text/ProQuest_vaccines_disinfo.txt")
 
 # Process into single text block
 text <- paste(text, collapse = "\n")
+```
 
+This chunk extracts just the text, author, headline, date, thereby cutting out other metadata. It puts the results into a dataframe, one row per article. We're using library(stringr) to extract text, data cleaning
+
+# Read text file
+```{r}
 # A function to extract fields from each article
 extract_fields <- function(article_text) {
   title <- str_extract(article_text, "(?<=Title: ).*")
@@ -61,20 +52,26 @@ extract_fields <- function(article_text) {
   return(data.frame(Title = title, Date = date, Pub = pub, Author = author, FullText = full_text, stringsAsFactors = FALSE))
 }
 
-# Split text into articles 
+# Split articles on a common identifier 
 articles <- str_split(text, "ProQuest document ID: \\d+\\n")[[1]]
 
 # Run the function, build a dataframe
+#The list from lapply is passed to rbind using do.call, basically pasting all rows into a single dataframe.
 articles_data <- do.call(rbind, lapply(articles, extract_fields))
+
+#Cleans junk row
+articles_data <- articles_data |> 
+  filter(!is.na(Title))
 
 ```
 
-# Inspect your labor!
+## Inspect your labor!
 ```{r}
+head(articles_data)
 print(articles_data[1, ], row.names = FALSE)
 ```
 
-We now have articles_data with 100 articles and the relevant metadata.
+We now have articles_data with 76 articles and the relevant metadata.
 But the cleaning is not over
 We need to standardize the publication names
 
@@ -83,14 +80,15 @@ articles_data |>
   count(Pub)
 ```
 
-# Cleaning, Standardizing Names, dates
+## Cleaning, Standardizing Names, dates
 ```{r}
 
 articles_data <- articles_data |> 
   mutate(Pub_cleaned = case_when(
        str_detect(Pub, "New York Times") ~ "NY_Times",
        str_detect(Pub, "The Washington Post") ~ "Wash_Post",
-       str_detect(Pub, "Wall Street Journal") ~ "WSJ", 
+       str_detect(Pub,"Washington Post Video; Washington, D.C.") ~ "Wash_Post",
+       str_detect(Pub, "The Baltimore Sun; Baltimore, Md.") ~ "Balt_Sun", 
        TRUE ~ Pub
        )) |> 
     filter(!is.na(Pub)) |> # clean up junk, empty row
@@ -101,10 +99,15 @@ articles_data <- articles_data |>
 
 ```{r}
 articles_data |> 
+  count(Pub_cleaned)
+```
+
+```{r}
+articles_data |> 
   count(Year)
 ```
 
-# Bigrams
+## Bigrams
 
 ```{r}
 #library(tidytext)
@@ -123,7 +126,7 @@ bigrams <- articles_data %>%
 bigrams
 ```
 
-#top 20 bigrams
+### Top 20 bigrams
 ```{r}
 
 top_20_bigrams <- bigrams |> 
@@ -134,7 +137,7 @@ top_20_bigrams <- bigrams |>
 top_20_bigrams
 ```
 
-# Create a chart
+## Create a chart
 
 ```{r}
 ggplot(top_20_bigrams, aes(x = reorder(bigram, n), y = n, fill=n)) +
@@ -142,13 +145,13 @@ ggplot(top_20_bigrams, aes(x = reorder(bigram, n), y = n, fill=n)) +
   theme(legend.position = "none") +
   coord_flip() +  
   labs(title = "Top Two-Word phrases about vaccine disinformation in Maryland",
-       caption = "n=99 articles, 2020-24. Graphic by Rob Wells. 11-8-2024",
+       caption = "n=76 articles, 2020-2024. Graphic by Rob Wells. 11-14-2024",
        x = "Phrase",
        y = "Count of terms")
 ```
 
 
-# Sentiment analysis
+## Sentiment analysis
 ```{r}
 # load sentiment dictionary
 afinn <- get_sentiments("afinn")
@@ -176,15 +179,30 @@ sentiment_analysis <- sentiment_analysis %>%
   mutate(sentiment_type = ifelse(sentiment >= 0, "Positive", "Negative"))
 ```
 
-# Chart sentiment by article
+## Chart sentiment by article
 ```{r}
 
 ggplot(sentiment_analysis, aes(x = article_nmbr, y = sentiment, fill = sentiment_type)) +
   geom_col(position = "dodge", stat = "identity") +
   scale_fill_manual(values = c("Positive" = "darkgreen", "Negative" = "red")) + 
   labs(title = "Sentiment of vaccine disinformation articles, 2020-2024",
-       caption = "n=99 articles. Afinn sentiment. Graphic by Rob Wells 11-8-2024",
+       caption = "n=76 articles. Afinn sentiment. Graphic by Rob Wells 11-8-2024",
        x = "Articles",
        y = "Sentiment Score") 
 ```
 
+
+# Notes for future research
+
+
+## Convert PDF to text
+
+If you are working with PDF files, this code will scrape text from clean PDFs and create a text file. Run this at the beginning of your code sequence after loading the libraries.
+
+```{r eval=FALSE, include=FALSE}
+#Using pdftools package. Good for basic PDF extraction
+text <- pdf_text("../FILE PATH TO YOUR PDF FILE.pdf")
+#pdf_text reads the text from a PDF file.
+writeLines(text, "extracted_pdf_text.txt")
+#writeLines writes this text to a text file
+```
