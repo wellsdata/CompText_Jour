@@ -1,7 +1,7 @@
 ---
-title: "Milwaukee County and City Evictions Analysis"
+title: "Case Study case_when: Milwaukee Evictions"
 author: "Rob Wells"
-date: "8/21/2020"
+date: "11/17/2024"
 output: html_document
 ---
 
@@ -11,9 +11,6 @@ output: html_document
 
 - **The records were scraped from this website**  
 https://wcca.wicourts.gov/advanced.html 
-
-- **And processed into this file**    
-https://github.com/Howard-Center-Investigations/evictions/blob/master/cleaning/output/wi_milwaukee/sta_wi_milwaukee_2019_2020.csv
 
 --------------------------------------------------------------------
 - **Part 1: Load Libraries and Data**
@@ -38,36 +35,28 @@ milw <- janitor::clean_names(milw)
 glimpse(milw)
 ```
 
-
-
 - **Parse Cities **
 ```{r}
-milw$defendant_address2 <- milw$defendant_address
+milw <- milw |> 
+  mutate(defendant_address2 = defendant_address) |> # makes a copy of a column you will now pick apart
+  separate(defendant_address, into = c("address", "city", "state_zip"), sep = ", ", extra = "merge", fill = "right")
 
-x <- separate(data = milw, col = defendant_address, into = c("address", "city", "state_zip"), sep = ", ", extra = "merge", fill = "right")
 ```
 
+
 ```{r}
-x %>% 
+milw %>% 
   group_by(city) %>%
   count(city) %>% 
   arrange(desc(n))
 ```
 
-- **Check data fields**
-```{r}
-glimpse(milw)
-```
 - **Process dates** 
 ```{r}
-#Process dates
-milw$date <- ymd(milw$file_date)
-
-milw <- milw %>% 
+milw <- milw |> 
+  mutate(date = ymd(file_date)) |> 
   mutate(yearmon = format(date, "%Y-%m"))
-```
-
-```{r}
+#Filter to July 31, 2000
 milw <- milw %>%
 filter(file_date <= as.Date("2020-07-31")) %>%
 distinct()
@@ -80,8 +69,6 @@ z <- milw %>%
   group_by(yearmon) %>%
   count(yearmon)
 z
-#write.csv(z, "miltotal.8.21.2020.csv")
-
 ```
 
 - **Context: Total eviction filings in Wisconsin City and County since Jan. 1, 2019: 19,420**
@@ -103,32 +90,24 @@ ggplot(z, aes(x=yearmon, y=n, fill=yearmon)) +
 #ggsave("Milw_Evict_8_21_2020.png",device = "png",width=9,height=6, dpi=500)
 ```
 
-- **Clean the columns - remove stray spaces**
+- **Clean the columns - remove stray spaces, numerals**
 
 ```{r}
-p <- milw
-```
-
-```{r}
-p$plaintiff_one <- str_trim(p$plaintiff)
-p$defendant_one <- str_trim(p$defendant)
-p$plaintiff_one <- gsub("[[:punct:]]", "", p$plaintiff_one)
-p$plaintiff_one <- gsub("[[:punct:]]", "", p$plaintiff_one)
-p$defendant_one <- gsub("[[:punct:]]", "", p$defendant_one)
-head(p)
-```
-
-- **Remove numerals from names **
-```{r}
-p$plaintiff_one <- gsub("[0-9]", "", p$plaintiff_one)
-head(p)
+milw <- milw |> 
+  mutate(
+    plaintiff_one = str_trim(plaintiff) |> 
+      str_remove_all("[[:punct:]]") |> 
+      str_remove_all("[0-9]"),
+    defendant_one = str_trim(defendant) |> 
+      str_remove_all("[[:punct:]]")
+  )
 ```
 
 
 - **Summary of Milwaukee Plaintiffs **
 ```{r}
 #Build a simple summary table
-plaintiff1 <- p %>% 
+plaintiff1 <- milw %>% 
   select(plaintiff_one, defendant_one, date) %>% 
          group_by(plaintiff_one) %>% 
          count(plaintiff_one) %>% 
@@ -141,19 +120,85 @@ plaintiff1 <- p %>%
 plaintiff1
 ```
 ##Cleaning of Plaintiffs Names, Normalizing and Grouping
-
 ```{r}
-p2 <- p
+milw <- milw %>% 
+  mutate(plaintiff_fixed = case_when(plaintiff_one=="meaux park llc" ~ "berrada",
+                                     plaintiff_one=="berrada properties  llc" ~ "berrada",
+                                     plaintiff_one=="spring court apartments llc" ~ "berrada",
+                                     plaintiff_one=="dineen park townhomes llc" ~ "berrada",
+                                     plaintiff_one=="arbor gardens apartments llc" ~ "berrada",
+                                          TRUE~plaintiff_one)) 
 ```
 
+Tally
 ```{r}
-p2$plaintiff_fixed <- p2$plaintiff_one
+milw |> 
+  count(plaintiff_fixed) |> 
+  arrange(desc(n))
+
+
 ```
 
 
+
+# Your turn
+Categorize the following as "berrada" properties
+"luther haven llc" 
+"willow court apartments llc" 
+"garden terrace homes llc" 
+"good hope townhomes ii llc" 
+"good hope townhomes llc" 
+"colonial pointe ii apartments llc" 
+"colonial pointe il apartments llc" 
+"colonial pointe i apartments llc" 
+
+Categorize the following as  "anchor_properties"
+"atlantis properties llc" 
+"anchor properties llc" 
+ "action properties llc" 
+"afc properties llc" 
+"atunna properties llc" 
+"affordable properties llc" 
+"acme properties  llc" 
+
+
 ```{r}
-glimpse(p2)
+#Save as a csv
+#write.csv(p2, "milw_landlord_cleaned_8_6_2020.csv")
 ```
+
+
+- **Context: Berrada was responsible for 17% of eviction filings in Milwaukee City and County since March 27, 2020.** Since the moratorium started in March 27, 2020, there have been 2,929 evictions. Berrada and its 18 affiliated entities had 484 eviction filings, or 17% of the total. Anchor and its affiliates were responsible for 4% of eviction filings.
+```{r}
+#Cleaned Milwaukee Plaintiffs since March 27 2020
+top2 <- p2 %>% 
+  filter(date > '2020-03-27') %>% 
+  select(plaintiff_fixed, yearmon) %>% 
+         group_by(plaintiff_fixed) %>% 
+         count(plaintiff_fixed) %>% 
+         filter(n > 5) %>% 
+         ungroup() %>% 
+         arrange(desc(n))
+top2
+```
+
+
+- **Top with top 50 Results of Milwaukee Landlords**
+```{r}
+top2 %>% 
+  top_n(50, n) %>% 
+  kable() %>% 
+  kable_styling("striped")
+
+```
+
+
+
+
+**--30--**
+
+Don't Peek!
+
 
 - **Rename and Group Landlords, Substitute top names and normalize**
 ```{r}
@@ -208,39 +253,3 @@ p2 <- p2 %>%
                                     TRUE~plaintiff_one)) 
 
 ```
-
-```{r}
-#Save as a csv
-#write.csv(p2, "milw_landlord_cleaned_8_6_2020.csv")
-```
-
-
-- **Context: Berrada was responsible for 17% of eviction filings in Milwaukee City and County since March 27, 2020.** Since the moratorium started in March 27, 2020, there have been 2,929 evictions. Berrada and its 18 affiliated entities had 484 eviction filings, or 17% of the total. Anchor and its affiliates were responsible for 4% of eviction filings.
-```{r}
-#Cleaned Milwaukee Plaintiffs since March 27 2020
-top2 <- p2 %>% 
-  filter(date > '2020-03-27') %>% 
-  select(plaintiff_fixed, yearmon) %>% 
-         group_by(plaintiff_fixed) %>% 
-         count(plaintiff_fixed) %>% 
-         filter(n > 5) %>% 
-         ungroup() %>% 
-         arrange(desc(n))
-write.csv(top2, "cleaned_mil_evictors_since_March27_8_5_2020.csv")
-top2
-```
-
-
-- **Top with top 50 Results of Milwaukee Landlords**
-```{r}
-top2 %>% 
-  top_n(50, n) %>% 
-  kable() %>% 
-  kable_styling("striped")
-
-```
-
-
-
-
-**--30--**
