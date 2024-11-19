@@ -6,7 +6,7 @@ editor_options:
 ---
 
 ::: {style="text-align: center; color: #337DFF;"}
-# Basic Visualization in R
+# Basic Visualization in R, Jour 389R/689R
 
 # Workbook
 
@@ -16,7 +16,7 @@ Philip Merrill College of Journalism
 University of Maryland
 robwells@umd.edu
 LinkedIn: https://www.linkedin.com/in/rob-wells-7929329/ 
-ver. 5/29/2024 
+ver. 11/19/2024 
 ```
 
 <br>
@@ -57,7 +57,11 @@ File renamed to: SF_311_Jan29.xlsx
 ```{r message=FALSE, warning=FALSE}
 #background on tidyverse: https://www.tidyverse.org/packages/
 #load the lubridate, tidyverse and janitor libraries
-
+#install.packages("ggthemes")
+library(tidyverse)
+library(janitor)
+library(lubridate)
+library(ggthemes)
 ```
 
 **Load Data**
@@ -66,13 +70,7 @@ File renamed to: SF_311_Jan29.xlsx
 SF <- rio::import("https://docs.google.com/spreadsheets/d/1-nkosLJKkfeLSl-UG82DDyiEw5-62kX2alS6ICG9iuk/edit#gid=552005485", sheet = "SF Police_Department_Calls_for_") 
 ```
 
-**Interview the Data**
-
-```{r}
-#display the first six rows of SF using head
-```
-
-**Really Interview the Data** How big are you? Rows? Columns? List of
+**Interview the Data** How big are you? Rows? Columns? List of
 column names?
 
 ```{r}
@@ -83,26 +81,21 @@ column names?
 
 ```{r}
 #This cleans column names
-SF <- janitor::clean_names(SF)
+#SF <- janitor::clean_names(SF)
 #This processes dates for analysis
-SF$call_date2 <- mdy(SF$call_date)
+#SF$call_date2 <- mdy(SF$call_date)
 #This creates a new column for year
-SF$year <- year(SF$call_date2)
+#SF$year <- year(SF$call_date2)
+
+#All together now
+SF <- SF |> 
+  janitor::clean_names() |> 
+  mutate(
+    call_date2 =  mdy(call_date),
+    year = year(call_date2))
+
 ```
 
-**Sort by Date**
-
-```         
-We're using a weirdo command called a 'pipe' - %>% - that joins
-lines of code. In the example below, the SF table is filtered in descending order and the results are dumped into a new file called SF1.
-```
-
-```{r}
-#descending order
-SF1 <- SF %>% 
-arrange(desc(report_date))
-#head(SF1)
-```
 
 **Create a Table: 311 Calls by Year**
 
@@ -116,7 +109,7 @@ head(Years)
 
 <br>
 
-## Part 2: Basic ggplot
+## Basic ggplot
 
 **Graph Years using ggplot**
 
@@ -172,43 +165,6 @@ ggplot(Years,aes(x = year, y = n,
   
 ```
 
-<br>
-
-### Your Turn
-
-**1) Which Day Had the Most 311 Calls?** Using count to tabulate calls
-by day
-
-```{r}
-
-```
-
-**2) Chart Calls by Day** Use the code above and add a ggplot chart to it
-
-```{r}
-
-```
-
-<br>
-
-# Part 3: Analysis
-
-**Summary**: Using the summary() function, describe the minimum,
-maximum, median and mean of calls in the Days table
-
-```{r}
-#Adding the $n allows us to calculate the data on a specific column
-Days <- SF %>% 
-  count(call_date2) %>% 
-  arrange(desc(n))
-
-summary(Days$n)
-```
-
-Between March 31, 2016 and Nov. 30, 2019, San Francisco residents placed
-**an average 117 calls** to police complaining about homeless people.
-
-**Most Calls**: Identify the day with the most calls
 
 ```{r}
 #Group_by gathers and allows tabulation of all days
@@ -217,87 +173,8 @@ Days %>%
   filter(n == max(n)) 
 ```
 
-**See what happens without group_by** Only the top value is computed,
-not the aggregation of the component parts
 
-```{r}
-
-Days %>%
-  # group_by(call_date2) %>% 
-  filter(n == max(n)) 
-
-```
-
-<br>\
-<br> **Breaking Down Group_By** <br>
-
-<img src="group_by.png" width="400" height="400"/> <br>\
-<br>
-
--- **Many thanks**, [Ben
-Stenhaug](https://www.youtube.com/watch?v=6xbGZDUu5W4) <br>\
-<br>
-
-**Export to spreadsheet**
-
-```{r}
-#write.csv(Days,"Days.csv")
-```
-
-<br>
-
-### Your Turn
-
-**Question**: Identify the top 5 days with the most calls? Pro tip:
-[slice_max to the
-rescue](https://dplyr.tidyverse.org/reference/slice.html)
-
-```{r}
-
-```
-
-**Question**: Identify the top 5 days with the fewest calls?
-
-Pro tip: [slice_min](https://dplyr.tidyverse.org/reference/slice.html)
-
-```{r}
-
-
-```
-
-<br>
-
-### Types of Complaints
-
-**Interviewing: Types of Complaints**
-
-```{r}
-SF1 <- SF %>% count(original_crime_type_name) %>% 
-    arrange(desc(n))
-head(SF1)
-```
-
-**Interviewing: Actions Taken**
-
-```{r}
-Action <- SF %>% 
-  count(disposition) %>% 
-  arrange(desc(n))
-head(Action)
-```
-
-**Tabulate types of events**. What are the top five complaints in this
-data and provide the number of complaints
-
-```{r}
-Types <- SF %>% count(original_crime_type_name) %>% 
-  slice_max(n, n=5)
-Types
-```
-
-<br>
-
-# Part 4: Visualization
+# Visualization
 
 **Question**: What were the common days for arrests?
 
@@ -396,7 +273,7 @@ ggsave("bubble.png",device = "png",width=9,height=6, dpi=800)
 (Thanks to Sean Mussenden for the material below)
 
 ```{r}
-ppp_maryland <- read_csv("../CompText_Jour/03_tutorials/qmd_files/assets/data/ppp_loans_md.csv.zip")
+ppp_maryland <- read_csv("../03_tutorials/qmd_files/assets/data/ppp_loans_md.csv.zip")
 ```
 
 First, we'll create a dataframe of those top 10, called maryland_ppp_top_counties.
@@ -530,10 +407,6 @@ ppp_maryland_loans_by_date %>%
 
 ```
 
-
-**Ready for More?** Check out [Gathering and Cleaning Data, which
-describes
-APIs](https://wellsdata.github.io/DJNF_Merrill/Intro_to_R_2024/DJNF_Gathering_Cleaning_Data.html)
 
 <br>
 
