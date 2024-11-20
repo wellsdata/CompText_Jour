@@ -1,0 +1,366 @@
+---
+title: 'Homework: Summary of final project'
+author: "Taufiq"
+date: "2024-11-16"
+output: html_document
+---
+
+#In this R Markdown document, I am providing a summary of your final project. 
+
+#to use the data and execute basic topic modeling with LADAL Method, I may need these packages and relevent libraries 
+
+```{r echo= T, results = 'hide', warning=F, error=F, message=F}
+library(tidyverse)
+library(pdftools)
+library(tidyverse)
+library(textdata)
+library(tidytext)
+library(quanteda)
+library(rio)
+library(janitor)
+library(rio)
+library(dplyr)
+library(stringr)
+library(readr)
+here::here()
+#topic modeling
+library(tm)
+library(topicmodels)
+library(lda)
+library(ldatuning)
+# from tutorial packages
+library(DT)
+library(knitr) 
+library(kableExtra) 
+library(reshape2)
+library(ggplot2)
+library(wordcloud)
+library(pals)
+library(SnowballC)
+library(flextable)
+```
+
+#I am Loading the data here from the folder, while reading the files, combining the text, spliting into the document. 
+
+```{r}
+#reading PDF file and converting it into text. 
+text <- pdf_text("./FramingAI_taufiq.PDF")
+writeLines(text, "./FramingAI_taufiq.text")
+file_path <- "./FramingAI_taufiq.text"
+text_data <- readLines(file_path)
+text_combined <- paste(text_data, collapse = "\n")
+documents <- strsplit(text_combined, "End of Document")[[1]]
+output_dir <- "./extracted"
+for (i in seq_along(documents)) {
+  output_file <- file.path(output_dir, paste0("FramingAI_extracted", i, ".txt"))
+  writeLines(documents[[i]], output_file) 
+}
+cat("Files created:", length(documents), "\n")
+FramingAI_index <- read_lines("./extracted/FramingAI_extracted1.txt")
+extracted_lines <-FramingAI_index[16:2360]
+cat(head(extracted_lines, 20), sep = "\n")
+extracted_lines <- extracted_lines |> 
+  as.data.frame() 
+```
+
+## Build a final dataframe index
+
+```{r}
+
+cleaned_data <- extracted_lines |>
+  mutate(
+    trimmed_line = str_trim(extracted_lines),  
+    is_title = str_detect(trimmed_line, "^\\d+\\. "),  
+
+    # Detect dates (e.g., "Aug 14, 2024")
+    is_date = str_detect(trimmed_line, "\\b\\w{3} \\d{1,2}, \\d{4}\\b")
+  )
+
+# Shifting dates to align with corresponding titles
+aligned_data <- cleaned_data |>
+  mutate(
+    date = ifelse(lead(is_date, 1), lead(trimmed_line, 1), NA_character_)  # Shift date to title's row
+  ) |>
+  filter(is_title) |>
+  select(trimmed_line, date)  # Keep only the relevant columns
+
+# Step 3: Rename columns for clarity
+final_data <- aligned_data |>
+  rename(
+    title = trimmed_line,
+    date = date
+  )
+
+# Date and Publication in separate columns, and formatted
+final_data <- separate(data = final_data, col = date, into = c("date2", "publication"), sep = "  ", extra = "merge", fill = "right")
+
+
+#Step 5: Format date, clean headline
+final_data <- final_data |> 
+  mutate(date = as.Date(date2,format = "%b %d, %Y")) |> 
+  mutate(title =str_remove(title, "^\\d+\\. ")) |> 
+  subset(select = -(date2)) |> 
+  mutate(index = row_number()) |> 
+  select(index, date, title, publication)
+
+write_csv(final_data, "./final_data.csv")
+```
+
+#Using code, describe the number of rows and columns of the dataset
+```{r}
+ncol(final_data)
+```
+
+```{r}
+nrow(final_data)
+```
+
+
+#Spell out your content analysis plan, including preliminary work on a code book
+
+#Objective of the Project: 
+  Analyze how U.S. organizations frame AI in press releases concerning disaster         response and management.
+
+#Research Questions:
+  1. How is AI framed in organizational press releases related to disaster management?
+  2. What themes and narratives dominate discussions of AI in the context of natural        disasters and crises?
+  3. What potential risks and ethical concerns regarding AI usage are highlighted in        these communications?
+  
+#Data collected:
+      Data collected using Nexis Uni, spanning press releases from Nov. 1, 2023, to         Nov.1, 2024. Press releases that explicitly mention 'Artificial Intelligence' or       'AI' in conjunction with disasters, emergencies, or crisis management.
+
+#Preliminary work on a code book is - In the Codebook Structure, I would define; 
+
+Code Name - Definition	- Examples -	Coding Rules
+
+#few tentative Code Names
+AI Framing
+Ethical Concerns
+Misinformation Risks
+Public Trust
+AI Benefits
+AI Limitations
+Disaster Types
+Organizational Strategies
+
+
+#Provide a sample of the data and some descriptive statistics.
+
+Total Press Releases:       	8,00
+Time Period Covered:        	Nov. 1, 2023 – Nov. 1, 2024
+Average Releases Per Month: 	125
+Top Mentioned Keywords:       "Artificial Intelligence," "AI," "Disaster"
+Dominant headlines of the press release:   Ethical Concerns, Public Trust, Misinformation, AI Benefits, AI Limitations
+Most Active Month:	July 2024
+Least Active Month:	February 2024
+Regional Focus:	United States
+Organizations Highlighted:	FEMA, Homeland Security, Tech Companies, NGOs
+
+
+
+#Remember to create a separate folder for the entire assignment. Compress or "zip" the folder, push it to your github and hand in a link to that zip file.
+
+
+#Create ggplot chart showing the distribution of the data over time
+
+
+```{r}
+library(readxl)
+final_data <- read_excel("./AI_disaster. R.XLSX") |> 
+  janitor::clean_names() |> 
+  mutate(index = row_number())
+
+head(final_data)
+
+```
+
+#I am presenting ggplot from one month data. 
+
+```{r}
+library(ggplot2)
+
+# Plotting the data
+ggplot(data, aes(x = `Published date`, y = `Word count`)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(color = "red", size = 2) +
+  labs(
+    title = "Count of Press Releases Over Time",
+    x = "Published Date",
+    y = "Number of Press Releases"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+#rsw change
+```{r}
+data1 <- data |> 
+  janitor::clean_names() |> 
+  mutate(published_date_bak = published_date) |> 
+  separate(published_date, into = c("date", "year_day"), sep = ", ", extra = "merge", fill = "right") |> 
+  group_by(date) |> 
+  count(date) 
+ 
+
+library(ggplot2)
+
+# Plotting the data
+ggplot(data1, aes(x =  date, y = n)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(color = "red", size = 2) +
+  labs(
+    title = "Count of Press Releases Over Time",
+    x = "Published Date",
+    y = "Number of Press Releases"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+#Render into an HTML page and post this to the web
+
+#Convert RTF to TXT
+```{r}
+install.packages("unrtf")
+library(unrtf)
+
+test <- unrtf("./Files_1_100/5 things to know for Oct. 22_ Vulnerable seniors exploited, Hostage talks, Hurricane aid, Fall aller.RTF", format = "text")
+```
+
+# ChatGPT loop to convert RTF to text
+```{r}
+# Install the unrtf package if not already installed
+# if (!require("unrtf")) install.packages("unrtf")
+
+# Load the unrtf library
+library(unrtf)
+
+# Define the folder paths
+rtf_folder <- "./Files_1_100" # Replace with your .RTF folder path
+text_folder <- "./text" # Replace with your desired text folder path
+
+# Create the output folder if it doesn't exist
+if (!dir.exists(text_folder)) {
+  dir.create(text_folder)
+}
+
+# Get a list of all .RTF files in the folder
+rtf_files <- list.files(rtf_folder, pattern = "\\.RTF$", full.names = TRUE)
+
+# Convert each .RTF file to .txt and save in the text folder
+for (rtf_file in rtf_files) {
+  # Extract the file name without extension
+  file_name <- tools::file_path_sans_ext(basename(rtf_file))
+  
+  # Convert RTF to plain text
+  text_content <- unrtf::unrtf(rtf_file, format = "text")
+  
+  # Define the output .txt file path
+  output_file <- file.path(text_folder, paste0(file_name, ".txt"))
+  
+  # Write the text content to the output file
+  writeLines(text_content, output_file)
+}
+
+cat("Conversion complete. Extracted text files are saved in:", text_folder)
+
+
+
+```
+
+
+
+# Specify a sheet name or index (optional)
+
+## Raw text compiler 
+```{r include=FALSE}
+#This creates an index with the file path to the stories. And then it compiles the stories into a dataframe
+#####################
+# Begin SM Code #####
+#####################
+
+###
+# List out text files that match pattern .txt, create DF
+###
+
+files <- list.files("text", pattern="*.txt") %>% 
+  as.data.frame() |> 
+  rename(filename = 1) |> 
+  mutate(index = row_number())
+
+
+final_index <- final_data |> 
+  inner_join(files, c("index")) |> 
+  mutate(filepath = paste0("./text/", filename))
+head(final_index)
+
+
+```
+
+## Text compiler
+```{r}
+###
+# Define function to loop through each text file 
+###
+
+create_article_text <- function(row_value) {
+  
+  #row_value is the single argument that is passed to the function
+  # Take each row of the dataframe
+  temp <- final_index %>%
+    slice(row_value)
+  
+  # Store the filename for  use in constructing articles dataframe
+  temp_filename <- temp$filename
+  
+  # Create a dataframe by reading in lines of a given textfile
+  # Add a filename column 
+  articles_df_temp <- read_lines(temp$filepath) %>%
+    as_tibble() %>%
+    mutate(filename = temp_filename)
+  
+  # Bind results to master articles_df
+  # <<- returns to global environment
+  articles_df <<- articles_df %>%
+    bind_rows(articles_df_temp)
+}
+
+###
+# Create elements needed to run function
+###
+
+# Create empty tibble to store results
+articles_df <- tibble()
+#running once to test
+#create_article_text(2) 
+# Create an array of numbers to loop through, from 1 to the number of rows in our index dataframe 
+row_values <- 1:nrow(final_index)
+
+###
+# Execute function using lapply
+# This loops through each row of the dataframe and append results to master file
+###
+
+lapply(row_values, create_article_text)
+
+###
+# Clean up articles_df and join to index dataframe
+###
+
+articles_df <- articles_df %>%
+  select(filename, sentence=value) %>%
+  inner_join(final_index)
+
+#After viewing articles_df, I see 64 lines from the index that I don't need. Cutting them 
+
+articles_df <- articles_df %>%
+ # slice(-c(1:64)) |> 
+  #gets rid of blank rows
+    filter(trimws(sentence) != "") 
+
+#write.csv(articles_df, "../exercises/assets/extracted_text/kemi_df2.csv")
+
+```
+
