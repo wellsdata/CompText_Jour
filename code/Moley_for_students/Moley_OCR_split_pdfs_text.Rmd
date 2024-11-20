@@ -1,0 +1,187 @@
+---
+title: "Split PDFs and text"
+author: "Rob Wells"
+date: "2024-09-06"
+output: html_document
+---
+```{r}
+library(tidyverse)
+library(pdftools)
+#install.packages("pdftools")
+```
+
+# Convert PDF to text
+
+Using 10 articles downloaded from NexisUni for Kemi Busari's research
+```{r}
+#Using pdftools package. Good for basic PDF extraction
+
+
+text <- pdf_text("Moley_newsweek_1956-12-10_48_24 copy.pdf")
+#pdf_text reads the text from a PDF file.
+writeLines(text, "moley_text.txt")
+#writeLines writes this text to a text file
+```
+
+```{r}
+# Key Points:
+# Column Boundaries: The page is divided into three columns based on x positions:
+# 
+# The first third of the page is discarded (column 1).
+# The second and third columns are processed in order, preserving the separation.
+# Preserving Order: By concatenating the text in the correct sequence (column 2 followed by column 3), you avoid intermingling text from different columns.
+# 
+# Flexible Column Boundaries: You can adjust the cutoff values (0.33 * page_width and 0.66 * page_width) if the columns aren’t perfectly aligned across different articles.
+# 
+# This approach should keep the text from the second and third columns separate and avoid any intermingling of content.
+
+# Extract text with spatial information
+pdf_info <- pdf_data("Perspective_1948-12-06_sim_newsweek-us_copy.pdf")
+
+# Function to segment columns and remove the first column
+filter_columns <- function(page_data) {
+  # Get the width of the page
+  page_width <- max(page_data$x + page_data$width)
+  
+  # Define column boundaries
+  column_1_cutoff <- 0.4 * page_width  # Left column
+  column_2_cutoff <- 0.7 * page_width  # Middle column
+
+  # Split the text into three columns based on x-coordinates
+  column_2 <- page_data[page_data$x > column_1_cutoff & page_data$x <= column_2_cutoff, ]
+  column_3 <- page_data[page_data$x > column_2_cutoff, ]
+  
+  # Combine the text from each column separately, line by line, to preserve order
+  col2_text <- paste(column_2$text, collapse = " ")
+  col3_text <- paste(column_3$text, collapse = " ")
+  
+  # Combine the text from columns 2 and 3
+  full_text <- paste(col2_text, col3_text, sep = " ")
+  
+  return(full_text)
+}
+
+# Apply the function to each page in the PDF
+cleaned_text <- sapply(pdf_info, function(page) filter_columns(page))
+
+# Save the cleaned text to a file
+writeLines(cleaned_text, "cleaned_perspective2.txt")
+
+```
+
+
+
+```{r}
+
+library(pdftools)
+
+# Extract text with spatial information
+pdf_info <- pdf_data("Perspective_1948-12-06_sim_newsweek-us_copy.pdf")
+
+# Function to filter out text in the left column and ignore small fragments
+filter_left_column <- function(page_data) {
+  # Get the width of the page
+  page_width <- max(page_data$x + page_data$width)
+  
+  # Use 40% of the page width as the cutoff for the left column
+  cutoff <- 0.4 * page_width
+  
+  # Filter out words in the left 40% of the page
+  filtered_words <- page_data[page_data$x > cutoff, ]
+  
+  # Further remove very small text fragments (likely ads)
+  filtered_words <- filtered_words[nchar(filtered_words$text) > 2, ]
+  
+  # Combine the remaining words into a single string
+  paste(filtered_words$text, collapse = " ")
+}
+
+# Apply the function to each page in the PDF
+cleaned_text <- sapply(pdf_info, function(page) filter_left_column(page))
+
+# Save the cleaned text to a file
+writeLines(cleaned_text, "cleaned_perspective_text.txt")
+
+```
+
+```{r}
+library(pdftools)
+
+# Extract text with spatial information
+pdf_info <- pdf_data("Perspective_1948-12-06_sim_newsweek-us_copy.pdf")
+
+# Function to filter out text in the left third of the page
+filter_left_column <- function(page_data) {
+  # Each `page_data` is a data frame with columns: x, y, width, height, space, and text
+  
+  # Get the width of the page
+  page_width <- max(page_data$x + page_data$width)
+  
+  # Filter out words that are located in the left third of the page
+  filtered_words <- page_data[page_data$x > (page_width / 3), ]
+  
+  # Combine the remaining words into a single string
+  paste(filtered_words$text, collapse = " ")
+}
+
+# Apply the function to each page in the PDF
+cleaned_text <- sapply(pdf_info, function(page) filter_left_column(page))
+
+# Save the cleaned text to a file
+writeLines(cleaned_text, "perspective.txt")
+
+
+```
+
+
+
+# Split text to separate articles on common identifier
+
+In this case, NexisUni makes life easy for us. At the end of each document, there are the words "End of Document". Convenient! We search for "End of Document" and then instruct R to split the file and dump it into a standalone text file.
+```{r}
+# Step 1: Read the entire text file into R
+#You will need to alter this for your computer
+#For Mac: In Finder, Cntl + click on the filename, NOW hold down Alt/Option, and an item to copy file path will appear as Copy "Filename" as Pathname 
+#https://stackoverflow.com/questions/52695546/how-to-copy-path-of-a-file-in-mac-os
+
+file_path <- "/Users/robwells/Code/CompText_Jour/exercises/split_file/kemi_text.txt"
+text_data <- readLines(file_path)
+
+# Step 2: Combine lines into one single string
+text_combined <- paste(text_data, collapse = "\n")
+
+# Step 3: Split the text by the "End of Document" phrase
+documents <- strsplit(text_combined, "End of Document")[[1]]
+
+# Step 4: Write each section to a new file
+output_dir <- "/Users/robwells/Code/CompText_Jour/exercises/split_file/"
+for (i in seq_along(documents)) {
+  output_file <- file.path(output_dir, paste0("test2_document_", i, ".txt"))
+  writeLines(documents[[i]], output_file)
+}
+
+cat("Files created:", length(documents), "\n")
+```
+
+#Part 2: Complex PDFs
+
+### For more complicated PDFs, bring in the Big Guns
+
+```{r}
+#Install Required Tools
+#Using the system() function to execute a command-line operation directly from within R.
+system("brew install tesseract")
+system("brew install xpdf")
+system("xcode-select --install")
+system("brew install libtiff")
+system("brew install ghostscript")
+system("brew install imagemagick")
+```
+
+#Convert PDF to Text
+```{r}
+#Executes pdftotext, a command-line tool used to convert PDF files to plain text.
+system("pdftotext /Users/robwells/Code/CompText_Jour/exercises/split_file/kemi.PDF ../exercises/split_file/kemi3.txt")
+```
+
+

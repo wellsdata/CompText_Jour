@@ -1,0 +1,255 @@
+---
+title: "Case Study case_when: Milwaukee Evictions"
+author: "Rob Wells"
+date: "11/17/2024"
+output: html_document
+---
+
+# Analyzing Eviction Court Data From Milwaukee
+### Data analysis by Rob Wells
+
+
+- **The records were scraped from this website**  
+https://wcca.wicourts.gov/advanced.html 
+
+--------------------------------------------------------------------
+- **Part 1: Load Libraries and Data**
+
+```{r include=FALSE}
+library(tidyverse)
+library(janitor)
+library(lubridate)
+library(kableExtra)
+```
+Load Milwaukee City and County Data for Evictions
+```{r}
+milw <- rio::import("../data/sta_wi_milwaukee_2019_2020.csv") 
+```
+
+- **Clean names**
+```{r}
+milw <- janitor::clean_names(milw)
+```
+
+```{r}
+glimpse(milw)
+```
+
+- **Parse Cities **
+```{r}
+milw <- milw |> 
+  mutate(defendant_address2 = defendant_address) |> # makes a copy of a column you will now pick apart
+  separate(defendant_address, into = c("address", "city", "state_zip"), sep = ", ", extra = "merge", fill = "right")
+
+```
+
+
+```{r}
+milw %>% 
+  group_by(city) %>%
+  count(city) %>% 
+  arrange(desc(n))
+```
+
+- **Process dates** 
+```{r}
+milw <- milw |> 
+  mutate(date = ymd(file_date)) |> 
+  mutate(yearmon = format(date, "%Y-%m"))
+#Filter to July 31, 2000
+milw <- milw %>%
+filter(file_date <= as.Date("2020-07-31")) %>%
+distinct()
+```
+
+### Total Eviction Filings by Month in Milwaukee City and County, Jan. 1 2019-July 31, 2020
+**Wisconsin eviction moratorium was March 27 - May 27, 2020**
+```{r}
+z <- milw %>% 
+  group_by(yearmon) %>%
+  count(yearmon)
+z
+```
+
+- **Context: Total eviction filings in Wisconsin City and County since Jan. 1, 2019: 19,420**
+```{r}
+summary(z$n)
+sum(z$n)
+```
+
+- **Chart of Milwaukee City and County Eviction Filings, Jan 1. 2019-July 31, 2020**  
+**Wisconsin eviction moratorium was March 27 - May 27, 2020**
+```{r}
+
+ggplot(z, aes(x=yearmon, y=n, fill=yearmon)) +
+  geom_col() +
+   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title="Milwaukee City-County Eviction Filings Per Month Jan. 2019-July 2020",y="Evictions", x= "", 
+       caption = "Graphic by Rob Wells. 8-21-2020", subtitle = "Source: Wisconsin Circuit Court records")+
+  theme(legend.position="none") 
+#ggsave("Milw_Evict_8_21_2020.png",device = "png",width=9,height=6, dpi=500)
+```
+
+- **Clean the columns - remove stray spaces, numerals**
+
+```{r}
+milw <- milw |> 
+  mutate(
+    plaintiff_one = str_trim(plaintiff) |> 
+      str_remove_all("[[:punct:]]") |> 
+      str_remove_all("[0-9]"),
+    defendant_one = str_trim(defendant) |> 
+      str_remove_all("[[:punct:]]")
+  )
+```
+
+
+- **Summary of Milwaukee Plaintiffs **
+```{r}
+#Build a simple summary table
+plaintiff1 <- milw %>% 
+  select(plaintiff_one, defendant_one, date) %>% 
+         group_by(plaintiff_one) %>% 
+         count(plaintiff_one) %>% 
+         ungroup() %>% 
+         arrange(desc(n))
+
+#write.csv(plaintiff1, "milplaintiff.7.6.2020.csv")
+
+
+plaintiff1
+```
+##Cleaning of Plaintiffs Names, Normalizing and Grouping
+```{r}
+milw <- milw %>% 
+  mutate(plaintiff_fixed = case_when(plaintiff_one=="meaux park llc" ~ "berrada",
+                                     plaintiff_one=="berrada properties  llc" ~ "berrada",
+                                     plaintiff_one=="spring court apartments llc" ~ "berrada",
+                                     plaintiff_one=="dineen park townhomes llc" ~ "berrada",
+                                     plaintiff_one=="arbor gardens apartments llc" ~ "berrada",
+                                          TRUE~plaintiff_one)) 
+```
+
+Tally
+```{r}
+milw |> 
+  count(plaintiff_fixed) |> 
+  arrange(desc(n))
+
+
+```
+
+
+
+# Your turn
+Categorize the following as "berrada" properties
+"luther haven llc" 
+"willow court apartments llc" 
+"garden terrace homes llc" 
+"good hope townhomes ii llc" 
+"good hope townhomes llc" 
+"colonial pointe ii apartments llc" 
+"colonial pointe il apartments llc" 
+"colonial pointe i apartments llc" 
+
+Categorize the following as  "anchor_properties"
+"atlantis properties llc" 
+"anchor properties llc" 
+ "action properties llc" 
+"afc properties llc" 
+"atunna properties llc" 
+"affordable properties llc" 
+"acme properties  llc" 
+
+
+```{r}
+#Save as a csv
+#write.csv(p2, "milw_landlord_cleaned_8_6_2020.csv")
+```
+
+
+- **Context: Berrada was responsible for 17% of eviction filings in Milwaukee City and County since March 27, 2020.** Since the moratorium started in March 27, 2020, there have been 2,929 evictions. Berrada and its 18 affiliated entities had 484 eviction filings, or 17% of the total. Anchor and its affiliates were responsible for 4% of eviction filings.
+```{r}
+#Cleaned Milwaukee Plaintiffs since March 27 2020
+top2 <- p2 %>% 
+  filter(date > '2020-03-27') %>% 
+  select(plaintiff_fixed, yearmon) %>% 
+         group_by(plaintiff_fixed) %>% 
+         count(plaintiff_fixed) %>% 
+         filter(n > 5) %>% 
+         ungroup() %>% 
+         arrange(desc(n))
+top2
+```
+
+
+- **Top with top 50 Results of Milwaukee Landlords**
+```{r}
+top2 %>% 
+  top_n(50, n) %>% 
+  kable() %>% 
+  kable_styling("striped")
+
+```
+
+
+
+
+**--30--**
+
+Don't Peek!
+
+
+- **Rename and Group Landlords, Substitute top names and normalize**
+```{r}
+p2 <- p2 %>% 
+  mutate(plaintiff_fixed = case_when(plaintiff_one=="meaux park llc" ~ "berrada",
+                                     plaintiff_one=="berrada properties  llc" ~ "berrada",
+                                     plaintiff_one=="spring court apartments llc" ~ "berrada",
+                                     plaintiff_one=="dineen park townhomes llc" ~ "berrada",
+                                     plaintiff_one=="arbor gardens apartments llc" ~ "berrada",
+                                     plaintiff_one=="luther haven llc" ~ "berrada",
+                                     plaintiff_one=="willow court apartments llc" ~ "berrada",
+                                     plaintiff_one=="garden terrace homes llc" ~ "berrada",
+                                     plaintiff_one=="good hope townhomes ii llc" ~ "berrada",
+                                     plaintiff_one=="good hope townhomes llc" ~ "berrada",
+                                     plaintiff_one=="colonial pointe ii apartments llc" ~ "berrada",
+                                     plaintiff_one=="colonial pointe il apartments llc" ~ "berrada",
+                                     plaintiff_one=="colonial pointe i apartments llc" ~ "berrada",
+                                     plaintiff_one=="mariners pointe apartments llc" ~ "berrada",
+                                     plaintiff_one=="berrada properties llc" ~ "berrada",
+                                     plaintiff_one=="yb florist llc" ~ "berrada",
+                                     plaintiff_one=="yb medford llc" ~ "berrada",
+                                     plaintiff_one=="yb silver spring llc" ~ "berrada",
+                                     plaintiff_one=="yb victory llc" ~ "berrada",
+                                     plaintiff_one=="falcon crest llc" ~ "berrada",
+                                     plaintiff_one=="wisniewski michael s" ~ "michael_s_wisniewski",
+                                     plaintiff_one=="bruckner daniel w" ~ "daniel_w_bruckner",
+                                     plaintiff_one=="nawrocki gregory w" ~ "gregory_w_nawrocki",
+                                     plaintiff_one=="nawrocki gregory" ~ "gregory_w_nawrocki",
+                                     plaintiff_one=="nawrocki gragory w" ~ "gregory_w_nawrocki",
+                                     plaintiff_one=="martin bruce" ~ "bruce_martin",
+                                     plaintiff_one=="housing authority of the city of milwaukee" ~ "milwaukee_city_housing_authority",
+                                     plaintiff_one=="city of milwaukee" ~ "milwaukee_city",
+                                     plaintiff_one=="city  of milwaukee" ~ "milwaukee_city",
+                                     plaintiff_one=="milwaukee living llc" ~ "milwaukee_living",
+                                     plaintiff_one=="milwaukee capital properties llc" ~ "milwaukee_capital_properties",
+                                     plaintiff_one=="good hope townhomes ii llc" ~ "good_hope_townhomes",
+                                     plaintiff_one=="good hope townhomes llc" ~ "good_hope_townhomes",
+                                     plaintiff_one=="howard and th street holding company" ~ "howard_76_st_holding_co",
+                                     plaintiff_one=="maas robert" ~ "robert_maas",
+                                     plaintiff_one=="maas robert j" ~ "robert_maas",
+                                     plaintiff_one=="atlantis properties llc" ~ "anchor_properties",
+                                     plaintiff_one=="anchor properties llc" ~ "anchor_properties",
+                                      plaintiff_one=="action properties llc" ~ "anchor_properties",
+                                     plaintiff_one=="afc properties llc" ~ "anchor_properties",
+                                     plaintiff_one=="atunna properties llc" ~ "anchor_properties",
+                                     plaintiff_one=="affordable properties llc" ~ "anchor_properties",
+                                     plaintiff_one=="acme properties  llc" ~ "anchor_properties",
+                                     plaintiff_one=="alotta properties llc" ~ "anchor_properties",
+                                     plaintiff_one=="anumbera properties llc" ~ "anchor_properties",
+                                     plaintiff_one=="allsortsa properties llc" ~ "anchor_properties",
+                                     plaintiff_one=="absolute properties llc" ~ "anchor_properties",
+                                    TRUE~plaintiff_one)) 
+
+```

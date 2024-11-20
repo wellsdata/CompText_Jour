@@ -1,0 +1,74 @@
+---
+title: "PDF Processing with OCR and Command-line Tools"
+output: html_document
+---
+
+#OCR PDFs to Text
+### This notebook adapts Chad Day's excellent NICAR 2024 tutorial to run on R
+
+Adapt below to work for class project
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Install Required Tools
+```{r}
+system("brew install tesseract")
+system("brew install xpdf")
+system("xcode-select --install")
+system("brew install libtiff")
+system("brew install ghostscript")
+system("brew install imagemagick")
+```
+
+#Convert PDF to Text
+```{r}
+system("pdftotext assets/Manafort_filing.pdf manafort.txt")
+
+# For tabular data
+system("pdftotext -table assets/07012018-report-final.pdf tabular-test.txt")
+```
+
+
+#Batch Processing PDFs
+```{r}
+
+library(fs)
+
+# Set paths
+pdf_folder <- "assets/pdfs"
+extracted_folder <- "extracted"
+
+# Create the extracted folder if it doesn't exist
+if (!dir_exists(extracted_folder)) {
+  dir_create(extracted_folder)
+}
+
+# Get list of PDF files
+pdf_files <- dir_ls(pdf_folder, glob = "*.pdf")
+
+# Process each PDF file
+for (pdf_file in pdf_files) {
+  output_file <- path(extracted_folder, path_ext_set(path_file(pdf_file), "txt"))
+  system2("pdftotext", args = c(pdf_file, output_file))
+  cat("Text extracted from", path_file(pdf_file), "and saved to", path_file(output_file), "\n")
+}
+```
+
+# Processing PNG Files
+
+```{r}
+# Install tesseract if not already installed
+#system("brew install tesseract")
+
+# Convert PNG to searchable PDF
+system("tesseract /Users/robwells/Code/CompText_Jour/exercises/assets/pdfs/a_lynching_in_ohio.png output")
+
+# # Convert the searchable PDF to text
+# system("pdftotext output.pdf output.txt")
+
+
+```
+
+

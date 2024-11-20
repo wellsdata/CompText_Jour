@@ -1,0 +1,284 @@
+---
+title: "Scrape PDF 2"
+author: "Bridget Lang"
+date: "2024-11-3"
+output: html_document
+---
+# Part 1: Scrape a PDF and split into separate text files
+
+```{r}
+#install.packages("pdftools")
+library(tidyverse)
+library(pdftools)
+library(dplyr)
+library(rio)
+library(tidytext)
+library(quanteda)
+library(knitr)
+```
+
+## Convert PDF to text
+```{r}
+#Using pdftools package. Good for basic PDF extraction
+
+text <- pdf_text("./Asian_Indian_Women_NYT_LAT_USAT.PDF")
+#pdf_text reads the text from a PDF file.
+writeLines(text, "./extracted_text/all_text.txt")
+#writeLines writes this text to a text file
+```
+
+
+## Split text to separate articles on common identifier
+
+In this case, NexisUni makes life easy for us. At the end of each document, there are the words "End of Document". Convenient! We search for "End of Document" and then instruct R to split the file and dump it into a standalone text file.
+```{r}
+# Step 1: Read the entire text file into R
+#You will need to alter this for your computer
+#For Mac: In Finder, Cntl + click on the filename, NOW hold down Alt/Option, and an item to copy file path will appear as Copy "Filename" as Pathname 
+#https://stackoverflow.com/questions/52695546/how-to-copy-path-of-a-file-in-mac-os
+
+
+file_path <- "./extracted_text/all_text.txt"
+text_data <- readLines(file_path)
+
+# Step 2: Combine lines into one single string
+text_combined <- paste(text_data, collapse = "\n")
+
+# Step 3: Split the text by the "End of Document" phrase
+documents <- strsplit(text_combined, "End of Document")[[1]]
+
+# Step 4: Write each section to a new file
+output_dir <- "./extracted_text/"
+for (i in seq_along(documents)) {
+  output_file <- file.path(output_dir, paste0("text_extracted_", i, ".txt"))
+  writeLines(documents[[i]], output_file)
+}
+
+cat("Files created:", length(documents), "\n")
+```
+
+## Create an index from the first extracted page
+--We are just grabbing the index of the 10 listed items and creating a dataframe
+```{r}
+article_index <- read_lines("./extracted_text/text_extracted_1.txt")
+# Extract lines 16 to 89
+extracted_lines <- article_index[16:89]
+
+
+# Print the extracted lines to the console
+cat(extracted_lines, sep = "\n")
+
+extracted_lines <- extracted_lines |> 
+  as.data.frame() 
+
+
+
+
+```
+
+## Build a final dataframe index
+
+```{r}
+#step 1 causes the titles to get cut off because some are multiple lines and do not get 
+#labeled with a number and a period before but are still part of the title. But the 
+#way you are extracting them does not count them as a title
+
+# 
+# I would try something like
+# foreach line 
+#   if (title && (line + 1) !is_data)
+#     set (line + 1).is_title = true and somehow merge it with the line before
+#     
+# or (while !line.is_data){
+#   merge the lines you visit 
+# }
+# Step 1: Trim spaces and detect rows with titles and dates
+cleaned_data <- extracted_lines |>
+  mutate(
+    # Trim leading and trailing spaces before detection
+    trimmed_line = str_trim(extracted_lines),  
+    
+    # Detect titles (start with a number and a period)
+   # is_title = str_detect(trimmed_line, "^\\d+\\."),  
+    # Detect dates (e.g., "Aug 14, 2024")
+    is_date = str_detect(trimmed_line, "\\b\\w{3} \\d{1,2}, \\d{4}\\b")
+  )
+cleaned_data
+
+cleaned_data <- cleaned_data |>
+  mutate(
+    # Trim leading and trailing spaces before detection
+
+    # Detect titles (start with a number and a period)
+    
+    # Detect dates (e.g., "Aug 14, 2024")
+    is_title = ifelse(lead(is_date, 1), 
+                      TRUE, 
+                      str_detect(trimmed_line, "^\\d+\\."))
+  )
+cleaned_data
+
+
+    
+# Step 2: Shift dates to align with corresponding titles
+aligned_data <- cleaned_data |>
+  mutate(
+    date = ifelse(lead(is_date, 1), lead(trimmed_line, 1), ifelse(lead(is_date, 2), lead(trimmed_line,2), NA_character_)),
+      # if (lead(is_date, 1)){
+      #   lead(trimmed_line, 1)
+      # }else if (lead(is_date, 2)){
+      #   lead(trimmed_line,2)
+      # }else {
+      #   NA_charcter_
+      # }# Shift date to title's row
+    trimmed_line = ifelse(is_title,
+                   ifelse(lead(is_title, 1),
+                          paste0(trimmed_line, lead(trimmed_line, 1), " "),
+                          trimmed_line
+                          ), 
+                   trimmed_line
+                   )
+    
+   )|> 
+  filter(is_title) |>
+  filter(str_detect(trimmed_line, "^\\d+\\.")) |>
+  
+  select(trimmed_line, date)
+
+ # Keep only the relevant columns
+aligned_data
+# Step 3: Rename columns for clarity
+final_data <- aligned_data |>
+  rename(
+    title = trimmed_line,
+    date = date
+  )
+final_data
+#Step 4: Date and Publication in separate columns, and formatted
+final_data <- separate(data = final_data, col = date, into = c("date2", "publication"), sep = "  ", extra = "merge", fill = "right")
+
+
+#Step 5: Format date, clean headline
+final_data <- final_data |> 
+  mutate(date = as.Date(date2,format = "%b %d, %Y")) |> 
+  mutate(title =str_remove(title, "^\\d+\\. ")) |> 
+  subset(select = -(date2)) |> 
+  mutate(index = row_number()) |> 
+  select(index, date, title, publication)
+
+write_csv(final_data, "./final_data.csv")
+  
+```
+
+# Part 2: Compile Text into a Dataframe
+
+## Raw text compiler 
+```{r include=FALSE}
+#This creates an index with the file path to the stories. And then it compiles the stories into a dataframe
+#####################
+# Begin SM Code #####
+#####################
+
+###
+# List out text files that match pattern .txt, create DF
+###
+
+files <- list.files("./extracted_text", pattern="*.txt") %>% 
+  as.data.frame() |> 
+  rename(filename = 1) |> 
+  #create an index with the file name
+ mutate(index = str_extract(filename, "\\d+")) |> 
+  mutate(index = as.numeric(index))
+
+#Join the file list to the index
+
+#load final data if you haven't already
+#final_data <- read.csv("assets/final_data.csv")
+
+final_index <- final_data |> 
+  inner_join(files, c("index")) |> 
+#you need the actual hard-coded path on this line below to the text
+  
+    mutate(filepath = paste0("./extracted_text/", filename))
+head(final_index)
+```
+
+## Text compiler
+```{r}
+###
+# Define function to loop through each text file 
+###
+
+create_article_text <- function(row_value) {
+  
+  #row_value is the single argument that is passed to the function
+  # Take each row of the dataframe
+  temp <- final_index %>%
+    slice(row_value)
+  
+  # Store the filename for  use in constructing articles dataframe
+  temp_filename <- temp$filename
+  
+  # Create a dataframe by reading in lines of a given textfile
+  # Add a filename column 
+  articles_df_temp <- read_lines(temp$filepath) %>%
+    as_tibble() %>%
+    mutate(filename = temp_filename)
+  
+  # Bind results to master articles_df
+  # <<- returns to global environment
+  articles_df <<- articles_df %>%
+    bind_rows(articles_df_temp)
+}
+
+###
+# Create elements needed to run function
+###
+
+# Create empty tibble to store results
+articles_df <- tibble()
+#running once to test
+#create_article_text(2) 
+# Create an array of numbers to loop through, from 1 to the number of rows in our index dataframe 
+row_values <- 1:nrow(final_index)
+
+###
+# Execute function using lapply
+# This loops through each row of the dataframe and append results to master file
+###
+
+lapply(row_values, create_article_text)
+
+###
+# Clean up articles_df and join to index dataframe
+###
+
+articles_df <- articles_df %>%
+  select(filename, sentence=value) %>%
+  inner_join(final_index)
+
+articles_df <- articles_df %>%
+  slice(-c(1:109)) |> 
+  #gets rid of blank rows
+    filter(trimws(sentence) != "") 
+
+
+write.csv(articles_df, "./articles_df.csv")
+
+```
+#Tokenize and stuff
+```{r}
+
+article_text <-  read.csv("./articles_df.csv")
+
+data(stop_words)
+one_word_per_row <- article_text %>% mutate(sentence= str_squish(sentence)) |> 
+  mutate(text = tolower(sentence)) |>  
+  mutate(text = gsub("\\d+", "", text)) |>
+  mutate(text = str_replace_all(text, "- ", "")) %>% 
+  unnest_tokens(word, text, token="ngrams", n=1 ) %>%
+  filter(!word %in% stop_words$word) %>%
+  filter(!is.na(word))
+one_word_per_row
+
+```

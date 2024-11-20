@@ -1,0 +1,119 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+# Scrape Wiki page for racist terms
+
+## Thanks to Sean Mussenden for his Advanced rvest tutorial, which this is shamelessly and ruthlessly stolen and remixed
+
+https://github.com/smussenden/datajournalismbook
+
+
+```{r}
+# install.packages("tidyverse")
+# install.packages("rvest")
+# install.packages("janitor")
+
+library(tidyverse)
+library(rvest)
+library(janitor)
+library(readxl)
+```
+
+
+Example URL of pages I want to scrape
+https://www.dailywire.com/news/not-encouraging-nyt-warns-kamala-in-trouble-as-poll-finds-her-tied-with-trump?topStoryPosition=1
+
+#I asked ChatGPT:  build a webscraper this into a function so it will extract URLs from Daily_Wire_Articles.xlsx from the URL column and produce one text file per article. there are 20 URLs on that list.
+
+```{r}
+
+
+# Define the function to scrape a Daily Wire article
+scrape_article <- function(url) {
+  # Read the HTML content of the page
+  page <- tryCatch(
+    read_html(url),
+    error = function(e) {
+      message(paste("Error reading:", url))
+      return(NULL)
+    }
+  )
+  
+  # Return NULL if page could not be loaded
+  if (is.null(page)) return(NULL)
+
+  # Extract the headline (assuming it's in an <h1> tag)
+  headline <- page %>%
+    html_element("h1") %>%
+    html_text(trim = TRUE)
+
+  # Extract the article text (all <p> elements)
+  article_text <- page %>%
+    html_elements("p") %>%
+    html_text(trim = TRUE) %>%
+    paste(collapse = "\n")
+
+  # Combine headline and article into one string
+  full_text <- paste("Headline:\n", headline, "\n\nArticle Text:\n", article_text)
+  
+  return(full_text)
+}
+
+# Read the URLs from the Excel file
+# You will need to point to the location of your Daily Wire Articles spreadsheet.
+urls <- read_excel("~/Code/CompText_Jour/data/Daily_Wire_Articles.xlsx", sheet = 1)$URL
+
+# Loop over URLs and save each article as a text file
+for (url in urls) {
+  article_content <- scrape_article(url)
+  
+  # Skip if article content is NULL
+  if (is.null(article_content)) next
+
+  # Create a filename from the URL (using only the last part)
+  filename <- paste0(basename(url), ".txt")
+  
+  # Save the article content to a text file
+  writeLines(article_content, con = filename)
+  
+  message(paste("Saved:", filename))
+}
+
+```
+
+#Basic scraper for one article
+
+```{r}
+library(rvest)
+
+# Define the URL
+url2 <- "https://www.dailywire.com/news/not-encouraging-nyt-warns-kamala-in-trouble-as-poll-finds-her-tied-with-trump?topStoryPosition=1"
+
+# Read the HTML content of the page
+page <- read_html(url2)
+
+# Extract the headline (usually in an <h1> tag)
+headline <- page %>%
+  html_element("h1") %>%
+  html_text(trim = TRUE)
+
+# Extract the article text (all <p> elements)
+article_text <- page %>%
+  html_elements("p") %>%
+  html_text(trim = TRUE)
+
+# Print the headline and article content
+cat("Headline:\n", headline, "\n\n")
+cat("Article Text:\n", paste(article_text, collapse = "\n"))
+
+```
+
+#ChatGPT explanation:
+
+html_element("h1"): Extracts the headline, assuming it is in an <h1> tag. If the headline isn't inside <h1>, you might need to inspect the webpage's HTML to adjust the selector.
+trim = TRUE: Ensures that any extra spaces or newlines around the text are removed.
+paste(..., collapse = "\n"): Joins the article paragraphs into a readable format with line breaks.
+
+

@@ -1,0 +1,160 @@
+---
+title: "Week_9_Keyword_KWIC"
+author: "Rob Wells"
+date: "2024-10-17"
+output: html_document
+---
+# Quanteda
+
+```{r}
+#install.packages("readtext")
+library(quanteda)
+library(readtext)
+library(tidyverse)
+
+```
+
+#Import your article text dataframe
+```{r}
+articles <- read.csv("https://raw.githubusercontent.com/wellsdata/CompText_Jour/refs/heads/main/exercises/assets/data/kemi_df2.csv")
+```
+
+
+
+```{r}
+
+# Create a corpus using the 'sentence' column as the text field
+my_corpus <- corpus(articles, text_field = "sentence") # build a new corpus from the texts
+head(my_corpus)
+
+
+```
+
+## kwic
+
+```{r}
+
+# Tokenize the corpus
+my_tokens <- tokens(my_corpus)
+
+# Perform KWIC (Key Word in Context) search on the tokens
+quanteda_test <- kwic(my_tokens, pattern = "journalist", valuetype = "regex") %>% 
+  as.data.frame()
+
+quanteda_test2 <- kwic(my_tokens, phrase(c("journalist", "reporter", "newspaper", "killer", "murdered", "killed", "investigate crimes against")), window = 50, valuetype = "regex") %>% as.data.frame() 
+
+#write.csv(quanteda_test, "quanteda_test.csv")
+
+```
+
+# Using KWIC for Mob analysis
+### Load and tokenize lynching data
+```{r}
+extracted_articles_index_oct_16_2024 <- read.csv("https://osf.io/download/uxw3a/?view_only=6c106acd6cb54f6f849e8c6f9098809f")
+
+extracted_text_oct_16_2024 <- read_csv("https://osf.io/download/gw5dk/?view_only=6c106acd6cb54f6f849e8c6f9098809f")
+
+lynch <- extracted_text_oct_16_2024 |> 
+  filter(year > 1890 & year < 1895)
+```
+
+#Tokenize 
+```{r}
+lynch <- lynch %>%
+  mutate(unique_file_id = paste0(file_id, "_", row_number()))
+
+# Now create the corpus with the new unique identifier
+lynch_corpus <- corpus(lynch, text_field = "sentence", 
+                       docid_field = "unique_file_id")
+
+# Tokenize the corpus
+lynch_tokens <- tokens(lynch_corpus)
+```
+
+# Perform KWIC search
+```{r}
+kwic_results <- kwic(
+  lynch_tokens,
+  phrase(c("mob", "masked men", "mask", "captors", "a party of", 
+           "mob attacked", "mob caught", "overpowered by a mob", 
+           "law into their own hands", "law unto themselves")),
+  window = 50, valuetype = "regex"
+) %>% 
+  as.data.frame() 
+
+```
+
+# Link the results with the metadata
+```{r}
+#Strips out unique file name from article index 
+kwic_results <- kwic_results |>  
+    mutate(matchrow = str_extract(docname, "^[^_]+_[^_]+"))
+
+metadata <- extracted_articles_index_oct_16_2024
+
+# Join KWIC results with metadata 
+kwic_with_metadata <- kwic_results %>%
+  inner_join(metadata, by = c("matchrow"="file_id")) |> 
+  distinct(docname, .keep_all= TRUE) |> 
+  select(matchrow, date, from, to, pre, keyword, post, pattern, newspaper_name, newspaper_city, newspaper_state,black_press,url, docname)
+```
+
+
+# Housecleaning
+```{r}
+#cut useless returns
+mobjunk <- c("mobile",  "automobile",  "automobiles", "mobilize", "mobley", "mobilizing", "democratic party of", "mobe", "moberly",  "mobil", "mobiles", "mobilized", "mobold")
+kwic_with_metadata <- kwic_with_metadata %>%
+  filter(!keyword %in% mobjunk)
+
+
+#Eliminate duplication
+kwic_with_metadata  <- kwic_with_metadata  %>% 
+  distinct(docname, pre, keyword, post, newspaper_name, date, url) %>% 
+  rename('Beginning of Passage' = pre, 'End of Passage' = post, Newspaper = newspaper_name, Date = date) 
+
+kwic_with_metadata_csv <- kwic_with_metadata  %>%
+  add_column(Code = NA) %>% 
+  add_column(Comments = NA) %>% 
+  select(docname, Newspaper, Date, 'Beginning of Passage', keyword, 'End of Passage', Code, Comments)
+
+write_csv(kwic_with_metadata_csv, "../exercises/assets/data/kwic_with_metadata.csv")
+
+```
+
+
+### Then import the data into a google form and code away
+
+Sample Google Form:
+https://docs.google.com/forms/d/1iT49Tz6ZfJ67eURsVI79OVjbH8fWcIozFXZyhL7dXCY/edit
+
+
+
+Steps to link to a Google form
+1) Create a Google Form with the fields you want to import from the spreadsheet (kwic_with_metadata.csv)
+Create Paragraph questions
+"docname"              
+"Beginning of Passage" 
+"keyword"              
+"End of Passage"      
+"Newspaper"            
+"Date"
+"url"    
+
+2) Get link
+https://docs.google.com/forms/d/e/1FAIpQLScJR-6mffrc17ZdoCc1qjpvRUL6H71EeW1h5qz_2LvILPb6Wg/viewform?usp=pp_url&entry.1101824497=Rob+Wells&entry.972664370=TODAY&entry.1301433784=WASHINGTON+POST&entry.91443670=START&entry.1665018793=WORD&entry.1496202882=FINISH
+
+
+Create a column where the link for each student project will go. The formula you want to use is =HYPERLINK(“URL”,”Click Here”).
+
+It will look something like this:
+=HYPERLINK(“https://docs.google.com/forms/d/e/1FAIpQLSc_I4u1oPbNpUFx9FT9qcq-AW1w7y1v0k5T-9virJg3XH6G9A/viewform?entry.792046611=Zada+Howarth%C2%A0&entry.189967737=How+relevant+is+Shakespeare?+Make+the+pop-culture+connections&entry.128488987″,”Click Here”)
+
+
+
+https://alicekeeler.com/2018/03/19/google-forms-pre-fill-answer/
+
+
+
+
+=HYPERLINK("https://docs.google.com/forms/d/e/1FAIpQLSek1beVd-ckbiX3w1AaIHSj3AjeTOtTmHd2ZM08mb5BBDTBFQ/viewform?usp=pp_url&entry.262647990=Rob&entry.1021580155="&E2&"&entry.847834668="&G2&"&entry.1352133755="&D2&"&entry.1266675087="&I2&"","Click for form")
