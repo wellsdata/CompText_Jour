@@ -1,0 +1,768 @@
+---
+output: html_document
+---
+
+::: {style="text-align: center; color: #FF4500; font-weight: bold;"}
+<span style="font-size: 40pt;">Finding narratives in documents</span>  
+
+:::
+<br>  
+
+::: {style="text-align: center;font-size: 14pt;"}
+**NICAR 2025**  
+**Time: Friday, March 7, 2025: 2:15 to 3:15 p.m.**  
+**Location: Crystal Lake room, fourth floor**   
+<span style='font-size: 8pt;'>ver. 1/31/2025.</span>
+:::
+
+
+> This hands-on session will show how to analyze a large batch of files to find common themes and narratives. We will use R and the Tidytext package to explore common words, analyze sentiment, and then the Quanteda package to examine keywords in the story context.
+>
+> This code demonstrates text processing, data cleaning and the creation of bigrams and sentiment analysis from a group of Daily Wire news articles about Kamala Harris and Donald Trump.
+
+::: {style="text-align: center;"}
+<img src="assets\merrill-logo-dark.png" width="450" height="75"/>
+:::
+
+<br> 
+
+
+::: {style="text-align: center;"}
+**Rob Wells, Ph.D.**\
+Philip Merrill College of Journalism, University of Maryland.\
+[robwells\@umd.edu](mailto:robwells@umd.edu){.email} \| <a href="https://www.linkedin.com/in/rob-wells-7929329/">LinkedIn</a>.\
+:::
+
+
+
+**Credits:**
+
+-   Julia Silge & David Robinson, [Text Mining with R](https://www.tidytextmining.com/)
+
+-   Nino Mtchedlishvili, Ph.D. student at the Philip Merrill College of Journalism, contributed to this project.
+
+## Load software
+
+```{r message=FALSE, warning=FALSE}
+#Install packages if you don't have them already
+#install.packages("tidyverse")
+#install.packages("tidytext")
+#install.packages("quanteda")
+#install.packages("readtext")
+#install.packages("DT")
+
+library(tidyverse)
+library(tidytext) 
+library(quanteda)
+library(readtext)
+library(DT)
+
+```
+
+#### Load & process raw text
+
+Kamala Daily Wire coverage from Oct. 14-Nov. 4, 2024
+
+```{r}
+#text obtained with a web scraper
+files <- list.files("./kamala_extracted_text", pattern="*.txt") |> 
+  as.data.frame() |> 
+  rename(filename = 1) |> 
+  mutate(name = str_replace_all(filename, ".txt", "")) |> 
+  mutate(name = str_replace_all(tolower(name), " ", "_")) |> 
+  mutate(name = str_replace_all(name, "[[:punct:]]", "")) |> 
+  arrange((name)) |> 
+  mutate(index = row_number())
+         
+          
+ #  #create an index with the file name
+ # mutate(index = str_extract(filename, "\\d+")) |> 
+ #  mutate(index = as.numeric(index))
+
+kharris_index <- rio::import("./assets/DW_Kamala_Articles.xlsx") |> 
+  mutate(name = str_replace_all(tolower(NAME), " ", "_")) |> 
+  mutate(name = str_replace_all(name, "[[:punct:]]", "")) |> 
+  arrange((name)) |> 
+  mutate(index = row_number()) |> 
+  distinct(name, .keep_all = TRUE) |> 
+  mutate(DATE = case_when(
+    str_detect(as.character(DATE), "2023-11-04") ~ as_datetime("2024-11-04"),
+    TRUE ~ DATE
+    ))
+```
+
+```{r}
+final_index <- files |> 
+  inner_join(kharris_index, by=c("name")) |> 
+  mutate(filepath = paste0("./kamala_extracted_text/", filename)) |> 
+  janitor::clean_names() |> 
+  rename(index = index_x) |> 
+  distinct(index, .keep_all = TRUE) |> 
+  select(index, date,filename,url, filepath, filename)
+
+#fact check
+anti <- files |> 
+  anti_join(kharris_index, by=c("name"))
+
+```
+
+#### Compile text into a single dataframe
+
+```{r include=FALSE, echo=FALSE}
+###
+# Define function to loop through each text file 
+###
+
+create_article_text <- function(row_value) {
+  
+  #row_value is the single argument that is passed to the function
+  # Take each row of the dataframe
+  temp <- final_index |>
+    slice(row_value)
+  
+  # Store the filename for  use in constructing articles dataframe
+  temp_filename <- temp$filename
+  
+  # Create a dataframe by reading in lines of a given textfile
+  # Add a filename column 
+  articles_df_temp <- read_lines(temp$filepath) |>
+    as_tibble() |>
+    mutate(filename = temp_filename)
+  
+  # Bind results to master articles_df
+  # <<- returns to global environment
+  articles_df <<- articles_df |>
+    bind_rows(articles_df_temp)
+}
+
+###
+# Create elements needed to run function
+###
+
+# Create empty tibble to store results
+articles_df <- tibble()
+#running once to test
+#create_article_text(2) 
+# Create an array of numbers to loop through, from 1 to the number of rows in our index dataframe 
+row_values <- 1:nrow(final_index)
+
+###
+# Execute function using lapply
+# This loops through each row of the dataframe and append results to master file
+###
+
+lapply(row_values, create_article_text)
+###
+# Clean up articles_df and join to index dataframe
+###
+
+articles_df <- articles_df |>
+  select(filename, sentence=value) |>
+  inner_join(final_index)
+
+```
+
+#### Clean data
+
+```{r}
+phrases <- c("Date:" = "", 
+            "Article Text:" = "",
+            "Headline:" = "",
+            "Already have an account?" = "", 
+            "Your information could be the missing piece to an important story. Submit your tip today and make a difference." = "",
+            "Stay up-to-date on the latestnews, podcasts, and more." = "",
+  "https" = "")
+
+
+harris_articles_df <- articles_df |> 
+   mutate(sentence = str_replace_all(sentence, phrases))
+
+#write.csv(harris_articles_df, "kharris_extracted_text_jan2025.csv")
+```
+
+<br> 
+
+::: {style="text-align: center; color: #FF4500; font-weight: bold;"}
+# Load processed data
+:::
+
+<br>
+
+```{r}
+harris_articles_df <- read.csv("./assets/kharris_extracted_text_jan2025.csv")
+```
+
+Fact check
+
+```{r}
+harris_articles_df |> 
+  distinct(filename) |> 
+  count(filename) |> 
+  summarise(sum(n))
+
+```
+
+<br>   
+
+::: {style="text-align: center; color: #FF4500; font-weight: bold;"}
+# Bigrams: top phrases
+:::    
+
+<br>
+
+
+
+```{r}
+harris_bigrams <- harris_articles_df |> 
+  select(sentence) |> 
+  mutate(text = str_squish(sentence)) |> 
+  mutate(text = tolower(text)) |>  
+  mutate(text = str_replace_all(text, "- ", "")) |> 
+  unnest_tokens(bigram, text, token="ngrams", n=2 ) |> 
+  separate(bigram, c("word1", "word2"), sep = " ") |> 
+  filter(!word1 %in% stop_words$word) |>
+  filter(!word2 %in% stop_words$word) |>
+  count(word1, word2, sort = TRUE) |> 
+  filter(!is.na(word1))
+
+head(harris_bigrams)
+```
+
+```{r include=FALSE}
+
+top_20_harris_bigrams <- harris_bigrams |> 
+   top_n(20) |> 
+  mutate(bigram = paste(word1, " ", word2)) |> 
+  select(bigram, n)
+```
+<br> 
+<br>  
+
+```{r}
+datatable(top_20_harris_bigrams,
+          caption = "Top 20 Harris Phrases",
+          options = list(pageLength = 20)) 
+```
+
+ 
+
+#### Chart Top Harris Phrases
+
+```{r}
+ggplot(top_20_harris_bigrams, aes(x = reorder(bigram, n), y = n, fill=n)) +
+  geom_bar(stat = "identity") +
+  theme(legend.position = "none") +
+  coord_flip() +  
+  labs(title = "Top Two-Word phrases about Kamala Harris on daily Wire coverage",
+       caption = "n=94 articles, 2024. Graphic by Rob Wells. 1-23-2025",
+       x = "Phrase",
+       y = "Count of terms")
+```
+
+<br>   
+
+::: {style="text-align: center; color: #FF4500; font-weight: bold;"}
+# Measure Sentiment
+:::    
+
+<br>
+
+```{r}
+# load sentiment dictionary
+afinn <- get_sentiments("afinn")
+
+#tokenize the dataframe, grouping by article number
+harris_sentiment <- harris_articles_df |> 
+  select(sentence, index) |> 
+  mutate(text = str_squish(sentence)) |> 
+  mutate(text = tolower(text)) |>  
+  mutate(text = str_replace_all(text, "- ", "")) |> 
+  group_by(index) |> 
+  unnest_tokens(tokens, text) |> 
+  filter(!tokens %in% stop_words$word) 
+
+# join tokenized words with the sentiment dictionary
+harris_sentiment_analysis <- harris_sentiment |>
+  inner_join(afinn, by = c("tokens"="word")) |>
+  group_by(index) |>  
+  summarize(sentiment = sum(value), .groups = "drop")
+
+# aggregate at article level, total sentiment score (Positive or Negative)
+harris_sentiment_analysis <- harris_sentiment_analysis |>
+   group_by(index) |> 
+  mutate(sentiment_type = ifelse(sentiment >= 0, "Positive", "Negative")) |> 
+  inner_join(final_index, by=("index")) |> 
+  select(index, date, sentiment, sentiment_type, filename, url)
+```
+
+#### Chart sentiment by article
+
+```{r warning=FALSE}
+
+ggplot(harris_sentiment_analysis, aes(x = index, y = sentiment, fill = sentiment_type)) +
+  geom_col(position = "dodge", stat = "identity") +
+  scale_fill_manual(values = c("Positive" = "darkgreen", "Negative" = "red")) + 
+  labs(title = "Sentiment of Daily Wire coverage of Kamala Harris, October 2024",
+       caption = "n=96 articles. Afinn sentiment. Graphic by Rob Wells 1-25-2025",
+       x = "Articles",
+       y = "Sentiment Score") 
+```
+
+#### Analyze Trump and Harris Articles
+
+```{r}
+combined <- read.csv("./assets/trump-harris-DW-combined.csv")
+
+#There are nine common articles the Trump / Harris corpra. Create a new category for shared article
+combined_index <- combined |>
+  distinct(filename, url, candidate, .keep_all = TRUE) |>
+  group_by(filename) |>
+  mutate(shared_article = n() > 1) |>
+  ungroup()
+
+write.csv(combined_index, "./assets/combined_index.csv")
+
+```
+
+fact check
+
+```{r}
+combined |> 
+  distinct(filename, url, candidate) |>
+  count(candidate)
+```
+
+#### Sentiment of Trump, Harris in Daily Wire
+
+```{r}
+# load sentiment dictionary
+afinn <- get_sentiments("afinn")
+
+#tokenize the dataframe, grouping by article number
+combined_sentiment <- combined |> 
+  select(sentence, candidate, index) |> 
+  mutate(text = str_squish(sentence)) |> 
+  mutate(text = tolower(text)) |>  
+  mutate(text = str_replace_all(text, "- ", "")) |> 
+  group_by(index, candidate) |> 
+  unnest_tokens(tokens, text) |> 
+  filter(!tokens %in% stop_words$word) 
+
+# Sentiment analysis by joining the tokenized words with the AFINN lexicon
+combined_sentiment_analysis <- combined_sentiment |>
+  inner_join(afinn, by = c("tokens"="word")) |>
+  group_by(index, candidate) |>  
+  summarize(sentiment = sum(value), .groups = "drop") |> 
+  inner_join(combined_index, by = c("index", "candidate"))
+
+# aggregate at article level, total sentiment score (Positive or Negative)
+combined_sentiment_analysis <- combined_sentiment_analysis |>
+   group_by(index) |> 
+  mutate(sentiment_type = ifelse(sentiment >= 0, "Positive", "Negative")) 
+
+```
+
+<br>   
+<br>   
+
+#### Chart Trump, Harris Sentiment by Date
+
+```{r}
+
+ggplot(combined_sentiment_analysis, 
+       aes(x = date, y = sentiment, fill = sentiment_type)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values = c("Positive" = "darkgreen", "Negative" = "red")) + 
+  facet_wrap(~candidate, ncol = 1) +  # This creates separate panels for each candidate
+  labs(title = "Harris, Trump Sentiment in Daily Wire coverage",
+       caption = "Oct 14-Nov 4, 2024. Afinn sentiment. Graphic by Rob Wells 1-25-2025",
+       x = "Date",
+       y = "Sentiment Score") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Makes date labels more readable
+```
+
+ 
+
+ 
+
+#### Examine Top Negative Phrases
+
+```{r}
+negative_bigrams <- combined |> 
+  select(sentence, candidate) |> 
+  mutate(text = str_squish(sentence)) |> 
+  mutate(text = tolower(text)) |>  
+  mutate(text = str_replace_all(text, "- ", "")) |> 
+  unnest_tokens(bigram, text, token="ngrams", n=2 ) |> 
+  separate(bigram, c("word1", "word2"), sep = " ") |> 
+  filter(!word1 %in% stop_words$word) |>
+  filter(!word2 %in% stop_words$word) |>
+  #adding candidate here to specify Trump v Harris
+  count(candidate, word1, word2, sort = TRUE) |> 
+  filter(!is.na(word1)) |> 
+  mutate(bigram = paste0(word1," ", word2))|> 
+  #left join keeps all scores, need to do it twice
+   left_join(afinn, by = c("word1" = "word")) |>
+  rename(value1 = value) |>
+  # left join second word
+  left_join(afinn, by = c("word2" = "word")) |>
+  rename(value2 = value) |>
+  # Combine scores
+  mutate(
+    total_sentiment = coalesce(value1, 0) + coalesce(value2, 0)
+  ) |> 
+  filter(total_sentiment < 0)
+  
+```
+
+```{r}
+top_50_negative_bigrams <- negative_bigrams |> 
+  slice_min(total_sentiment, n= 50) |> 
+  select(bigram, total_sentiment, candidate) |> 
+  arrange(total_sentiment) 
+
+
+datatable(top_50_negative_bigrams,
+          caption = "Top 50 Negative Phrases",
+          options = list(pageLength = 20)) 
+
+
+
+```
+
+<br>    
+
+::: {style="text-align: center; color: #FF4500; font-weight: bold;"}
+# Examine Keywords, Phrases in Context
+:::   
+
+<br>
+
+Process Text Corpus Object
+```{r}
+
+# Create a corpus using the 'sentence' column as the text field
+my_corpus <- corpus(combined, text_field = "sentence") # build a new corpus from the texts
+docvars(my_corpus)$candidate <- combined$candidate 
+```
+
+#### Search for the term "media"
+
+```{r}
+# First add a unique identifier to combined
+combined <- combined |>
+  mutate(doc_id = paste0(filename, "_", row_number()))
+
+# First, create a lookup dataframe from your original combined data
+lookup_df <- combined |>
+  select(doc_id, candidate) |>
+  distinct()
+
+my_tokens <- tokens(my_corpus)
+
+# Now modify your KWIC analysis to join with this lookup
+quanteda_test <- kwic(my_tokens, pattern = "media", valuetype = "regex") |> 
+  as.data.frame() |>
+  # Extract the filename part before the underscore and row number
+  mutate(doc_id = docname) |>
+  left_join(lookup_df, by = "doc_id")
+
+```
+
+#### Search Journalism Terms
+
+```{r}
+media_narratives <- kwic(my_tokens, 
+                       pattern = c("media", "reporter", "newspaper", "journalist"), 
+                       valuetype = "fixed") |> 
+  as.data.frame() |>
+  mutate(doc_id = docname) |>
+  left_join(lookup_df, by = "doc_id")
+```
+
+```{r}
+media_narratives_table <- media_narratives |> 
+  select(candidate, pre, keyword, post, doc_id)
+
+datatable(media_narratives_table,
+          caption = "Top 50 Negative Phrases",
+          options = list(pageLength = 20)) 
+```
+
+   
+
+ 
+
+<br>  
+
+::: {style="text-align: center; color: #FF4500; font-weight: bold;"}
+# Background Content
+:::   
+
+
+<br>
+
+#### Sentiment of Trump, Harris headlines
+
+```{r}
+#tokenize the headlines only
+headline_sentiment <- combined_index |> 
+  select(filename, candidate, index) |>  
+  mutate(text = str_replace_all(filename, "_", " "),
+         text = str_replace_all(text, ".txt", "")) |>    group_by(index, candidate) |> 
+  unnest_tokens(tokens, text) |> 
+  filter(!tokens %in% stop_words$word) 
+
+# Sentiment analysis by joining the tokenized words with the AFINN lexicon
+headline_sentiment_analysis <- headline_sentiment |>
+  inner_join(afinn, by = c("tokens"="word")) |>
+  group_by(index, candidate) |>  
+  summarize(sentiment = sum(value), .groups = "drop") |> 
+  inner_join(combined_index, by = c("index", "candidate"))
+
+# aggregate at article level, total sentiment score (Positive or Negative)
+headline_sentiment_analysis <- headline_sentiment_analysis|>
+   group_by(index) |> 
+  mutate(sentiment_type = ifelse(sentiment >= 0, "Positive", "Negative")) 
+
+```
+
+#### Headline sentiment charted
+
+```{r}
+
+ggplot(headline_sentiment_analysis, 
+       aes(x = date, y = sentiment, fill = sentiment_type)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values = c("Positive" = "darkgreen", "Negative" = "red")) + 
+  facet_wrap(~candidate, ncol = 1) +  # This creates separate panels for each candidate
+  labs(title = "Harris, Trump Headline Sentiment in Daily Wire coverage",
+       caption = "Oct 14-Nov 4, 2024. Afinn sentiment. Graphic by Rob Wells 1-25-2025",
+       x = "Date",
+       y = "Sentiment Score") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Makes date labels more readable
+```
+
+#### Building the Trump text dataframe
+
+```{r}
+
+tfiles <- list.files("./trump_extracted_text", pattern="*.txt") |> 
+  as.data.frame() |> 
+  rename(filename = 1) |> 
+  mutate(name = str_replace_all(filename, ".txt", "")) |> 
+  mutate(name = str_replace_all(tolower(name), " ", "_")) |> 
+  mutate(name = str_replace_all(name, "[[:punct:]]", "")) |> 
+  arrange((name)) |> 
+  mutate(index = row_number())
+
+
+trump_index <- rio::import("./assets/DW_Trump_Articles.xlsx") |> 
+  mutate(name = str_replace_all(tolower(Name), " ", "_")) |> 
+  mutate(name = str_replace_all(name, "[[:punct:]]", "")) |> 
+  arrange((name)) |> 
+  mutate(index = row_number()) |> 
+  rename(date = N) |> 
+  distinct(name, .keep_all = TRUE)
+```
+
+```{r}
+tfinal_index <- tfiles |> 
+  inner_join(trump_index, by=c("name")) |> 
+  mutate(filepath = paste0("./trump_extracted_text/", filename)) |> 
+  janitor::clean_names() |> 
+  rename(index = index_x) |> 
+  distinct(index, .keep_all = TRUE) |> 
+  select(index, date,filename,url, filepath, filename)
+
+#fact check
+anti <- tfiles |> 
+  anti_join(trump_index, by=c("name"))
+
+```
+
+Text compiler
+
+```{r include=FALSE, echo=FALSE}
+###
+# Define function to loop through each text file 
+###
+
+create_article_text <- function(row_value) {
+  
+  #row_value is the single argument that is passed to the function
+  # Take each row of the dataframe
+  temp <- tfinal_index |>
+    slice(row_value)
+  
+  # Store the filename for  use in constructing articles dataframe
+  temp_filename <- temp$filename
+  
+  # Create a dataframe by reading in lines of a given textfile
+  # Add a filename column 
+  articles_df_temp <- read_lines(temp$filepath) |>
+    as_tibble() |>
+    mutate(filename = temp_filename)
+  
+  # Bind results to master articles_df
+  # <<- returns to global environment
+  articles_df <<- articles_df |>
+    bind_rows(articles_df_temp)
+}
+
+###
+# Create elements needed to run function
+###
+
+# Create empty tibble to store results
+articles_df <- tibble()
+#running once to test
+#create_article_text(2) 
+# Create an array of numbers to loop through, from 1 to the number of rows in our index dataframe 
+row_values <- 1:nrow(tfinal_index)
+
+###
+# Execute function using lapply
+# This loops through each row of the dataframe and append results to master file
+###
+
+lapply(row_values, create_article_text)
+
+###
+# Clean up articles_df and join to index dataframe
+###
+
+trump_articles_df <- articles_df |>
+  select(filename, sentence=value) |>
+  inner_join(tfinal_index)
+
+```
+
+clean data
+
+```{r}
+phrases <- c("Date:" = "", 
+            "Article Text:" = "",
+            "Headline:" = "",
+            "Already have an account?" = "", 
+            "Your information could be the missing piece to an important story. Submit your tip today and make a difference." = "",
+            "Stay up-to-date on the latestnews, podcasts, and more." = "",
+  "https" = "")
+
+
+trump_articles_df <- trump_articles_df |> 
+  mutate(sentence = str_replace_all(sentence, phrases))
+
+#write.csv(trump_articles_df, "trump_extracted_text_jan2025.csv")
+```
+
+Trump Bigrams
+
+```{r}
+#library(tidytext)
+trump_bigrams <- trump_articles_df |> 
+  select(sentence) |> 
+  mutate(text = str_squish(sentence)) |> 
+  mutate(text = tolower(text)) |>  
+  mutate(text = str_replace_all(text, "- ", "")) |> 
+  unnest_tokens(bigram, text, token="ngrams", n=2 ) |> 
+  separate(bigram, c("word1", "word2"), sep = " ") |> 
+  filter(!word1 %in% stop_words$word) |>
+  filter(!word2 %in% stop_words$word) |>
+  count(word1, word2, sort = TRUE) |> 
+  filter(!is.na(word1))
+
+```
+
+Top 20 bigrams
+
+```{r}
+
+top_20_trump_bigrams <- trump_bigrams |> 
+   top_n(20) |> 
+  mutate(bigram = paste(word1, " ", word2)) |> 
+  select(bigram, n)
+```
+
+#### Chart Trump Bigrams
+
+```{r}
+ggplot(top_20_trump_bigrams, aes(x = reorder(bigram, n), y = n, fill=n)) +
+  geom_bar(stat = "identity") +
+  theme(legend.position = "none") +
+  coord_flip() +  
+  labs(title = "Top Two-Word phrases about Donald Trump on Daily Wire coverage",
+       caption = "n=99 articles, 2024. Graphic by Rob Wells. 1-23-2025",
+       x = "Phrase",
+       y = "Count of terms")
+```
+
+#### Trump Sentiment analysis
+
+```{r}
+# load sentiment dictionary
+afinn <- get_sentiments("afinn")
+
+#tokenize the dataframe, grouping by article number
+trump_sentiment <- trump_articles_df |> 
+  select(sentence, index) |> 
+  mutate(text = str_squish(sentence)) |> 
+  mutate(text = tolower(text)) |>  
+  mutate(text = str_replace_all(text, "- ", "")) |> 
+  group_by(index) |> 
+  unnest_tokens(tokens, text) |> 
+  filter(!tokens %in% stop_words$word) 
+
+# Sentiment analysis by joining the tokenized words with the AFINN lexicon
+trump_sentiment_analysis <- trump_sentiment |>
+  inner_join(afinn, by = c("tokens"="word")) |>
+  group_by(index) |>  
+  summarize(sentiment = sum(value), .groups = "drop")
+
+# aggregate at article level, total sentiment score (Positive or Negative)
+trump_sentiment_analysis <- trump_sentiment_analysis |>
+   group_by(index) |> 
+  mutate(sentiment_type = ifelse(sentiment >= 0, "Positive", "Negative")) |> 
+  inner_join(tfinal_index, by=("index")) |> 
+  select(index, date, sentiment, sentiment_type, filename, url)
+```
+
+Chart sentiment by article
+
+```{r}
+
+ggplot(trump_sentiment_analysis, aes(x = index, y = sentiment, fill = sentiment_type)) +
+  geom_col(position = "dodge", stat = "identity") +
+  scale_fill_manual(values = c("Positive" = "darkgreen", "Negative" = "red")) + 
+  labs(title = "Sentiment of Daily Wire coverage of Donald Trump, October 2024",
+       caption = "n=99 articles. Afinn sentiment. Graphic by Rob Wells 1-25-2025",
+       x = "Articles",
+       y = "Sentiment Score") 
+```
+
+#### Combine Harris, Trump articles
+
+```{r}
+harris_articles_df <- harris_articles_df |> 
+  mutate(candidate = "harris") 
+
+trump_articles_df <- trump_articles_df |> 
+  mutate(candidate = "trump")
+
+#combined <- rbind(harris_articles_df, trump_articles_df)
+
+#write.csv(combined, "trump-harris-DW-combined.csv")
+
+```
+
+<br>    
+
+
+::: {style="text-align: center;"}
+**Questions?**   
+**Rob Wells, Ph.D.**\
+Philip Merrill College of Journalism, University of Maryland.\
+[robwells\@umd.edu](mailto:robwells@umd.edu){.email} \| <a href="https://www.linkedin.com/in/rob-wells-7929329/">LinkedIn</a>.\
+:::
