@@ -1,0 +1,183 @@
+---
+title: "Basics of APIs"
+author: "Rob Wells"
+date: "2025-02-06"
+output: html_document
+---
+
+::: {style="text-align: center; color: #337DFF;"}
+# Basics of APIs
+:::
+
+::: {style="text-align: center;"}
+<img src="./assets/images/merrill-logo-dark.png" width="300" height="50"/>
+:::
+
+```         
+Rob Wells, Ph.D.
+Philip Merrill College of Journalism
+University of Maryland
+robwells@umd.edu
+LinkedIn: https://www.linkedin.com/in/rob-wells-7929329/ 
+ver. 2/6/2025 
+```
+
+<br>
+
+## Learning Goals
+
+```         
+Understand the basics of APIs.  
+Gather data in R through APIs and web URLs. 
+```
+
+<br> <br>
+
+#### APIs - basics
+
+[A beginner's guide to
+APIs](https://medium.com/@LewisMenelaws/a-beginners-guide-to-web-apis-and-how-they-will-help-you-23923a0da450)
+
+[A gentle introduction to APIs for data
+journalists](https://trendct.org/2016/12/29/fetching-airport-delays-with-python-a-gentle-guide-to-apis-for-journalists/)
+
+### Import from an API
+
+```{r include=FALSE}
+#background on tidyverse: https://www.tidyverse.org/packages/
+# install.packages("formattable")
+#install.packages("janitor")
+#install.packages("tidyverse")
+#install.packages("jsonlite")
+
+library(tidyverse)
+library(janitor)
+library(lubridate)
+library(jsonlite)
+library(tidyr)
+```
+
+**Details about software: jsonlite**
+
+```{r}
+vignette("json-apis", package = "jsonlite")
+
+```
+
+**Example: Racing Data**
+
+```{r}
+res <- fromJSON('http://ergast.com/api/f1/2004/1/results.json')
+#head(res)
+```
+
+**Nested list**
+
+<br>
+
+<img src="./assets/images/API_drivers.png" width="800" height="400"/>
+<br>\
+<br>
+
+**Click on green arrow icon and that will display path directory in the
+console in R Studio** Copy that path into your code
+
+**Unpack it**
+
+```{r}
+drivers <- res[["MRData"]][["RaceTable"]][["Races"]][["Results"]][[1]][["Driver"]]
+```
+
+```{r}
+colnames(drivers)
+```
+
+<br>
+
+### Example: Arkansas Agent and Broker Data API
+
+[Here's the source data from the state of
+Arkansas](https://services.arcgis.com/PwY9ZuZRDiI5nXUB/ArcGIS/rest/services/Agent_And_Broker_Locations/FeatureServer/layers)
+
+```{r}
+brokerjson <- fromJSON('https://services.arcgis.com/PwY9ZuZRDiI5nXUB/ArcGIS/rest/services/Agent_And_Broker_Locations/FeatureServer/0/query?where=0%3D0&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&resultType=none&distance=0.0&units=esriSRUnit_Meter&relationParam=&returnGeodetic=false&outFields=Last_Name%2CFirst_Name%2CMiddle_Name%2CEmail_Address%2CAddress%2CState%2CZip%2CPhone%2CLic_Type%2CEXCEL_POINT_Y%2CEXCEL_POINT_X%2CFID&returnGeometry=true&featureEncoding=esriDefault&multipatchOption=xyFootprint&maxAllowableOffset=&geometryPrecision=&outSR=&defaultSR=&datumTransformation=&applyVCSProjection=false&returnIdsOnly=false&returnUniqueIdsOnly=false&returnCountOnly=false&returnExtentOnly=false&returnQueryGeometry=false&returnDistinctValues=false&cacheHint=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&having=&resultOffset=&resultRecordCount=&returnZ=false&returnM=false&returnExceededLimitFeatures=false&quantizationParameters=&sqlFormat=none&f=pjson&token=')
+#head(brokerjson )
+```
+
+**Pulls in the data that matters to 'broker'**
+
+```{r}
+broker <- brokerjson[["features"]][["attributes"]]
+glimpse(broker)
+```
+
+**Add system date, clean**
+
+```{r}
+broker$date <- Sys.Date()
+
+#clean column names
+broker <- clean_names(broker)
+```
+
+**Create a new column with city name**
+
+**We split the column at the comma to create a new city column**
+
+```{r warning=FALSE}
+broker <- separate(broker, col = address, into = c("street", "city"), sep = ",")
+
+```
+
+**Create a table: Count cities**
+
+```{r}
+#call your new table broker_city
+
+
+```
+
+**Chart It**
+
+```{r}
+broker_city %>% 
+  slice_max(total, n= 20) %>% 
+  arrange(desc(total)) %>% 
+  #sandwich the ggplot code
+  ggplot(aes(x = city, y = total, fill = total)) +
+  geom_col(position = "dodge") + 
+  theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle=90)) +
+   labs(title = "Insurance brokers in Arkansas", 
+       subtitle = "Source: Arkansas public records, 2024",
+       caption = "Graphic by Rob Wells, 5/29/2024",
+       y="Number brokers",
+       x="")
+```
+
+**Reorder the Chart**
+
+```{r}
+broker_city %>% 
+  slice_max(total, n= 20) %>% 
+  arrange(desc(total)) %>% 
+  #sandwich the ggplot code
+  ggplot(aes(x = reorder(city, -total), y = total, fill = total)) +
+  geom_col(position = "dodge") + 
+  theme(legend.position = "none") +
+  theme(axis.text.x = element_text(angle=90)) +
+   labs(title = "Insurance brokers in Arkansas", 
+       subtitle = "Source: Arkansas public records, 2024",
+       caption = "Graphic by Rob Wells",
+       y="Number brokers",
+       x="")
+```
+
+## Analysis of San Francisco Police Calls for Service Data
+
+[**Here is the original dataset: 3,048,797
+records**](https://data.sfgov.org/Public-Safety/Police-Department-Calls-for-Service/hz9m-tj6z/data)
+
+[**Access the API**](https://datasf.org/opendata/developers/)
+
+[**Import from an API**](https://data.sfgov.org/resource/hz9m-tj6z.json)
