@@ -1,0 +1,359 @@
+---
+title: "Daily Wire Scraper"
+author: "Wells"
+date: "02-11-2025"
+  output:
+  html_document: default
+  pdf_document: default
+---
+
+
+```{r}
+# Install and load required packages if not already installed
+#install.packages("rvest")
+library(rvest)
+library(tidyverse)
+```
+
+```{r}
+# Install and load required packages
+
+
+# Set up API credentials
+# You'll need to get these from Google Cloud Console
+# Visit: https://console.cloud.google.com/
+# 1. Create a project
+# 2. Enable Custom Search API
+# 3. Create credentials
+# 4. Set up a Custom Search Engine at https://programmablesearchengine.google.com/
+
+# Set your API key and Search Engine ID
+set_google_api_key("XXXX")
+set_google_custom_search_engine_id("XXXXX")
+```
+
+```{r}
+# Install and load required packages
+# install.packages("httr")
+# install.packages("jsonlite")
+library(httr)
+library(jsonlite)
+```
+
+```{r}
+# Function to search using Google Custom Search API with pagination
+google_search_all <- function(api_key, search_engine_id) {
+  base_url <- "https://www.googleapis.com/customsearch/v1"
+  all_results <- data.frame(
+    url = character(),
+    title = character(),
+    snippet = character(),
+    stringsAsFactors = FALSE
+  )
+  
+  # The exact search query
+  full_query <- 'site:www.dailywire.com "kamala harris" after:2024-07-21 before:2024-11-05'
+  
+  # Google only allows up to 100 pages (1000 results)
+  for(start_index in seq(1, 300, 10)) {
+    # Add delay to avoid hitting rate limits
+    Sys.sleep(1)
+    
+    response <- GET(
+      base_url,
+      query = list(
+        key = api_key,
+        cx = search_engine_id,
+        q = full_query,
+        start = start_index
+      )
+    )
+    
+    results <- fromJSON(rawToChar(response$content))
+    
+    # Check if we have items in the response
+    if(!is.null(results$items)) {
+      page_df <- data.frame(
+        url = results$items$link,
+        title = results$items$title,
+        snippet = results$items$snippet,
+        stringsAsFactors = FALSE
+      )
+      
+      all_results <- rbind(all_results, page_df)
+      
+      # Print progress
+      cat("Retrieved results", start_index, "to", start_index + nrow(page_df) - 1, "\n")
+    } else {
+      # If no more results, break the loop
+      break
+    }
+  }
+  
+  return(all_results)
+}
+
+# Your credentials here
+api_key <- "XXXX"
+search_engine_id <- "XXXX"
+# Get all results
+all_urls_df <- google_search_all(api_key, search_engine_id)
+
+# Remove any duplicates
+all_urls_df <- unique(all_urls_df)
+
+# Print total number of results
+cat("\nTotal unique articles found:", nrow(all_urls_df), "\n")
+
+# Save to CSV
+write.csv(all_urls_df, "kamala_harris_all_articles.csv", row.names = FALSE)
+```
+
+
+
+#delivers 10 results
+```{r}
+# Function to search using Google Custom Search API
+google_search <- function(api_key, search_engine_id, start = 1) {
+  base_url <- "https://www.googleapis.com/customsearch/v1"
+  
+  # The exact search query we want
+  full_query <- 'site:www.dailywire.com "kamala harris" after:2024-07-21 before:2024-11-05'
+  
+  response <- GET(
+    base_url,
+    query = list(
+      key = api_key,
+      cx = search_engine_id,
+      q = full_query,
+      start = start
+    )
+  )
+  
+  results <- fromJSON(rawToChar(response$content))
+  return(results)
+}
+
+# Get results
+results <- google_search(api_key, search_engine_id)
+
+# Create dataframe with URL, title, and snippet
+urls_df <- data.frame(
+  url = results$items$link,
+  title = results$items$title,
+  snippet = results$items$snippet,
+  stringsAsFactors = FALSE
+)
+
+# Print the results
+print(urls_df)
+
+# Save to CSV
+#write.csv(urls_df, "kamala_harris_articles.csv", row.names = FALSE)
+```
+older version
+```{r}
+
+# Function to search using Google Custom Search API
+google_search <- function(query, api_key, search_engine_id, start = 1) {
+  base_url <- "https://www.googleapis.com/customsearch/v1"
+  
+  # Construct the URL with parameters
+  response <- GET(
+    base_url,
+    query = list(
+      key = api_key,
+      cx = search_engine_id,
+      q = query,
+      start = start
+    )
+  )
+  
+  # Parse the response
+  results <- fromJSON(rawToChar(response$content))
+  
+  return(results)
+}
+
+# Your credentials here
+api_key <- "XXX"
+search_engine_id <- "XXXX"
+
+# Your search query
+query <- 'site:www.dailywire.com before:2024-07-21 and after:2024-11-05'
+
+# Get results
+results <- google_search(query, api_key, search_engine_id)
+
+# Create dataframe from the results
+urls_df <- data.frame(
+  url = results$items$link,
+  title = results$items$title,
+  stringsAsFactors = FALSE
+)
+
+# View results
+# print(urls_df)
+# 
+# # Save to CSV
+# write.csv(urls_df, "dailywire_urls.csv", row.names = FALSE)
+```
+
+Custom search engine script
+<script async src="https://cse.google.com/cse.js?cx=d105d1b8f6b3543ba">
+</script>
+<div class="gcse-search"></div>
+
+
+
+https://www.google.com/search?q=site:www.dailywire.com+%22kamala+harris%22+after:2024-07-21+before:2024-11-05&sca_esv=2727c2a8608e1f45&sxsrf=AHTn8zpDXqi-tyT-WzRBtigEJlgI_ryXoQ:1739305367342&ei=l7GrZ7bHFIuh5NoP0PXu0Qk&start=10&sa=N&sstk=Af40H4WUIxjStGfGhskfy2OrTCAmktGQTUGNIcqW3wBTgDRPrqc67yhnWy6g2QaNNH4AdXcRVqUiI527k8ngwSv3eP1EHSzhSy4ciQ&ved=2ahUKEwj27s20ubyLAxWLEFkFHdC6O5oQ8tMDegQIBxAE&biw=1920&bih=934&dpr=2
+
+
+
+# Build a table from the Daily Wire RSS feed
+
+```{r}
+# First install and load required packages
+install.packages(c("xml2", "tidyRSS"))
+library(xml2)
+library(tidyRSS)
+
+# Assuming you have the RSS content stored in a variable called 'rss_content'
+# You would need to use your preferred method to get the RSS content first
+
+# Parse the RSS feed
+df <- tidyfeed("https://www.dailywire.com/feeds/rss.xml") 
+
+# This will create a dataframe with common RSS fields like:
+# - feed_title
+# - feed_link
+# - item_title
+# - item_link
+# - item_description
+# - item_pub_date
+
+# You can then manipulate the dataframe as needed
+# For example, to see the first few rows:
+head(df)
+
+# To select specific columns:
+selected_df <- df[, c("item_title", "item_pub_date", "item_link")]
+```
+
+
+
+
+# Scrape Wiki page for racist terms
+
+## Thanks to Sean Mussenden for his Advanced rvest tutorial, which this is shamelessly and ruthlessly stolen and remixed
+
+https://github.com/smussenden/datajournalismbook
+
+
+```{r}
+# install.packages("tidyverse")
+# install.packages("rvest")
+# install.packages("janitor")
+
+library(tidyverse)
+library(rvest)
+library(janitor)
+library(readxl)
+```
+
+
+Example URL of pages I want to scrape
+https://www.dailywire.com/news/not-encouraging-nyt-warns-kamala-in-trouble-as-poll-finds-her-tied-with-trump?topStoryPosition=1
+
+#I asked ChatGPT:  build a webscraper this into a function so it will extract URLs from Daily_Wire_Articles.xlsx from the URL column and produce one text file per article. there are 20 URLs on that list.
+
+```{r}
+
+
+# Define the function to scrape a Daily Wire article
+scrape_article <- function(url) {
+  # Read the HTML content of the page
+  page <- tryCatch(
+    read_html(url),
+    error = function(e) {
+      message(paste("Error reading:", url))
+      return(NULL)
+    }
+  )
+  
+  # Return NULL if page could not be loaded
+  if (is.null(page)) return(NULL)
+
+  # Extract the headline (assuming it's in an <h1> tag)
+  headline <- page %>%
+    html_element("h1") %>%
+    html_text(trim = TRUE)
+
+  # Extract the article text (all <p> elements)
+  article_text <- page %>%
+    html_elements("p") %>%
+    html_text(trim = TRUE) %>%
+    paste(collapse = "\n")
+
+  # Combine headline and article into one string
+  full_text <- paste("Headline:\n", headline, "\n\nArticle Text:\n", article_text)
+  
+  return(full_text)
+}
+
+# Read the URLs from the Excel file
+# You will need to point to the location of your Daily Wire Articles spreadsheet.
+urls <- read_excel("~/Code/CompText_Jour/data/Daily_Wire_Articles.xlsx", sheet = 1)$URL
+
+# Loop over URLs and save each article as a text file
+for (url in urls) {
+  article_content <- scrape_article(url)
+  
+  # Skip if article content is NULL
+  if (is.null(article_content)) next
+
+  # Create a filename from the URL (using only the last part)
+  filename <- paste0(basename(url), ".txt")
+  
+  # Save the article content to a text file
+  writeLines(article_content, con = filename)
+  
+  message(paste("Saved:", filename))
+}
+
+```
+
+#Basic scraper for one article
+
+```{r}
+library(rvest)
+
+# Define the URL
+url2 <- "https://www.dailywire.com/news/not-encouraging-nyt-warns-kamala-in-trouble-as-poll-finds-her-tied-with-trump?topStoryPosition=1"
+
+# Read the HTML content of the page
+page <- read_html(url2)
+
+# Extract the headline (usually in an <h1> tag)
+headline <- page %>%
+  html_element("h1") %>%
+  html_text(trim = TRUE)
+
+# Extract the article text (all <p> elements)
+article_text <- page %>%
+  html_elements("p") %>%
+  html_text(trim = TRUE)
+
+# Print the headline and article content
+cat("Headline:\n", headline, "\n\n")
+cat("Article Text:\n", paste(article_text, collapse = "\n"))
+
+```
+
+#ChatGPT explanation:
+
+html_element("h1"): Extracts the headline, assuming it is in an <h1> tag. If the headline isn't inside <h1>, you might need to inspect the webpage's HTML to adjust the selector.
+trim = TRUE: Ensures that any extra spaces or newlines around the text are removed.
+paste(..., collapse = "\n"): Joins the article paragraphs into a readable format with line breaks.
+
+
