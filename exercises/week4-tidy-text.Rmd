@@ -1,3 +1,10 @@
+---
+title: "Tidytext Intro"
+date: "2025-02-12"
+output: html_document
+---
+
+
 # This page is ripped from Text Mining with R A Tidy Approach Julia Silge and David Robinson  2018-12-21, Ch. 1, https://www.tidytextmining.com/, 
 
 #1: Install tidytext package and then Load libraries: tidyverse, tidytext
@@ -78,11 +85,38 @@ tidy_books
 
 This function uses the [tokenizers](https://github.com/ropensci/tokenizers) package to separate each line of text in the original data frame into tokens. The default tokenizing is for words, but other options include characters, n-grams, sentences, lines, paragraphs, or separation around a regex pattern.
 
-Now that the data is in one-word-per-row format, we can manipulate it with tidy tools like dplyr. Often in text analysis, we will want to remove stop words; stop words are words that are not useful for an analysis, typically extremely common words such as "the", "of", "to", and so forth in English. We can remove stop words (kept in the tidytext dataset `stop_words`) with an `anti_join()`.
+Now that the data is in one-word-per-row format, we can manipulate it with tidy tools like dplyr. 
+
+# Stop Words
+
+Often in text analysis, we will want to remove stop words; stop words are words that are not useful for an analysis, typically extremely common words such as "the", "of", "to", and so forth in English. We can remove stop words (kept in the tidytext dataset `stop_words`) with an `anti_join()`.
+
+```{r}
+stopwords <- stop_words
+stopword
+```
+
+# Check the lexicons
+```{r}
+stopwords |> 
+  count(lexicon)
+
+
+```
+
+The tidytext package includes the stop_words dataset.It contains, as of this writing, 1,149 words that data scientists and linguistic nerds felt could be removed from sentences because they don't add meaning. Filtering out these words can help focus on the more meaningful content, making it easier to uncover trends, themes, and key information in large amounts of text. Obviously, we have different priorities and we may or may not want to use stop_words or we have want to provide a customized list of stop words.
+
+The stop_words list is derived from three separate lists, or lexicons: SMART (571 words), onix (404 words), and snowball (174 words)
+
+The ONIX lexicon comes from the Open Information Exchange and is often used in text mining and natural language processing. 
+
+The Snowball lexicon is part of a broader project that has algorithms that simplify words in different languages by reducing them to their root form. It's best known for the Porter stemming algorithm, which, for example, changes "running" to "run." 
+
+Lastly, the SMART lexicon is a set of common words, like "and," "the," and "is," and it comes from the SMART Information Retrieval System, created at Cornell University in the 1960s.
+
 
 ```{r}
 data(stop_words)
-
 tidy_books <- tidy_books %>%
   anti_join(stop_words)
 ```
@@ -117,9 +151,9 @@ Note that the `austen_books()` function started us with exactly the text we want
 Now that we've used the janeaustenr package to explore tidying text, let's introduce the [gutenbergr](https://github.com/ropensci/gutenbergr) package [@R-gutenbergr]. The gutenbergr package provides access to the public domain works from the [Project Gutenberg](https://www.gutenberg.org/) collection. The package includes tools both for downloading books (stripping out the unhelpful header/footer information), and a complete dataset of Project Gutenberg metadata that can be used to find works of interest. In this book, we will mostly use the function `gutenberg_download()` that downloads one or more works from Project Gutenberg by ID, but you can also use other functions to explore metadata, pair Gutenberg ID with title, author, language, etc., or gather information about authors. 
 
 
-```{block, type = "rmdtip"}
+
 To learn more about gutenbergr, check out the [package's documentation at rOpenSci](https://docs.ropensci.org/gutenbergr/), where it is one of rOpenSci's packages for data access.
-```
+
 
 ## Word frequencies
 
@@ -130,11 +164,6 @@ install.packages("gutenbergr")
 library(gutenbergr)
 
 hgwells <- gutenberg_download(c(35, 36, 5230, 159))
-```
-
-```{r}
-
-load("assets/data/hgwells.rda")
 ```
 
 ```{r }
@@ -156,9 +185,6 @@ Now let's get some well-known works of the Brontë sisters, whose lives overlapp
 bronte <- gutenberg_download(c(1260, 768, 969, 9182, 767))
 ```
 
-```{r echo = FALSE}
-load("assets/data/bronte.rda")
-```
 
 ```{r }
 tidy_bronte <- bronte %>%
