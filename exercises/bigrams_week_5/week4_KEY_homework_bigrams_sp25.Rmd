@@ -1,0 +1,96 @@
+---
+title: "Bigrams Exercise"
+author: "Rob Wells"
+date: '2025-02-19'
+output: html_document
+---
+
+# Jour 689 Spring 2025:
+
+In this exercise, you will import the Nexis spreadsheet and create bigrams from the headlines
+
+Setup. These instructions are important. Follow them carefully
+
+1) Create a new folder called "bigrams_week_5" in your class folder
+2) Copy this file to "bigrams_week_5"
+3) Copy your spreadsheet to "bigrams_week_5"
+4) Create an .Rproj file that points to "bigrams_week_5"
+
+```{r}
+#load tidyverse, tidytext, rio,, janitor libraries
+
+library(tidyverse)
+library(tidytext)
+library(rio)
+library(janitor)
+
+```
+
+```{r}
+#Import dataframe 
+
+
+bmore <- rio::import("Results list for__crime_ _Baltimore_.XLSX") |> 
+  clean_names()
+
+```
+# Tokenize
+
+```{r}
+
+stories <- str_replace_all(bmore$hlead, "- ", "")
+stories_df <- tibble(stories,)
+
+# unnest includes lower, punct removal
+
+stories_tokenized <- stories_df %>%
+  unnest_tokens(word,stories)
+
+stories_tokenized
+```
+
+
+#Remove stopwords
+
+
+#Remove stopwords
+```{r}
+
+data(stop_words)
+
+stories_tokenized <- stories_tokenized %>%
+  anti_join(stop_words, by = c("word" = "word")) %>%
+  filter(word != "temp_file") %>%
+  filter(word != "stories_corpus") %>%
+  filter(!grepl('[0-9]', word))
+
+# Word Count
+
+story_word_ct <- stories_tokenized %>%
+  count(word, sort=TRUE)
+
+```
+
+# Bigrams
+
+```{r}
+bigrams <- stories_df %>%
+  unnest_tokens(bigram, stories, token="ngrams", n=2)
+
+bigrams
+
+#Filter out stop words.
+
+
+bigrams1 <- bigrams %>%
+  separate(bigram, c("word1", "word2"), sep = " ")
+
+bigrams2 <- bigrams1 %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word)
+
+bigram3 <- bigrams2 %>%
+  count(word1, word2, sort = TRUE)
+
+
+```
