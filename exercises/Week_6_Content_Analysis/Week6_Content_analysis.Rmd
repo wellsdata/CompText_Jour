@@ -1,0 +1,121 @@
+---
+title: "Week 6 Content analysis"
+author: "Rob Wells"
+date: "2025-02-27"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+#import df created from sequence below
+
+lynch <- read.csv("articles_oct_19.csv")
+```
+
+#### Compile by decade
+
+```{r}
+lynch_decade <- lynch %>% 
+  mutate(decade = case_when(
+         year < 1870 ~ "pre1870",
+        year >= 1870 & year <=1879 ~ "1870s",
+         year >= 1880 & year <=1889 ~ "1880s",
+         year >= 1890 & year <=1899 ~ "1890s",
+        year >= 1900 & year <=1909 ~ "1900s",
+        year >= 1910 & year <=1919 ~ "1910s",
+        year >= 1920 & year <=1929 ~ "1920s",
+        year >= 1930 ~ "post1930s"
+         ))
+
+```
+
+```{r}
+lynch_decade |> 
+  count(decade)
+
+
+```
+
+### Regional classification
+
+```{r}
+# lynch_decade %>% 
+#   count(newspaper_state)
+lynch_decade <- lynch_decade %>% 
+  mutate(region=newspaper_state) %>% 
+  mutate(region = case_when(region=="South Carolina" ~ "South",
+                            region=="Texas" ~ "South",
+                            region=="Louisiana" ~ "South",
+                            region=="Tennessee" ~ "South",
+                            region=="Mississippi" ~ "South",
+                            region=="Arkansas" ~ "South",
+                            region=="Alabama" ~ "South",
+                            region=="Georgia" ~ "South",
+                            region=="Virginia" ~ "South",
+                            region=="Florida" ~ "South",
+                            region=="North Carolina" ~ "South",
+                            region=="Maryland" ~ "Border",
+                            region=="Delaware" ~ "Border",
+                            region=="West Virginia" ~ "Border",
+                            region=="Kentucky" ~ "Border",
+                            region=="Missouri" ~ "Border",
+                            region=="Maine" ~ "North",
+                            region=="New York" ~ "North",
+                            region=="New Hampshire" ~ "North",
+                            region=="Vermont" ~ "North",
+                            region=="Massassachusetts" ~ "North",
+                            region=="Connecticut" ~ "North",
+                            region=="Rhode Island" ~ "North",
+                            region=="Pennsylvania" ~ "North",
+                            region=="New Jersey" ~ "North",
+                            region=="Ohio" ~ "North",
+                            region=="Indiana" ~ "North",
+                            region=="Kansas" ~ "North",
+                            region=="Michigan" ~ "North",
+                             region=="Wisconsin" ~ "North",
+                             region=="Minnesota" ~ "North",
+                             region=="Iowa" ~ "North",
+                             region=="California" ~ "North",
+                             region=="Nevada" ~ "North",
+                             region=="Oregon" ~ "North",
+                            region=="Illinois" ~ "North",
+                            region=="Nebraska" ~ "Misc",
+                            region=="Colorado" ~ "Misc",
+                            region=="North Dakota" ~ "Misc",
+                            region=="South Dakota" ~ "Misc",
+                            region=="Montana" ~ "Misc",
+                            region=="Washington" ~ "Misc",
+                            region=="Idaho" ~ "Misc",
+                            region=="Wyoming" ~ "Misc",
+                            region=="Utah" ~ "Misc",
+                            region=="Oklahoma" ~ "Misc",
+                            region=="New Mexico" ~ "Misc",
+                            region=="Arizona" ~ "Misc",
+                            region=="Alaska" ~ "Misc",
+                            region=="Hawaii" ~ "Misc",
+                            region=="District of Columbia" ~ "Misc",
+                            region=="Virgin Islands" ~ "Misc",
+                                                     TRUE~region)) 
+
+
+```
+
+# Visualize by Region
+
+```{r}
+lynch_decade |> 
+  distinct(filename, .keep_all = TRUE) |> 
+  count(region) |> 
+  ggplot(aes(x = region, y = n, fill=n)) +
+  ylab("Count of newspapers by region") +
+  xlab("") +
+  geom_col() +
+  labs(title = "Regional Grouping of Newspapers in Lynching Coverage",
+       subtitle = "Newspapers from Chronicling America, LOC",
+       caption = "n=6,448 newspapers. Graphic by Rob Wells, 2/27/2025")
+
+
+```
