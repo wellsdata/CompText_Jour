@@ -1,0 +1,452 @@
+---
+title: "Mainstream Papers Topic Modeling"
+author: "(redated - peer review)"
+date: '2024-6-21'
+output: html_document
+---
+
+#--------------------------------------------- \# Mainstream Papers Topic Modeling #--------------------------------------------- This notebook will import 11,194 text files and related metadata files and execute basic topic modeling with LADAL Method I've adapted this LADAL tutorial for the lynching research: <https://ladal.edu.au/topicmodels.html>
+
+Load up the packages if you haven't already....
+
+```{r}
+install.packages("here")
+install.packages("tidytext")
+install.packages("quanteda")
+install.packages("tm")
+install.packages("topicmodels")
+install.packages("reshape2")
+install.packages("ggplot2")
+install.packages("wordcloud")
+install.packages("pals")
+install.packages("SnowballC")
+install.packages("lda")
+install.packages("ldatuning")
+install.packages("kableExtra")
+install.packages("DT")
+install.packages("flextable")
+install.packages("remotes")
+remotes::install_github("rlesur/klippy")
+install.packages("rio")
+install.packages("readtext")
+install.packages("formattable")
+
+```
+
+```{r include=FALSE}
+# set options
+options(stringsAsFactors = F)         # no automatic data transformation
+options("scipen" = 100, "digits" = 4) # suppress math annotation
+# load packages
+here::here()
+library(tidyverse)
+library(tidytext)
+library(rio)
+library(readtext)
+#topic modeling
+library(quanteda)
+library(tm)
+library(topicmodels)
+library(lda)
+library(ldatuning)
+# from tutorial packages
+library(DT)
+library(knitr) 
+library(kableExtra) 
+library(reshape2)
+library(ggplot2)
+library(wordcloud)
+library(pals)
+library(SnowballC)
+library(flextable)
+
+```
+
+### Import Data
+
+```{r include=FALSE}
+#import 11,194 text files that were compiled into a df  
+dei_articles <- read_csv("articles_df.csv")
+
+
+```
+
+# Topic Modeling Predmoninantly White-Owned Papers
+
+### Process into corpus object
+
+```{r}
+textdata <- dei_articles |>  
+  mutate(international = case_when(
+    publication_location == "International" ~ "INTL",
+    publication_location != "International" ~ "US",
+     TRUE ~ NA_character_
+  )) |> 
+  select(filename, sentence, published_date, publication_location, international) |> 
+  as.data.frame() %>% 
+  rename(doc_id = filename, text= sentence)
+
+# load stopwords
+english_stopwords <- readLines("https://slcladal.github.io/resources/stopwords_en.txt", encoding = "UTF-8")
+# create corpus object
+corpus <- Corpus(DataframeSource(textdata))
+# Preprocessing chain
+processedCorpus <- tm_map(corpus, content_transformer(tolower))
+processedCorpus <- tm_map(processedCorpus, removeWords, english_stopwords)
+processedCorpus <- tm_map(processedCorpus, removePunctuation, preserve_intra_word_dashes = TRUE)
+processedCorpus <- tm_map(processedCorpus, removeNumbers)
+processedCorpus <- tm_map(processedCorpus, stemDocument, language = "en")
+processedCorpus <- tm_map(processedCorpus, stripWhitespace)
+```
+
+```{r tm3a}
+#DTM: rows correspond to the documents in the corpus. Columns correspond to the terms in the documents. Cells correspond to the weights of the terms. (Girder)
+# compute document term matrix with terms >= minimumFrequency
+minimumFrequency <- 5
+DTM <- DocumentTermMatrix(processedCorpus, control = list(bounds = list(global = c(minimumFrequency, Inf))))
+# have a look at the number of documents and terms in the matrix
+dim(DTM)
+# due to vocabulary pruning, we have empty rows in our DTM
+# LDA does not like this. So we remove those docs from the
+# DTM and the metadata
+sel_idx <- slam::row_sums(DTM) > 0
+DTM <- DTM[sel_idx, ]
+textdata <- textdata[sel_idx, ]
+#5 term minimum[1] 1387 3019
+#5 term minimum[1] 308597 10339
+
+```
+
+## Topic proportions over time {.unnumbered}
+
+We examine topics in the data over time by aggregating mean topic proportions per decade. These aggregated topic proportions can then be visualized, e.g. as a bar plot.
+
+```{r}
+# append decade information for aggregation
+textdata$day <- weekdays(as.Date(textdata$published_date, format="%Y-%m-%d"))
+```
+
+Articles per decade
+
+```{r}
+install.packages("formattable")
+articles_per_day <- textdata |> 
+  distinct(doc_id, .keep_all=TRUE) |>  
+  count(day) |> 
+  mutate(pct_total= (n/sum(n))) |> 
+  mutate(pct_total= formattable::percent(pct_total)) |> 
+  # mutate(pct_total = round(pct_total, 1)) %>% 
+  arrange(desc(day))
+
+library(kableExtra)
+articles_per_day %>%
+  kbl(caption = "Trump DEI Articles Per Day (n=1916, 10/23/2024)", font_size = 30) %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>% 
+  column_spec(1, bold = T, border_right = T) %>%
+  column_spec(2, width = "5em") %>% 
+  column_spec(3, width = "5em", background = "yellow") 
+
+
+
+#Fact check 9589 articles
+sum(articles_per_day$n)
+```
+
+```{r tm12}
+# number of topics
+# K <- 20
+K <- 7
+# set random number generator seed
+set.seed(9161)
+#Latent Dirichlet Allocation, LDA
+topicModel2 <- LDA(DTM, K, method="Gibbs", control=list(iter = 500, verbose = 25, alpha = 0.2))
+tmResult <- posterior(topicModel2)
+theta <- tmResult$topics
+beta <- tmResult$terms
+topicNames <- apply(terms(topicModel2, 10), 2, paste, collapse = " ")  # reset topicnames
+```
+
+### Mean topic proportions per decade
+
+```{r}
+# Step 1: Check dimensions
+n_theta <- nrow(theta)
+n_textdata <- length(textdata$day)
+
+cat("Number of rows in theta: ", n_theta, "\n")
+cat("Number of documents in textdata: ", n_textdata, "\n")
+
+# Check if textdata contains all the documents in theta
+common_ids <- intersect(rownames(theta), textdata$doc_id) # Assuming textdata has a 'doc_id' column
+
+# Filter textdata to include only the documents present in theta
+textdata_filtered <- textdata[textdata$doc_id %in% common_ids, ]
+
+# Check dimensions after filtering
+n_textdata_filtered <- nrow(textdata_filtered)
+cat("Number of documents in filtered textdata: ", n_textdata_filtered, "\n")
+
+# Ensure the lengths match now
+if (n_theta != n_textdata_filtered) {
+  stop("The number of rows in 'theta' still does not match the length of 'textdata_filtered$decade'.")
+}
+
+# Align rownames of theta with filtered textdata
+theta_aligned <- theta[rownames(theta) %in% textdata_filtered$doc_id, ]
+
+# Optional: Verify the order of documents
+if (!all(rownames(theta_aligned) == textdata_filtered$doc_id)) {
+  # If the order doesn't match, reorder one to match the other
+  textdata_filtered <- textdata_filtered[match(rownames(theta_aligned), textdata_filtered$doc_id), ]
+}
+
+# Ensure they are now aligned and can be combined
+if (!all(rownames(theta_aligned) == textdata_filtered$doc_id)) {
+  stop("The document IDs still do not match. Please check the data alignment.")
+}
+
+# Step 2: Combine data
+topic_data <- data.frame(theta_aligned, day = textdata_filtered$day)
+
+# Step 3: Aggregate data
+topic_proportion_per_day <- aggregate(. ~ day, data = topic_data, FUN = mean)
+
+
+# get mean topic proportions per decade
+# topic_proportion_per_decade <- aggregate(theta, by = list(decade = textdata$decade), mean)
+# set topic names to aggregated columns
+colnames(topic_proportion_per_day)[2:(K+1)] <- topicNames
+# reshape data frame
+vizDataFrame <- melt(topic_proportion_per_day, id.vars = "day")
+
+# #filter out 1960 - one article
+vizDataFrame <- vizDataFrame  
+   #filter(!decade==1960)
+```
+
+topics by international
+```{r}
+# Step 2: Combine data
+topic_data1 <- data.frame(theta_aligned, intl = textdata_filtered$international)
+
+# Step 3: Aggregate data
+topic_proportion_per_day1 <- aggregate(. ~ intl, data = topic_data1, FUN = mean)
+
+
+# get mean topic proportions per decade
+# topic_proportion_per_decade <- aggregate(theta, by = list(decade = textdata$decade), mean)
+# set topic names to aggregated columns
+colnames(topic_proportion_per_day1)[2:(K+1)] <- topicNames
+# reshape data frame
+vizDataFrame1 <- melt(topic_proportion_per_day1, id.vars = "intl")
+
+# #filter out 1960 - one article
+vizDataFrame1 <- vizDataFrame1 
+   #filter(!decade==1960)
+```
+
+
+
+#Examine topic names
+
+```{r}
+#enframe(): Converts a named list into a dataframe.
+topics <- enframe(topicNames, name = "number", value = "text") %>% 
+  unnest(cols = c(text)) 
+  
+topics
+```
+
+### Review the topics and determine a 1-2 word label after reading the source documents.
+
+```{r}
+
+#Topic 1	counti citi night mile jail day town morn march juli
+
+theta2 <- as.data.frame(theta)
+
+topic1 <- theta2 %>% 
+  rownames_to_column(var = "file") |> # putting the rownames into a new column called file
+  mutate(file = str_remove(file, "^X"),  # Remove leading 'X'
+         line = str_extract(file, "(?<=\\.txt)\\.\\d+")) |>   # Extract number after .txt
+  mutate(file = str_remove(file, "\\.\\d+$")) |> 
+  rename(topic1 = '1') |> # looking at first topic: ounti citi night mile jail day town morn march juli
+  top_n(20, topic1) |> 
+  arrange(desc(topic1)) |>  
+  select(file, line, topic1) 
+
+
+```
+
+```{r}
+
+#add categories
+
+vizDataFrame <- vizDataFrame %>%
+  mutate(category = case_when(
+        str_detect(str_squish(variable), "univers word fund student length feder educ state program school") ~ "education_dei",
+    str_detect(variable, "compani divers end dei document inclus target busi polici year") ~ "corporate_dei_policies",
+    str_detect(variable, "trump presid state musk nation donald govern countri administr hous") ~ "trump_national_politics",
+    str_detect(variable, "right reserv copyright februari januari crash air bodi thursday control") ~ "airplane_helicopter_crash",
+    str_detect(variable, "order trump feder dei execut divers govern program inclus presid") ~ "trumps_admin_orders",
+    str_detect(variable, "peopl “ american make polit time ’ work trump black") ~ "politics_race",
+  str_detect(str_squish (variable), "news bodi load-date februari nyu load-date januari search sport student edit open") ~ "campus_media"
+  ))
+  
+  
+  
+
+
+```
+
+# Fact Check and Validate Topics
+
+Topic 1: 	univers word fund student length  feder educ state program school
+Topic 2: order trump feder dei execut divers govern program inclus presid
+Topic 3: trump presid state musk nation donald govern countri administr hous
+Topic 4: right reserv copyright februari januari crash air bodi thursday control
+Topic 5: compani divers end dei document inclus target busi polici year
+Topic 6: peopl “ american make polit time ’ work trump black
+Topic 7: news bodi load-date februari nyu load-date januari search sport student edit open
+
+### for topic 2 dei_topics in administration topic
+
+```{r}
+# Assuming `theta` is a dataframe related to DEI topics
+theta2 <- as.data.frame(theta)
+
+# Extract and rename relevant column for DEI topic (e.g., for "female" or another DEI-related category)
+dei_topic <- theta2 %>%
+  rename(dei_topic = '2') %>%   # Replace '4' with the column that represents the DEI topic
+  top_n(20, dei_topic) %>%
+  arrange(desc(dei_topic)) %>% 
+  select(dei_topic)
+
+# Apply rownames_to_column to include story IDs
+dei_topic <- tibble::rownames_to_column(dei_topic, "story_id")
+
+# Clean up story_id if necessary (e.g., removing "X" or other unwanted characters)
+dei_topic$story_id <- gsub("X", "", dei_topic$story_id)
+
+# Check the top 20 story IDs
+head(dei_topic$story_id, 20)
+# Now it’s validated for DEI topics
+
+
+
+```
+
+### for university 
+
+```{r}
+theta2 <- as.data.frame(theta)
+
+university <- theta2 %>% 
+  #renaming for a general topic
+  rename(university = '1') %>% 
+  top_n(20, university ) %>%
+  arrange(desc(university )) %>% 
+  select(university)
+
+# Apply rownames_to_column
+university  <- tibble::rownames_to_column(university , "story_id") 
+
+university $story_id <- gsub("X", "", university $story_id)
+
+head(university$story_id, 20)
+#Checks out
+
+
+```
+
+### for trump/elon musck 
+
+```{r}
+theta2 <- as.data.frame(theta)
+
+trump_elon <- theta2 %>% 
+  #renaming for a general topic
+  rename(trump_elon = '3') %>% 
+  top_n(20,trump_elon ) %>%
+  arrange(desc(trump_elon )) %>% 
+  select(trump_elon)
+
+# Apply rownames_to_column
+trump_elon <- tibble::rownames_to_column(trump_elon , "story_id") 
+
+trump_elon $story_id <- gsub("X", "", trump_elon $story_id)
+
+head(trump_elon$story_id, 20)
+#Checks out 
+#main theme is negros are lynching victims
+
+```
+
+#### topic 5 corporate_dei_policies
+
+```{r}
+theta2 <- as.data.frame(theta)
+
+# Rename and extract top 20
+corporate_dei_policies <- theta2 %>%
+  rename(corporate_dei_policies = '5') %>%
+  top_n(20, corporate_dei_policies) %>%
+  arrange(desc(corporate_dei_policies))
+
+# Move rownames to a column BEFORE selecting
+corporate_dei_policies <- tibble::rownames_to_column(corporate_dei_policies, "story_id")
+
+# Clean up the story_id column
+corporate_dei_policies$story_id <- gsub("X", "", corporate_dei_policies$story_id)
+
+# Optionally, select only the columns you want now
+corporate_dei_policies <- corporate_dei_policies %>%
+  select(story_id, corporate_dei_policies)
+#Checks out 
+
+
+```
+
+#Figure 15: white_paper_topics_oct_19_2024
+
+```{r}
+ggplot(vizDataFrame, aes(x = day, y = value, fill = category)) + 
+  geom_bar(stat = "identity") +
+  ylab("Proportion") + 
+  scale_fill_manual(
+    values = c("#9933FF", "#33FFFF", "red", "yellow", "darkblue", "green", "white"),
+    name = "Day"
+  ) + 
+  theme(
+    axis.text.x = element_text(angle = 90, hjust = 1)
+  ) +
+  labs(
+    title = "Common Narratives in Trump DEI Coverage",
+    subtitle = "Six probable topics in domestic and international media coverage sample. n = 9,590",
+    caption = "Aggregate mean topic proportions per day from 01/20–02/20.\nGraphic by Tiasia Saunders (redacted - peer review) & (redacted - peer review), 10-19-2024"
+  )
+
+# Save the figure if needed
+# ggsave(
+#   here::here("../lynching_press/output_images_tables/Article_Images/Figure_15_white_topics_oct_19_2024.png"),
+#   device = "png", width = 9, height = 6, dpi = 800
+# )
+```
+
+##
+Summary 
+I attempted to create a dataframe with domestic and international split, without having to perform the topic modeling for each. Since it was unsuccessful, I would like to know how to do this in class, would I have to create two datatables with the domestic and international outlets, then perform topic modeling for each to look at them on two seperate graphs. Is there a way to use the aggregate data with the publication_location column, and be able to look at both categories of newspapers on the same graph? Despite this, I like being able to look at my topics and the likelihood of them being in a given story. Also, I selected 7 because when I did six I had a metadata (dates of publications) category; so I expanded by one to see what it would pull. When I did this, the previous metadata category was changed to campus media, because it reflected sports and media. Lastly, I would like to know if there is a way to have more control with what the topics pull, to be more catered to what I want? Ultimately, I wish I had more control on the topics it pulled from my dataset. 
+
+Overall, the most interesting topics for me were the education_dei, trump_national_politics(trump/musk topic), airline_helicopter_crash (because Trump attributed it to DEI hires failure) and trump_admin_orders. I feel okay about the topics coporate_dei_policies, politics_race. I did not like the topics of campus sports media, because it feels irrelevant to my topic. Honestly, it was a fun exercise and enlightening to see my topics graphed visually. 
+ 
+ ###
+vizDataFrame |> 
+  left_join(textdata, by = "doc_id") |> 
+  pivot_longer(cols = starts_with("topic"), names_to = "category", values_to = "value") 
+|> 
+  group_by(day, category, source_type) |> 
+  summarise(value = mean(value), .groups = "drop")
+  
+  ##
+
+

@@ -7,7 +7,6 @@ date: "02-11-2025"
   pdf_document: default
 ---
 
-
 ```{r}
 # Install and load required packages if not already installed
 #install.packages("rvest")
@@ -27,9 +26,12 @@ library(tidyverse)
 # 3. Create credentials
 # 4. Set up a Custom Search Engine at https://programmablesearchengine.google.com/
 
+install.packages("googleAuthR")
+library(googleAuthR)
 # Set your API key and Search Engine ID
-set_google_api_key("XXXX")
-set_google_custom_search_engine_id("XXXXX")
+#set_google_api_key("XXX")
+#set_google_custom_search_engine_id("XXX")
+
 ```
 
 ```{r}
@@ -100,18 +102,133 @@ search_engine_id <- "XXXX"
 all_urls_df <- google_search_all(api_key, search_engine_id)
 
 # Remove any duplicates
-all_urls_df <- unique(all_urls_df)
+sept_urls_df <- unique(all_urls_df)
 
 # Print total number of results
 cat("\nTotal unique articles found:", nrow(all_urls_df), "\n")
 
 # Save to CSV
-write.csv(all_urls_df, "kamala_harris_all_articles.csv", row.names = FALSE)
+write.csv(sept_urls_df, "sept_kamala_harris_all_articles.csv", row.names = FALSE)
+```
+#determine search results per month
+
+```{r}
+library(httr)
+library(jsonlite)
+library(dplyr)
+library(lubridate)
+
+# Function to count search results by date
+count_results_by_date <- function(api_key, search_engine_id, site, search_term, date_ranges) {
+  results_count <- data.frame(
+    date_range = character(),
+    result_count = numeric(),
+    stringsAsFactors = FALSE
+  )
+  
+  for (date_range in date_ranges) {
+    # Create the full query
+    query <- paste0('site:', site, ' "', search_term, '" after:', date_range[1], ' before:', date_range[2])
+    
+    # Make the API request
+    response <- GET(
+      "https://www.googleapis.com/customsearch/v1",
+      query = list(
+        key = api_key,
+        cx = search_engine_id,
+        q = query,
+        num = 1  # We only need the count, not actual results
+      )
+    )
+    
+    # Parse the response
+    if (status_code(response) == 200) {
+      results <- fromJSON(rawToChar(response$content))
+      
+      # Get the total count
+      total_results <- as.numeric(results$searchInformation$totalResults)
+      
+      # Add to dataframe
+      new_row <- data.frame(
+        date_range = paste(date_range[1], "to", date_range[2]),
+        result_count = total_results,
+        stringsAsFactors = FALSE
+      )
+      
+      results_count <- rbind(results_count, new_row)
+      
+      message("Query: ", query)
+      message("Results: ", total_results)
+    } else {
+      message("Error for date range ", date_range[1], " to ", date_range[2], 
+              ": Status code ", status_code(response))
+    }
+    
+    # Delay to avoid hitting rate limits
+    Sys.sleep(1)
+  }
+  
+  return(results_count)
+}
+
+# Define your parameters
+api_key <- "XXXX"
+search_engine_id <- "XXXX"
+site <- "www.dailywire.com"
+search_term <- "kamala harris"
+
+# Define date ranges to check (monthly intervals)
+date_ranges <- list(
+  c("2024-07-01", "2024-07-31"),
+  c("2024-08-01", "2024-08-31"),
+  c("2024-09-01", "2024-09-30"),
+  c("2024-10-01", "2024-10-31"),
+  c("2024-11-01", "2024-11-05")
+)
+
+# If you want to see how results are distributed within September
+# september_ranges <- list(
+#   c("2024-09-01", "2024-09-10"),
+#   c("2024-09-11", "2024-09-20"),
+#   c("2024-09-21", "2024-09-30")
+# )
+
+# If you want to see how results are distributed within a month
+
+august_ranges <- list(
+  c("2024-08-01", "2024-08-15"),
+  c("2024-08-16", "2024-08-32")
+)
+
+october_ranges <- list(
+  c("2024-10-01", "2024-10-10"),
+  c("2024-10-11", "2024-10-20"),
+  c("2024-10-21", "2024-10-31")
+)
+
+# Run the count for monthly data
+monthly_counts <- count_results_by_date(api_key, search_engine_id, site, search_term, date_ranges)
+
+# Run the count for September segments
+october_counts <- count_results_by_date(api_key, search_engine_id, site, search_term, october_ranges)
+august_counts <- count_results_by_date(api_key, search_engine_id, site, search_term, august_ranges)
+# View results
+print(monthly_counts)
+print(october_counts)
+print(august_counts)
+# # Create a simple bar chart of monthly results
+# barplot(monthly_counts$result_count, 
+#         names.arg = monthly_counts$date_range,
+#         main = "DailyWire Articles Mentioning 'Kamala Harris' by Month",
+#         xlab = "Month", 
+#         ylab = "Number of Articles",
+#         col = "steelblue")
 ```
 
 
 
-#delivers 10 results
+#delivers 100 results
+
 ```{r}
 # Function to search using Google Custom Search API
 google_search <- function(api_key, search_engine_id, start = 1) {
@@ -151,7 +268,9 @@ print(urls_df)
 # Save to CSV
 #write.csv(urls_df, "kamala_harris_articles.csv", row.names = FALSE)
 ```
+
 older version
+
 ```{r}
 
 # Function to search using Google Custom Search API
@@ -200,15 +319,15 @@ urls_df <- data.frame(
 ```
 
 Custom search engine script
+
+```{=html}
 <script async src="https://cse.google.com/cse.js?cx=d105d1b8f6b3543ba">
 </script>
-<div class="gcse-search"></div>
-
-
+```
+::: gcse-search
+:::
 
 https://www.google.com/search?q=site:www.dailywire.com+%22kamala+harris%22+after:2024-07-21+before:2024-11-05&sca_esv=2727c2a8608e1f45&sxsrf=AHTn8zpDXqi-tyT-WzRBtigEJlgI_ryXoQ:1739305367342&ei=l7GrZ7bHFIuh5NoP0PXu0Qk&start=10&sa=N&sstk=Af40H4WUIxjStGfGhskfy2OrTCAmktGQTUGNIcqW3wBTgDRPrqc67yhnWy6g2QaNNH4AdXcRVqUiI527k8ngwSv3eP1EHSzhSy4ciQ&ved=2ahUKEwj27s20ubyLAxWLEFkFHdC6O5oQ8tMDegQIBxAE&biw=1920&bih=934&dpr=2
-
-
 
 # Build a table from the Daily Wire RSS feed
 
@@ -240,15 +359,11 @@ head(df)
 selected_df <- df[, c("item_title", "item_pub_date", "item_link")]
 ```
 
-
-
-
 # Scrape Wiki page for racist terms
 
 ## Thanks to Sean Mussenden for his Advanced rvest tutorial, which this is shamelessly and ruthlessly stolen and remixed
 
 https://github.com/smussenden/datajournalismbook
-
 
 ```{r}
 # install.packages("tidyverse")
@@ -261,11 +376,9 @@ library(janitor)
 library(readxl)
 ```
 
+Example URL of pages I want to scrape https://www.dailywire.com/news/not-encouraging-nyt-warns-kamala-in-trouble-as-poll-finds-her-tied-with-trump?topStoryPosition=1
 
-Example URL of pages I want to scrape
-https://www.dailywire.com/news/not-encouraging-nyt-warns-kamala-in-trouble-as-poll-finds-her-tied-with-trump?topStoryPosition=1
-
-#I asked ChatGPT:  build a webscraper this into a function so it will extract URLs from Daily_Wire_Articles.xlsx from the URL column and produce one text file per article. there are 20 URLs on that list.
+#I asked ChatGPT: build a webscraper this into a function so it will extract URLs from Daily_Wire_Articles.xlsx from the URL column and produce one text file per article. there are 20 URLs on that list.
 
 ```{r}
 
@@ -352,8 +465,12 @@ cat("Article Text:\n", paste(article_text, collapse = "\n"))
 
 #ChatGPT explanation:
 
-html_element("h1"): Extracts the headline, assuming it is in an <h1> tag. If the headline isn't inside <h1>, you might need to inspect the webpage's HTML to adjust the selector.
-trim = TRUE: Ensures that any extra spaces or newlines around the text are removed.
-paste(..., collapse = "\n"): Joins the article paragraphs into a readable format with line breaks.
+html_element("h1"): Extracts the headline, assuming it is in an
 
+<h1>
 
+tag. If the headline isn't inside
+
+<h1>
+
+, you might need to inspect the webpage's HTML to adjust the selector. trim = TRUE: Ensures that any extra spaces or newlines around the text are removed. paste(..., collapse = "\n"): Joins the article paragraphs into a readable format with line breaks.
