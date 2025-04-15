@@ -1,0 +1,146 @@
+```{r}
+library(tidyverse)
+library(janitor)
+```
+
+
+
+# Tabula to Extract Data from PDFs
+
+The PDF document has spawned a cottage industry offering tools to harvest data from the documents. There are online services like [CometDocs](https://www.cometdocs.com/) where you can upload your PDF and point and click your way into an Excel file. One of the best is a tool called [Tabula](https://tabula.technology/), built by journalists for journalists.
+
+The tool is powerful but not always successful.
+
+## Easy does it
+
+Tabula works best when tables in PDFs are clearly defined and have nicely-formatted information. Here's an example: [mail-in ballots returned so far in 2024 by county in Maryland](https://elections.maryland.gov/press_room/2024_stats/PG24/Absentees%20Sent%20and%20Returned%20by%20County.pdf).
+
+[Download and install Tabula](https://tabula.technology/). Tabula works much the same way as Open Refine does -- it works in the browser by spinning up a small webserver in your computer.
+
+When Tabula opens, you click browse to find the PDF on your computer somewhere, and then click import. After it imports, click autodetect tables. You'll see red boxes appear around what Tabula believes are the tables. You'll see it does a pretty good job at this.
+
+```{r, echo=FALSE}
+knitr::include_graphics(rep("images/eln2024_1.png"))
+```
+
+Now you can hit the green "Preview & Export Extracted Data" button on the top right. You should see something very like this:
+
+```{r, echo=FALSE}
+knitr::include_graphics(rep("images/eln2024_2.png"))
+```
+
+You can now export that extracted table to a CSV file using the "Export" button. And then we can read it into R:
+
+```{r}
+#In RStudio the keyboard shortcut for the assignment operator <- is Alt + - (Windows) or Option + - (Mac).
+#Native pipe operator |> : Global Options window, select "Code" and you'll see an option for "use native pipe operator, |>". Select that for the shortcut to take effect.
+
+voters_by_county <- read_csv("images/tabula-Absentees Sent and Returned by County.csv") |> clean_names()
+
+voters_by_county
+```
+
+Good!
+
+### Fun with mail in ballots
+
+We can't resist the temptation to open a crystal ball on the election.
+Let's calculate a new column describing the percent turnout by mail ballot by county
+We will use mutate to divide the total_received by total_sent
+
+```{r}
+voters_by_county <- voters_by_county |> 
+  mutate(pct_received = round(total_received / total_sent*100, 1))
+
+#round = rounds the calculation to 1 decimal
+
+```
+
+## YOUR TURN
+Now you do the same. Use mutate to create a new column for pct_dem, pct_gop, pct_ind (the other) and determine total received by party. 
+
+```{r}
+voters_by_county <- voters_by_county |> 
+  mutate(
+    pct_dem = round(dem_received / dem_sent * 100, 1),
+    pct_gop = round(rep_received / rep_sent * 100, 1),
+    pct_ind = round(oth_received / oth_sent * 100, 1)
+)
+
+
+
+```
+
+
+Now, sort by the top five counties by return for each party
+
+```{r}
+# Top 5 counties by each category
+  pct_received = voters_by_county |> 
+    select(county_name, pct_received, pct_dem, pct_gop, pct_ind) |> 
+    arrange(desc(pct_received)) |> 
+    slice_head(n = 5)
+  
+  pct_dem = voters_by_county |> 
+    select(county_name, pct_received, pct_dem, pct_gop, pct_ind) |> 
+    arrange(desc(pct_dem)) |> 
+    slice_head(n = 5)
+  
+  pct_gop = voters_by_county |> 
+    select(county_name, pct_received, pct_dem, pct_gop, pct_ind) |> 
+    arrange(desc(pct_gop)) |> 
+    slice_head(n = 5)
+  
+  pct_ind = voters_by_county |> 
+    select(county_name, pct_received, pct_dem, pct_gop, pct_ind) |> 
+    arrange(desc(pct_ind)) |> 
+    slice_head(n = 5)
+
+
+
+```
+
+
+
+## When it looks good, but needs a little fixing
+
+Here's a slightly more involved PDF. Check out the table on page 4 of [this SBA PDF](https://www.sba.gov/sites/default/files/2021-06/PPP_Report_Public_210531-508.pdf).
+
+```{r, echo=FALSE}
+knitr::include_graphics(rep("images/ppp_1.png"))
+```
+
+Looks like a spreadsheet, right? Save that PDF file to your computer in a place where you'll remember it (like a Downloads folder).
+
+Now let's repeat the steps we did to import the PDF into Tabula and autodetect the tables. Page 4 should look like this:
+
+```{r, echo=FALSE}
+knitr::include_graphics(rep("images/ppp_2.png"))
+```
+
+We just want the table on page 4, which shows 2021 loan activity by type of lender, so hit the "Clear All Selections" button to remove the red boxes. Now, in Tabula, let's draw a box around the table on page 4. Click and drag to draw the box.
+
+Now you can hit the green "Preview & Export Extracted Data" button on the top right. You should see something very like this:
+
+```{r, echo=FALSE}
+knitr::include_graphics(rep("images/ppp_3.png"))
+```
+
+You can now export that extracted table to a CSV file using the "Export" button. And then we can read it into R:
+
+```{r}
+lender_types <- read_csv("images/tabula-PPP_Report_Public_210531-508.csv") |> 
+  clean_names()
+
+lender_types
+```
+
+## Cleaning up the data in R
+
+See the "Net Dollars" column? Thanks to the dollar signs, R doesn't recognize those values as numbers. The column names seem ok, but having spaces in them is a pain. Let's fix that by re-importing it and calling `mutate` so that the new `net_dollars` column is numeric.
+
+```{r}
+lender_types <- read_csv("images/tabula-PPP_Report_Public_210531-508.csv", skip=1, col_names=c("type", "count", "approved", "net_dollars"))
+lender_types <- lender_types  |>  mutate(net_dollars=as.numeric(parse_number(net_dollars)))
+lender_types
+```

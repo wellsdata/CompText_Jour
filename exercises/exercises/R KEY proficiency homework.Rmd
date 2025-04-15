@@ -1,0 +1,118 @@
+---
+title: "R proficiency homework"
+author: "Wells"
+date: "2025-02-06"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+```
+
+--Load the mob analysis dataLinks to an external site.
+```{r}
+mob <- read.csv("https://raw.githubusercontent.com/wellsdata/CompText_Jour/main/data/mob_analysis_data.csv")
+```
+
+Links to an external site.--Using code, describe the number of rows in the dataset
+```{r}
+nrow(mob)
+```
+columns in the dataset
+```{r}
+ncol(mob)
+```
+
+A more sophisticated method using print and paste0 that integrates text and r output
+
+```{r}
+print(paste0("This dataset has ", nrow(mob), " rows and ", ncol(mob), " columns."))
+
+```
+
+
+--Create a table that displays a count of the top 15 newspaper entries
+top_n function
+```{r}
+
+top <- mob |> 
+  #filter nas
+  filter(!is.na(Newspaper)) |> 
+  count(Newspaper) |>
+  top_n(15, n) |> 
+  arrange(desc(n))
+
+top
+
+```
+
+--Create a table that counts the different entries in the "keyword" column
+```{r}
+keyword <- mob |> 
+  count(keyword) |>
+  arrange(desc(n))
+
+```
+
+--Create a table that counts all entries by year
+
+```{r}
+year <- mob |> 
+  count(Year) |> 
+  arrange(Year)
+
+year
+```
+
+--Create a simple column ggplot chart that shows the total entries by year
+
+```{r}
+mob |> 
+  count(Year) |> 
+   ggplot(aes(x = Year, y = n,
+             fill = n)) +
+  geom_col(position = "dodge") + 
+  theme(legend.position = "none") +
+#This is your title sequence
+  labs(title = "Count of mob appearing in newspaper articles",
+       subtitle = "Lynching news research",
+       caption = "Graphic by Rob Wells, 2-6-2024",
+       y="Count of mob terms",
+       x="Year")
+
+```
+#question from Tiasia: figure out how to space out my x-axis so that the years can be seen clearly to better understand my graph. 
+```{r}
+year_count <- mob_analysis |>
+  count(Year)
+
+#her version
+ggplot(year_count, aes(x = factor(Year), y = n)) +
+  geom_col(fill = "steelblue") +
+  labs(title = "Total Entries by Year",
+       x = "Year",
+       y = "Total Entries") +
+  theme_minimal()
+```
+
+issue with factor(Year)
+ggplot(year_count, aes(x = factor(Year), y = n)) +
+you use factor(Year) when you want each year to have its own distinct bar in a bar plot or you're only dealing with specific years rather than a continuous range
+
+Don't factor(Year) and keep it numeric to control the spacing of years (like using scale_x_continuous). factor turns a variable into a categorical variable. You can't do math on categorical variables
+
+
+```{r}
+
+ggplot(year_count, aes(x = Year, y = n)) +
+  geom_col(fill = "steelblue") +
+  labs(title = "Total Entries by Year",
+       x = "Year",
+       y = "Total Entries") +
+  theme_minimal() +
+    theme(axis.text.x = element_text(angle=90)) +
+  scale_x_continuous(breaks = seq(1800, 1960, by = 10))
+```
+
+
+

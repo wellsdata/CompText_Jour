@@ -1,0 +1,418 @@
+---
+title: "Assignment 3 KEY"
+author: "Rob Wells"
+date: "2024-11-10"
+output: html_document
+---
+# Assignment #3 Basic Text Pipeline Proficiency
+
+For this assignment, you will create an R markdown document, import a text dataset
+Use this PDF of 32 articles about journalist and political operative Raymond Moley. https://github.com/wellsdata/CompText_Jour/blob/main/exercises/assets/pdfs/moley_news.PDF
+Load the appropriate software libraries
+Import the data and compile the articles into a dataframe, one row per sentence.
+Then tokenize the data, one word per row
+Clean the data
+Generate a list of the top 20 bigrams
+Create a ggplot chart showing the top 20 bigrams
+At the bottom of the R markdown document, write a 300 word memo describing your key findings.
+
+You are welcome to consult your notes, books, the internet, AI tools or work in groups. Make sure you hand in your own work.
+Hand in a link to your personal GitHub repository in Elms that contains the data and your code. Make sure the code links to your GitHub and not to your personal computer's hard drive.
+
+# Part 1: Scrape a PDF and split into separate text files
+
+```{r}
+#install.packages("pdftools")
+library(tidyverse)
+library(pdftools)
+library(stringr)
+library(tidytext)
+```
+
+## Convert PDF to text
+
+```{r}
+#Download PDF from Github. Thanks Teona for this trick!
+url <- "https://github.com/wellsdata/CompText_Jour/blob/main/exercises/assets/pdfs/moley_news.PDF?raw=true"
+destfile <- "assets/pdfs/moley_text.pdf"
+
+download.file(url, destfile, mode = "wb")
+
+#Using pdftools package. Good for basic PDF extraction
+#Oct 17: removed split_file folder in a cleanup
+text <- pdf_text("assets/pdfs/moley_text.pdf")
+#pdf_text reads the text from a PDF file.
+writeLines(text, "assets/extracted_text/moley_text.txt")
+#writeLines writes this text to a text file
+
+```
+
+
+
+
+
+## Create an index from the first extracted page
+```{r}
+moley_index <- read_lines("../exercises/assets/extracted_text/moley_text.txt")
+extracted_lines <- moley_index[16:173]
+
+extracted_lines <- extracted_lines |> 
+  as.data.frame() |> 
+  mutate(extracted_lines = str_replace_all(extracted_lines, "\\s*\\|\\s*About LexisNexis\\s*\\|\\s*Privacy Policy\\s*\\|\\s*Terms & Conditions\\s*\\|\\s*Copyright © 2020 LexisNexis\\s*\\|?\\s*", "")) 
+
+
+# \\s* matches any amount of whitespace, which allows for flexibility if there are extra spaces around the text.
+# \\| matches the pipe symbol (|) literally.
+# The final \\s*\\|?\\s* accounts for an optional trailing pipe and whitespace, ensuring any leftover pipes are removed as well.
+
+extracted_lines
+
+```
+
+## Clean, Split text to separate articles on common identifier
+
+In this case, NexisUni makes life easy for us. At the end of each document, there are the words "End of Document". Convenient! We search for "End of Document" and then instruct R to split the file and dump it into a standalone text file.
+```{r}
+
+file_path <- "../exercises/assets/extracted_text/moley_text.txt"
+text_data <- readLines(file_path)
+
+# Step 2: Combine lines into one single string
+text_combined <- paste(text_data, collapse = "\n")
+
+# Step 3: Split the text by the "End of Document" phrase
+documents <- strsplit(text_combined, "End of Document")[[1]]
+
+#New Cleaning Sequence
+documents <- lapply(documents, function(doc) {
+  # Clean "Classification" to "Load-Date" metadata
+  doc <- str_replace_all(doc, "Classification[\\s\\S]*?Load-Date:.*?\\n", "")
+  
+  # Clean "Section:", "Length:", and "Body" followed by a blank line
+  doc <- str_replace_all(doc, "(Section:|Length:|Body)\\s*.*?(\\r?\\n){2,}", "")
+  
+  return(doc)
+})
+
+documents <- unlist(documents)
+#Clean metadata
+#text_combined <- str_replace_all(text_combined, "Classification[\\s\\S]*?Load-Date:.*?\\n", "")
+#text_combined <- str_replace_all(text_combined, "(Section:|Length:|Body)\\s*.*?(\\r?\\n)+", "")
+
+#Cleaning notes:
+# (Section:|Length:) matches either "Section:" or "Length:".
+# \\s*.*? matches any whitespace and optional characters on the same line as "Section:" or "Length:", allowing us to capture anything after the term until the end of the line.
+# (\\r?\\n)+ matches one or more newline sequences, whether \n or \r\n, ensuring that we also remove any extra line breaks following these terms.
+
+# Step 4: Write each section to a new file
+output_dir <- "../exercises/assets/extracted_text/"
+for (i in seq_along(documents)) {
+  output_file <- file.path(output_dir, paste0("moley_extracted_", i, ".txt"))
+  writeLines(documents[[i]], output_file)
+}
+
+cat("Files created:", length(documents), "\n")
+```
+
+```{r}
+#remove index from first article
+article1 <- read_lines("../exercises/assets/extracted_text/moley_extracted_1.txt")
+# Extract lines with only the text
+article1 <- article1[184:217]
+
+file1 <- "../exercises/assets/extracted_text/moley_extracted_1.txt"
+writeLines(article1, file1)
+
+```
+
+## Build a final dataframe index
+
+```{r}
+# This section from Bridget Lang does a better job capturing the date and title fields
+# Step 1: Trim spaces and detect rows with titles and dates
+cleaned_data <- extracted_lines |>
+  mutate(
+    # Trim leading and trailing spaces before detection
+    trimmed_line = str_trim(extracted_lines),  
+    
+    # Detect titles (start with a number and a period)
+   # is_title = str_detect(trimmed_line, "^\\d+\\."),  
+    # Detect dates (e.g., "Aug 14, 2024")
+    is_date = str_detect(trimmed_line, "\\b\\w{3} \\d{1,2}, \\d{4}\\b")
+  )
+cleaned_data
+
+cleaned_data <- cleaned_data |>
+  mutate(
+    # Trim leading and trailing spaces before detection
+    # Detect titles (start with a number and a period)
+    # Detect dates (e.g., "Aug 14, 2024")
+    is_title = ifelse(lead(is_date, 1), 
+                      TRUE, 
+                      str_detect(trimmed_line, "^\\d+\\."))
+  )
+cleaned_data
+
+
+    
+# Step 2: Shift dates to align with corresponding titles
+aligned_data <- cleaned_data |>
+  mutate(
+    date = ifelse(lead(is_date, 1), lead(trimmed_line, 1), ifelse(lead(is_date, 2), lead(trimmed_line,2), NA_character_)),
+      # if (lead(is_date, 1)){
+      #   lead(trimmed_line, 1)
+      # }else if (lead(is_date, 2)){
+      #   lead(trimmed_line,2)
+      # }else {
+      #   NA_charcter_
+      # }# Shift date to title's row
+    trimmed_line = ifelse(is_title,
+                   ifelse(lead(is_title, 1),
+                          paste0(trimmed_line, lead(trimmed_line, 1), " "),
+                          trimmed_line
+                          ), 
+                   trimmed_line
+                   )
+    
+   )|> 
+  filter(is_title) |>
+  filter(str_detect(trimmed_line, "^\\d+\\.")) |>
+  
+  select(trimmed_line, date)
+
+ # Keep only the relevant columns
+aligned_data
+# Step 3: Rename columns for clarity
+final_data <- aligned_data |>
+  rename(
+    title = trimmed_line,
+    date = date
+  )
+final_data
+#Step 4: Date and Publication in separate columns, and formatted
+final_data <- separate(data = final_data, col = date, into = c("date2", "publication"), sep = "  ", extra = "merge", fill = "right")
+
+
+#Step 5: Format date, clean headline
+final_data <- final_data |> 
+  mutate(date = as.Date(date2,format = "%b %d, %Y")) |> 
+  mutate(title =str_remove(title, "^\\d+\\. ")) |> 
+  subset(select = -(date2)) |> 
+  mutate(index = row_number()) |> 
+  select(index, date, title, publication)
+
+#write_csv(final_data, "./final_data.csv")
+```
+
+
+# Part 2: Compile Text into a Dataframe
+
+## Raw text compiler 
+```{r include=FALSE}
+#This creates an index with the file path to the stories. And then it compiles the stories into a dataframe
+#####################
+# Begin SM Code #####
+#####################
+
+###
+# List out text files that match pattern .txt, create DF
+###
+
+files <- list.files("../exercises/assets/extracted_text", pattern="*.txt") %>% 
+  as.data.frame() |> 
+  rename(filename = 1) |> 
+  #create an index with the file name
+ mutate(index = str_extract(filename, "\\d+")) |> 
+  mutate(index = as.numeric(index))
+
+#the actual path: #~/Code/CompText_Jour/exercises/assets/extracted_text
+
+#Join the file list to the index
+
+#load final data if you haven't already
+#final_data <- read.csv("assets/final_data.csv")
+
+final_index <- final_data |> 
+  inner_join(files, c("index")) |> 
+#you need the actual hard-coded path on this line below to the text
+  
+  # mutate(filepath = paste0("/Users/robwells/Code/CompText_Jour/exercises/assets/extracted_text/", filename))
+  mutate(filepath = paste0("../exercises/assets/extracted_text/", filename))
+head(final_index)
+```
+
+## Text compiler
+```{r}
+###
+# Define function to loop through each text file 
+###
+
+create_article_text <- function(row_value) {
+  
+  #row_value is the single argument that is passed to the function
+  # Take each row of the dataframe
+  temp <- final_index %>%
+    slice(row_value)
+  
+  # Store the filename for  use in constructing articles dataframe
+  temp_filename <- temp$filename
+  
+  # Create a dataframe by reading in lines of a given textfile
+  # Add a filename column 
+  articles_df_temp <- read_lines(temp$filepath) %>%
+    as_tibble() %>%
+    mutate(filename = temp_filename)
+  
+  # Bind results to master articles_df
+  # <<- returns to global environment
+  articles_df <<- articles_df %>%
+    bind_rows(articles_df_temp)
+}
+
+###
+# Create elements needed to run function
+###
+
+# Create empty tibble to store results
+articles_df <- tibble()
+#running once to test
+#create_article_text(2) 
+# Create an array of numbers to loop through, from 1 to the number of rows in our index dataframe 
+row_values <- 1:nrow(final_index)
+
+###
+# Execute function using lapply
+# This loops through each row of the dataframe and append results to master file
+###
+
+lapply(row_values, create_article_text)
+
+###
+# Clean up articles_df and join to index dataframe
+###
+
+articles_df <- articles_df %>%
+  select(filename, sentence=value) %>%
+  inner_join(final_index)
+
+#write.csv(articles_df, "../exercises/assets/extracted_text/moley_df2.csv")
+
+```
+
+# Part 2: Bigrams and Viz
+
+#Remove stopwords
+```{r}
+data(stop_words)
+```
+
+
+# Bigrams
+
+```{r}
+bigrams <- articles_df %>% 
+  select(sentence) %>% 
+  mutate(sentence = str_squish(sentence)) |> 
+  mutate(sentence = tolower(sentence)) |>  
+  mutate(sentence = str_replace_all(sentence, "title|pages|publication date|publication subject|issn|language of publication: english|document url|copyright|last updated|database|startofarticle|proquest document id|classification|https|--|people|publication info|illustration|caption|[0-9.]|identifier /keyword|twitter\\.", "")) |> 
+  mutate(sentence = str_replace_all(sentence, "- ", "")) %>% 
+  unnest_tokens(bigram, sentence, token="ngrams", n=2 ) %>% 
+  separate(bigram, c("word1", "word2"), sep = " ") %>% 
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>% 
+  count(word1, word2, sort = TRUE) %>% 
+  filter(!is.na(word1))
+
+bigrams
+```
+
+## Rerun with cleaning of random words from bigrams
+```{r}
+bigrams <- articles_df %>% 
+  select(sentence) %>% 
+  mutate(sentence = str_squish(sentence)) |> 
+  mutate(sentence = tolower(sentence)) |>  
+  mutate(sentence = str_replace_all(sentence, "new york times| news service|rights reserved|authoritative content|wwwalt|newstex|wwwjstororg|enwikipediaorg|wiki|length|words|title|pages|publication date|publication subject|issn|language of publication: english|document url|copyright|last updated|database|startofarticle|proquest document id|classification|https|--|people|publication info|illustration|caption|[0-9.]|identifier /keyword|twitter\\.", "")) |> 
+  mutate(sentence = str_replace_all(sentence, "https?://\\S+", "")) |> 
+  mutate(sentence = str_replace_all(sentence, "wwwalt\\S+", "")) |> 
+  mutate(sentence = str_replace_all(sentence, "- ", "")) %>% 
+  unnest_tokens(bigram, sentence, token="ngrams", n=2 ) %>% 
+  separate(bigram, c("word1", "word2"), sep = " ") %>% 
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>% 
+  count(word1, word2, sort = TRUE) %>% 
+  filter(!is.na(word1))
+
+bigrams
+```
+
+### Marilyn Harbert's killer cleaning script
+```{r}
+clean_df <- articles_df %>%
+  mutate(text = str_squish(sentence)) %>% #gets rid of leading and trailing spaces + double spaces
+  mutate(text = tolower(text)) %>%
+  mutate(text = str_replace(text, "startofarticle", "")) %>%
+  mutate(text = gsub("issn:\\s+\\S+", "", text)) %>%
+  mutate(text = str_replace_all(text, c(
+    "copyright" = "",
+    "database: proquest central" = "",
+    "language of publication: english" = "",
+    "document url:\\s+\\S+" = "",
+    "proquest document id:\\s+\\S+" = "",
+    "publication subject:\\s+\\S+" = "",
+    "publication date:\\s+\\S+" = "",
+    "publication-type:\\s+\\S+" = "",
+    "pages:\\s+\\S+" = "",
+    "publication info" = "",
+    "last updated:\\s+\\S+" = "",
+    "interest periodicals--united states" = "",
+    "all rights resesrved" = "",
+    "load-date" = "",
+    "all rights reserved" = "", 
+    "https://en.wikipedia.org/wiki" = "",
+    "https://www.alt-m.org/" = "", 
+    "new york times" = "",
+    "states news service" = "",
+    "language: english" = ""
+  ))) 
+```
+
+
+
+#top 20 bigrams
+```{r}
+
+top_20_bigrams <- bigrams |> 
+   top_n(20) |> 
+  mutate(bigram = paste(word1, " ", word2)) |> 
+  select(bigram, n)
+  
+```
+
+
+
+```{r}
+library(ggplot2)
+ggplot(top_20_bigrams, aes(x = reorder(bigram, n), y = n, fill=n)) +
+  geom_bar(stat = "identity") +
+  theme(legend.position = "none") +
+  coord_flip() +  
+  labs(title = "Top Two-Word phrases in Raymond Moley articles",
+       caption = "n=32 articles. Graphic by Rob Wells. 11-10-2024",
+       x = "Phrase",
+       y = "Count of terms")
+```
+
+
+
+# Code for people who didn't set their file paths correctly
+```{r}
+
+text <- pdf_text("../exercises/assets/pdfs/moley_news.PDF")
+
+#pdf_text reads the text from a PDF file.
+writeLines(text, "assets/extracted_text/moley_text.txt")
+
+
+```
+

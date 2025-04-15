@@ -1,0 +1,158 @@
+---
+title: "Key for R Proficiency"
+author: "Rob Wells"
+date: "2025-02-19"
+output: html_document
+---
+
+#1: --Load relevant software libraries
+```{r}
+library(tidyverse)
+library(rio)
+library(janitor)
+```
+
+#2: Load the data: https://github.com/wellsdata/CompText_Jour/raw/main/data/blackindex_master.csv
+```{r}
+
+test <- rio::import("https://github.com/wellsdata/CompText_Jour/raw/main/data/blackindex_master.csv") |> 
+  clean_names() |> 
+    subset(select = -c(year)) #deleting year for the exercise below
+
+```
+
+#3: Using code, describe the number of rows and columns in the dataset
+
+```{r}
+dim(test)
+
+
+# in this data set there are 1803 rows and 30 columns.. 
+
+
+print(paste0("This dataset has ", nrow(test), " rows and ", ncol(test), " columns. Each row in this dataset appears to describe a single article that appeared in a Black newspaper between ", min(test$year), " and ", max(test$year), ". The articles appear to have been sourced from several historical newspaper databases and archives. Many of the article headlines reference racial terror lynching."))
+
+```
+
+#4: Create a table that displays a count of the top 20 newspaper_city entries. Filter out the NA values
+```{r}
+test %>% 
+  filter(!is.na(newspaper_city)) |>
+  count(newspaper_city) %>% 
+ slice_max(order_by = n, n = 20)
+
+```
+
+#5: Create a table that counts all entries by year. Filter out the NA values
+```{r}
+library(lubridate)
+test <- test |> 
+  #mutate(date = as.Date(strptime(published_date, format = "%B %d, %Y %A"))) #some dates needed different processing
+  mutate(date = as.Date(date, format = "%Y %m %d")) |> 
+  mutate(year = year(date))
+
+
+year_test <- test %>%
+  group_by(year) %>%
+  count()
+
+
+
+
+test %>% 
+  filter(!is.na(newspaper_city)) %>% 
+  count(newspaper_city, year) %>% 
+  arrange(desc(n)) 
+  
+
+
+```
+
+
+#6: --Create a simple column ggplot chart that shows the total entries by year
+```{r}
+test %>%
+  count(year) %>% 
+  ggplot(aes(x = year, y = n, fill = n)) +
+  geom_col() +
+  scale_fill_gradient(low = "lightblue", high = "darkred") +
+  theme(legend.position = "none") +
+  labs(title = "Total articles by year in Black newspapers",
+       subtitle = "There are more articles from 1920 in this dataset than any other year",
+       x = "Year",
+       y = "Total Articles",
+       caption = "Source: Black Index Master Dataset, Chart by Rob Wells") +
+  scale_x_continuous(breaks = seq(1850, 2020, 10)) +
+  #rotate x axis labels 45 degrees
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+```
+
+
+# Extra items for discussion in class
+
+## Checkinmg duplication in data
+```{r}
+
+
+
+trump_dei_news <- rio::import("https://github.com/wellsdata/CompText_Jour/raw/refs/heads/main/exercises/assets/data/trump_dei_news.XLSX") |> 
+  clean_names()
+
+#One way to check the duplication
+trump_dei_news |>
+  filter(!is.na(publication_4)) |> 
+    filter(!is.na(publication_16)) |> 
+  count(publication_4, publication_16)|> 
+  top_n(20, n) |>
+  arrange(desc( n))
+```
+#Cut columns
+```{r}
+
+#Ways to cut columns: 1) select just the columns you want: 
+
+trim_trump <- trump_dei_news |> 
+select(title, published_date,publication_location, publication_4, section, word_count,countries,  byline,company)
+```
+
+#Delete specific columns:
+
+```{r}
+
+trim_trump <- trim_trump |> 
+  subset(select = -c(countries))
+```
+
+
+# Selecting specific variables
+```{r}
+
+test %>% 
+  filter(newspaper_city == c("Chicago", "Pittsburgh", "Atlanta")) %>% 
+  count(newspaper_city, year) %>% 
+  arrange(desc(n)) 
+
+```
+#Filter out a city
+```{r}
+
+test %>% 
+  filter(newspaper_city != "Chicago") %>% 
+  count(newspaper_city, year) %>% 
+  arrange(desc(n)) 
+
+```
+
+#Create a table that counts all newspaper_city entries by year
+```{r}
+
+entries_year <- test %>% 
+  filter(!is.na(newspaper_city)) %>% 
+  select(year, newspaper_city) %>% 
+  group_by(year, newspaper_city) %>% 
+  count(year) 
+
+```
+

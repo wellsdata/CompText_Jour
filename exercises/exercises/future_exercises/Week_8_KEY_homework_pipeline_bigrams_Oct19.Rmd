@@ -1,0 +1,432 @@
+---
+title: "KEY oct 19 bigrams"
+author: "Rob Wells"
+date: '2024-10-15'
+output: html_document
+---
+
+# Jour 389/689 Fall 2024:
+
+Prep for Assignment #3: Basic pipeline proficiency
+
+Use this dataset of Los Angeles Times articles on Chinese business in the U.S.
+
+ChinaFDI-LAT_tidy.csvLinks to an external site.
+
+Load the appropriate software libraries
+
+Import the data
+
+Then tokenize the data, one word per row
+
+Generate a list of the top 20 bigrams
+
+Create a ggplot chart showing the top 20 bigrams
+
+Create a table showing the top five bigrams per year
+
+At the bottom of the R markdown document, write a 250 word memo describing your key findings, focusing on how the bigrams changed over time. Describe any problems you encountered in this process.
+
+ 
+
+Edit Rubric together
+
+```{r message=FALSE, warning=FALSE}
+#load tidyverse, tidytext, rio 
+library(tidyverse)
+library(rio)
+library(tidytext)
+```
+
+```{r}
+#Import dataframe 
+
+fdi <- read_csv("https://raw.githubusercontent.com/wellsdata/CompText_Jour/main/data/ChinaFDI-LAT_tidy.csv")
+
+```
+
+
+
+
+# Count the number of distinct articles in 1910
+```{r}
+fdi %>% 
+  select(article_nmbr) %>% 
+ distinct(article_nmbr, .keep_all = TRUE) %>% 
+  count(article_nmbr) %>% 
+  summarize(total =sum(n)) 
+#There are 36 distinct articles in the dataset 
+n_distinct(fdi$article_nmbr)
+```
+
+#Remove stopwords
+```{r}
+data(stop_words)
+```
+
+
+# Bigrams
+
+```{r}
+bigrams <- fdi %>% 
+  select(text) %>% 
+  mutate(text = str_squish(text)) |> 
+  mutate(text = tolower(text)) |>  
+  mutate(text = str_replace_all(text, "title|pages|publication date|publication subject|issn|language of publication: english|document url|copyright|last updated|database|startofarticle|proquest document id|classification|https|--|people|publication info|illustration|caption|[0-9.]|identifier /keyword|twitter\\.", "")) |> 
+  mutate(text = str_replace_all(text, "- ", "")) %>% 
+  unnest_tokens(bigram, text, token="ngrams", n=2 ) %>% 
+  separate(bigram, c("word1", "word2"), sep = " ") %>% 
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>% 
+  count(word1, word2, sort = TRUE) %>% 
+  filter(!is.na(word1))
+
+bigrams
+```
+
+#top 20 bigrams
+```{r}
+
+top_20_bigrams <- bigrams |> 
+   top_n(20) |> 
+  mutate(bigram = paste(word1, " ", word2)) |> 
+  select(bigram, n)
+  
+
+
+```
+
+
+
+```{r}
+ggplot(top_20_bigrams, aes(x = reorder(bigram, n), y = n, fill=n)) +
+  geom_bar(stat = "identity") +
+  theme(legend.position = "none") +
+  coord_flip() +  
+  labs(title = "Top Two-Word phrases about Chinese investment in U.S.",
+       caption = "n=36 articles. Graphic by Rob Wells. 10-21-2024",
+       x = "Phrase",
+       y = "Count of terms")
+```
+
+
+
+```{r}
+afinn <- get_sentiments("afinn")
+
+#Clean and tokenize
+sentiment <- fdi %>% 
+  select(text, article_nmbr) %>% 
+  mutate(text = str_squish(text)) |> 
+  mutate(text = tolower(text)) |>  
+  mutate(text = str_replace_all(text, "calif|database central|info| times| issn|publication|periodicals|database|central|url|http|caption|photo|issn|proquest|document|copyright|accountid|docview|search.proquest.com|los angeles|los angeles times|[0-9.]|los angeles, calif\\.", "")) |> 
+  mutate(text = str_replace_all(text, "- ", "")) |> 
+  group_by(article_nmbr) |> 
+  unnest_tokens(tokens, text) |> 
+  filter(!tokens %in% stop_words$word) 
+
+
+
+# Sentiment analysis by joining the tokenized words with the AFINN lexicon
+sentiment_analysis <- sentiment %>%
+  inner_join(afinn, by = c("tokens"="word")) %>%
+  group_by(article_nmbr) %>%  
+  summarize(sentiment = sum(value), .groups = "drop")
+
+# a column for sentiment type (Positive or Negative)
+sentiment_analysis <- sentiment_analysis %>%
+   group_by(article_nmbr) %>% 
+  mutate(sentiment_type = ifelse(sentiment >= 0, "Positive", "Negative"))
+```
+
+```{r}
+# Visualize the sentiment scores
+ggplot(sentiment_analysis, aes(x = article_nmbr, y = sentiment, fill = sentiment_type)) +
+  geom_col(position = "dodge", stat = "identity") +
+  scale_fill_manual(values = c("Positive" = "darkgreen", "Negative" = "red")) + 
+  labs(title = "Sentiment Analysis Using AFINN Lexicon",
+       caption = "n=36 articles. Graphic by Rob Wells 10-20-2024",
+       x = "Words",
+       y = "Sentiment Score") 
+```
+
+
+# YOUR TURN
+
+Create one dataframe with black press articles
+```{r}
+bp <- lynch %>% 
+  filter(black_press=="Y")
+
+
+```
+
+
+#BP bigrams
+```{r}
+bp_stories_bigrams <- stories_df %>%
+  unnest_tokens(bigram, stories, token="ngrams", n=2)
+
+bp_stories_bigrams_separated <- bp_stories_bigrams %>%
+  separate(bigram, c("word1", "word2"), sep = " ") %>% 
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>% 
+  count(word1, word2, sort = TRUE) %>% 
+  filter(!is.na(word1))
+
+bp_stories_bigrams_separated
+
+```
+
+
+Create one dataframe without black press articles
+```{r}
+wp <- lynch %>% 
+  filter(is.na(black_press))
+
+#for some reason, the column had a trailing space so the anti-filter only worked like so:
+# wp <- lynch %>% 
+#   filter(black_press != "Y ")
+
+#to eliminate leading and trailing spaces
+# lynch <- lynch %>%
+#   mutate(black_press = trimws(black_press)) 
+
+
+```
+
+
+Produce the top 20 bigrams for the black press and non-black press coverage
+# Tokenize the 1900 lynching stories
+
+```{r}
+
+wp_stories_bigrams <- wp %>% 
+  select(sentence) %>% 
+  mutate(sentence = str_replace_all(sentence, "- ", "")) %>% 
+  unnest_tokens(bigram, sentence, token="ngrams", n=2 ) %>% 
+  separate(bigram, c("word1", "word2"), sep = " ") %>% 
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>% 
+  count(word1, word2, sort = TRUE) %>% 
+  filter(!is.na(word1))
+
+wp_stories_bigrams 
+```
+
+Compare and discuss!
+#top BP Bigrams
+```{r}
+bp_top5 <- head(bp_stories_bigrams, 5)
+
+cat("The top five Black press bigrams were:\n")
+print(bp_top5)
+
+```
+
+#top WP Bigrams
+```{r}
+wp_top5 <- head(wp_stories_bigrams, 5)
+
+cat("The top five white press bigrams were:\n")
+print(wp_top5)
+
+
+```
+
+print(paste0("A: The top five cities in the newspaper_city column are: ", 
+             paste(top_five, collapse = ", "), ". However, it's important to note that the dataset of ",nrow(blackindex_master), " rows has ", newspaper_city_count_na, " rows with a missing value in the newspaper_city column."))
+
+
+```{r}
+
+# Create a data frame with the top bigrams
+results_table <- data.frame(
+  Rank = 1:5,
+  `Black Press Bigrams` = bp_top5,
+  `White Press Bigrams` = wp_top5
+)
+
+#fix the column names
+results_table <- results_table %>% 
+  rename(bp1 = 2, bp2=3, bp_count=4, wp1=5, wp6=6, wp_count=7)
+
+results_table
+```
+
+
+```{r}
+library(kableExtra)
+
+# Formatting so you can read it in R studio Dark Mode
+kable(results_table, 
+      caption = "Top Five Bigrams in Black and White Press",
+      align = c('c', 'l', 'l')) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+                full_width = FALSE,
+                position = "left",
+                font_size = 14) %>%
+  row_spec(0, bold = TRUE, color = "white", background = "#4C4C4C") %>%
+  column_spec(1, bold = TRUE, border_right = TRUE) %>%
+  row_spec(1:5, background = "white", color = "black")
+```
+
+
+# Trigrams
+
+```{r}
+stories_trigrams <- stories_df %>%
+  unnest_tokens(trigram, stories, token="ngrams", n=3)
+
+stories_trigrams_separated <- stories_trigrams %>%
+  separate(trigram, c("word1", "word2", "word3"), sep = " ")
+
+stories_trigrams_ct <- stories_trigrams_separated %>%
+  count(word1, word2, word3, sort = TRUE)
+
+#filtered
+# stories_trigrams_filtered <- stories_trigrams_separated %>%
+#   filter(!word1 %in% stop_words$word) %>%
+#   filter(!word2 %in% stop_words$word) %>%
+#   filter(!word3 %in% stop_words$word)
+# 
+# stories_trigrams_ct <- stories_trigrams_filtered %>%
+#   count(word1, word2, word3, sort = TRUE)
+
+#replace Date for the decade analyzed
+stories_trigrams_ct_post1940 <- stories_trigrams_ct %>% 
+  mutate(decade = "post1940")
+
+write_csv(stories_trigrams_ct_post1940, "../output/post1940_lynch_trigram_count.csv")
+
+
+```
+
+#Compile DFs
+
+```{r}
+stories_bigram_cts_pre1850s <- read.csv("../output/pre1850s_lynch_bigram_count.csv")
+stories_bigram_cts_the1850s <- read.csv("../output/the1850s_lynch_bigram_count.csv")
+stories_bigram_cts_the1860s <- read.csv("../output/1860s_lynch_bigram_count.csv")
+stories_bigram_cts_the1870s <- read.csv("../output/1870s_lynch_bigram_count.csv")
+stories_bigram_cts_the1880s <- read.csv("../output/1880s_lynch_bigram_count.csv")
+stories_bigram_cts_the1890s <- read.csv("../output/1890s_lynch_bigram_count.csv")
+stories_bigram_cts_the1900s <- read.csv("../output/1900s_lynch_bigram_count.csv")
+stories_bigram_cts_the1910  <- read.csv("../output/1910s_lynch_bigram_count.csv")
+stories_bigram_cts_the1920s <- read.csv("../output/1920s_lynch_bigram_count.csv")
+```
+
+```{r}
+#Compile DFs
+
+bigrams_all <- rbind(stories_bigram_cts_pre1850s,stories_bigram_cts_the1850s, stories_bigram_cts_the1860s, stories_bigram_cts_the1870s, stories_bigram_cts_the1880s, stories_bigram_cts_the1890s, stories_bigram_cts_the1900s, stories_bigram_cts_the1910,stories_bigram_cts_the1920s, stories_bigram_cts_1930s, stories_bigram_cts_post1940) 
+
+
+write.csv(bigrams_all, "../output/all_bigrams_11.10.csv")
+```
+
+```{r}
+stories_QUINTgrams <- stories_df %>%
+  unnest_tokens(phrase, stories, token="ngrams", n=5)
+
+stories_QUINTgrams_ct <- stories_QUINTgrams %>%
+  count(phrase, sort=TRUE)
+
+#write_csv(stories_QUINTgrams_ct, "stories_corpus_quintgram_count.csv")
+
+stories_QUINTgrams_ct
+
+```
+
+```{r}
+# plotting for fun and profit
+#NEEDS TO BE FIXED
+story_word_ct %>%
+  filter(n >= 5000) %>%
+  mutate(word = reorder(word,n)) %>%
+  ggplot(aes(n, word)) + 
+  geom_col() +
+  labs(y = NULL) + 
+  ggtitle("Words mentioned 5000 times or more in identified lynching articles")
+
+```
+
+*If we want to look at trigrams for narrative, maybe we don't drop the stop words? Might be more likely to catch turns of phrase.*
+
+# Quanteda
+
+```{r}
+#install.packages("readtext")
+library(quanteda)
+library(readtext)
+lynch1 <- readtext("../narratives/article_text_test")
+```
+
+### creates index with metadata
+
+```{r}
+###
+# List out text files that match pattern .txt, create DF
+###
+
+files <- list.files("../article_text_7_15/article_text/", pattern="*.txt") %>% 
+  as.data.frame() %>%
+  rename(filename = 1) %>%
+  filter(!str_detect(filename,"log"))
+
+
+###
+# Load 638 stories provided by jack, create join column, join to files list
+###
+
+jackindex <- read_csv("../article_text_7_15/article_text/LayoutBoxes_index.csv") %>%
+  mutate(filename = paste0(file_id,"_",article_id,".txt")) %>%
+  inner_join(files) %>%
+  mutate(filepath = paste0("../article_text_7_15/article_text/",filename))
+```
+
+### adds metadata to corpus
+
+```{r}
+lynch1 <- lynch1 %>% 
+  inner_join(jackindex, by=c("doc_id"="filename"))
+
+
+#Other options
+#summary(corpus_subset(data_corpus_inaugural, President == "Adams"))
+
+```
+
+```{r}
+
+my_corpus <- corpus(lynch1)  # build a new corpus from the texts
+summary(my_corpus)
+
+
+```
+
+### subset corpus
+
+```{r}
+
+x1920s <- summary(corpus_subset(my_corpus, year > 1920))
+
+```
+
+## kwic
+
+```{r}
+
+quanteda_test <- kwic(my_corpus, "lynch", valuetype = "regex") %>% as.data.frame()
+
+
+quanteda_test <- kwic(my_corpus, "torture", valuetype = "regex") %>% as.data.frame()
+
+quanteda_test <- kwic(my_corpus, "watts", valuetype = "regex") %>% as.data.frame()
+
+  
+#write.csv(quanteda_test, "quanteda_test.csv")
+
+```
+
+### 
