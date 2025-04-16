@@ -1,0 +1,117 @@
+---
+title: "Reddit Extractor"
+author: "Wells"
+date: "2025-04-16"
+output: html_document
+---
+
+#Simple Reddit extractor
+https://github.com/ivan-rivera/RedditExtractor
+
+
+```{r}
+#devtools::install_github('ivan-rivera/RedditExtractor')
+library(RedditExtractoR)
+library(tidyverse)
+```
+
+# Search for URLs
+```{r}
+top_cats_urls <- find_thread_urls(subreddit="cats", sort_by="top")
+str(top_cats_urls)
+
+
+```
+
+```{r}
+
+baltimore_urls <- find_thread_urls(subreddit="baltimore", sort_by="top")
+str(baltimore_urls)
+
+
+```
+#Search keywords
+```{r}
+
+key_bridge <- find_thread_urls(keywords="key bridge") |> 
+    mutate(index = 1:n())
+
+```
+
+
+```{r}
+#examine text from specific post
+key_bridge$text[1]
+
+```
+
+#More specific phrase search
+```{r}
+key_bridge1 <- find_thread_urls(keywords="\"key bridge\"") |> 
+   mutate(index = 1:n())
+```
+
+
+
+# parse these URLs and retrieve their metadata and comments
+```{r}
+threads_contents <- get_thread_content(top_cats_urls$url[1:2]) # just two posts
+str(threads_contents$threads) # thread metadata
+```
+
+# Search for subreddits
+```{r}
+
+cat_subreddits <- find_subreddits("cats")
+```
+
+
+```{r}
+
+
+bmore_subreddits <- find_subreddits("baltimore")
+```
+
+# retrieve information about a particular user:
+
+
+```{r}
+
+user <- "nationalgeographic"
+nat_geo_user <- get_user_content(user)
+str(nat_geo_user[[user]]$about)
+# List of 7
+# $ created_utc  : chr "2017-08-24"
+# $ name         : chr "nationalgeographic"
+# $ is_employee  : logi FALSE
+# $ is_mod       : logi TRUE
+# $ is_gold      : logi TRUE
+# $ thread_karma : num 279068
+# $ comment_karma: num 87406
+str(nat_geo_user[[user]]$comments)
+# 'data.frame':	997 obs. of  11 variables:
+# $ url           : chr  "https://www.reddit.com/r/history/comments/anhdnl/im_historian_author_and_musician_mark_lee_gardner/" "https://www.reddit.com/r/history/comments/anhdnl/im_historian_author_and_musician_mark_lee_gardner/" "https://www.reddit.com/r/history/comments/anhdnl/im_historian_author_and_musician_mark_lee_gardner/" "https://www.reddit.com/r/history/comments/anhdnl/im_historian_author_and_musician_mark_lee_gardner/" ...
+# $ date_utc      : chr  "2019-02-05" "2019-02-05" "2019-02-05" "2019-02-05" ...
+# $ subreddit     : chr  "history" "history" "history" "history" ...
+# $ thread_author : chr  "nationalgeographic" "nationalgeographic" "nationalgeographic" "nationalgeographic" ...
+# $ comment_author: chr  "nationalgeographic" "nationalgeographic" "nationalgeographic" "nationalgeographic" ...
+# $ thread_title  : chr  "I\031m historian, author, and musician Mark Lee Gardner and I can tell you a lot about Jesse James, the infamou"| __truncated__ "I\031m historian, author, and musician Mark Lee Gardner and I can tell you a lot about Jesse James, the infamou"| __truncated__ "I\031m historian, author, and musician Mark Lee Gardner and I can tell you a lot about Jesse James, the infamou"| __truncated__ "I\031m historian, author, and musician Mark Lee Gardner and I can tell you a lot about Jesse James, the infamou"| __truncated__ ...
+# $ comment       : chr  "You're welcome.  Part of Jesse and Frank's success in eluding law enforcement (in addition to fast horses!) was"| __truncated__ "In 1874, the Missouri legislature passed the Suppression of Outlawry Act that set aside a \"state secret servic"| __truncated__ "Probably the quick-draw gunfight: two men staring each other down in the middle of the street and attempting to"| __truncated__ "That was actually part of the problem.  There was often little coordination between towns and the state.  In fa"| __truncated__ ...
+# $ score         : num  2 2 9 4 8 6 6 10 13 2 ...
+# $ up            : num  2 2 9 4 8 6 6 10 13 2 ...
+# $ downs         : num  0 0 0 0 0 0 0 0 0 0 ...
+# $ golds         : num  0 0 0 0 0 0 0 0 0 0 ...
+str(nat_geo_user[[user]]$threads)
+# 'data.frame':	999 obs. of  10 variables:
+# $ url      : chr  "https://www.nationalgeographic.com/environment/2019/02/2018-fourth-warmest-year-ever-noaa-nasa-reports/?cmpid=o"| __truncated__ "https://www.reddit.com/r/history/comments/anhdnl/im_historian_author_and_musician_mark_lee_gardner/" "https://www.nationalgeographic.com/environment/2019/02/climate-change-alters-oceans-blues-greens/" "https://v.redd.it/ehqa55sbcge21" ...
+# $ date_utc : chr  "2019-02-06" "2019-02-05" "2019-02-05" "2019-02-04" ...
+# $ subreddit: chr  "u_nationalgeographic" "history" "u_nationalgeographic" "u_nationalgeographic" ...
+# $ author   : chr  "nationalgeographic" "nationalgeographic" "nationalgeographic" "nationalgeographic" ...
+# $ title    : chr  "The last five years were the hottest ever, NASA and NOAA declare" "I\031m historian, author, and musician Mark Lee Gardner and I can tell you a lot about Jesse James, the infamou"| __truncated__ "Climate change will shift the oceansâ\u0080\u0099 colors" "Welcome to our half-time show of only the most superb owls" ...
+# $ text     : chr  "" "Edit: Thanks so much for your questions.  They were excellent!  I've got to run now, but be sure to check out m"| __truncated__ "" "" ...
+# $ golds    : num  0 0 0 0 2 0 1 0 0 0 ...
+# $ score    : num  303 62 165 97 6406 ...
+# $ ups      : num  303 62 165 97 6406 ...
+# $ downs    : num  0 0 0 0 0 0 0 0 0 0 ...
+```
+
