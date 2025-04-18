@@ -1,7 +1,8 @@
 ---
 title: "AI Classifier"
-output: html_notebook
+author: "Rob Wells and his pal Claude"
 date: 04-18-2025
+output: null
 ---
 
 This exercise is an introduction to using AI to classify content. We're using the ellmer package: <https://ellmer.tidyverse.org/>
@@ -25,6 +26,21 @@ library(janitor)
 
 ```
 
+# API Key
+Google Studio, create API Key
+https://aistudio.google.com/app/apikey
+
+# Important! DO NOT STORE YOUR API Key in GitHub! 
+
+```{r}
+
+Sys.setenv(GOOGLE_API_KEY = "XXX")
+
+
+```
+
+
+
 ```{r}
 chat <- chat_gemini()
 
@@ -32,18 +48,19 @@ chat <- chat_gemini()
 chat$chat("Please give me three reasons to get out of bed in the morning. Make it funny")
 ```
 
-## Load Data
+## Tokens
+On average an English word needs ~1.5 tokens so a page might require 375-400 tokens
 
-library(googledrive)
-library(rio)
+An LLM is a model, and like all models needs some way to represent its inputs numerically. For LLMs, that means we need some way to convert words to numbers. This is the goal of the tokenizer. For example, using the GPT 4o tokenizer, the string “When was R created?” is converted to 5 tokens: 5958 (“When”), 673 (” was”), 460 (” R”), 5371 (” created”), 30 (“?”). As you can see, many simple strings can be represented by a single token. But more complex strings require multiple tokens. For example, the string “counterrevolutionary” requires 4 tokens: 32128 (“counter”), 264 (“re”), 9477 (“volution”), 815 (“ary”). (You can see how various strings are tokenized at http://tiktokenizer.vercel.app/).
 
-# First, download the file from Google Drive
-temp_file <- tempfile()
-drive_download(as_id("1fexSMTg_wJOpyh_XCuc_3_2CP_FGS_tB"), path = temp_file)
+### Price
+State of the art models (like GPT-4o or Claude 3.5 sonnet) cost $2-3 per million input tokens, and $10-15 per million output tokens. Cheaper models can cost much less, e.g. GPT-4o mini costs $0.15 per million input tokens and $0.60 per million output tokens.
 
-# Then import the downloaded file
-# If you know the file format, specify it explicitly
-dei_articles <- rio::import(temp_file, format = "csv") # or "xlsx", "txt", etc.
+## Check token usage
+
+In ellmer, you can see how many tokens a conversations has used by printing it, and you can see total usage for a session with token_usage()
+
+
 
 ```{r echo = F}
 #136596 rows of text
@@ -56,9 +73,9 @@ articles_text <-  rio::import("https://www.dropbox.com/scl/fi/0xej3ebt6kuiwxa0cz
 
 ```{r}
 
-llm_test <- articles_text[1:1000, ]
+llm_text <- articles_text[1:1000, ]
 
-llm_test <- llm_test |> 
+llm_text <- llm_text |> 
   mutate(sentence = gsub("\n", " ", sentence)) |> 
   mutate(sentence = gsub("\\s+", " ", sentence))
 
@@ -78,6 +95,7 @@ process_articles <- function(df) {
       # Combine all non-NA sentences
       sentence = paste(na.omit(sentence), collapse = " "),
       # Keep one value for each of the other columns
+      # consolidating metadata into single row per article
       title = first(title),
       abstract = first(abstract),
       store_id = first(store_id),
@@ -113,21 +131,21 @@ process_articles <- function(df) {
 }
 
 # Apply the function to your dataframe
-processed_llm_test <- process_articles(llm_test)
-```
+processed_llm_text <- process_articles(llm_text)
 
-# The AI prompt
-
-```{r}
 # Prepare data with filenames and content
-articles_for_analysis <- processed_llm_test %>%
+articles_for_analysis <- processed_llm_text %>%
   select(filename, sentence) %>%
   mutate(article_data = paste("FILENAME:", filename, "\nCONTENT:", sentence))
 
 # Combine with clear separators
 combined_text_with_filenames <- paste(articles_for_analysis$article_data, 
                                     collapse = "\n\n---ARTICLE SEPARATOR---\n\n")
+```
 
+# The AI prompt
+
+```{r}
 # Update system prompt to request the specific format you want
 chat <- chat_gemini(
   system_prompt = "You are an academic researcher performing context analysis on selected Newsweek articles. Analyze each article and classify it based on these criteria:
@@ -156,7 +174,8 @@ chat <- chat_gemini(
 response <- chat$chat(combined_text_with_filenames)
 ```
 
-#old version lacks the explanation column
+#Process first response
+--We're taking the chat response and putting it into a dataframe
 
 ```{r}
 process_llm_response_to_df <- function(response) {
@@ -188,11 +207,9 @@ process_llm_response_to_df <- function(response) {
     
     # Process data lines (only after header is found)
     if (header_found) {
-      # Split by comma, handling potential issues
       parts <- strsplit(line, ",")[[1]]
       if (length(parts) >= 2) {
         filenames <- c(filenames, parts[1])
-        # Handle case where category might contain commas
         categories <- c(categories, paste(parts[2:length(parts)], collapse=","))
       }
     }
@@ -215,18 +232,18 @@ process_llm_response_to_df <- function(response) {
   }
 }
 
-result_df2 <- process_llm_response_to_df(response2)
+result_df <- process_llm_response_to_df(response)
 
-result_df2
+result_df
 
 ```
 
 # validate results
 
-democrat critique
+--democrat critique
 
 ```{r}
-dem <- result_df2 |> 
+dem <- result_df |> 
   filter(str_detect(category, "democrat_critique")) |> 
   mutate(path = paste0("./perspective_extracted/",filename)) |> 
   mutate(ai_correct = " ",
@@ -273,12 +290,14 @@ write_combined_files <- function(file_list, file_paths, output_file) {
   message(paste("Successfully wrote", length(file_list), "files to", output_file))
 }
 
-write_combined_files(viet_list, file_paths1, "combined_viet_files.txt")
+write_combined_files(dem_list, file_paths1, "combined_dem_files.txt")
 ```
 
 Now, open a Google Sheet, import dem_ai_verification.csv, read the articles and rate the responses
 
 # A better AI prompt
+--Spoiler alert. 
+--This prompt seeks to improve on the Democrat_critique : " If an article contains two or more mentions of Democrats or the Democratic Party and if adjectives modifying Democrats are critical, classify it as 'democrat_critique'"
 
 ```{r}
 chat2 <- chat_gemini(
@@ -434,74 +453,14 @@ write_combined_files <- function(file_list, file_paths, output_file) {
 write_combined_files(viet_list, file_paths1, "combined_viet_files.txt")
 ```
 
+# Token usage and pricing
 ```{r}
-# chat <- chat_ollama(
-#   model = "deepseek-r1:70b"
-# )
-
-```
-
-```{r}
-
-chat <- chat_gemini()
-
-data <- chat$extract_data(
-  "My name is Marcus and I'm a 24 year old jazz player",
-  type = type_object(
-    age = type_number(),
-    name = type_string(),
-    major = type_string()
-  )
-)
-
-as.data.frame(data)
-
-```
-
-The amount you trust an LLM is related to the amount of pain you're willing to endure.
-
-time management - limiot to five queries per minute to stay in free tier. put a five second pause at the return after the function call
-
-library(refiner) Open Refine tool key_collision_merge <https://cran.r-project.org/web/packages/refineR/vignettes/refineR_package.html> <https://r-packages.io/packages/refineR/refineR-Package>
-
-```{r}
+tokens <- token_usage()
 
 
 chat <- chat_gemini()
 
-chat$extract_data(
-  "POSS W/ INTENT DIST METH",
-  type = type_object(
-    methamphetamine_related = type_boolean(),
-    drug_possession_related = type_boolean(),
-    drug_distribution_related = type_boolean(),
-    fully_spelled_out_no_abbreviations = type_string()
-  )
-)
+#Prompt
+chat$chat(paste0("How much will it cost me with my token usage so far using gemini 2.0 flash. My input token use is: ", tokens$input, "and my output token use is: ", tokens$output))
 ```
 
-```{r}
-
-countypopchange <- read_csv("https://the-art-of-data-journalism.github.io/tutorial-data/census-estimates/nebraska.csv")
-
-statenarrative <- countypopchange |> 
-  select(COUNTY, STATE, CTYNAME, STNAME, POPESTIMATE2023, POPESTIMATE2022, NPOPCHG2023, NATURALCHG2023, NETMIG2023) |>
-  mutate(POPPERCENTCHANGE = ((POPESTIMATE2023-POPESTIMATE2022)/POPESTIMATE2022)*100) |> 
-  mutate(GEOID = paste0(COUNTY, STATE)) |> 
-  arrange(desc(POPPERCENTCHANGE)) |> 
-  mutate(PCTCHANGERANK = row_number()) |> 
-  mutate(base_narrative = glue(
-  "County: {CTYNAME}, Population in 2023: {POPESTIMATE2023}, Population in 2022: {POPESTIMATE2022}, Population change: {NPOPCHG2023}, Percent change: {POPPERCENTCHANGE}, Percent change rank in {STNAME}: {PCTCHANGERANK}, Natural change (births vs deaths): {NATURALCHG2023}, Net migration: {NETMIG2023}")) 
-
-statenarrative$base_narrative[[1]]
-
-```
-
-```{r}
-
-chat <- chat_gemini(
-  system_prompt = "You are a demographics journalist from Nebraska. Your job today is to write short -- 2-3 sentence -- summaries of population estimates from the Census Bureau for each county in the state. I will provide you the name of the county and a series of population numbers for the county. Your job is to turn it into a concise but approachable summary of what happened in that county. Here is the data you have to work with: "
-)
-
-chat$chat(statenarrative$base_narrative[[2]])
-```
