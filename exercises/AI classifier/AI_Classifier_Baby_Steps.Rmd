@@ -2,7 +2,7 @@
 title: "AI Classifier"
 author: "Rob Wells and his pal Claude"
 date: 04-18-2025
-output: null
+output: pdf_document
 ---
 
 This exercise is an introduction to using AI to classify content. We're using the ellmer package: <https://ellmer.tidyverse.org/>
@@ -13,11 +13,13 @@ ellmer supports a wide variety of model providers:
 
 Anthropic’s Claude: chat_claude(). AWS Bedrock: chat_bedrock(). Azure OpenAI: chat_azure(). Databricks: chat_databricks(). DeepSeek: chat_deepseek(). GitHub model marketplace: chat_github(). Google Gemini: chat_gemini(). Groq: chat_groq(). Ollama: chat_ollama(). OpenAI: chat_openai(). OpenRouter: chat_openrouter(). perplexity.ai: chat_perplexity(). Snowflake Cortex: chat_snowflake() and chat_cortex_analyst(). VLLM: chat_vllm()
 
-chat_gemini() is great for large prompts because it has a much larger context window than other models. It allows up to 1 million tokens. It also comes with a generous free tier (with the downside that your data is used to improve the model).
+Google's chat_gemini() is great for large prompts because it has a much larger context window than other models. It allows up to 1 million tokens (about 8 average length English novels) and has a generous free tier. By contrast, other LLMS allow 32,000 tokens or 128,000 tokens in their context windows. One warning: your data is used to improve the model.
+
+For Gemini models, a token is equivalent to about 4 characters. 100 tokens is equal to about 60-80 English words.
 
 And so we will use chat_gemini()
 
-```{r}
+```{r include=FALSE}
 #install.packages("ellmer")
 library(ellmer)
 library(tidyverse)
@@ -27,40 +29,55 @@ library(janitor)
 ```
 
 # API Key
+
 Google Studio, create API Key
-https://aistudio.google.com/app/apikey
 
-# Important! DO NOT STORE YOUR API Key in GitHub! 
+--You may need to use your personal gmail account. 
+--Do not activate billing. We are just using the free tier of Gemini
+--Create API key here: <https://aistudio.google.com/app/apikey>
 
-```{r}
+# Important! DO NOT STORE YOUR API Key in GitHub!
 
-Sys.setenv(GOOGLE_API_KEY = "XXX")
+```{r echo=FALSE}
+
+#Sys.setenv(GOOGLE_API_KEY = "XXXX")
 
 
 ```
 
 
 
-```{r}
+
+```{r echo=FALSE}
 chat <- chat_gemini()
 
 #Prompt
 chat$chat("Please give me three reasons to get out of bed in the morning. Make it funny")
 ```
 
-## Tokens
-On average an English word needs ~1.5 tokens so a page might require 375-400 tokens
+# -----------------------------------------------------------------------------------------------------------
+# Important! after verifying that the chat_gemini is working, I would delete the API key from Line 37 so you don't mistakenly save it to GitHub. 
+# -----------------------------------------------------------------------------------------------------------
 
-An LLM is a model, and like all models needs some way to represent its inputs numerically. For LLMs, that means we need some way to convert words to numbers. This is the goal of the tokenizer. For example, using the GPT 4o tokenizer, the string “When was R created?” is converted to 5 tokens: 5958 (“When”), 673 (” was”), 460 (” R”), 5371 (” created”), 30 (“?”). As you can see, many simple strings can be represented by a single token. But more complex strings require multiple tokens. For example, the string “counterrevolutionary” requires 4 tokens: 32128 (“counter”), 264 (“re”), 9477 (“volution”), 815 (“ary”). (You can see how various strings are tokenized at http://tiktokenizer.vercel.app/).
+## Tokens
+
+On average an English word needs \~1.5 tokens so a page might require 375-400 tokens. 
+
+For Gemini models, a token is equivalent to about 4 characters. 100 tokens is equal to about 60-80 English words. A 5,000 word essay would be about 8,000 tokens (1.6 tokens per word...).
+
+From the ellmer documentation: 
+
+An LLM is a model, and like all models needs some way to represent its inputs numerically. For LLMs, that means we need some way to convert words to numbers. This is the goal of the tokenizer. For example, using the GPT 4o tokenizer, the string “When was R created?” is converted to 5 tokens: 5958 (“When”), 673 (” was”), 460 (” R”), 5371 (” created”), 30 (“?”). As you can see, many simple strings can be represented by a single token. But more complex strings require multiple tokens. For example, the string “counterrevolutionary” requires 4 tokens: 32128 (“counter”), 264 (“re”), 9477 (“volution”), 815 (“ary”). (You can see how various strings are tokenized at <http://tiktokenizer.vercel.app/>).
 
 ### Price
-State of the art models (like GPT-4o or Claude 3.5 sonnet) cost $2-3 per million input tokens, and $10-15 per million output tokens. Cheaper models can cost much less, e.g. GPT-4o mini costs $0.15 per million input tokens and $0.60 per million output tokens.
+
+State of the art models (like GPT-4o or Claude 3.5 sonnet) cost \$2-3 per million input tokens, and \$10-15 per million output tokens. Cheaper models can cost much less, e.g. GPT-4o mini costs \$0.15 per million input tokens and \$0.60 per million output tokens.
+
+We are using the free tier of Gemini. Do not activate billing.
 
 ## Check token usage
 
 In ellmer, you can see how many tokens a conversations has used by printing it, and you can see total usage for a session with token_usage()
-
-
 
 ```{r echo = F}
 #136596 rows of text
@@ -71,7 +88,7 @@ articles_text <-  rio::import("https://www.dropbox.com/scl/fi/0xej3ebt6kuiwxa0cz
 
 # Load a very small subset: 10 articles
 
-```{r}
+```{r echo=FALSE}
 
 llm_text <- articles_text[1:1000, ]
 
@@ -85,7 +102,7 @@ llm_text <- llm_text |>
 
 --Articles put into a single string of text, no punctuation or spaces
 
-```{r}
+```{r echo=FALSE}
 process_articles <- function(df) {
   # First group by article identifiers and concatenate sentences
   # Using filename as the identifier, but you might need to use other columns
@@ -145,14 +162,159 @@ combined_text_with_filenames <- paste(articles_for_analysis$article_data,
 
 # The AI prompt
 
-```{r}
+```{r echo=FALSE}
 # Update system prompt to request the specific format you want
 chat <- chat_gemini(
   system_prompt = "You are an academic researcher performing context analysis on selected Newsweek articles. Analyze each article and classify it based on these criteria:
   
   1. If an article contains two or more mentions of President Richard Nixon, classify it as 'nixon'
+  2. If an article contains two or more mentions the Vietnam War, classify it as 'vietnam'
+
+  Return ONLY a CSV-formatted result with exactly two columns:
+  filename,category
+  
+  For example:
+  filename,category
+  article1.txt,nixon
+  article2.txt,vietnam
+  article3.txt,nixon;vietnam
+  
+  No additional text, explanations, or summary counts."
+)
+
+# Send to the LLM
+response <- chat$chat(combined_text_with_filenames)
+```
+
+#Process first response --We're taking the chat response and putting it into a dataframe
+
+```{r echo=FALSE}
+process_llm_response_to_df <- function(response) {
+  # Extract lines
+  lines <- strsplit(response, "\n")[[1]]
+  
+  # Remove markdown code block markers if present
+  lines <- lines[!grepl("^```", lines)]
+  
+  # Initialize vectors for data
+  filenames <- c()
+  categories <- c()
+  
+  # Flag to track if we're processing data (after header)
+  header_found <- FALSE
+  
+  for (line in lines) {
+    # Skip empty lines
+    if (trimws(line) == "") next
+    
+    # Skip row numbers or other artifacts (lines with asterisks)
+    if (grepl("\\*\\*", line)) next
+    
+    # Check if this is the header line
+    if (grepl("filename,category", line, ignore.case = TRUE)) {
+      header_found <- TRUE
+      next
+    }
+    
+    # Process data lines (only after header is found)
+    if (header_found) {
+      parts <- strsplit(line, ",")[[1]]
+      if (length(parts) >= 2) {
+        filenames <- c(filenames, parts[1])
+        categories <- c(categories, paste(parts[2:length(parts)], collapse=","))
+      }
+    }
+  }
+  
+  # Create and return the dataframe
+  if (length(filenames) > 0) {
+    data.frame(
+      filename = filenames,
+      category = categories,
+      stringsAsFactors = FALSE
+    )
+  } else {
+    # Return empty dataframe with correct structure if no data found
+    data.frame(
+      filename = character(0),
+      category = character(0),
+      stringsAsFactors = FALSE
+    )
+  }
+}
+
+result_df <- process_llm_response_to_df(response)
+
+result_df
+
+```
+
+# validate results
+
+
+```{r echo=FALSE}
+nixon <- result_df |> 
+  filter(str_detect(category, "nixon")) |> 
+  mutate(path = paste0("./perspective_extracted/",filename)) |> 
+  mutate(ai_correct = " ",
+         ai_wrong = " ",
+         unsure = " ",
+         notes = " ")
+
+write.csv(nixon, "nixon_ai_verification.csv")
+
+
+file_paths1 <- nixon$path
+nixon_list <- lapply(file_paths1, readLines)
+```
+# process the results to a single file, separated by file name
+
+```{r echo=FALSE}
+
+write_combined_files <- function(file_list, file_paths, output_file) {
+  # Open connection to output file
+  con <- file(output_file, "w")
+  
+  # Loop through each file
+  for (i in seq_along(file_list)) {
+    # Extract just the filename from the path
+    filename <- basename(file_paths[i])
+    
+    # Write the separator with filename
+    writeLines(paste0("=== FILE: ", filename, " ==="), con)
+    
+    # Write the content of the file
+    writeLines(file_list[[i]], con)
+    
+    # Add a blank line between files (except after the last file)
+    if (i < length(file_list)) {
+      writeLines("", con)
+    }
+  }
+  
+  # Close the connection
+  close(con)
+  
+  # Return a message
+  message(paste("Successfully wrote", length(file_list), "files to", output_file))
+}
+
+write_combined_files(nixon_list, file_paths1, "combined_nixon_files.txt")
+```
+
+Now, open a Google Sheet, import nixon_ai_verification.csv, read the articles and rate the responses
+
+
+# Second AI prompt
+
+```{r echo=FALSE}
+# Update system prompt to request the specific format you want
+chat <- chat_gemini(
+  system_prompt = "You are an academic researcher performing context analysis on selected Newsweek articles. Analyze each article and classify it based on these criteria:
+  
+  1. If an article contains two or more mentions of 'Richard Nixon' or 'President Nixon', classify it as 'nixon'
   2. If an article contains two or more mentions of vote or voter registration, classify it as 'voter_turnout'
-  3. If an article contains two or more mentions the Vietnam War, classify it as 'vietnam'
+  3. If an article contains two or more mentions the Vietnam War or references to Vietnamese or Vietcong, classify it as 'vietnam'
   4. If an article has adjectives that criticize Democrats, classify it as 'democrat_critique'
   5. If an article meets multiple criteria, assign multiple categories separated by semicolons
   6. If an article meets none of the criteria, classify it as 'other'
@@ -174,10 +336,9 @@ chat <- chat_gemini(
 response <- chat$chat(combined_text_with_filenames)
 ```
 
-#Process first response
---We're taking the chat response and putting it into a dataframe
+#Process first response --We're taking the chat response and putting it into a dataframe
 
-```{r}
+```{r echo=FALSE}
 process_llm_response_to_df <- function(response) {
   # Extract lines
   lines <- strsplit(response, "\n")[[1]]
@@ -242,7 +403,7 @@ result_df
 
 --democrat critique
 
-```{r}
+```{r echo=FALSE}
 dem <- result_df |> 
   filter(str_detect(category, "democrat_critique")) |> 
   mutate(path = paste0("./perspective_extracted/",filename)) |> 
@@ -260,7 +421,7 @@ dem_list <- lapply(file_paths1, readLines)
 
 # process the results to a single file, separated by file name
 
-```{r}
+```{r echo=FALSE}
 
 write_combined_files <- function(file_list, file_paths, output_file) {
   # Open connection to output file
@@ -296,10 +457,10 @@ write_combined_files(dem_list, file_paths1, "combined_dem_files.txt")
 Now, open a Google Sheet, import dem_ai_verification.csv, read the articles and rate the responses
 
 # A better AI prompt
---Spoiler alert. 
---This prompt seeks to improve on the Democrat_critique : " If an article contains two or more mentions of Democrats or the Democratic Party and if adjectives modifying Democrats are critical, classify it as 'democrat_critique'"
 
-```{r}
+--Spoiler alert. --This prompt seeks to improve on the Democrat_critique : " If an article contains two or more mentions of Democrats or the Democratic Party and if adjectives modifying Democrats are critical, classify it as 'democrat_critique'"
+
+```{r echo=FALSE}
 chat2 <- chat_gemini(
   system_prompt = "You are an academic researcher performing context analysis on selected Newsweek articles. Analyze each article and classify it based on these criteria:
   
@@ -327,7 +488,7 @@ chat2 <- chat_gemini(
 response2 <- chat2$chat(combined_text_with_filenames)
 ```
 
-```{r}
+```{r echo=FALSE}
 process_llm_response_to_df <- function(response) {
   # Extract lines
   lines <- strsplit(response, "\n")[[1]]
@@ -402,7 +563,7 @@ result_df2 <- process_llm_response_to_df(response2)
 
 #vietnam
 
-```{r}
+```{r echo=FALSE}
 viet <- result_df2 |> 
   filter(str_detect(category, "vietnam")) |> 
   mutate(path = paste0("./perspective_extracted/",filename)) |> 
@@ -420,7 +581,7 @@ viet_list <- lapply(file_paths1, readLines)
 
 # process the results to a single file, separated by file name
 
-```{r}
+```{r echo=FALSE}
 
 write_combined_files <- function(file_list, file_paths, output_file) {
   # Open connection to output file
@@ -454,7 +615,17 @@ write_combined_files(viet_list, file_paths1, "combined_viet_files.txt")
 ```
 
 # Token usage and pricing
-```{r}
+
+
+From Google: https://ai.google.dev/gemini-api/docs/billing
+
+Billing for the Gemini API is based on two pricing tiers: free of charge (or free) and pay-as-you-go (or paid). Pricing and rate limits differ between these tiers and also vary by model.
+
+We are not using the paid tier. Do not activate billing.
+
+
+
+```{r echo=FALSE}
 tokens <- token_usage()
 
 
@@ -463,4 +634,10 @@ chat <- chat_gemini()
 #Prompt
 chat$chat(paste0("How much will it cost me with my token usage so far using gemini 2.0 flash. My input token use is: ", tokens$input, "and my output token use is: ", tokens$output))
 ```
+
+More from Google on counting tokens, using python: https://ai.google.dev/gemini-api/docs/tokens?lang=python
+
+
+Learn more about the possibilities of AI analysis of video, audio:
+https://ai.google.dev/gemini-api/docs/long-context
 
