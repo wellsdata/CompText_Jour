@@ -267,8 +267,7 @@ nixon_list <- lapply(file_paths1, readLines)
 # process the results to a single file, separated by file name
 
 ```{r echo=FALSE}
-
-write_combined_files <- function(file_list, file_paths, output_file) {
+write_combined_files <- function(file_list, file_paths, output_file, width = 60) {
   # Open connection to output file
   con <- file(output_file, "w")
   
@@ -280,8 +279,47 @@ write_combined_files <- function(file_list, file_paths, output_file) {
     # Write the separator with filename
     writeLines(paste0("=== FILE: ", filename, " ==="), con)
     
-    # Write the content of the file
-    writeLines(file_list[[i]], con)
+    # Get the content of the file
+    content <- file_list[[i]]
+    
+    # Process each line to wrap text at the specified width
+    for (line in content) {
+      # Skip empty lines
+      if (nchar(line) == 0) {
+        writeLines("", con)
+        next
+      }
+      
+      # If the line is shorter than width, write it as is
+      if (nchar(line) <= width) {
+        writeLines(line, con)
+      } else {
+        # Split the line into words
+        words <- unlist(strsplit(line, "\\s+"))
+        current_line <- ""
+        
+        # Rebuild the line word by word
+        for (word in words) {
+          # If adding this word would exceed the width
+          if (nchar(current_line) + nchar(word) + 1 > width && nchar(current_line) > 0) {
+            # Write the current line and start a new one
+            writeLines(current_line, con)
+            current_line <- word
+          } else if (nchar(current_line) == 0) {
+            # Start with this word
+            current_line <- word
+          } else {
+            # Add the word to the current line
+            current_line <- paste(current_line, word)
+          }
+        }
+        
+        # Write the last line if there's anything left
+        if (nchar(current_line) > 0) {
+          writeLines(current_line, con)
+        }
+      }
+    }
     
     # Add a blank line between files (except after the last file)
     if (i < length(file_list)) {
@@ -295,7 +333,6 @@ write_combined_files <- function(file_list, file_paths, output_file) {
   # Return a message
   message(paste("Successfully wrote", length(file_list), "files to", output_file))
 }
-
 write_combined_files(nixon_list, file_paths1, "combined_nixon_files.txt")
 ```
 
@@ -311,18 +348,20 @@ chat <- chat_gemini(
   1. If an article contains two or more mentions of 'Richard Nixon' or 'President Nixon', classify it as 'nixon'
   2. If an article contains two or more mentions of vote or voter registration, classify it as 'voter_turnout'
   3. If an article contains two or more mentions the Vietnam War or references to Vietnamese or Vietcong, classify it as 'vietnam'
-  4. If an article has adjectives that criticize Democrats, classify it as 'democrat_critique'
+  4. If an article has adjectives that criticize Democrats, classify it as 'democrat_critique'. Name the adjectives in the explanations column.
   5. If an article meets multiple criteria, assign multiple categories separated by semicolons
   6. If an article meets none of the criteria, classify it as 'other'
   
-  Return ONLY a CSV-formatted result with exactly two columns:
-  filename,category
+  Provide a brief explanation or example of the material you found that meets the criteria in prompts 1-6. 
+  
+  Return ONLY a CSV-formatted result with exactly three columns:
+  filename,category, explanation
   
   For example:
-  filename,category
-  article1.txt,nixon
-  article2.txt,voter_turnout
-  article3.txt,nixon;voter_turnout
+  filename,category, explanation
+  article1.txt,nixon, three mentions of nixon
+  article2.txt,voter_turnout, two mentions of voters
+  article3.txt,nixon;voter_turnout, two mentions of nixon, four of voters
   article4.txt,other
   
   No additional text, explanations, or summary counts."
@@ -554,25 +593,25 @@ process_llm_response_to_df <- function(response) {
     )
   }
 }
-result_df2 <- process_llm_response_to_df(response2)
+result_df2 <- process_llm_response_to_df(response)
 ```
 
-#vietnam
+
 
 ```{r echo=FALSE}
-viet <- result_df2 |> 
-  filter(str_detect(category, "vietnam")) |> 
+vote <- result_df2 |> 
+  filter(str_detect(category, "voter_turnout")) |> 
   mutate(path = paste0("./perspective_extracted/",filename)) |> 
   mutate(ai_correct = " ",
          ai_wrong = " ",
          unsure = " ",
          notes = " ")
 
-write.csv(viet, "viet_ai_verification.csv")
+write.csv(vote, "vote_ai_verification.csv")
 
 
-file_paths1 <- viet$path
-viet_list <- lapply(file_paths1, readLines)
+file_paths1 <- vote$path
+vote_list <- lapply(file_paths1, readLines)
 ```
 
 # process the results to a single file, separated by file name
@@ -607,7 +646,7 @@ write_combined_files <- function(file_list, file_paths, output_file) {
   message(paste("Successfully wrote", length(file_list), "files to", output_file))
 }
 
-write_combined_files(viet_list, file_paths1, "combined_viet_files.txt")
+write_combined_files(vote_list, file_paths1, "combined_vote_files.txt")
 ```
 
 # Token usage and pricing
