@@ -1,0 +1,83 @@
+---
+title: "rvest and scraping"
+output: html_document
+date: "2026-08-27"
+---
+# ==============================================================================
+# BASIC WEB SCRAPER: DOWNLOAD R CHEAT SHEETS
+# ==============================================================================
+
+# 1. Load the required libraries
+library(rvest)    # For reading HTML and extracting elements
+library(stringr)  # For cleaning URLs and text strings
+
+https://opensource.posit.co/resources/cheatsheets/
+
+
+# 2. Define the target URL and download destination
+url <- "https://posit.co"
+download_dir <- "R_Cheatsheets"
+
+# Create a local folder if it does not already exist
+if (!dir.exists(download_dir)) {
+  dir.create(download_dir)
+}
+
+# 3. Read the HTML content of the webpage
+cat("Connecting to Posit Cheatsheets...\n")
+webpage <- read_html(url)
+
+# 4. Extract all hyperlinks from the page
+# "a" targets anchor tags; html_attr("href") grabs the actual URL destinations
+all_links <- webpage %>% 
+  html_elements("a") %>% 
+  html_attr("href")
+
+# Remove any empty or missing links
+all_links <- na.omit(all_links)
+
+# 5. Filter the list to find only PDF cheat sheets
+# We use a regular expression to match links ending in '.pdf' (case-insensitive)
+pdf_links <- all_links[str_detect(all_links, "(?i)\\.pdf$")]
+
+# Keep only unique links so we don't download duplicates
+pdf_links <- unique(pdf_links)
+
+# 6. Ensure all links are absolute URLs (add the domain if missing)
+pdf_links <- ifelse(
+  str_detect(pdf_links, "^http"), 
+  pdf_links, 
+  paste0("https://posit.co", pdf_links)
+)
+
+cat("Found", length(pdf_links), "cheat sheets to download.\n\n")
+
+# 7. Loop through each link and download the file
+for (i in seq_along(pdf_links)) {
+  current_url <- pdf_links[i]
+  
+  # Extract the clean file name from the end of the URL
+  file_name <- basename(current_url)
+  
+  # Define the full path where the file will be saved locally
+  local_path <- file.path(download_dir, file_name)
+  
+  cat(sprintf("[%d/%d] Downloading: %s...\n", i, length(pdf_links), file_name))
+  
+  # Use a tryCatch block to prevent the loop from crashing if one link fails
+  tryCatch({
+    download.file(
+      url = current_url, 
+      destfile = local_path, 
+      mode = "wb",       # 'wb' mode is critical for correctly writing binary files like PDFs
+      quiet = TRUE
+    )
+    # Pause for 1 second between requests to be polite to the server
+    Sys.sleep(1) 
+    
+  }, error = function(e) {
+    cat(sprintf("   --> Error downloading %s: %s\n", file_name, e$message))
+  })
+}
+
+cat("\nFinished! Check the 'R_Cheatsheets' folder in your working directory.\n")
