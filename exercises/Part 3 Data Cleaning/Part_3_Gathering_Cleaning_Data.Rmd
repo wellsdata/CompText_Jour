@@ -46,7 +46,8 @@ library(tidyr)
 
 ## Analysis of San Francisco Police Calls for Service Data
 
-Here is [the original dataset: 5.9 million records](https://data.sfgov.org/Public-Safety/Police-Department-Calls-for-Service/hz9m-tj6z/data)
+Here is [the original dataset: 5.9 million
+records](https://data.sfgov.org/Public-Safety/Police-Department-Calls-for-Service/hz9m-tj6z/data)
 
 [**Access the API**](https://datasf.org/opendata/developers/)
 
@@ -60,11 +61,17 @@ SF <- rio::import("https://docs.google.com/spreadsheets/d/1-nkosLJKkfeLSl-UG82DD
 
 ```{r}
 #This cleans column names
-SF <- janitor::clean_names(SF)
-#This processes dates for analysis
-SF$call_date2 <- mdy(SF$call_date)
-#This creates a new column for year
-SF$year <- year(SF$call_date2)
+SF <- clean_names(SF)
+```
+
+
+```{r}
+#This processes dates for analysis, rearranges columns
+SF <- SF |> 
+  mutate(call_date2 = mdy(call_date),
+         year = year(call_date2)) |> 
+  select(crime_id, original_crime_type_name, call_date2, year, call_date_time, disposition, address, city, state, everything())
+
 ```
 
 ### Cleaning Dispositions
@@ -98,22 +105,26 @@ copspeak <- rio::import("https://docs.google.com/spreadsheets/d/1l86DSZ5LWxlXTli
 
 The disposition column is in cop-speak. We need to clean it up
 
-Step #1: Use mutate to duplicate the column you want to mess with
+Step #1: Use mutate to duplicate the column you want to modify
 
 **Mutate command**
 
 ```         
-Create new column(s) in the data, or change existing column(s). 
+Use **mutate** to create new column(s) in the data, or change existing column(s). 
+
 mutate() adds new variables and preserves existing
+
 Example:
 mtcars <- as.data.frame(mtcars)
 View(mtcars)
 
-mtcars2 <- mtcars %>% as_tibble() %>% mutate(
-cyl2 = cyl * 2,
-cyl4 = cyl2 * 2)
+mtcars2 <- mtcars |> 
+as_tibble() |> 
+mutate(cyl2 = cyl * 2,
+       cyl4 = cyl2 * 2)
 ```
 
+**Mutate example, copying one column to another, renaming it
 ```{r}
 SF <- SF %>% 
   mutate(disposition1 = disposition)
@@ -125,10 +136,12 @@ Example:
 
 ```         
  str_replace_all(test.vector, pattern=fixed('-'),     replacement=fixed(':') )
- [Details on string manipulation - follow this link](    https://dereksonderegger.github.io/570L/13-string-manipulation.html)
+
+
+[Details on string manipulation - follow this link](https://dereksonderegger.github.io/570L/13-string-manipulation.html)
 ```
 
-**Replace ABA with "Abated"**
+**Use Mutate to Replace ABA with "Abated"**
 
 ```{r}
 SF <- SF |> 
@@ -173,8 +186,9 @@ SF <- SF %>%
 ```{r}
 Action <- SF %>% 
   count(disposition1, disposition) %>% 
-  arrange(desc(n))
-#head(Action)
+  arrange(desc(n)) 
+
+head(Action)
 ```
 
 ### Chart Dispositions
@@ -200,7 +214,9 @@ Action %>%
 Types <- SF %>% count(original_crime_type_name) %>% 
   group_by(original_crime_type_name) %>% 
   arrange(desc(n))
-#head(Types)
+
+head(Types)
+
 # 915/919
 # 915 Sleeper 
 # Some have commentary
@@ -210,22 +226,23 @@ Types <- SF %>% count(original_crime_type_name) %>%
 **Cleaning Sequence**
 
 ```{r}
-#convert all text to lowercase
-SF$crime1 <- tolower(SF$original_crime_type_name)
+SF <- SF |> 
+  mutate(crime1 = tolower(original_crime_type_name),
+         crime1 = gsub("/", " ", crime1),
+         crime1 = gsub("'", "", crime1),
+         crime1 = gsub("homeless complaint", "homeless_complaint", crime1)) 
 
-#Replace / with a space
-SF$crime1 <- gsub("/", " ", SF$crime1)
 
-#Replace '
-SF$crime1 <- gsub("'", "", SF$crime1)
-
-#fix space in homeless complaint
-SF$crime1 <- gsub("homeless complaint", "homeless_complaint", SF$crime1)
-
-#split crime1 into three new columns
-SF <- separate(data = SF, col = crime1, into = c("crime2", "crime3", "crime4"), sep = " ", extra = "merge", fill = "right")
-
+SF <- SF %>%
+  separate_wider_delim(
+    cols = crime1,
+    delim = " ",
+    names = c("crime2", "crime3", "crime4"),
+    too_many = "merge",
+    too_few = "align_start"
+  )
 ```
+
 
 For this lesson, we will clean just one column.
 
@@ -254,7 +271,7 @@ SF <- SF %>%
      TRUE ~ ""
    ))
 ```
- stopped for Feb 13
+
 **Count crime_cleaned**
 
 ```{r}
@@ -376,13 +393,6 @@ SF %>%
 
 
 ```
-
-<br>
-
-### Appendix
-
-[Police radio codes
-data](https://data.sfgov.org/api/views/hz9m-tj6z/files/b60ee24c-ae7e-4f0b-a8d5-8f4bd29bf1de?download=true&filename=Radio%20Codes%202016.xlsx)
 
 <br>
 
