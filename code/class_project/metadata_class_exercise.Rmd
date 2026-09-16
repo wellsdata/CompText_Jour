@@ -5,15 +5,15 @@ date: "2026-09-15"
 output: html_document
 ---
 
-Class exercise to import your project metadata from the spreadsheet into R 
+Class exercise to import your project metadata from the spreadsheet into R
 
---Create a folder called "class_project" in your code folder 
+--Create a folder called "class_project" in your code folder
 
---Save this file to the "class_project" folder 
+--Save this file to the "class_project" folder
 
---Move your Nexis spreadsheet to the folder 
+--Move your Nexis spreadsheet to the folder
 
---Create a project file on R Studio: File \| New Project \| \*\*\* select Existing folder \| "class_project" 
+--Create a project file on R Studio: File \| New Project \| \*\*\* select Existing folder \| "class_project"
 
 --After project.Rproj launches, then launch this file, metadata.Rmd, and complete the tutorial
 
@@ -35,10 +35,18 @@ library(readxl)
 
 ```{r}
 
-data <- read_excel("NAME OF YOUR FILE.XLSX")
+data <- read_excel("benji_data.XLSX") |> 
+  clean_names()
+
 View(data)
 
+names(data)
 ```
+
+
+
+
+
 
 # Clean names
 
@@ -49,14 +57,15 @@ data <- data |>
 ```
 
 # check data types
+
 ```{r}
 glimpse(data)
 ```
 
-
 Next Steps: Count years, and create a ggplot
 
 # Transform date into years. See tutorial
+
 ```{r}
 
 data <- data |> 
@@ -65,7 +74,33 @@ data <- data |>
 ```
 
 
+#count
+```{r}
+
+data |> 
+  count(year)
+```
+
+#publication
+```{r}
+
+data |> 
+  count(publication_4) |> 
+  arrange(desc(n))
+```
+
+# counting
+```{r}
+data_big <- data |> 
+  mutate(length1 = as.numeric(length)) |> 
+  filter(length1 > 2093 & length1 <2505)
+
+```
+
+
+
 # Create a ggplot
+
 ```{r}
 data |> 
   count(year) |> 
@@ -73,12 +108,12 @@ data |>
              fill = n)) +
   geom_col(position = "dodge") + 
   theme(legend.position = "none") +
-  scale_x_continuous(breaks=c(2015:2026)) + #fixes wonky x axis
-  labs(title = "Years for Xinjiang Women Research",
+  scale_x_continuous(breaks=c(2023:2026)) + #fixes wonky x axis
+  labs(title = "Benji Data",
        subtitle = "Limited NexisUni Run",
        caption = "Graphic by Rob Wells, 9-15-2026",
-       y="Number of Calls",
-       x="Year")
+       y="Number of Articles",
+       x="")
 
 
 
@@ -90,19 +125,47 @@ data |>
 
 ```
 
-
 #Visualize publications
 
 ```{r}
 
 ```
 
-
-
-
 # NOTES ON FIXING COMPLEX Date COLUMN WITH HOURS AND MINUTES
 
 ```{r}
 women <- women |> 
   mutate(date = as.Date(strptime(published_date, format = "%B %d, %Y %A")))
+```
+
+
+
+```{r}
+nobel <- read_excel("nobel.XLSX") |> 
+  clean_names() |> 
+  mutate(year = year(published_date))
+
+
+```
+
+
+```{r}
+nobel |> 
+  count(publication_4) |> 
+   # ggplot(aes(x = publication_4, y=n, 
+   #           fill = n)) +
+    ggplot(aes (x = reorder(publication_4, n), y = n, fill = n))  +
+  geom_col(position = "dodge") + 
+  theme(legend.position = "none") +
+#theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  #scale_x_continuous(breaks=c(2021:2026)) + #fixes wonky x axis
+    coord_flip() +
+  labs(title = "Nobel Data",
+       subtitle = "Limited NexisUni Run",
+       caption = "Graphic by Rob Wells, 9-15-2026",
+       y="Publications",
+       x="Number of Articles")
+
+
+
 ```
