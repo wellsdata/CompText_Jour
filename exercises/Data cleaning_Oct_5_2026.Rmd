@@ -1,22 +1,10 @@
 ---
 title: "Data cleaning exercises"
 author: "Rob Wells"
-date: "2024-10-21"
-output:
-  html_document:
-    df_print: paged
-  pdf_document: default
-  word_document: default
+date: "2026-10-06"
 ---
 
- Niveda back to class Oct 21
- --data cleaning -- this week's lecture
- --sentiment analysis - out this week
- --KWIC -- next week
- --dependency parsing - next week
- --draft conference paper
-
- --content analysis
+ 
 
 
  Data cleaning
@@ -57,26 +45,29 @@ library(rio)
 ```{r}
 #2. Import the data
 
-RawChinaData <- read_csv("ChinaFDI-LAT_tidy.csv") #rsw comment: please use relative file paths so someone looking at your code can run it without having to modify the file path
-#RawChinaData <- read_csv("~/Code/CompText_Jour/data/ChinaFDI-LAT_tidy.csv")
-
+RawChinaData <- read_csv("https://raw.githubusercontent.com/wellsdata/CompText_Jour/refs/heads/main/data/ChinaFDI-LAT_tidy.csv")
 
 ```
 
 ```{r}
 # 3. Use code to count the number of unique articles in the dataset
 
-n_distinct(RawChinaData$article_nmbr) 
+RawChinaData |>
+  select(article_nmbr) |> 
+  n_distinct()
 
 ```
-#rsw comment - this cleaning sequence is awesome. nice job!
+#Cleaning junk
 ```{r}
 #4. Remove useless metadata such as "Los Angeles Times" and "ISSN". See sample code below
-ChinaData_nometa <- RawChinaData %>%
+China_cleaned <- RawChinaData %>%
   mutate(text = str_squish(text)) %>% #gets rid of leading and trailing spaces + double spaces
   mutate(text = tolower(text)) %>%
   mutate(text = str_replace(text, "startofarticle", "")) %>%
   mutate(text = gsub("issn:\\s+\\S+", "", text)) %>%
+ mutate(text = str_remove_all(text, "https?://\\S+")) |> 
+  mutate(text = str_remove_all(text, "\\d{2}\\s+[a-z]{3,9}\\s+\\d{4}(?:[:;,\\.\\s]+[a-z]\\.\\d+)?")) %>%
+  mutate(text = str_remove_all(text, "[:;,\\.\\[\\]]")) %>%
   mutate(text = str_replace_all(text, c(
     "copyright" = "",
     "database: proquest central" = "",
@@ -88,7 +79,8 @@ ChinaData_nometa <- RawChinaData %>%
     "pages:\\s+\\S+" = "",
     "publication info" = "",
     "last updated:\\s+\\S+" = "",
-    "interest periodicals--united states" = ""
+    "interest periodicals--united states" = "",
+    "https://+/docview/\\d+\\?accountid=\\d+" =""
   ))) %>%
   mutate(text = str_replace_all(text, c(
     "search.proquest.com" = "",
@@ -100,28 +92,26 @@ ChinaData_nometa <- RawChinaData %>%
 
 Zirong
 
-```{r}
 #filter the body text only
 ```{r}
-#I learned how to do this using AI
 
-body_df <- articles_df |>
-  mutate(sentence = str_squish(sentence)) |>        # trim extra spaces
-  group_by(filename) |>
+
+China2 <- RawChinaData |>
+  mutate(text = str_squish(text)) |>        # trim extra spaces
+  group_by(article_nmbr) |>
   mutate(
     line       = row_number(),
     # body starts after the "Body" line
-    body_start = which(sentence == "Body")[1],
+    body_start = which(text == "STARTOFARTICLE")[1],
     # body ends at the first of these markers (photo captions, Newstex notes, BI footer, Load-Date)
-    body_end   = which(sentence %in% c("Graphic", "Notes", "Read the original article on") |
-                         str_detect(sentence, "^Load-Date"))[1]
+   body_end   = coalesce(which(str_detect(text, regex("^Classification:", ignore_case = TRUE)))[1], n() + 1L)
   ) |>
   filter(line > body_start, line < body_end) |>
   ungroup() |>
   # drop blank rows
-  filter(!is.na(sentence), sentence != "") |>
+  filter(!is.na(text), text != "") |>
   # drop leftover boilerplate lines inside the body
-  filter(!str_detect(sentence, regex(paste(
+  filter(!str_detect(text, regex(paste(
     "^Link to (image|the original story)",
     "^Access PDF version",
     "^Click here for updates",
@@ -137,14 +127,14 @@ body_df <- articles_df |>
     "Copyright|All rights reserved",
     sep = "|"), ignore_case = TRUE))) |>
   # drop short byline lines like "By Deidre McPhillips, CNN"
-  filter(!(str_detect(sentence, "^By [A-Z]") & str_length(sentence) < 60)) |>
+  filter(!(str_detect(text, "^By [A-Z]") & str_length(text) < 60)) |>
   # strip the Newstex prefix and any URLs
-  mutate(sentence = str_remove(sentence, "^.*Delivered by Newstex\\)\\s*"),
-         sentence = str_remove_all(sentence, "https?://\\S+|www\\.\\S+")) |>
+  mutate(text = str_remove(text, "^.*Delivered by Newstex\\)\\s*"),
+         text = str_remove_all(text, "https?://\\S+|www\\.\\S+")) |>
   select(-line, -body_start, -body_end)
 
 # check: should be 100 articles
-body_df |> count(filename) |> summarise(n_articles = n(), min = min(n), max = max(n))
+# body_df |> count(filename) |> summarise(n_articles = n(), min = min(n), max = max(n))
 
 ```
 
