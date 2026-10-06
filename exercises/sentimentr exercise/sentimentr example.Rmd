@@ -1,0 +1,257 @@
+---
+title: "Sentimentr Example"
+author: "Wells"
+date: "2026-10-06"
+output: html_document
+---
+
+Sentimentr is a package that examines sentiment at the sentence level. 
+
+
+Here is the supporting documentation
+https://github.com/trinker/sentimentr
+
+sentimentr is designed to quickly calculate text polarity sentiment in the English language at the sentence level and optionally aggregate by rows or grouping variable(s).
+
+sentimentr is a response to my own needs with sentiment detection that were not addressed by the current R tools. My own polarity function in the qdap package is slower on larger data sets. It is a dictionary lookup approach that tries to incorporate weighting for valence shifters (negation and amplifiers/deamplifiers). Matthew Jockers created the syuzhet package that utilizes dictionary lookups for the Bing, NRC, and Afinn methods as well as a custom dictionary. He also utilizes a wrapper for the Stanford coreNLP which uses much more sophisticated analysis. Jocker's dictionary methods are fast but are more prone to error in the case of valence shifters. Jocker's addressed these critiques explaining that the method is good with regard to analyzing general sentiment in a piece of literature. He points to the accuracy of the Stanford detection as well. In my own work I need better accuracy than a simple dictionary lookup; something that considers valence shifters yet optimizes speed which the Stanford's parser does not. This leads to a trade off of speed vs. accuracy. Simply, sentimentr attempts to balance accuracy and speed.
+
+Why sentimentr
+So what does sentimentr do that other packages don't and why does it matter?
+
+sentimentr attempts to take into account valence shifters (i.e., negators, amplifiers (intensifiers), de-amplifiers (downtoners), and adversative conjunctions) while maintaining speed. Simply put, sentimentr is an augmented dictionary lookup. The next questions address why it matters.
+
+So what are these valence shifters?
+
+A negator flips the sign of a polarized word (e.g., "I do not like it."). See lexicon::hash_valence_shifters[y==1] for examples. An amplifier (intensifier) increases the impact of a polarized word (e.g., "I really like it."). See lexicon::hash_valence_shifters[y==2] for examples. A de-amplifier (downtoner) reduces the impact of a polarized word (e.g., "I hardly like it."). See lexicon::hash_valence_shifters[y==3] for examples. An adversative conjunction overrules the previous clause containing a polarized word (e.g., "I like it but it's not worth it."). See lexicon::hash_valence_shifters[y==4] for examples.
+
+
+```{r}
+#install.packages("sentimentr")
+library(tidyverse)
+library(sentimentr)
+library(tidyr)
+```
+
+
+
+# Example dataframe
+
+```{r}
+reviews <- tibble(
+  id = 1:4,
+  text = c(
+    "The food was not good, but the service was extremely friendly.",
+    "I barely enjoyed the movie, although the actors were talented.",
+    "I am a vampire and I'm going to kill you and suck out your blood.",
+    "I am excited that you are so happy."
+  )
+)
+```
+
+# 1. Split into sentences and calculate sentiment at the sentence level
+```{r}
+sentence_sentiment <- reviews %>%
+  get_sentences() %>%
+  sentiment_by(by = c("id")) # Summarizes back to row/document level if desired
+```
+
+
+
+# View sentence-by-sentence detailed breakdown
+```{r}
+detailed_sentences <- reviews %>%
+  get_sentences() %>%
+  sentiment()
+
+head(detailed_sentences)
+```
+
+Unlike dictionary-based packages that scale linearly between fixed boundaries (like -1 to +1), sentimentr uses an unbounded continuous scoring scale where:
+
+0.00 = Perfectly neutral
+
+Positive values (> 0) = Net positive tone
+
+Negative values (< 0) = Net negative tone
+
+
+
+AI Made this up. It's not really accurate. Do not use these bands or descriptions.
+Extreme Negative: Anything below -0.50 is deeply negative (e.g., severe criticism, disaster, strong hostility).
+Moderate Negative: -0.10 to -0.49 indicates a critical, somber, or negative tone 
+Neutral / Mild: -0.09 to +0.09 is essentially neutral or casual background context
+Moderate Positive: +0.10 to +0.49 indicates optimistic, praising, or confident speech 
+Extreme Positive: Anything above +0.50 is overwhelmingly celebratory or enthusiastic.
+
+Again, they are made up, but they do help us think of how to characterize the scores. 
+Look at the data distribution
+```{r}
+detailed_sentences |> 
+  pull(sentiment) |> 
+  summary()
+```
+
+
+#Put the scores in context
+```{r}
+
+print(paste0("From this silly exercise, the most positive sentence was scored at ", max(detailed_sentences$sentiment), "while the most negative was scored at", min(detailed_sentences$sentiment),". For context, the median value was ", median(detailed_sentences$sentiment), "."))
+        
+```
+
+#Alternate Lexicons
+List of alternate lexicons
+https://github.com/trinker/lexicon
+```{r}
+#install.packages("lexicon")
+library(lexicon)
+
+cliches <- cliches
+
+head(cliches)
+
+jockers <- hash_sentiment_jockers
+
+```
+
+#Trump speech
+```{r}
+
+#trump <- read_tsv("trump_dallas_sept_9_2026.txt")
+trump <- read.table("trump_dallas_sept_9_2026.txt", header = F, sep = "\t") |> 
+  rename(text = V1) |> 
+  mutate(text = str_replace(text, "Trump:", "")) |> 
+  mutate(id = row_number())
+
+```
+
+
+# 1. Split into sentences and calculate sentiment at the sentence level
+```{r}
+trump_sentiment <- trump %>%
+  get_sentences() %>%
+  sentiment_by(by = c("id")) 
+```
+
+
+#Put the Trump scores in context
+```{r}
+
+print(paste0("From this exercise, the most positive sentence in Trump's speech was scored at ", max(trump_sentiment$ave_sentiment), "while the most negative was scored at", min(trump_sentiment$ave_sentiment),". For context, the median value was ", median(trump_sentiment$ave_sentiment), "."))
+        
+```
+
+#What is the most negative sentence?
+
+```{r}
+trump$text[89]
+```
+
+#Highlighter for negative and positive terms.
+```{r}
+library(magrittr)
+set.seed(2)
+x <- hu_liu_cannon_reviews |> 
+  as.data.frame()
+
+hu_liu_cannon_reviews %>%
+    filter(review_id %in% sample(unique(review_id), 3)) %>%
+    mutate(review = get_sentences(text)) %$%
+    sentiment_by(review, review_id) %>%
+    highlight()
+
+```
+
+# Highlight sentence-by-sentence detailed breakdown
+
+```{r}
+trump_detailed_sentences <- trump %>%
+  get_sentences() %>%
+  sentiment()
+
+
+trump_detailed_sentences %>%
+   # filter(sentence_id %in% sample(unique(sentence_id), 3)) %>%
+    mutate(review = get_sentences(text)) %$%
+    sentiment_by(review, sentence_id) %>%
+    highlight()
+
+```
+
+#profanity
+```{r message=FALSE, warning=FALSE}
+trump_profane <- trump %>%
+  get_sentences() %>%
+  profanity_by(by = c("id"))
+
+
+```
+
+#What is the most negative sentence?
+
+```{r}
+
+
+trump$text[13]
+```
+
+
+Assignment:
+
+Part 1: 
+Use your content on the Sentimentr package. 
+Describe the minimum, maximum, median and standard deviation of the sentiment scores for all.
+
+Part 2: 
+
+Break up your content into two periods - one batch for the most recent year and one batch for older years. 
+use summarize() to figure out which years should be the cutoff points. Describe that.
+
+Run sentimentr on the recent years.
+Describe the minimum, maximum, median and standard deviation of the sentiment scores 
+and then again on the older years. 
+Describe the minimum, maximum, median and standard deviation of the sentiment scores
+
+
+Part 3: 
+Apply the higlight function to your entire text. Examine the results. Is this useful? Why or why not? Are there flaws?
+
+Part 4:
+Next: Examine the sentimentr package for other functions we have not used, such as profanity or emotion. 
+Or select one of the alternate lexicons and run your content against that, such as the cliches lexicon.
+
+Pick one, examine the output and write a short analysis of your results to share with the class next week.
+
+https://github.com/trinker/lexicon
+https://github.com/trinker/sentimentr
+
+There are two main functions (top 2 in table below) in sentimentr with several helper functions summarized in the table below:
+
+Function	Description
+sentiment	Sentiment at the sentence level
+sentiment_by	Aggregated sentiment by group(s)
+profanity	Profanity at the sentence level
+profanity_by	Aggregated profanity by group(s)
+emotion	Emotion at the sentence level
+emotion_by	Aggregated emotion by group(s)
+uncombine	Extract sentence level sentiment from sentiment_by
+get_sentences	Regex based string to sentence parser (or get sentences from sentiment/sentiment_by)
+replace_emoji	repalcement
+replace_emoticon	Replace emoticons with word equivalent
+replace_grade	Replace grades (e.g., "A+") with word equivalent
+replace_internet_slang	replacment
+replace_rating	Replace ratings (e.g., "10 out of 10", "3 stars") with word equivalent
+as_key	Coerce a data.frame lexicon to a polarity hash key
+is_key	Check if an object is a hash key
+update_key	Add/remove terms to/from a hash key
+highlight	Highlight positive/negative sentences as an HTML document
+general_rescale	Generalized rescaling function to rescale sentiment scoring
+sentiment_attribute	Extract the sentiment based attributes from a text
+validate_sentiment	Validate sentiment score sign against known results
+
+
+
+Write a 300 post answering the questions from Parts 1,2,3 & 4
+
+
+
