@@ -1,0 +1,445 @@
+Introduction
+The recent development of Internet technologies has led to increasing social media (SM) use for finding information (Yu et al. 2021; Shu et al. 2017). Thus, government agencies and individual media also increasingly rely on these platforms to expand their influence. However, the lack of news censorship on SM makes fake news (FN) a concerning problem. The term “fake news” has extensively appeared in different fields with terms like rumors, propaganda, misinformation, etc. (Pierri and Ceri 2019).
+Due to the variety and quantity of such FN, their negative impact keeps increasing and even seriously undermines social stability and harmony (Lazer et al. 2018). For example, FN about Hillary Clinton heavily influenced the 2016 US presidential election results (Pierri and Ceri 2019). FN also influenced the 2016 UK referendum on Brexit (Howard and Kollanyi 2016) and the 2017 French presidential election (Ferrara 2017). As another example, rumors and panic have been sparked in different countries after the COVID-19 outbreak due to various FN on SM (Kouzy et al. 2020). Thus, it is imperative to develop an effective method for FN detection as soon as possible.
+Research about supervised methods has recently been well-tested and provided promising performance in FN detection (Ansar and Goswami 2021). Some effective FN detection methods (Wang 2017; Ajao et al. 2018; Xu et al. 2020; Wang et al. 2021a; Jain et al. 2022; Moreira, et al. 2023) that extract content features automatically have been developed. However, content-based detection methods are typically unreliable and lack flexibility due to the highly dependent nature of content features on specific news domains. Although news propagation structures can be used to detect FN (Kumar and Carley 2019; Ma et al. 2017, 2018, 2020; Bian et al. 2020; Davoudi et al. 2022; Inan 2022) in multifarious area, this approach is also based on supervised learning, which still requires many label data for training to guarantee performance. It is well known annotating news crawled from the web requires expert opinion and experience, so the annotation work consumes enormous human labor and material resources. Furthermore, real-time data annotations are also impossible to complete. Thus, manual annotation cannot keep up with the rapid generation and mass SM news. As big data labeling may create many annotation inconsistencies (Meel and Vishwakarma 2021), designing effective unsupervised learning frameworks for FN detection is necessary.
+We have found one study about unsupervised learning-based FN detection methods. This work (Guo et al. 2021) used a graph embedding-based generative adversarial network (Graph-GAN) to detect FN. However, Graph-GAN is not a completely adaptive detection method, which can only detect the existing propagation structure of fake news in the dataset. For structures that do not appear in the dataset, the detection accuracy is very low. That is because Graph-GAN cannot learn and understand the latent patterns about the propagation structure of fake news. Therefore, it is necessary to design a robust detection method that not only can identify fake news with various existing and unknown characteristics of propagation structures, but also have high accuracy and other performances. Despite very few unsupervised learning-based FN detection methods, we found some unsupervised learning-based research in the computer vision field. For example, (Chen et al. 2020) used the comparative learning method to generate two instances from the same source data as positive and negative instances, respectively, for reducing the distance of positive instances while widening negative instances. Besides, (Grill et al. 2020) proposed an asymmetric network structure model named BYOL to avoid using enormous negative instances by interacting online and targeting neural networks. Moreover, BYOL takes two positive instances from the same source data as inputs to the two neural networks for data augmentation.
+Inspired by the idea of designing asymmetric target networks and online networks given by (Grill et al. 2020), we creatively build an asymmetric network structure framework (SCL), which achieves unsupervised contrastive learning based on the propagation structure of news. When designing the contrastive learning method, we were enlightened by the idea of removing a certain number of edges (named DropEdge) by (Rong et al. 2020) to prevent over-fitting. Meanwhile, in order to avoid the limitations of Graph-GAN (Guo et al. 2021) that cannot learn the potential patterns of news propagation and to sufficiently enrich the various variant propagation structures of fake and real news, we creatively obtain two positive instances by randomly clipping the edges of the propagation structure tree of news. Combining structure-based data enhancement methods and contrastive learning, our unsupervised FN detection framework (SCL) has the following contributions. - We propose to implement data enhancement propagation structure of the news through random cropping. Meanwhile, we experimentally explore the effect of constructing positive instances by different random cropping rates on model performance.
+
+- We enrich various different variants of propagation structures for real news and fake news by random cropping, which effectively enhances the diversity of model detection.
+
+- We combine the propagation structure of news and contrastive learning to achieve unsupervised training, which is most likely the first research to use propagation structures of news for contrastive learning in FN detection.
+
+- Comprehensive experiments are designed and implemented with two real-life datasets to demonstrate the performance of SCL for FN detection. Experiments show that our SCL improves the performance more than 10% compared to the optimal unsupervised method. Experimental results also showed the stability of the detection performance of our SCL model and can consistently outperform other methods under multifarious proportions of training data. Therefore, our SCL model is appropriately robust compared to other unsupervised baseline methods.
+
+
+Related work
+FN detection
+Many works have recently dealt with FN detection on SM based on supervised, semi-supervised, and unsupervised learning.
+In the supervised approaches, the typical work mainly utilizes content features and propagation structure features. (Wang 2017) designed a method using a CNN that extracts feature information from the text, plus a Bi-LSTM network that extracts feature information from the metadata. A fully connected layer concatenates the extracted features for deciding FN. (Ajao et al. 2018) suggested using LSTM-CNN neural networks by adding a layer of one-dimensional convolutional neural networks following the LSTM word embedding layer. (Xu et al. 2020) detect rumors only based on their source tweets using a topic-driven rumor detection framework (TDRD) by classifying source tweets automatically classified into topic vector representation for rumor detection. (Wang et al. 2021a) suggested a graph-based neural network model named SemSeq4FD for FN detection by first learning global sentence representation using a GCN network, followed by learning local sentence representation using a one-dimensional CNN network. Their final document representation was derived by combining the two-sentence representation with LSTM. (Jain et al. 2022) propose a network architecture combining contextual word embedding and attention mechanisms with metadata. (Moreira, et al. 2023) evaluated BERT’s ability to detect fake news compared to traditional machine learning algorithms, using text classification to identify false news.
+Unlike content features, a propagation graph with nodes and edges can effectively represent FN diffusion patterns (Ma et al. 2017). A BCTree-LSTM model has been proposed by (Kumar and Carley 2019) for detecting rumors and stances using propagation trees. (Ma et al. 2017) detect FN on Twitter using tree kernels by comparing propagation tree structures’ similarity. Further, this research team (Ma et al. 2018, 2020) observed that rumors propagated non-sequentially and used an RvNN model for learning discriminative features. It involves representing news propagation with propagation trees and learning the spreading with recurrent neural networks (RvNN). According to (Bian et al. 2020), multi-directional propagation of FN is considered in a bi-directional graph model and uses the source post content at each GCN layer to supplement influences from FN roots. For early detection of FN, (Davoudi et al. 2022) designed a detection system (DSS) simultaneously using propagation trees and stance networks. (Inan 2022) generate a user friendship, retweet propagation, and content graph for FN detection using pre-trained encoders.
+In contrast, very few semi-supervised and unsupervised works deal with FN detection. (Meel and Vishwakarma 2021) proposed a semi-supervised CNN method with the self-ensembling concept to explore linguistic information in annotated news and hidden information from unlabeled data. (Paka et al. 2021) proposed a cross-stitch-based semi-supervised model (Cross-SEAN) that takes advantage of many unlabeled data. (Alzanin and Azmi 2019) extracted features from users and content to determine their importance so that important news was used for training through semi-supervised expectation maximization (E–M). (Wang et al. 2021b) designed a weakly-supervised FN detection (WeFEND) method to increase the training data, which used user reports as weak supervision.
+Till now, we only found one unsupervised work about FN detection. (Guo et al. 2021) designed an explainable adaptive learning approach to FN detection. This model is based on graph embeddings and generative adversarial networks (Graph-GAN). Therefore, designing effective unsupervised learning frameworks for FN detection is necessary.
+Contrastive learning
+As we all know, a key limiting factor of supervised learning is the absence of labeled data. However, contrast learning methods can extract feature representations from unlabeled data itself, thus avoiding the labeling of large-scale data. Computer vision (CV) and natural language processing (NLP) extensively utilize contrast learning, mainly for image and text data. As far as we know, no researcher has used comparative learning based on propagation structure data for FN detection.
+(Chen et al. 2020) proposed a new contrastive learning algorithm SimCLR without customized architectures for computer vision. Momentum Contrast (MoCo) (He et al. 2020) was proposed for the unsupervised learning of visual representations. By constructing a dynamic dictionary on-the-fly, MoCo facilitates contrastive unsupervised learning by constructing a large and consistent dictionary. (Grill et al. 2020) developed BYOL, a self-supervised approach to learning image representations from an augmented image to identify the same image under a different view. Subsequently, (Chen and He 2021) proposed a simpler method, SimSiam, which does not require negative samples or momentum to update network parameters. To avoid model collapse, SimSiam adds Stop-gradient to the network.
+In natural language processing, (Gao et al. 2021) designed SimCSE, which combines an unsupervised approach with dropout noise and a supervised approach based on NLI datasets. Using contrastive learning to reduce the cover between tweets, (Zeng and Cui 2022) proposed a simple framework (SimCLRT) that used contrastive learning to track FN.
+Summary
+In this section, we summarize reviewed research and features used by FN detection methods. - Most methods (Wang 2017; Ajao et al. 2018; Xu et al. 2020; Wang et al. 2021a; Jain et al. 2022; Moreira, et al. 2023; Kumar and Carley 2019; Ma et al. 2017, 2018, 2020; Bian et al. 2020; Davoudi et al. 2022; Inan 2022) utilize content and propagation structure, news content features highly depend on the topics, geographical regions, and linguistics. Thus, methods based on news content cannot be applied to news from different areas. Methods used in propagation structure have better applicability than content-based methods and can adapt to news of various topics and areas.
+
+- Most FN detection research adopt supervised learning, and only a few studies use unsupervised learning methods (Meel and Vishwakarma 2021; Guo et al. 2021; Paka et al. 2021; Alzanin and Azmi 2019; Wang et al. 2021b). Despite the success of supervised models, only a limited amount of labeled data is available to detect FN. Furthermore, the cost of labeling news articles is prohibitive, and the enormous volume of data necessitates a great deal of human labor. Therefore, unsupervised frameworks are necessary for FN detection to explore the hidden information of recent unlabeled data. The only found unsupervised methods have the limitation of learning and understanding the latent patterns about the propagation structure of fake news.
+
+- As a form of self-supervised learning, contrastive learning (Chen et al. 2020; Grill et al. 2020; He et al. 2020; Chen and He 2021; Gao et al. 2021; Zeng and Cui 2022) has recently received the most focus in unsupervised learning. However, contrast learning has been extensively used in computer vision and natural language processing, mainly for image and text data, but no research has been conducted to apply it to structured data in FN detection.
+
+
+To satisfy the need for designing effective unsupervised work about FN detection, we proposed a new detection framework that combines the propagation structure of news and contrastive learning to achieve unsupervised training. Unlike existing content-based methods, our framework does not rely upon specific content characteristics of news. Unlike other unsupervised learning methods, our approach combines the propagation structure of news and contrastive learning to achieve unsupervised training.
+Proposed methodology
+This section presents a framework named SCL for FN detection. We first explain the overall framework and individual components, followed by the training strategy.
+Notation definition
+The follower/friend relationship among SM users, such as Weibo and Twitter, embeds shared interests between them. As soon as the user posts an update, it will be sent to all following users. Therefore, such patterns can be viewed as news propagation structures, which we use propagation trees to describe and thus also a special graph type, as formalized in Definition 1.
+Definition 1
+We represent the news event propagation tree T = G , where G = E , V represents the graph structure of the propagation tree for a news event, where E = e ij | i , j = 0 , 1 , ⋯ , t represents the set of edges between nodes and V = w 1 , w 2 , w 3 , ⋯ , w t the set of node features.
+Framework overview
+Due to the scarcity of labeled data and annotating data necessitating enormous human labor, designing unsupervised frameworks for FN detection is obligatory. Inspired by works (Grill et al. 2020; Rong et al. 2020), our FN detection framework (SCL) with structural contrastive learning combines the propagation structure of news and contrastive learning to achieve unsupervised training.
+Figure 1 shows our SCL architecture comprising an online and a target network. Each network comprises four parts: Data enhancement, Feature encoding, Feature projection, and Parameter optimization. In the our SCL framework, the parts of feature encoding and feature projection are the same for both online and target networks, but the parts of input data and parameter optimization are different. Algorithm 1 shows the overall steps of SCL. [See PDF for image]
+Fig. 1 The overall framework of SCL
+
+
+Firstly, we perform data augmentation on the propagation tree of news using random cropping and use the two obtained positive instances as inputs to the online and target networks, respectively (see Step 2 in Algorithm 1). Secondly, in the feature encode part, we use GCN to model data in the graph structure of the news propagation tree and encode fine-grained structure features (see Step 3 in Algorithm 1). Thirdly, we perform nonlinear projection on the structure feature to get low-dimensional representation in the projection part (see Steps 4–5 in Algorithm 1). Then, in the parameter optimization part, we use the representation after feature projection in the online network to pass a predictor for computing the contrastive loss with the target network’s output (see Step 6 in Algorithm 1). Finally, we optimize the online network parameters and update the target network parameters based on the momentum function (see Step 7 in Algorithm 1). The following sections introduce the implementation of the above steps in detail.
+The random cropping-based data augmentation algorithm
+A news propagation tree, defined in Definition 1, is a tree structure formed by news in the propagation process. FN detection based on propagation structure can better [See PDF for image]
+Algorithm 1 Unsupervised detection framework based on structural contrastive learning
+
+
+[See PDF for image]
+Algorithm 2 The random cropping-based data augmentation algorithm
+
+
+exploit the propagation pattern of news, thus enabling the model to learn more spatial invariance of propagation structure in comparative learning. In contrast, the learning in data augmentation methods is mainly focused on images and text data (e.g., random color distortions, random Gaussian blur, and back-translation). Yet, there are few data augmentation methods based on structure data. Based on (Rong et al. 2020), we innovatively construct two positive instances by randomly cropping the edges of the news propagation tree T to achieve data augmentation of the news propagation tree,. We define the two positive instances as follows:
+Definition 2
+The two positive instances are defined as T i and T j , and the sets of their edges are E i and E j .
+We obtain two different positive instances T i and T j by random cropping the edges of each propagation tree T , where the sets of edges E i and E j are calculated as follows. 1
+E i = E - E i drop 2
+E j = E - E j drop where E i drop and E j drop are the sets of edges constructed with N × p edges sampled randomly from the original edge set E , N is the amount of edges of the propagation tree T , and p is the random cropping rate of the edges.
+The algorithm for data augmentation based on random cropping comprises three steps. (1) the amount of edges N is counted from T (Steps 1–2 of Algorithm 2). (2) The sets of edges E i drop and E j drop are obtained by randomly sampling the set of edges E of T twice (Steps 3–4 of Algorithm 2). (3) The algorithm finally gets the sets of edges E i and E j . of two positive instances, T i and T j (Step 5 of Algorithm 2).
+GCN encoding algorithm
+Our research found news propagation trees have a specific graph structure, whereas graph convolutional neural networks (GCNs) (Kipf and Welling 2017) can effectively obtain structural feature representations from neighboring nodes. Therefore, we use GCN as an encoder to encode the structure feature of news.
+The text vector matrix V = w 1 , w 2 , w 3 , ⋯ , w t serves as GCN’s input feature matrix X . GCN’s adjacency matrix A = a 11 , a 12 , ⋯ , a ij ⋯ , a tt ∈ 0 , 1 t × t can be computed from the set E of edges as follows: 3
+X = V = w 1 , w 2 , w 3 , ⋯ , w t 4
+a ij 1 , i f e ij ∈ E 0 , o t h e r w i s e
+In the GCN, layer-wise propagation is as follows: 5
+H l = M A H l - 1 W l - 1 = ρ A ^ H l - 1 W l - 1 where l = 0 , H 0 = X ; The hidden feature matrix H l is obtained from layer l - 1 in GCN; M the message propagation function; W l a weight matrix of layer l in GCN. Each row in H l is a node’s feature representation and ρ is an activation function like ReLU. A ^ is the normalized adjacency matrix as obtained below: 6
+A ^ = D - 1 2 A D 1 2 7
+D ij = ∑ j A ij where D is the degree matrix obtained from an adjacency matrix A , and D ij is the degree of the i - t h node.
+With more GCN layers piled up, more information is gathered for neighboring nodes. In this part, we respectively input the two positive examples T i and T j into encoders f ( θ ) , f ( β ) to obtain the feature representations y i and y j as follows: 8
+y i = f T i = G C N T i 9
+y j = f T j = G C N T j
+Feature projection
+To reduce information loss, SimCLR (Chen et al. 2020) added a nonlinear projection layer (named Projection Head) behind the Backbone, which leading to an average accuracy improvement of about 10% for the downstream classification task. Therefore, Projection Head is widely used in contrast learning framework (Grill et al. 2020; He et al. 2020; Chen and He 2021; Gao et al. 2021). BYOL’s (Grill et al. 2020) Projection Head was designed as a multilayer perceptron (MLP) containing a hidden layer. In our framework, we continue the design concept of the Projection Head by using two linear layers in the Projection part and adding a batch normalization layer (BN) toward each linear layer. Besides, we add the ReLU activation function after batch normalization in the first linear layer, which can extract relevant features more effectively and speed up the fitting of training data. The equation of the Projection Head in two networks is as follows. 10
+y i ′ = g y i = W ( 2 ) ∂ W ( 1 ) · y i 11
+y j ′ = g y j = W ( 2 ) ∂ W ( 1 ) · y j where W ( 1 ) , W ( 2 ) denote weight matrices of two linear layers and ∂ represents the ReLU function.
+Parameters optimization method
+According to BYOL (Grill et al. 2020), a nonlinear projection layer (Predictor Head) is added after the Projection Head in the online network, designed to prevent the model collapse. Therefore, we continue to use this network structure in our framework. Predictor Head is a multilayer perceptron (MLP) similar to Projection Head, which expands the feature dimension to twice the input layer in the hidden layer. Meanwhile, Predictor Head does not add the Batch Normalization (BN) and ReLU functions to the output layer.
+Different from BYOL (Grill et al. 2020), to minimize the loss of the encoder output feature signal, we keep the dimension of the features unchanged after inputting them into the Predictor Head. The equation of the Predictor Head is as follows. 12
+z i = p y i ′ = W p ( 2 ) · ∂ W p ( 1 ) · y i ′ where W ( 1 ) , W ( 2 ) denote weight matrices of two linear layers and ∂ represents the ReLU function.
+The output z i of the Predictor Head in the online network is calculated by the contrastive loss with the output y j ′ of the Projection Head in the target network. The calculation equation is shown as follows. 13
+L = 2 - 2 · z i , y j ′ z i 2 · y j ′ 2 where · 2 denotes L 2 regularization.
+We then updated the parameter θ In the online network with gradient descent, and the target network’s β momentum can be estimated by’s exponential moving average and optimized for θ and β as follows. 14
+θ ← o p t i m i z e r θ , L , λ 15
+β ← τ β + 1 - τ θ using an Adam optimizer, where λ and τ denote the learning rate and decay rates, respectively.
+Experiment settings
+We designed three sets of experiments to verify our framework’s performance: one explores how different random cropping rates impact data augmentation, another assesses the SCL framework, and the third explores different types of training data. We detail the two experimental datasets used, experimental setups, baseline methods, and the experimental results.
+Datasets
+This section evaluates our method with 2 real-life datasets from Weibo (Ma et al. 2020) and Twitter, with the synthesis of two similar datasets, Twitter 15 (Ma et al. 2017) and Twitter 16 (Ma et al. 2017). In these datasets, nodes depict users, while edges depict retweets and replies concerning the text messages sent, as summarized in Table 1 and 2. Table 1. Weibo dataset statistics
+Statistic
+Weibo
+
+Source tweets
+4664
+
+Tweets
+3,805,656
+
+Fake news
+2313
+
+True news
+2351
+
+Table 2. Twitter dataset statistics
+Statistic
+Twitter
+
+Source tweets
+2308
+
+Tweets
+536,432
+
+Non-fake news
+579
+
+False-fake news
+575
+
+True-fake news
+579
+
+Unverified-fake news
+575
+
+
+Parameters and experimental setup
+For this research, Pytorch (Paszke et al. 2019) is used in the primary implementation of the SCL framework, with the Dropout (Srivastava et al. 2014) method for avoiding model overfitting. To evaluate different random cropping rates in the data augmentation, we set the random cropping rates of the edges at 0.1, 0.2, 0.3, 0.4, and 0.5, as shown in Table 3. Table 3. SCL framework parameters
+Parameter
+Value
+
+λ
+0.001
+
+τ
+0.996
+
+p
+0.1/0.2/0.3/0.4/0.5
+
+Batch size
+128
+
+Hidden size of GCN
+128
+
+Output dimension of projection head
+128
+
+Output dimension of prediction head
+128
+
+
+Evaluation metrics
+The following detection performance parameters in the experiment are used to evaluate the SCL framework:
+Accuracy-Weibo, Accuracy-Twitter, Precision, Recall, and F1 (see Eqs. (16) - (20)), regarding TP (True Positive), FP (False Positive), TN (True Negative), and FN (False Negative).
+- Accuracy for Weibo and Twitter: for comparing the percentage of samples correctly predicted news labels to the total news samples: 16
+A c c u r a c y - W e i b o = T P + T N T P + F P + F N + T N 17
+A c c u r a c y - T w i t t e r = T P 1 + T P 2 + T P 3 + T P 4 T P 1 , 2 , 3 , 4 + F P 1 , 2 , 3 , 4 + F N 1 , 2 , 3 , 4 + T N 1 , 2 , 3 , 4
+
+- Precision: the percentage of samples correctly predicted as one news label in all samples correctly predicted. 18
+P r e c i s i o n = TP T P + F P
+
+- Recall: A percentage of samples correctly predicted as one news label in all samples of this label. 19
+R e c a l l = TP T P + F N
+
+- F1: The harmonic mean of Recall and Precision of a news label. 20
+F 1 = 2 ∗ P r e c i s i o n × R e c a l l P r e c i s i o n + R e c a l l
+
+
+
+Baseline approaches
+In FN detection, we found (Guo et al. 2021) is the latest research using unsupervised learning methods. To highlight the performance of the SCL framework, we continue to use the unsupervised learning baseline approaches from that work (Guo et al. 2021). In addition, we also explore the gap between the SCL framework and supervised learning methods. The baseline approach is described in detail as follows.
+1) Baseline models with supervised learning:
+- DG (Guo et al. 2023): A FN detection framework using deep propagation and global structure features.
+
+- MDG (Guo et al. 2023): A FN detection framework also considering the maximal diffusion feature based on DG.
+
+
+
+2) The baseline models with unsupervised learning:
+- Random-LR : a two-stage combinatorial approach—the training data labels are randomly generated, and the logistic regression model is trained to detect FN. After that, this FN detection is implemented as supervised learning.
+
+- Random-MLP : An unsupervised case remapped into a supervised learning problem, and the logistic regression model with an MLP network.
+
+- C-Means (Chang et al. 2013): The vector representation of the text is extracted by TF-IDF. This clustering method classifies events into FN and non-FN events.
+
+- Twitter-LDA (Yang and Rim 2013): This topic model determines each article’s topic indicator, assigns a prior distribution to the text generation process, and achieves rumor detection by posterior probabilistic inference based on Gibbs sampling.
+
+- HDP (Karlsson et al. 2018): This probabilistic generative model uses cluster similar samples to distinguish different classes. All events can be divided into FN and non-FN with a 2-class setup.
+
+- BPI (Guo et al. 2021): This method assumes the labels derived from some previous distributions with some hyperparameters, which can be learned during training.
+
+- GAN (Guo et al. 2021): The initial graph-free embedding model converts all events into feature vectors using TF-IDF.
+
+- Graph-GAN (Guo et al. 2021): The structure of this model is similar to GAN, except that the model adds a Graph-Embedding structure to obtain more fine-grained features.
+
+
+
+Results and analysis
+The effect of random cropping rate p on the effectiveness
+We set the random cropping rates of the edges at 0.1, 0.2, 0.3, 0.4, and 0.5, respectively, to investigate the impact of different random cropping rates on data augmentation. Figure 2 reports the experimental results on both datasets. Figure 2a shows when the random cropping rates increase from 0.1 to 0.2, there is a great performance improvement in the Twitter dataset. However, the model performance gradually decreases when the random cropping rates increase from 0.2 to 0.5. From Fig. 2b, similar to the Twitter dataset, when the random cropping rate is also 0.2, SCL reaches the optimal value with Weibo’s. Results indicate when the random cropping rate is 0.2, the positive instances constructed by data augmentation can enable SCL to learn the fine-grained propagation structure features to classify real news and FN better. [See PDF for image]
+Fig. 2 F1 for different values of p : Twitter versus Weibo
+
+
+Performance comparison with baseline
+We experimented with Twitter and Weibo datasets to compare our method with baseline models by randomly dividing 80% of the data in the 2 datasets for training (see Tables 4 and 5). Results indicate that the SCL framework has some gaps in the two datasets compared to the two supervised models. On the Twitter dataset, the SCL accuracy is 12.1% and 14.3% worse than the DG and MDG models, respectively. However, the accuracy of Graph-GAN, a contemporary detection model of unsupervised baseline methods, is 25.1% and 27.3% worse than the DG and MDG models, respectively. In addition, as for accuracy on the Weibo dataset, the SCL is about 25.9% worse than DG and 30.5% worse than MDG. The accuracy of Graph-GAN is 47.5% and 52.1% worse than the DG and MDG models, respectively. The above analysis indicates our SCL is not as good as the supervised methods. However, it has narrowed the gap significantly compared with other unsupervised methods. Table 4. Comparison results: Twitter data
+Learning style category
+Algorithms
+Accuracy-twitter
+Precision
+Recall
+F1
+
+Supervised learning
+DG (Guo et al. 2023)
+0.759
+0.763
+0.758
+0.756
+
+MDG (Guo et al. 2023)
+0.781
+0.785
+0.783
+0.779
+
+Unsupervised learning
+Random-LR
+0.433
+0.425
+0.432
+0.428
+
+Random-MLP
+0.440
+0.444
+0.441
+0.442
+
+C-Means (Chang et al. 2013)
+0.461
+0.451
+0.460
+0.457
+
+Twitter-LDA (Yang and Rim 2013)
+0.472
+0.465
+0.469
+0.470
+
+HDP (Karlsson et al. 2018)
+0.480
+0.473
+0.480
+0.478
+
+BPI (Guo et al. 2021)
+0.492
+0.482
+0.491
+0.488
+
+GAN (Guo et al. 2021)
+0.499
+0.432
+0.498
+0.494
+
+Graph-GAN (Guo et al. 2021)
+0.508
+0.502
+0.507
+0.505
+
+SCL
+0.638
+0.636
+0.629
+0.627
+
+Underline denotes the optimal results of each metric in the baseline approach within the unsupervised learning category
+Table 5. Comparison results: Weibo data
+Learning style category
+Algorithms
+Accuracy-weibo
+Precision
+Recall
+F1
+
+Supervised learning
+DG (Guo et al. 2023)
+0.920
+0.915
+0.925
+0.915
+
+MDG (Guo et al. 2023)
+0.966
+0.965
+0.969
+0.965
+
+Unsupervised learning
+Random-LR
+0.378
+0.376
+0.376
+0.378
+
+Random-MLP
+0.376
+0.379
+0.374
+0.378
+
+C-Means (Chang et al. 2013)
+0.390
+0.388
+0.389
+0.390
+
+Twitter-LDA (Yang and Rim 2013)
+0.387
+0.386
+0.386
+0.388
+
+HDP (Karlsson et al. 2018)
+0.395
+0.401
+0.397
+0.399
+
+BPI (Guo et al. 2021)
+0.411
+0.413
+0.412
+0.412
+
+GAN (Guo et al. 2021)
+0.425
+0.432
+0.426
+0.429
+
+Graph-GAN (Guo et al. 2021)
+0.445
+0.446
+0.444
+0.446
+
+SCL
+0.661
+0.749
+0.741
+0.735
+
+Underline denotes the optimal results of each metric in the baseline approach within the unsupervised learning category
+
+Our SCL framework performs the best among other methods for the unsupervised methods on the two datasets. On the datasets of Twitter and Weibo, the accuracy of unsupervised baselines is between 43.3%–50.8% and 37.8%–44.5%, respectively. Among them, Random-LR performs worst, and Graph-GAN has the best in all unsupervised baselines. However, the Graph-GAN is 11.5%, 11.8%, 9.6%, and 9.5% lower than our SCL on the four metrics. Moreover, on the Weibo dataset, the Graph-GAN is 11.5%, 11.8%, 9.6%, and 9.5% lower than SCL on the four metrics. Two possible explanations may be deduced for the above phenomenon.
+Notably, data augmenters can increase data amount without breaking data balance, optimizing the detection performance. Besides, GCN can extract the fine-grained propagation structure features of news. Meanwhile, contrastive learning can help the model learn the difference in the propagation structure features of real news and FN, which makes tweets with similar authenticity closer while separating those with different authenticity.
+Influence of different training data proportion
+We set the proportion of training data on two datasets at 50%, 60%, 70%, and 80%, respectively, to investigate the effect of different training data proportions on performance. We first set the proportion of test data to 20% of one dataset and then selected the training data randomly from the other data by different proportions, without duplicate data between the test and the training sets. Figure 3 and 4 show the trends of four evaluation metrics with different proportions, with four subgraphs each, where the X- and Y-axes denote evaluation metrics and different training data proportions, respectively. From Fig. 3, the four evaluation metrics show similar trends on the Twitter dataset. As the training data proportion gradually increases, each method’s performance improves. However, the SCL framework’s advantage is also highlighted more than other baselines. Notably, when the Twitter dataset has enough training samples, the SCL framework can learn more fine-grained features. Moreover, from Fig. 4, the four metrics tend to increase slowly or flatten out on the Weibo dataset, indicating the training data proportion only slightly impacts each method’s performance. Especially when the training data is over 70%, our SCL shows a decreasing trend in accuracy on the Weibo dataset. [See PDF for image]
+Fig. 3 Accuracy, precision, recall, and F1 for different training data proportions on the twitter dataset
+
+[See PDF for image]
+Fig. 4 Accuracy, precision, recall, and F1 for different training data proportions on the weibo dataset
+
+
+The possible explanation is that the increased data causes an imbalanced dataset, making the SCL appear unstable. For the performance described above, we mainly summarize the following explanations. Notably, our SCL has better robustness than other unsupervised methods because it improves the performance and stability of the encoding model by training two networks against each other. Besides, compared with general feature encode models, GCN can extract more fine-grained features of propagation structure, thus also ensuring SCL’s performance.
+Conclusion
+To deal with the scarcity of label data and the difficulty of data annotation, we propose an unsupervised framework SCL for FN detection, which uses contrastive learning based on the propagation structure of news. In the SCL framework, we innovatively realize data enhancement of the news propagation structure, which uses random cropping to construct two positive instances. We also design experiments to verify the impact of various random cropping rates on our SCL’s performance. We further evaluated our framework with two open Twitter and Weibo datasets, demonstrating our framework outperforms other baseline methods. We demonstrate the contrastive learning method based on propagation structures has great advantages in FN detection. Furthermore, we experiment on the impact of different training data proportions on performance. The results showed our SCL has proper robustness compared to other unsupervised baseline methods.
+As the SCL framework is the first to combine news propagation structure with contrastive learning, we are extending the experimentation to other scenarios and cases for future work. Recently, contrast learning is beginning to be used in the graph data representation learning field (You et al. 2020). The graph node and edge cropping methods used in these works are insightful. We will focus on some approaches (Chen et al. 2023; Feng et al. 2022) of other areas and design new fake news detection methods in the future.
+Acknowledgements
+The authors would like to thank the editor and anonymous referees for their constructive comments.
+Author contributions
+Yajie Guo completed the writing and experiments for the manuscript, Shujuan Ji, Xianwen Fang and Dickson K. W. Chiu provided guidance and suggestions for revision, and Ning Cao and Hofung Leung examined and validated experiments. All authors read and approved the final manuscript.
+Funding
+This paper is supported by the Natural Science Foundation of China (71772107), the Natural Science Foundation of Shandong Province of China (ZR2023MF070), Open Research Fund of Anhui Province Engineering Laboratory for Big Data Analysis and Early Warning Technology of Coal Mine Safety (NO. CSBD2022-ZD01).
+Availability of data and materials
+When certain data sharing requirements are met, the data is available upon request. Such requests should be sent to the first author of this paper.
+Declarations
+Competing interests
+The authors declare that they have no competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+Abbreviations
+SM Social media
+FN Fake news
+MLP Multilayer perceptron
+BN Batch normalization layer
+TP True positive
+FP False positive
+TN True negative
+FN False negative
+Publisher's Note
+Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References
+Ajao O, Bhowmik D and Zargari S, (2018) “Fake news identification on twitter with hybrid cnn and rnn models,” In proceedings of the 9th international conference on social media and society , pp. 226–230. https://doi.org/10.1145/3217804.3217917s
+Alzanin, SM; Azmi, AM. Rumor detection in Arabic tweets using semi-supervised and unsupervised expectation–maximization. Knowl-Based Syst ; 2019; [DOI: https://dx.doi.org/10.1016/j.knosys.2019.104945] 0185.50902
+Ansar, W; Goswami, S. Combating the menace: a survey on characterization and detection of fake news from a data science perspective. Int J Inf Manage Data Insights ; 2021; [DOI: https://dx.doi.org/10.1016/j.jjimei.2021.100052] 1133.83354
+Bian T, Xiao X, Xu T, Zhao P, Huang W, Rong Y and Huang J, (2020) “Rumor detection on social media with bi-directional graph convolutional networks,” In proceedings of the AAAI conference on artificial intelligence , pp. 549–556. https://doi.org/10.1609/aaai.v34i01.5393
+Chang WL, Tay KM and Lim CP. (2013) “Enhancing an evolving tree-based text document visualization model with fuzzy c-means clustering,” In proceedings of the 2013 IEEE international conference on fuzzy systems (FUZZ-IEEE) , pp. 1–6. https://doi.org/10.1109/FUZZ-IEEE.2013.6622363
+Chen, MR; Yang, LQ; Zeng, GQ et al. IFA-EO: an improved firefly algorithm hybridized with extremal optimization for continuous unconstrained optimization problems. Soft Comput ; 2023; 27 , 6 pp. 2943-2964. [DOI: https://dx.doi.org/10.1007/s00500-022-07607-6] 07772000
+Chen X and He K, (2021) “Exploring simple siamese representation learning,” In proceedings of the IEEE/CVF conference on computer vision and pattern recognition , pp. 15750–15758.
+Chen T, Kornblith S, Norouzi M and Hinton G, (2020) “A simple framework for contrastive learning of visual representations,” In Proceedings of the 37th International conference on machine learning , pp. 1597–1607.
+Davoudi, M; Moosavi, MR; Sadreddini, MH. DSS: A hybrid deep model for fake news detection using propagation tree and stance network. Expert Syst Appl ; 2022; [DOI: https://dx.doi.org/10.1016/j.eswa.2022.116635] 1517.81046
+Feng, Y; Xu, Y; Hu, Q et al. Predicting vacant parking space availability zone-wisely: a hybrid deep learning approach. Complex Intell Syst ; 2022; 8 , 5 pp. 4145-4161. [DOI: https://dx.doi.org/10.1007/s40747-022-00700-1] 1402.35292
+Ferrara E, (2017) “Disinformation and social bot operations in the run up to the 2017 French presidential election,” arXiv preprint arXiv:1707.00086
+Gao T, Yao X and Chen D, (2021) “Simcse: Simple contrastive learning of sentence embeddings,” arXiv preprint arXiv:2104.08821
+Grill, JB; Strub, F; Altché, F et al. Bootstrap your own latent-a new approach to self-supervised learning. Adv Neural Inf Process Syst ; 2020; 33 , pp. 21271-21284.
+Guo, Z; Yu, K; Jolfaei, A; Bashir, AK; Almagrabi, AO; Kumar, N. Fuzzy detection system for rumors through explainable adaptive learning. IEEE Trans Fuzzy Syst ; 2021; 29 , 12 pp. 3650-3664. [DOI: https://dx.doi.org/10.1109/TFUZZ.2021.3052109]
+Guo, Y; Ji, S; Cao, N; Chiu, DK; Su, N; Zhang, C. MDG: Fusion learning of the maximal diffusion, deep propagation and global structure features of fake news. Expert Syst Appl ; 2023; [DOI: https://dx.doi.org/10.1016/j.eswa.2022.119291]
+He K, Fan H, Wu Y, Xie S and Girshick R, (2020) “Momentum contrast for unsupervised visual representation learning,” In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , pp. 9729–9738.
+Howard PN and Kollanyi B, (2016) “Bots, StrongerIn, and Brexit: computational propaganda during the UK-EU referendum,”, arXiv:1606.06356
+Inan, E. ZoKa: a fake news detection method using edge-weighted graph attention network with transfer models. Neural Comput Appl ; 2022; 34 , 14 pp. 11669-11677. [DOI: https://dx.doi.org/10.1007/s00521-022-07057-z] 07926847
+Jain, V; Kaliyar, RK; Goswami, A; Narang, P; Sharma, Y. AENeT: an attention-enabled neural architecture for fake news detection using contextual features. Neural Comput Appl ; 2022; 34 , 1 pp. 771-782. [DOI: https://dx.doi.org/10.1007/s00521-021-06450-4]
+Karlsson A, Duarte D, Mathiason G and Bae J, (2018) “Evaluation of the Dirichlet process multinomial mixture model for short-text topic modeling,” In 2018 6th international symposium on computational and business intelligence (ISCBI) , pp. 79–83. https://doi.org/10.1109/ISCBI.2018.00025
+Kipf TN and Welling M, (2017) “Semi-supervised classification with graph convolutional networks,” In proceedings of the 5th international conference on learning representations (ICLR) , pp. 1–14.
+Kouzy, R; Abi Jaoude, J; Kraitem, A et al. Coronavirus goes viral: quantifying the COVID-19 misinformation epidemic on Twitter. Cureus ; 2020; [DOI: https://dx.doi.org/10.7759/cureus.7255]
+Kumar S and Carley KM, (2019) “Tree lstms with convolution units to predict stance and rumor veracity in social media conversations,” In proceedings of the 57th annual meeting of the association for computational linguistics , pp. 5047–5058. https://doi.org/10.18653/v1/P19-1498
+Lazer, DM; Baum, MA; Benkler, Y et al. The science of fake news. Science ; 2018; 359 , 6380 pp. 1094-1096. [DOI: https://dx.doi.org/10.1126/science.aao2998] 0165.34301
+Ma, J; Gao, W; Joty, S; Wong, KF. An attention-based rumor detection model with tree-structured recursive neural networks. ACM Trans Intell Syst Technol ; 2020; 11 , 4 pp. 1-28. [DOI: https://dx.doi.org/10.1145/3391250]
+Ma J, Gao W and Wong KF, (2017) “Detect Rumors in Microblog posts using propagation structure via kernel learning,” In proceedings of the 55th annual meeting of the association for computational linguistics , pp. 708–717. https://doi.org/10.18653/v1/P17-1066
+Ma J, Gao W and Wong KF, (2018) “Rumor detection on twitter with tree-structured recursive neural networks,” In proceedings of the 56th annual meeting of the association for computational linguistics , pp. 1980–1989. https://aclweb.org/anthology/P18-1184
+Meel, P; Vishwakarma, DK. A temporal ensembling based semi-supervised ConvNet for the detection of fake news articles. Expert Syst Appl ; 2021; [DOI: https://dx.doi.org/10.1016/j.eswa.2021.115002] 07493633
+Moreira, LS et al. A study of algorithm-based detection of fake news in Brazilian election: is BERT the best. IEEE Latin Am Trans ; 2023; 21 , 8 pp. 897-903. [DOI: https://dx.doi.org/10.1109/TLA.2023.10246346] 1478.51008
+Paka, WS; Bansal, R; Kaushik, A; Sengupta, S; Chakraborty, T. Cross-SEAN: A cross-stitch semi-supervised neural attention model for COVID-19 fake news detection. Appl Soft Comput ; 2021; [DOI: https://dx.doi.org/10.1016/j.asoc.2021.107393] 1452.62866
+Paszke, A; Gross, S; Massa, F; Lerer, A; Bradbury, J; Chanan, G; Chintala, S. Pytorch: an imperative style, high-performance deep learning library. Adv Neural Inf Process Syst ; 2019; 32 , pp. 8026-8037.
+Pierri, F; Ceri, S. False news on social media: a data-driven survey. ACM SIGMOD Rec ; 2019; 48 , 2 pp. 18-27. [DOI: https://dx.doi.org/10.1145/3377330.3377334] 1411.34106
+Rong Y, Huang W, Xu T and Huang J, (2020) “Dropedge: Towards deep graph convolutional networks on node classification,” In proceedings of the 8th international conference on learning representations (ICLR) , pp. 1–16.
+Shu, K; Sliva, A; Wang, S; Tang, J; Liu, H. Fake news detection on social media: a data mining perspective. ACM SIGKDD Explor Newsl ; 2017; 19 , 1 pp. 22-36. [DOI: https://dx.doi.org/10.1145/3137597.3137600] 0922.39004
+Srivastava, N; Hinton, G; Krizhevsky, A; Sutskever, I; Salakhutdinov, R. Dropout: a simple way to prevent neural networks from overfitting. J Mach Learn Res ; 2014; 15 , 1 pp. 1929-1958.32315921318.68153
+Wang WY, (2017) ““liar, liar pants on fire”: A new benchmark dataset for fake news detection,” In proceedings of the 55th annual meeting of the association for computational linguistics , pp. 422–426. https://doi.org/10.18653/v1/P17-2067
+Wang, Y; Wang, L; Yang, Y; Lian, T. SemSeq4FD: integrating global semantic relationship and local sequential order to enhance text representation for fake news detection. Expert Syst Appl ; 2021; [DOI: https://dx.doi.org/10.1016/j.eswa.2020.114090] 1481.65199
+Wang, Y; Yang, W; Ma, F; Xu, J; Zhong, B; Deng, Q; Gao, J. Weak supervision for fake news detection via reinforcement learning. Proce AAAI Confer Artif Intell ; 2021; [DOI: https://dx.doi.org/10.1609/aaai.v34i01.5389] 1121.74398
+Xu, F; Sheng, VS; Wang, M. Near real-time topic-driven rumor detection in source microblogs. Knowl-Based Syst ; 2020; [DOI: https://dx.doi.org/10.1016/j.knosys.2020.106391] 1184.53071
+Yang, MC; Rim, HC. Identifying interesting twitter contents using topical analysis. Expert Syst Appl ; 2013; 41 , 9 pp. 4330-4336. [DOI: https://dx.doi.org/10.1016/j.eswa.2013.12.051] 1140.90376
+You, Y; Chen, T; Sui, Y; Chen, T; Wang, Z; Shen, Y. Graph contrastive learning with augmentations. Adv Neural Inf Process Syst ; 2020; 33 , pp. 5812-5823.07633928
+Yu, HY; Tsoi, YY; Rhim, AHR; Chiu, DK; Lung, MMW. Changes in habits of electronic news usage on mobile devices in university students: a comparative survey. Library Hi Tech ; 2021; 40 , 5 pp. 1322-1336. [DOI: https://dx.doi.org/10.1108/LHT-03-2021-0085]
+Zeng, H; Cui, X. SimCLRT: a simple framework for contrastive learning of rumor tracking. Eng Appl Artif Intell ; 2022; [DOI: https://dx.doi.org/10.1016/j.engappai.2022.104757] 1506.37062

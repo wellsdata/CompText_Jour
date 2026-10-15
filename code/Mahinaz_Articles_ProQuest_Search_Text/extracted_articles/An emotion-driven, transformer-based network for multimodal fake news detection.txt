@@ -1,0 +1,787 @@
+Introduction
+The proliferation of fake news in social media platforms has emerged as a critical and pressing issue in today’s information landscape. False or misleading information, disguised as legitimate news, can spread rapidly and widely, potentially influencing public opinion, decision-making, and even contributing to social unrest.
+In recent times, social media has been misused for sharing false information, also known as “fake news,” about politics, elections, COVID-19, etc. For example, fake news created great social confusion and psychological pain during the COVID-19 pandemic [1]. During the 2016 US elections, fake news was spreading like a virus on the social media platforms like Twitter [2]. Fake news consists of false information developed intentionally to mislead people and create social confusion that may further impact society with unfavorable outcomes. Figure 1 is an example of a news on Internet which is fake, including multimodal data comprising of images and text. The problem statement emphasizes the urgent need for effective fake news detection mechanisms within social media platforms. Without reliable means to distinguish between accurate and fabricated information, users are vulnerable to misinformation, which can lead to a range of negative consequences, including Misinformed Public, Threat to Democracy, Economic Impact, Public Safety and Health Concerns, Erosion of Credibility for Media and Institutions, and Manipulation and Influence Campaigns. Given these potential implications, it is imperative to develop and implement robust and reliable fake news detection systems within social media platforms.
+Fig. 1 [Images not available. See PDF.]
+Examples of fake news on Internet
+
+According to the existing literature, various attempts have been made to efficiently design these systems using machine learning or deep learning-based models. The deep learning models have gained much attention with their exceptional capability of capturing the complex patterns within the data. Fake news detection networks like multitask learning model [3], attention-based convolutional bidirectional long short-term memory [4], cross-stitch-based semi-supervised attentive model [5], entity-oriented multimodal alignment, and fusion network [6], RNN with an attention mechanism [7], multimodal variational autoencoder [8], cross-modal attention residual, and multichannel convolutional neural network [9] are some of the deep learning models that have recently been developed to identify the fake news.
+The ever-growing need to detect fake news on trending social media platforms leads to multiple challenges in this area. Firstly, most of the earlier studies have focused on extracting the fake content from unimodal data like text [3, 10, 11]. Some researchers have recently started focusing on multimodal data like text, video, and images to generate efficient fake news detection models. However, these systems are based on fusing the multimodal content, resulting in unnecessary noise, thus affecting the performance of the model. Hence, we need to design a system that can capture and preserve the unique features of multiple modalities.
+Secondly, some prior works on multimodal fake news classification have given importance to all the parts in the text and image modalities, resulting in redundant data [8]. Moreover, maximizing the correlation among the multiple modalities is important to enhance the multimodal fusion process. Thirdly, existing works have majorly used pretrained CNN architectures like VGG-16 network for images and RNN for textual data. Although CNN architectures can be effective, they may not always successfully extract domain-specific features, and similarly, RNN networks may struggle to extract high-level semantic features. Emotions also has a significant impact in detecting fake news. Ajao et al . [12] show that the veracity of the news and the sentiment of the posted news has a direct relationship with each other. However, researchers have mainly focused on extracting sentiments from text-based fake news. To the best of our knowledge, no study has concentrated on modeling the relationship between the veracity of multimodal data and the emotion extracted from the multiple modalities.
+In order to address the challenges and limitations mentioned above, we have developed an emotion-driven network that utilizes transformers and is designed to identify fraud news from multimodal input. Our architecture extracts prominent features from the image and text modalities by using transformers, which are inspired by the attention networks. The image modality utilizes multi-head self-attention, where each head learns completely different attentive features from the visual data. The contextual features are extracted from the textual data to generate the robust embedding vectors. We also extract emotions from images, text, and emoticons to help the classifiers detect fake news from the multimodal data. As far as we are aware, our work is the first to utilize multimodal emotions to detect fake news across multiple modalities. The main contributions of our paper can be summarized as follows:
+- We propose an emotion-based network to identify fake news from the multimodal data by extracting visual emotions and textual emotional scores. As far as we are aware, our work is the first to utilize multimodal emotions to detect fake news across multiple modalities.
+
+- The proposed architecture is inspired by the vision transformer, which uses an attention network at multiple levels to remove unnecessary features and noisy data. This generates relevant feature vectors, which help the classifiers to identify the fake news.
+
+- We performed experiments on five popular datasets, specifically Twitter, Risdal Fake News Dataset (RFND), Pontes Fake News Dataset (PFND), Jruvika Fake News Dataset (JFND), and Fakeddit Multimodal Dataset (Fakeddit). We assessed their performance using Accuracy, Precision, Recall, and F1 score.
+
+- We also performed an ablation study to show the potency of different modules in the proposed architecture and show several visualizations to understand how the proposed network extracts features by paying attention to relevant data only.
+
+
+
+The remaining paper is structured as: Sect. 2 summarizes the previous work in this area. Section 3 discusses the proposed architecture in detail. Section 4 shows the experimental results and visualizations. Section 5 discusses the challenges and ethical considerations related to fake news, and Sect. 6 focuses on the conclusion and future work.
+Related work
+Previous work in fake news detection includes various approaches that help in misinformation detection and its mitigation. Early research in this area is mainly focused on extracting fake news from a single modality. However, recent literature has started using multimodal data like text, images, videos, and emoticons to identify fake news efficiently. Hence, this section summarizes the critical work on unimodal and multimodal fake news detection. We also discuss some of the vital work which uses emotions or sentiments to identify the fake data.
+Unimodal sentiment detection
+This section discusses prior works that utilize a single modality to identify fake news. Wu et al . [2] proposed a category-controlled model which uses encoder and decoder modules for dataset enhancement. The model is trained to generate examples that differentiate features based on category. Dong et al . [10] proposed a semi-supervised learning framework that consists of two-path deep layers. The first path is comprised of supervised learning and works on limited labeled data. The second path is comprised of unsupervised learning and learns through extensive unlabeled data. The authors also use shared convolutional neural networks for optimization.
+Shim et al . [11] proposed a structural model of web links containing news content as a promising input feature for fake news detection. The authors proposed link2vec, which is an extension of word2vec. Liao et al . [3] proposed a multitask learning model that explores the topic labels and generates contextual information. The model integrates representation learning and multitask learning for training and classification. Trueman et al . [4] utilized attention aware LSTM model for fake news detection in the multi-class environment. Paka et al . [5] introduced a large Twitter dataset for COVID-19 and proposed a neural attention model based on semi-supervised end-to-end learning. The model learns from a large chunk of unlabeled data having relevant external knowledge. Verma et al . [13] proposed a benchmark model that utilizes word embeddings over linguistic features and uses the voting classification for fake news identification.
+Multimodal sentiment detection
+The growth of the Internet has contributed to generating a large volume of multimodal data on social media, resulting in identifying the fake news from multiple modalities. Recent literature shows a sharp increase in multimodal fake news detection.
+Li et al . [6] proposed a fusion network based on entities that aims to preserve the semantic integrity in the multimodal data. Jin et al . [7] utilized RNNs and attention networks to extract the visual, textual, and social context-based features. Khattar et al . [8] proposed a variational autoencoder framework with multimodal support. The model can learn correlations between the modalities through its encoder–decoder-based module. Singhal et al . [14] proposed SpotFake + , that utilizes transfer learning for multimodal data. The model takes visual and textual data as inputs and captures the semantic and contextual information from these inputs, respectively. Song et al . [9] proposed a multichannel convolutional neural network-based framework that utilizes a residual attention network to capture the multimodal features.
+Kumari et al . [15] proposed a framework comprising of multiple sub-modules. The first module represents the text-based features, which are extracted by using Bi-LSTMs networks. The second module utilizes CNN and RNN to extract the visual features. The multimodal features are fused in the third module and sent to the multilayer perceptron network for classification. Junxiao Xue et al . [16] proposed a consistent neural network to capture the broad multimodal characteristics of social media and compute the similarity scores between different types of multimodal data. Meel and Vishwakarma [17] proposed a framework that uses the hierarchical attention network. The authors extract the hidden patterns from news titles and headlines by performing an error-level analysis to identify the noise. Max voting ensemble classifier is used to detect fake news. Yuan et al . [18] proposed a graph-attention neural network model that works across multiple events or domains. The model has the advantage of training on partial domain sample data and provides efficient classifications. Multimodal fake news detection adds trust and authenticity to the high-performing deep learning models and results in efficient classifications. However, contextual information in the form of emotions can further help in efficient classification.
+Emotion-based detection
+Recent literature reveals that emotions embedded in the fake news data can form a significant characteristic in determining the veracity of the news. The misinformation is usually communicated to arouse interest by embedding an element of surprise, fear, or disgust within the consumers. Hence, such fake news immediately attracts people’s attention and results in an intense emotional stimulus.
+Xueyao Zhang et al . [19] verified that publisher and dual social emotions act as a distinctive feature between fake and real news. The authors proposed emotional features to represent dual emotions and modeled their relationship. Rina Kumari et al . [1] proposed a fake news detection framework that extracts emotions from the textual data to determine the authenticity of news. The authors have used the transfer-learning approach to train their textual novelty detection and emotion prediction modules. The text data are encoded by using multichannel CNN and pretrained Glove embeddings. The experimental results show that the extracted emotions have contributed to identifying the fake data from the text. Hence, this study extends the possibility of utilizing emotions from the multimodal data to verify their authenticity.
+Proposed methodology
+This work aims to detect the fake content from images and text on social media platforms. Let the text-based post be defined as T = { w 1 , w 2 , ⋯ , w n } , where w denotes the number of words in a post T and let I = { i 1 , i 2 , . . , i n } are the images corresponding to the entire text T . Our task is to classify the post into two different class labels defined as Real (R) or Fake (F). The block diagram of the proposed network is shown in Fig. 2.
+Fig. 2 [Images not available. See PDF.]
+Block diagram of proposed network
+
+Multi-granular visual feature extraction
+Initially, we divide each image i i ∀ i = 1 , 2 , ⋯ , n into small patches by using a kernel of size 16*16. Then, the learnable position embeddings are added, which understands the similarity between the nearby embedding vectors. In this way, the transformer gathers full information about the overall image sequence. The generated vectors are fed into the transformer and divided into query (Q), key (K), and value (V) matrices. The transformer contains a multi-head self-attention layer (MHSA) and multilayer perceptron layer (MLP). MHSA divides the input into different heads where each head learns completely different attention. The relation between the trainable matrices Q, K, ad V is shown in Eq. (1) as follows: 1
+h i = softmax Q ∗ K / d ∗ V where d = dimension of i th attention head. The MLP combines the output of each of the different heads h 1 , h 2 , ⋯ . . h n and pass them to the fully connected layers of the network. The entire module is explained in Fig. 3.
+Fig. 3 [Images not available. See PDF.]
+Multi-granular visual feature extraction
+
+Visual emotion extraction
+We extract the visual emotions from the images to understand how emotions can contribute to identify the false and fabricated features from the visual data. Hence, we use the VGG-16 model, which is pretrained on ImageNet [20] dataset, to extract the emotions. The VGG-16 is fine-tuned on the IESN dataset [21], which contains images belonging to eight different categories of emotion: amusement, anger, awe, disgust, contentment, fear, excitement, and sad. We freeze the weights of the higher layers, remove the last fully connected layers of the network, and replace them with new layers, which are fine-tuned on the IESN dataset. Let I i be the i th fake image of the network, the emotional features are extracted by the VGG-16 network as shown in Eq. (2): 2
+EF i = f V G G 16 ( I i )
+Hence, if S i denotes the features of i th image obtained from the multi-granular visual feature extraction module and EF i denotes the emotional features extracted by the VGG-16 network, then the combined visual features for the i th image in the dataset can be represented by Eq. (3) as shown below: 3
+VF i = S i + EF i
+Contextual feature extraction
+For extracting the text-based features, we use BERT-Base [22], which predicts a word by using the concept of masking, i.e., looking at both the left and right direction of the target word. This enables the model to extract the full context of the sentence. The major advantage or motivation of applying transformers is that they look at the small number of steps selected empirically and apply a self-attention mechanism at each step to focus and understand the association between different words in a sentence.
+Let T = { s 1 , s 2 , ⋯ , s n } be the n sentences in a text where s i = { w 1 , w 2 , ⋯ . , w j } are the set of j words corresponding to each sentence s i ∀ i = 1 t o n . The transformer attaches [CLS] token at the beginning of the first sentence, thereby separating each sentence using the [SEP] token and converting the input word tokens into token embeddings. The token embeddings are then converted into segment embeddings that divide each sentence using a sentence marker. Finally, position information is appended to each token which informs about the relative position of the words in the sentence.
+Let s 1 and s 2 be two sentences: Input:
+s 1 = { w 11 , w 12 , ⋯ . , w 1 n } and s 2 = { w 21 , w 22 , ⋯ . , w 2 n }
+
+Token embedding:
+E C L S E W 11 E W 12 ⋯ E W 1 n E S E P
+E W 21 E W 22 E M A S K ⋯ E W 2 n E [ S E P ]
+
+ +
+ +
+
+Segment embedding:
+E A E A E A ⋯ ⋯ . E A E A
+E B E B E B ⋯ ⋯ . E B E B
+
+ +
+ +
+
+Point embeddings:
+E 0 E 1 E 2 ⋯ ⋯ . E 7 E 8
+E 9 E 10 E 11 ⋯ ⋯ . E 16 E 17
+
+Final embedding:
+Token embedding  +  Segment embedding
+
+ +  Point embedding
+
+
+The final embeddings are normalized and passed into the fully connected layers to give the contextual information of the text.
+Textual emotion extraction
+The emotional features are also mined from the text, which includes calculating the emoticon score and word score from the lexicon.
+Emoticon score
+The text found on social media platforms is filled with different emojis and symbols like “:/” (skeptical) and “:P” (cheeky/playful) etc. We use the Wikipedia list of emoticons [23] to calculate the sentiments of the emoticons, S E .
+Word score from lexicon
+We use the NRC word-emotion lexicon [24, 25], which contains eight different emotions: disgust, trust, fear, sadness, anger, anticipation, joy, and surprise. The lexicon provides a sentiment score corresponding to each word in the text. If L is the length of the sentence, then the sentiment of the sentence is calculated by combining the scores of each word: 4
+S L = scores ( w 1 , w 2 , ⋯ , w L ) L
+The final emotion of the i th sentence is calculated by combining the emoticon scores and lexicon word scores as shown in Eq. (5): 5
+S f i = S E i + S L i
+Lastly, we add the contextual text features with the emotional features to generate the complete feature vector for the textual modality.
+Classification
+The final textual feature vector obtained in Sect. 3.4 and the image feature vector obtained in Sect. 3.2 are fused and passed to the fully connected layers. We use the softmax classifier, which classifies the input sample into Real or Fake categories. Finally, we use the cross-entropy loss which helps in training the network. 6
+P S = softmax ( f ) 7
+Loss = - ∑ ( P S , y ) where y = actual label of the training data.
+Experimental settings
+This section discusses the dataset used, implementation details, and qualitative and quantitative analysis of the proposed work.
+Dataset
+We have used five real-world datasets to validate the performance of the proposed architecture. The complete details of the dataset are shown in Table 1: Table 1. Dataset details
+#Samples
+Dataset
+
+Twitter
+JFND
+PFND
+RFND
+
+# Real
+5910
+1861
+25,249
+8071
+
+# Fake
+7420
+2012
+20,136
+11,834
+
+Total
+13,330
+3,873
+45,385
+19,905
+
+
+Twitter
+This dataset was released for the public in the Verifying Multimedia Use [26] task to predict whether the news on Twitter is real or fake. The dataset contains text, along with its associated image and user profile information. We keep on the text and its related image. Those samples which do not contain either text or its image are removed.
+Jruvika fake news dataset (JFND)
+The Jruvika Fake News Dataset, which includes the body, URL, headline, and output label (Real or Fake), was uploaded to Kaggle [27] by Jruvika. In our approach, we downloaded the images using the Beautiful Soup library in Python and concatenated the headline and body before passing them through the contextual feature extraction module of our proposed network.
+Pontes fake news dataset (PFND)
+Guilherme Pontes hosted this dataset on Kaggle [28], which consists of news articles from various categories such as satire, fake, reliable, rumor, etc. In our approach, we grouped rumor, unreliable, fake, and clickbait categories into the Fake category, while the reliable category was grouped into the Real category.
+Risdal fake news dataset (RFND)
+The dataset is uploaded on Kaggle [29] by Megan Risdal and contains 8,071 real news and 11,834 fake news instances. The images are downloaded from the URL provided in the dataset.
+Fakeddit multimodal dataset (Fakeddit)
+To enhance the precision of classifying multimodal fake news, we leverage the Fakeddit dataset, which, to the best of our knowledge, stands as the most extensive publicly available multimodal fake news dataset. An additional benefit is that the dataset’s creators have partitioned it into distinct sets for training, validation, and testing, allowing for direct and comparable experiments.
+The Fakeddit dataset comprises one million instances spanning up to six distinct categories of information distortion, sourced through the Pushshift API. Consequently, it offers 2-way, 3-way, and 6-way labels for each sample, affording researchers the opportunity to develop a more nuanced fake news detection model. In our study, we have employed the 6-way labels for classification, encompassing the following categories: - True Content that aligns accurately with facts. This category encompasses eight subreddits, such as “usnews” and “mildlyinteresting.” The former features posts from various news outlets, while the latter showcases authentic images paired with accurate descriptions.
+
+- Satire/Parody This category comprises content that presents true contemporary information with a satirical twist or provides false information.
+
+- Misleading Content This category includes information intentionally manipulated to deceive the audience.
+
+- Imposter Content This category encompasses two subreddits containing bot-generated content, drawing from a wide array of other subreddits.
+
+- False Connection Images in this category do not accurately support their accompanying text descriptions. We have identified four subreddits with this label, featuring posts of images with captions that diverge from the genuine meaning of the image.
+
+- Manipulated Content Content deliberately altered through manual photo editing or other forms of manipulation. The entirety of this category is constituted by comments from the photoshopbattle subreddit (not the submissions themselves). These samples feature edited versions of images sourced from the submissions.
+
+
+For our experiments, we preprocess the data (following a similar approach to [2]) by excluding samples where not all modalities are available (e.g., text-only posts). This yields 560,622 samples for training, 58,972 samples for validation, and 58,954 holdout samples for testing.
+Experimental setup
+In the multi-granular visual feature extraction module, the images are normalized and resized to 224*224 size. The kernel size used in the Conv2D layer is 16*16. We use twelve parallel attention heads, and the output of VGG-16 is taken to get the image’s emotional features. Fully connected layer of size 1024 is added for combining the multi-granular visual features and visual emotions. In the contextual feature extraction, the size of the input text is set to 16. We use dropout with a 0.4 value. The entire dataset is divided into training, testing, and validation part with the split ratio of 80:10:10 with batch size = 64, and we use K-fold validation testing to test our datasets. For the Twitter dataset, the total epochs are 120 and the learning rate = 0.001. For JFND, the total epochs are 80 and the learning rate = 0.001. For PFND and RFND, the number of epochs = 100 and learning rate = 0.005. For Fakeddit, the number of epochs are 100 and learning rate = 0.004. All the experiments are performed in Python using NVIDIA-Titan-RTX GPUs.
+Baseline comparison
+This section compares our results with the state-of-the-art and other baseline methods for fake news detection.
+Datasets based on binary classification: twitter, JFND, PFND, RFND
+This section compares our results with the baseline methods on the binary datasets, where the output label category is Fake and Real. The complete details are shown in Table 2.
+- VQA [30]: In VQA task, a natural language answer is generated corresponding to a given image and a text-based question related to it. As VQA is a multi-class problem, we replaced it with a binary classifier in our approach.
+
+- EMAF [6]: The authors have used cross-modal alignment and fusion to extract and align the entities from the multimodal data
+
+- Att-RNN [7]: To extract textual features and combine them with social context features, the authors employed an attention-based RNN in their approach. Additionally, visual features were extracted using pretrained CNN networks.
+
+- MVAE [8]: The authors have used bimodal variational autoencoder for detecting the fake news by using BILSTMs and VGG-16 network for textual and visual content, respectively. The autoencoder learns the shared representation of the multimodal data.
+
+- Spotfake [14]: Pretrained network is used to extract the text-based features, and CNN is used for extracting the visual features.
+
+- DAGA-NN [18]: The authors have used a graph-attention network to identify the fake news from different domains. The text features are extracted by BERT and visual features by VGG-16 network. Both the features are combined and passed into the graph-attention layer.
+
+- Ensemble with Max-Voting [17]: The authors have used hierarchical attention networks for extracting the textual features, generating the image caption, and matching the headlines along with the forensic analysis techniques to identify the fake news.
+
+- AMFB [15]: The authors utilized an attention-based bidirectional LSTM to extract textual features, an attention-based CNN-RNN to extract visual features, and a pooling layer to combine the features from both modalities in their approach.
+
+
+Table 2. Performance results (P: Precision, R: Recall, F1: F1 score, Acc: Accuracy)
+Datasets
+Evaluation Metrics
+VQA [1]
+EMAF [2]
+Att-RNN [3]
+MVAE [4]
+Spotfake [5]
+DAGA-NN [6]
+Ensemble with Max Voting [7]
+AMFB [8]
+Ours
+
+Twitter
+Real -P
+0.60
+0.73
+0.67
+0.68
+0.87
+0.91
+0.89
+0.67
+0.95
+
+Real- R
+0.77
+0.86
+0.88
+0.77
+0.76
+0.77
+0.90
+0.88
+0.93
+
+Real- F1
+0.67
+0.79
+0.76
+0.73
+0.81
+0.83
+0.91
+0.76
+0.93
+
+Fake -P
+0.78
+0.88
+0.85
+0.80
+0.89
+0.89
+0.90
+0.85
+0.94
+
+Fake -R
+0.61
+0.75
+0.61
+0.71
+0.95
+0.96
+0.87
+0.61
+0.93
+
+Fake -F1
+0.68
+0.81
+0.71
+0.75
+0.92
+0.93
+0.89
+0.71
+0.93
+
+Acc
+0.68
+0.80
+0.74
+0.74
+0.88
+0.90
+0.88
+0.74
+0.94
+
+JFND
+Real -P
+0.66
+0.70
+0.62
+0.75
+0.81
+0.84
+0.93
+0.84
+0.98
+
+Real- R
+0.69
+0.73
+0.65
+0.83
+0.79
+0.88
+0.89
+0.83
+0.98
+
+Real- F1
+0.67
+0.71
+0.63
+0.79
+0.80
+0.86
+0.91
+0.83
+0.98
+
+Fake -P
+0.61
+0.76
+0.63
+0.82
+0.84
+0.87
+0.92
+0.86
+0.97
+
+Fake—R
+0.67
+0.80
+0.68
+0.84
+0.83
+0.89
+0.91
+0.85
+0.96
+
+Fake—F1
+0.64
+0.78
+0.65
+0.83
+0.83
+0.88
+0.91
+0.85
+0.96
+
+Acc
+0.62
+0.77
+0.72
+0.79
+0.77
+0.83
+0.92
+0.85
+0.96
+
+PFND
+Real -P
+0.65
+0.68
+0.75
+0.74
+0.77
+0.81
+0.93
+0.89
+0.98
+
+Real- R
+0.70
+0.69
+0.77
+0.72
+0.72
+0.83
+0.94
+0.91
+0.94
+
+Real- F1
+0.67
+0.68
+0.76
+0.73
+0.74
+0.82
+0.93
+0.90
+0.95
+
+Fake -P
+0.64
+0.65
+0.71
+0.79
+0.75
+0.79
+0.95
+0.93
+0.96
+
+Fake -R
+0.66
+0.67
+0.74
+0.81
+0.74
+0.80
+0.91
+0.90
+0.95
+
+Fake -F1
+0.65
+0.66
+0.72
+0.80
+0.74
+0.79
+0.93
+0.91
+0.95
+
+Acc
+0.67
+0.71
+0.74
+0.77
+0.81
+0.83
+0.94
+0.87
+0.97
+
+RFND
+Real -P
+0.78
+0.77
+0.81
+0.75
+0.86
+0.81
+0.89
+0.89
+0.96
+
+Real- R
+0.81
+0.79
+0.80
+0.77
+0.82
+0.83
+0.87
+0.88
+0.95
+
+Real- F1
+0.79
+0.78
+0.80
+0.76
+0.84
+0.82
+0.86
+0.85
+0.95
+
+Fake -P
+0.82
+0.84
+0.79
+0.73
+0.80
+0.79
+0.86
+0.86
+0.98
+
+Fake -R
+0.78
+0.83
+0.76
+0.76
+0.83
+0.81
+0.89
+0.83
+0.97
+
+Fake -F1
+0.80
+0.83
+0.77
+0.74
+0.81
+0.80
+0.87
+0.87
+0.97
+
+Acc
+0.79
+0.81
+0.83
+0.76
+0.84
+0.83
+0.88
+0.85
+0.98
+
+
+Dataset based on multi-class classification: Fakeddit
+This section compares our results with the baseline methods on the Fakeddit dataset, where the output label categories are: True, Satire, Misleading Content, Imposter Content, False Connection, and Manipulated Content. The complete details are shown in Table 3.
+- BERT  +  Xception  +  Max-Fusion [31]: This method initiates by feeding padded and tokenized text into the BERT model to derive word vectors. Concurrently, the Xception model extracts the visual features, and the multimodal features are integrated using Max-Fusion.
+
+- BERT  +  Xception  +  Concatenate [31]: This method employs the BERT model for word vector extraction from padded and tokenized text. The Xception model is utilized to capture visual characteristics. Finally, the multimodal features are concatenated.
+
+- (BERT  +  Dense)  +  Xception  +  Max-Fusion [31]: Here, a dense output layer enriched with a softmax activation function is incorporated into the BERT model. The model is subsequently fine-tuned using Xception and fused via Max-Fusion.
+
+- (BERT  +  Dense)  +  Xception  +  Concatenate-Fusion [31]: Similar to the previous method, a dense output layer with softmax activation is integrated into BERT. Post fine-tuning with Xception, features are combined through Concatenate-Fusion.
+
+- EMAF [6]: An alignment module, known as cross-modal alignment, serves the purpose of encapsulating semantic entities from both images and texts. It accomplishes this by aligning visual entities with textual entities using an enhanced dynamic routing algorithm.
+
+- Text content (BERT)  +  Visual content (InceptionV3)  +  Concat [32]: We focused on utilizing the textual and visual content only (ignoring the metadata and textual comments).
+
+
+Table 3. Performance results on Fakeddit dataset (P: Precision, R: Recall, F1: F1 score, Acc: Accuracy)
+Ref
+P
+R
+F1
+Acc
+
+BERT + Xception + Max pooling [31]
+92.44
+92.07
+92.25
+91.51
+
+BERT + Xception + Concatenate [31]
+91.08
+92.11
+91.59
+91.80
+
+(BERT + Dense) + Xception + Max-Fusion [31]
+92.76
+92.83
+92.79
+91.91
+
+(BERT + Dense) + Xception + Concatenate-Fusion [31]
+93.11
+93.08
+93.09
+91.87
+
+EMAF [6]
+94.10
+94.70
+94.40
+93.8
+
+Text content + Visual content + Concat [32]
+88.61
+85.62
+87.09
+87.0
+
+Modified Fakefind [33]
+68.77
+67.74
+68.25
+64.8
+
+Ours
+96.64
+95.12
+95.87
+96.6
+
+
+Results and analysis
+In this section, we discuss the results obtained on the binary and Fakeddit datasets.
+Analysis on twitter, JFND, PFND, RFND datasets
+The performance of the proposed method is measured in terms of the following evaluation metrics: Precision, Recall, F1 score, and Accuracy. Figure 4 summarizes the classification results on all the fake news datasets.
+Fig. 4 [Images not available. See PDF.]
+Classification results of the proposed model on Fake News Datasets
+
+The accuracy received on Twitter, Jruvika, Pontes, and Risdal datasets are 94%, 96%, 97%, and 98%, respectively. We have also shown the class-wise result distribution (Real-Precision, Fake-Recall) for Real and Fake output classes. Table 2 compares our results with state-of-the-art and other baseline methods in fake news detection. The results clearly show that our proposed method outperforms all the baseline methods. The multi-granular feature extraction block and contextual feature extraction phase, along with the multimodal emotions, have successfully contributed to identifying the fake news.
+Figure 5 shows the training and validation accuracy and loss curves for the proposed model. The training curves show how the model learns from the data. The training loss decreases with the epochs, and the training accuracy increases as the epochs increase. The model stops learning when the training accuracy reaches 100%, and training loss is 0. During the training process, the validation accuracy and loss are continuously monitored. The model that achieves the highest validation accuracy is chosen as the final model. Figure 6 shows the ROC curves for all the datasets. ROC curve is plotted between the TPR (true-positive rate) and FPR (false-positive rate). Since the datasets we have used for classification are not balanced, we plot ROC (receiver operating characteristic) curves to see the true performance of the classifier. These curves validate that the imbalanced data samples do not affect the performance of the model.
+Fig. 5 [Images not available. See PDF.]
+a Training and validation accuracy and b training and validation loss curves
+
+Fig. 6 [Images not available. See PDF.]
+ROC curve of the datasets
+
+Analysis on Fakeddit multimodal dataset (Fakeddit)
+Fake news frequently uses heightened emotion to captivate users by tapping into their psychological responses. By incorporating textual captions of the images, the proposed system helps in identifying fake news, which is a key factor that promotes the rapid spread of such posts. Moreover, the online counterfeit images often carry significant visual weight and evoke strong emotions. It is observed that the image captions are purposefully crafted to capture user attention. Hence, the proposed network focuses on extracting these emotions to get the fake data.
+However, the Fakeddit dataset presents significant challenges for classification. As depicted in Table 4, there are instances of both accurately and inaccurately classified samples within the Fakeddit dataset. It becomes apparent that image and text elements offer synergistic features in the identification of fake news. For instance, in Row 4, the textual caption “other discussions” does not offer substantial insight regarding the nature of the fake news. Only when paired with its visual component does the model accurately determine the label. A major challenge within the Fakeddit dataset is the presence of concise sentences. Additionally, the dataset lacks a consistent domain classification, further complicating the classification task. A notable difficulty arises in predicting the “False connection” label, primarily because the associated textual descriptions often misalign with their image counterparts, leading to misclassifications. Furthermore, Fakeddit frequently employs caricatures to convey emotions, which the model struggles to correctly classify, especially in instances of manipulated content. Nevertheless, the model adeptly identifies entries in the “Satire” category, which necessitates contextual discernment to determine news authenticity. Similarly, the proposed model was also able to correctly identify the imposter content, thus distinguishing the captions generated by bots. Table 4. Error analysis in Fakeddit dataset with correct and incorrectly classified samples
+S. No.
+Image
+Text
+Predicted label
+Actual label
+Percent
+
+1
+make clouds and rain and fight for an abundant harvest Chinese poster promoting cloudseeding
+Manipulated content
+False connection
+1.65
+
+2
+found these two fellas happy to make my toast
+Satire
+Satire
+24.76
+
+3
+this would have been a dream come true
+True
+Manipulated content
+5.87
+
+4
+other discussions
+Manipulated content
+Manipulated content
+23.98
+
+5
+no one knows how or why but has been there for as long as anyone can remember
+False connection
+Manipulated content
+6.83
+
+6
+bear encircled by salmon finally succeeds with new fishing method
+Satire
+False Connection
+5.98
+
+7
+suspect in north Korea says it would expel Russian spies but it turns out to be robbed was really shot accidentally
+Imposter content
+Imposter content
+20.56
+
+8
+nazi cartoon aimed at occupied France portraying the jews sending out popular American cartoon figures to bomb an innocent French family
+Manipulated content
+False connection
+8.49
+
+
+Ablation study
+In this section, we perform a layer ablation study to verify the performance of different modules in the proposed architecture. We also see the importance of incorporating emotions to detect fake content. We first conduct the unimodal analysis to see the role of individual modalities and then move to multimodal analysis. The results are reported in Table 5. Table 5. Ablation study results on the proposed model
+Modality
+Model
+Accuracy
+
+Twitter
+JFND
+PFND
+RFND
+
+Unimodal
+Textual
+0.74
+0.79
+0.78
+0.74
+
+Textual w/o emotional score of text
+0.67
+0.72
+0.71
+0.70
+
+Visual
+0.69
+0.73
+0.68
+0.72
+
+Visual w/o visual emotions
+0.51
+0.66
+0.58
+0.54
+
+Multimodal
+Model w/o visual emotions
+0.86
+0.90
+0.86
+0.87
+
+Model w/o NRC emotion lexicon
+0.89
+0.87
+0.85
+0.84
+
+Model w/o emoticon score
+0.91
+0.90
+0.89
+0.90
+
+Model w/o emotional score of text
+0.84
+0.82
+0.82
+0.81
+
+Ours
+0.94
+0.96
+0.97
+0.98
+
+
+Unimodal analysis
+In the unimodal analysis, we first experiment on the textual modality ( Textual ) by combining the emotional score of the text (emoticon score and Word score from lexicon) and the contextual feature score and pass them to the fully connected layer with a softmax classifier. Similarly, we combine the visual emotions ( Visual ) with the multi-granular visual features for the visual modality and pass them to the fully connected layer with a softmax classifier. Next, we remove the emotional component in each of these modalities ( Textual w/o emotional score of text and Visual w/o visual emotions ). We observe that the accuracy decreases significantly when the emotional component of unimodal data is removed.
+Multimodal data analysis
+For our multimodal analysis, we conducted experiments by removing various components from the overall model. We observe that we get the least accuracy when the emotional score of the text is removed. The accuracy obtained is 84%, 82%, 82%, and 81% in Twitter, Jruvika, Pontes, and Risdal Fake news datasets, respectively. We also removed the NRC emotion lexicon and emoticon score from the model separately. The results show that NRC emoticon lexicon has more importance as compared to the emoticon score as the accuracy drops to 89%, 87%, 85%, and 84%, respectively.
+Computation time
+In this section, we discuss the computation time of the proposed network. The results are shown in Table 6. We observe that for the Twitter dataset, the visual and textual features are generated in 10.2 ms. The time taken to classify the input sample into real and fake news categories takes 0.42 ms. The experiments were performed on a 128 GB Windows machine using NVIDIA-Titan-RTX GPUs. Table 6. Analyzing the computation Time for Twitter dataset
+Dataset
+Multimodal feature generation
+Classification
+Total
+
+Twitter
+10.2 ms
+0.42 ms
+10.62 ms
+
+
+Qualitative analysis
+In this section, we visualize the attention on the multimodal data by showing the heatmaps corresponding to the visual and textual modalities. The attention networks have shown tremendous success and served as a backbone network in many state-of-the-art architectures. The prime advantage of these networks is that they focus on one area or region at a point in time and remove the irrelevant features from the data. Figure 7 visualizes the attention mechanism in the multi-granular visual feature extraction module. As discussed in Sect. 3.1, the input image is divided into patches, and the positional embeddings are appended to the patched image. The positional embeddings are shown in Fig. 7b. Since our visual module uses multi-head attention, we visualize the attention corresponding to the different heads in a row of the attention matrices, as shown in Fig. 7c–i. Similarly, the text-level attention is visualized in Fig. 8. The words which are darker in color signify that the network gives more focus or weight to them, and the words which are lighter in color are given less weight by the network. In this way, the attention mechanism focuses only on the vital information present in the text.
+Fig. 7 [Images not available. See PDF.]
+Visualizing the attention in multi-granular visual feature extraction module
+
+Fig. 8 [Images not available. See PDF.]
+Visualizing text-level attention
+
+Challenges and ethical considerations
+The proposed emotion-driven framework for fake news detection has significant real-world implications and applications across various domains. The integration of emotion analysis allows the framework to consider the emotional content of news articles. This can provide a deeper understanding of the potential impact of misinformation on readers. Social media platforms and news aggregators can employ this framework to identify and flag potentially misleading or emotionally manipulative content. This enables more effective content moderation and reduces the dissemination of fake news. By considering emotions, the framework can help identify content designed to manipulate readers’ emotions for nefarious purposes. This can help protect individuals from emotional exploitation and maintain a healthier online discourse. Hence, by considering the emotional impact of content, it addresses a crucial aspect of misinformation and provides a valuable tool for safeguarding the integrity of information in our digital age. This can lead to a more informed, resilient, and cohesive society.
+However, there exists multiple challenges and ethical considerations during the implementation of such systems. Maintaining the right balance between accuracy and false positives, privacy, reducing bias, human oversight, legal, and ethical judgements are crucial for the responsible implementation of such systems. Furthermore, transparency and accountability are key to maintaining public trust in the technology and its impact on society. Future directions in this area include extracting fake data from audio and videos posted on the Internet. Moreover, the semantic similarity between images and text can be investigated to design better fusion methods.
+Conclusion
+In this paper, we address the issue of multimodal fake news generation by proposing an emotion-based network that uses multiple layers of attention networks to extract crucial features from the multimodal data, including images and text. We also extract visual and textual emotions to see how emotions can contribute to identify the fraudulent data. We investigated the performance of the proposed network on four real-world datasets. Experimental results clearly show that the proposed architecture outperforms the prior works in this area on all four datasets. We also performed an ablation study to validate the potency of different modules in our proposed network.
+Future directions in this area include extracting fake data from audio and videos posted on the Internet. Moreover, the semantic similarity between images and text can be investigated to design better fusion methods.
+Author contributions
+Ashima Yadav: Software, Validation, Investigation, Data Curation, Writing – Original Draft, Writing - Review & Editing, Visualization, Formal Analysis, Resources. Anika Gupta: Writing – Original Draft, Visualization, Resources.
+Funding
+No funding was provided for this work.
+Research data policy and data availability statements
+The datasets generated during and/or analyzed during the current study are available from the corresponding author on reasonable request.
+Declarations
+Conflict of interest
+The authors have no competing interests to declare that are relevant to the content of this article. The authors have no relevant financial or non-financial interests to disclose.
+Publisher's Note
+Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References
+1. Agrawal A, Lu J, Antol S, Mitchell M, Zitnick L, Batra D and Parikh D (2015) VQA: visual question answering, Proceedings of the IEEE international conference on computer vision , pp. 2425–2433.
+2. Li, P; Sun, X; Yu, H; Tian, Y; Yao, F. Entity-oriented multi-modal alignment and fusion network for fake news detection. IEEE Trans Multimedia ; 2022; 24 , pp. 3455-3468. [DOI: https://dx.doi.org/10.1109/TMM.2021.3098988]
+3. Jin Z, Cao J, Guo H, Luo J and Zhang Y (2017), Multimodal fusion with recurrent neural networks for rumor detection on microblogs, Proceedings of the 25th ACM international conference on Multimedia ., pp. 795–816
+4. Khattar D, Goud J, Gupta M and Varma V (2019), MVAE: multimodal Variational Autoencoder for Fake News detection, The world wide web conference , pp. 2915–2921.
+5. Singhal, S; Kabra, A; Sharma, M; Shah, RR; Chakraborty, T; Kumaraguru, P. SpotFake+: a multimodal framework for fake news detection via transfer learning (student abstract). Proc AAAI Conf Artif Intell ; 2020; 34 , 10 pp. 13915-13916.
+6. Yuan, H; Zheng, J; Ye, Q; Qian, Y; Zhang, Y. Improving fake news detection with domain-adversarial and graph-attention neural network. Decis Support Syst ; 2021; 151 , pp. 1-11. [DOI: https://dx.doi.org/10.1016/j.dss.2021.113633]
+7. Meel, P; Vishwakarma, DK. HAN, image captioning, and forensics ensemble multimodal fake news detection. Inf Sci ; 2021; 567 , pp. 23-41.MathSciNet ID: 4238967[DOI: https://dx.doi.org/10.1016/j.ins.2021.03.037]
+8. Kumari, R; Ekbal, A. AMFB: attention based multimodal factorized bilinear pooling for multimodal fake news detection. Expert Syst Appl ; 2021; 184 , pp. 1-12. [DOI: https://dx.doi.org/10.1016/j.eswa.2021.115412]
+9. Zhao, S; Yao, H; Gao, Y; Ding, G; Chua, T-S. Predicting personalized image emotion perceptions in social networks. IEEE Trans Affect Comput ; 2016; 9 , 4 pp. 526-540. [DOI: https://dx.doi.org/10.1109/TAFFC.2016.2628787]
+10. Deng J, Dong W, Socher R, Li L-J, Li K and Fei-Fei L (2009), Imagenet: a large-scale hierarchical image database, IEEE conference on computer vision and pattern recognition , pp. 248–255, 2009.
+11. Devlin J, Chang M-W, Lee K and Toutanova K (2019), BERT: pre-training of deep bidirectional transformers for language understanding, Annual conference of the North American chapter of the association for computational linguistics , pp. 1–16, 2019.
+12. “List of emoticons,” [Online]. Available: https://en.wikipedia.org/wiki/List_of_emoticons. [Accessed 25 06 2022].
+13. Mohammad, SM; Turney, PD. Crowdsourcing a word-emotion association lexicon. Comput Intell ; 2013; 29 , 3 pp. 436-465.MathSciNet ID: 3093841[DOI: https://dx.doi.org/10.1111/j.1467-8640.2012.00460.x]
+14. Mohammad SM and Turney PD (2010), Emotions evoked by common words and phrases: using mechanical turk to create an emotion lexicon, Proceedings of the NAACL HLT 2010 workshop on computational approaches to analysis and generation of emotion in text , pp. 26–34, 2010.
+15. Yang Y, Zheng L, Zhang J, Cui Q and Zhang X, TI-CNN: convolutional neural networks for fake news detection, arXiv preprint arXiv:1806.00749 , pp. 1–11, 2018.
+16. “Jruvika Fake News Dataset,” [Online]. Available: https://www.kaggle.com/datasets/jruvika/fake-news-detection. [Accessed 10 07 2022].
+17. “Pontes Fake News Dataset,” [Online]. Available: https://www.kaggle.com/pontes/fake-news-sample.
+18. Boididou, C; Papadopoulos, S; Dang-Nguyen, D; Boato, G; Riegler, M. Verifying multimedia use at mediaeval. Work Notes Proc MediaEval ; 2016; 2016 , pp. 1-3.
+19. Xue, J; Wang, Y; Tian, Y; Li, Y; Shi, L; Wei, L. Detecting fake news by exploring the consistency of multimodal data. Inf Process Manage ; 2021; 58 , 5 pp. 1-13. [DOI: https://dx.doi.org/10.1016/j.ipm.2021.102610]
+20. Song, C; Ning, N; Zhang, Y; Wu, B. a multimodal fake news detection model based on crossmodal attention. Inf Process Manage ; 2021; 58 , 1 pp. 1-35. [DOI: https://dx.doi.org/10.1016/j.ipm.2020.102437]
+21. Ajao O, Bhowmik D and Zargari S (2019), Sentiment aware fake news detection on online social networks, IEEE international conference on acoustics, speech and signal processing (ICASSP), pp. 2507–2511
+22. Kumari, R; Ashok, N; Ghosal, T; Ekbal, A. What the fake? Probing misinformation detection standing on the shoulder of novelty and emotion. Inform Process Manag ; 2022; 59 , 1 pp. 1-18. [DOI: https://dx.doi.org/10.1016/j.ipm.2021.102740]
+23. Wu L, Rao Y, Zhang C, Zhao Y and Nazir A (2021), Category-controlled encoderdecoder for fake news detection, IEEE Transact Knowl Data Eng.
+24. Liao Q, Chai H, Han H, Zhang X and Wang X (2021), An integrated multi-task model for fake news detection, IEEE Transact Knowl Data Eng, pp. 1–12.
+25. Trueman, TE; Kumar, A; Narayanasamy, P; Vidya, J. Attention-based C-BiLSTM for fake news detection. Appl Soft Comput ; 2021; 110 , pp. 1-8. [DOI: https://dx.doi.org/10.1016/j.asoc.2021.107600]
+26. Paka, W; Bansal, R; Kaushik, A; Sengupta, S; Chakraborty, T. Cross-SEAN: a cross-stitch semi-supervised neural attention model for COVID-19 fake news detection. Appl Soft Comput ; 2021; 107 , pp. 1-13. [DOI: https://dx.doi.org/10.1016/j.asoc.2021.107393]
+27. Dong, X; Victor, U; Qian, L. Two-path deep semisupervised learning for timely fake news detection. IEEE Transact Comput Soc Syst ; 2020; 7 , 6 pp. 1386-1398. [DOI: https://dx.doi.org/10.1109/TCSS.2020.3027639]
+28. Shim, J-S; Lee, Y; Ahn, H. A link2vec-based fake news detection model using web search results. Expert Syst Appl ; 2021; 184 , pp. 1-15. [DOI: https://dx.doi.org/10.1016/j.eswa.2021.115491]
+29. Verma, P; Agrawal, P; Amorim, I; Prodan, R. WELFake: word embedding over linguistic features for fake news detection. IEEE Transact Comput Soc Syst ; 2021; 8 , 4 pp. 1-13.
+30. Zhang X, Cao J, Li X, Sheng Q, Zhong L and Shu K (2021), Mining dual emotion for fake news detection, Proceedings of the Web Conference, pp. 3465–3476
+31. Uppada, SK Patel P (2022) An image and text-based multimodal model for detecting fake news in OSN’s, J Intell Inform Syst, pp. 1–27
+32. Armin K, Djordje S and Matthias Z (2021), Multimodal detection of information disorder from social media,” IEEE International conference on content-based multimedia indexing (CBMI), pp. 1–4,
+33. Sengan S, Vairavasundaram S, Ravi L, AlHamad AQM, Alkhazaleh HA and Alharbi M, Fake news detection using stance extracted multimodal fusion-based hybrid neural network,” IEEE transactions on computational social systems , pp. 1–12, 2023.

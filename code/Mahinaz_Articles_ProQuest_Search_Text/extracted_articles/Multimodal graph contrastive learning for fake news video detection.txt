@@ -1,0 +1,398 @@
+Introduction At present, social media contains different kinds of multimedia information in our daily life all around the world. With easy accessibility, more and more users choose it to acquire and share information, express and exchange opinions. Unfortunately, various fake news have been generated and spread widely on social media platforms, due to a large mount of users with other purpose (Bu et al. 2023). These widespread fake news are utilized by some users to mislead readers, which is harmful to our society and may cause great economic and social loss. Meanwhile, fake news hides in various forms, including text, image and video. Compared with previously studied fake news in text and image form mostly, video-formed fake news is more deceptive and spreadable (Qi et al. 2023a). Fig. 1 [Images not available. See PDF.]
+An illustration of intrinsic complex correlations across different modalities
+
+A fake news video refers to a video in which both the content and the title describe news that has been confirmed as fake, which involves three modalities data, including textual, acoustic and visual modalities data (Qi et al. 2023a).
+Detecting fake news video presents a distinct challenge compared to text-based and text-image ones. The abundance heterogeneous information of fake news videos across various modalities introduces increased uncertainty and noise, further complicating the detection process. Some methods mainly focus on explicit features of fake news videos, such as metadata (Uppada et al. 2024), local contextual features (Peng et al. 2024), comments (Medina Serrano et al. 2020), user profile (Truică et al. 2024), social user behavior features (Hou et al. 2020), social network structure information (Sormeily et al. 2024; Niu et al. 2025). However, these explicit features are hard to obtain in the early propagation stage of the fake news video. Moreover, these methods ignore the latent features of the news which will lead to poor performance in detecting fake news video. Some researchers try to learning latent features from the video content itself, such as visual features (Shang et al. 2021; Qi et al. 2023a, b), audio features (Li et al. 2022), and textual features (Choi and Ko 2021). Video semantic (McCrae et al. 2022; Li et al. 2022; Zhang et al. 2023; Nadeem et al. 2023; Zhang et al. 2024) is taken into consideration to identify similarity between the text of video and the video content. However, these methods either focus on the features concatenation of a single modality or fuse them at the feature layer, which ignore the intrinsic complex correlations information across different modalities.
+The heterogeneities present across modalities amplify the challenges in capturing the intricate correlations inherent between them. Illustrated in Fig. 1, the receptors for audio and visual streams can differ in terms of their receiving frequencies, hindering the achievement of an optimal mapping between the two modalities. For example, a scene portraying being lost in flowers at the conclusion of the visual stream might be linked to key words spoken at the outset of the audio stream. This underscores the “unaligned” nature frequently found in fake news videos, necessitating the modeling of complex intrinsic correlations across modalities. The textual information of the video could help select important ones from complex visual frames, and vice versa (Kumari and Ekbal 2021; Luvembe et al. 2024; Cui et al. 2024). The acoustic characteristics of the audio modality often contain useful hints(such as adjusting the tone and speed of speech) in capturing the key information in the speech text (Qi et al. 2023a; Hou et al. 2020; Li et al. 2022).
+To address the above issues, in this paper we propose a novel graph contrastive learning-based fake news video detection framework, M ultimodal G raph C ontrastive L earning(MGCL) for fake news video detection. First, we intutively adopt graphs to model the intrinsic complex correlation information of the heterogeneities between different modalities, due to its inherent advantage of modeling relation (Qian et al. 2021). Specifically, we model the text of the video with syntax-aware textual homogeneous graphs by sentence-dependency-tree technology1 to capture the syntax information. We model the acoustic and visual modalities with temporal association homogeneous graphs in which temporal information is constructed as edges. We also use temporal information to construct cross-modal heterogeneous graphs which contains different type nodes and edges from different modalities to model inherent correlation information between different modalities. Second, inspired by graph contrastive learning (You et al. 2020), we design the self-supervised graph contrastive learning strategy based on graph augmentation to learn a more appropriate graph structure for cross-modal heterogeneous graphs which can solve the issue of data non-alignment without explicitly aliging the data. Finally, we design a heterogeneous graph transformer layer (Hu et al. 2020) to learn the graph representation with capturing the underlying correlation across modalities. In summary, the contributions of this paper are summarized as follows: - We propose a multimodal graph contrastive learning framework to extract fake news features within and across modalities.
+
+- We construct homogeneous unimodal graphs and heterogeneous cross-modal graphs to explore hidden correlations within and across modalities to improve the effectiveness of fake news video detection.
+
+- We conduct experiments on the public dataset and the results show that our proposed model outperforms existing methods on fake news video detection.
+
+
+Related Work Image-based multimodal fake news detection Traditional news articles often include a piece of text and some attached images or a video (Guo et al. 2020). Due to the strong feature learning ability of the deep neural networks, Variational autoencoders(VAEs) (Khattar et al. 2019; Wang et al. 2023), convolutional neural networks(CNN) (Song et al. 2021; Qu et al. 2024) and attention mechanisms (Kumari and Ekbal 2021; Xue et al. 2021; Cui et al. 2025; Lv et al. 2025) have been widely explored in recent years, because these methods can automatically learn latent textual and visual representation and their fusion. For instance, BCMF (Yu et al. 2022) employs a bidirectional cross-modal fusion model to comprehensively integrate textual and visual features. QMFND (Qu et al. 2024) extracts visual and textual features and feeds them as input into the quantum convolutional neural network. COOLANT (Wang et al. 2023) interpretably aggregates and aligns unimodal representations and cross-modal correlations. CMMTN (Wang et al. 2024) jointly models the cross-modal and unimodal relations of multi-modal information and masks irrelevant information. The above works achieved better performance by integrating features of different modalities than the single-modality did. While advanced fusion techniques beyond simple concatenation have been explored, they predominantly ignore the acoustic modality, rendering them inapplicable to the more complex and prevalent domain of fake news videos.
+To address the above issue, some studies have proposed to learn the correlation between different modalities in a deeper manner and improve the fusion mode by introducing a more advanced aggravating mode, such as similarity-aware fusion method (Zhou et al. 2023; Huang et al. 2023; Nadeem et al. 2023; Zhang et al. 2024), text-image deep matching method (Hu et al. 2024; Yang et al. 2024), complementary information learning method (Cui et al. 2024; Luvembe et al. 2024), inconsistent information learning method (Wu et al. 2023; Zeng et al. 2023b, a; Wu et al. 2024; Guo et al. 2025). For instance, CLIP-based models (Zhou et al. 2023; Yan et al. 2024) use the CLIP model to extract textual and visual features, and use the similarity-aware fusion method to adaptively fuse multi-modal features. The token-level feature fusion method (Huang et al. 2023) extracts and fuses token-level features of text and image. SSM (Nadeem et al. 2023) uses a hyperbolic hierarchical attention network to extract textual features and calculates the semantic similarity between textual and visual features to achieve multi-modal fusion. In order to better understand the image-text relation and its role in fake news detection, Zhang et al. (2024) explore that text similarity and semantic similarity have a significant impact on the performance of fake news detection, while contextual similarity and post-training similarity have less impact on the performance of fake news detection. MPFN (Jing et al. 2023) captures different levels of features of each modality, and fine-grained modeling of textual features are deeply fused with different levels of image frequency domain information. Hu et al. (2024) utilize image-text matching-aware co-attention mechanism to align images and text for better multi-modal fusion. MRAN (Yang et al. 2024) uses a multi-level coding network and VGG19 to extract hierarchical semantic feature representations of textual and visual data, respectively, and generates high-order features by calculating the similarity between information segments within the same modality and cross-modality similarity. MFCAN (Cui et al. 2024) utilizes physical tampering clues of images in the frequency domain to supplement the image spatial domain, by jointly modeling the unimodal and cross-modal relationships between textual and visual information in a unified deep framework to fuse the representation of text and image. The inconsistency between modalities is used to learn and fuse text and image information (Wu et al. 2023). Zeng et al. (2023b, 2023a) identify inconsistent semantics between local and global perspectives to supplement global information. These works with more advanced fusion mode achieved better performance than the methods with concatenation fusion mode did. However, due to ignoring the acoustic modality in the fake news video, they cannot be directly applied to fake news video detecion. This paper aims to explore how to model the intrinsic correlation information between different modalities and learning its representation.
+Table 1. Comparison of predominant methodologies in multimodal fake news detection.
+Dimension
+Fusion-based Methods
+Contrastive Learning-based Methods
+Graph-based Methods
+
+Core Idea
+Integrate features from different modalities into a unified representation for classification.
+Learn embeddings by pulling positive pairs together and pushing negatives apart.
+Model data as a graph to exploit structural relations between nodes.
+
+Typical Modalities
+Text, Image
+Text, Image
+Text, Image, Audio
+
+Key Strength
+Effective for capturing complementary information; straightforward to implement.
+Excels at learning robust, modality-invariant representations; good for self-supervised pre-training.
+Powerful at modeling complex, high-order dependencies and non-Euclidean data structures.
+
+Common Metrics
+Accuracy, F1-score, Precision, Recall
+Accuracy, F1-score, Precision, Recall
+Accuracy, F1-score, Precision, Recall
+
+Main Limitation
+Often limited to shallow feature interactions; may struggle with modal inconsistency; ignores acoustic modality in videos.
+Requires careful construction of positive/negative pairs; can be computationally expensive; often ignores structured relationships.
+Performance is sensitive to the quality of the constructed graph structure; requires domain knowledge for graph design.
+
+
+Video-based multimodal fake news detection Besides textual and visual features, news videos contain more features(i.e. acoustic feature). However, video-based fake news detection is more challenging than image-based fake news detection due to the complexity of video data. The related video data (Papadopoulou et al. 2018; Kim et al. 2025) are used to identify fake news videos. Medina Serrano et al. (2020) employs tf-idf vectors of titles, comments, and comment conspiracy theories for fake news video detection. Hou et al. (2020) use linguistic, audio, and social user behavior features to identify fake news videos. Li et al. (2022) convert audio to text and extract textual features, combining video uploader features and contextual features to identify false news videos. The above methods only use the context data or user data of the video, but ignores the information of the video content itself. Some studies use text and video data to discover fake news videos. Choi and Ko (2021) use a pre-trained model to extract corresponding features from video frames, titles and comments, and also use the difference in topic distribution of news titles and news comments to fuse multi-modal information to identify fake news videos. Shang et al. (2021) use text information extracted from speech data to guide visual feature learning, and also use a joint attention network to achieve the fusion of visual features and audio features to identify fake news videos. McCrae et al. (2022) use text analysis, audio transcription, video semantic analysis, target recognition and other technologies to identify inconsistencies between video title and video content. Some studies (Qi et al. 2023a; Feng et al. 2025) use cross-modal correlation information of text, audio and video information to detect fake news videos. Subsequently, NEED (Qi et al. 2023b) integrates the neighborhood relations of new videos of the same event belonging to fake news videos, combined with a single-sample detector, and further enhances by graph aggregation and debunking rectification module. CAMD (Guo et al. 2024) leverages the cross-modal attention network to capture the correlation between different modalities. Zong et al. (2024) mine implicit opinions within short video news and promote the evolution of both explicit and implicit opinions across all modalities. TSC-MDFFM (Yin et al. 2025) fuses the text features, video motion features and visual features of video comments at the feature level to represent the global features of the video to enhance the performance of fake news video detection. FakingRecipe (Bu et al. 2024) captures the fake news preferences in material selection from sentimental and semantic aspects and considers the traits of material editing from spatial and temporal aspects. MMVD (Zeng et al. 2024) attempts to mitigate various multimodal biases for fake news video detection. For video-based news, many methods either rely on external context (e.g., user profiles, comments) or perform shallow, feature-level fusion of the content itself (e.g., early or late fusion). Crucially, there remains a lack of explicit and deep modeling of the intricate, high-order correlations between the textual, visual, and acoustic modalities inherent in video content. Most works learn unimodal features separately before fusion, failing to capture the intrinsic relationships that are fundamental for discerning authenticity. Fig. 2 [Images not available. See PDF.]
+The overall architecture of MGCL. The blue nodes denote textual modality. The green nodes denote acoustic modality. The pruple nodes denote visual modality. Nodes with the same label as the anchor node are treated as positive samples, while those with different labels are considered negative samples. Representations of the same video under different graph augmentations are treated as positive pairs, while representations of different videos are treated as negative pairs
+
+In general, our research falls into the video-based multimodal fake news detection. Different from all the aforementioned work, our study aims to detect fake news video by modeling the intrinsic complex correlation between different modalities, instead of learning and concatenating the latent feature of the unimodal data. Our work is designed to address these specific gaps. We explicitly incorporate and model the acoustic modality. We propose a novel framework that constructs a heterogeneous graph to explicitly model the complex intra- and inter-modal interactions at a semantic level. Furthermore, we introduce multimodal contrastive learning to refine these representations by pulling together samples with consistent cross-modal correlations while pushing apart those with inconsistent signals, thereby directly learning the intrinsic patterns that distinguish real news video from fake. This structured approach allows us to directly model the complex, non-linear relationships between all three modalities.
+For the sake of brevity and convenience, we have organized and summarized the characteristics of the aforementioned methods, as shown in Table 1.
+The proposed method In this section, we introduce the proposed multimodal graph contrastive learning framework for fake news video detection.
+Our task is to detection fake news video with multimodal data. A news video consist of three different modalities data, in cluding visual, acoustic and textual information. Let V = [ v 1 , … , v i , … , v n ] represent visual information, where n is the number of key frames of the visual information. Let A = [ a 1 , … , a i , … , a m ] represent acoustic information, where m is the number of key frames of the acoustic information. Similarly, the text information is represented by T = [ t 1 , … , t i , … , t l ] , where l is the number of words. The goal of this task is to identify the news video V is real( y = 0 ) or fake( y = 1 ) news video by learning a fake news video detection function F : F ( V , A , T ) → ( y ^ ) .
+As shown in Fig. 2, given an input news video, we first obtain unimodal representations via unimodal learning networks. We then construct unimodal homogeneous graphs and cross-modal heterogeneous graphs based on the obtained unimodal representations. After that, we adopt a two-layer heterogeneous graph transformer to learn the graph representation. We generate positive and negative pairs of unimodal and multimodal according to different contrastive losses. The model is trained with our designed contrastive losses to learn inter-modal interactions and intra-modal relationships, which will be discarded at the inference time. Finally, we predict the label of the news video with the multimodal representation.
+Feature extraction Given an example input news video, three encoders are used to extract features from the three modalities of data, respectively.
+Textual feature extraction For the news video, the text embedded in the video often contains more complete information than the title. Therefore, we extract the text from the video and concatenate it together with the title. Then, we use the pre-trained model RoBERTa to extract the textual features h t = R o B E R T a ( T ) .
+Acoustic feature extraction Acoustic modal data includes information such as speech, environmental sounds, and background music. It not only provides semantic information but also unique information for understanding the speaker’s emotions, and reflects the publisher’s intention. We segment the audio information in the original video and use the pre-trained model VGGish (Hershey et al. 2017) to extract audio keyframe features, h a = V G G i s h ( A ) .
+Visual feature extraction We use video keyframes to represent a video, and use the pre-trained model VGG19 (Simonyan and Zisserman 2015) to extract static visual features h v = V G G 19 ( V ) .
+Building unimodal and cross-modal graphs In this section, we will mainly introduce how to build unimodal and cross-modal graphs for each multimodal news instance. In order to make full use of the relations between nodes, inspired by the literature (Kipf and Welling 2017), we construct undirected graphs for unimodal and cross-modal graphs.
+Homogeneous unimodal graphs construction In order to fully explore the hidden information within the modalities, we first construct three unimodal graphs, explicitly taking into account the representation and modality-specific relations across the three modalities of multimodal instances. In order to facilitate subsequent cross-modal edge construction, we also keep the temporal information corresponding to each node.
+In order to mine semantic information from the text, we construct the textual modal graph G t based on the sentence syntax dependency tree. We regard words with timestamp information in the text of the news as the nodes. The edges consist of the following two parts. One is the edges in the dependency tree, and the other one is the edges induced by the adjacency relation of the words in the text. We construct the acoustic modal graph G a . We regard the key frames of the audio with timestamp information as the nodes. The edges are induced by adjacent nodes through time series. Similarly to G a , we construct the visual modal graph G v . We regard the key frames of the video with timestamp information as the nodes.
+Heterogeneous cross-modal graphs construction In order to extract hidden information between multiple modalities and fuse multimodal representations, we construct a heterogeneous cross-modal graph G m for each multimodal instance based on the above unimodal graph. The nodes in G m consist of different types of nodes in the three unimodal graphs. Thus, graph G m is a heterogeneous graph with different types of nodes. We first combine three unimodal graphs, and then use timestamp information to connect nodes with time overlap in the three modal graphs as edge across modalities. Specifically, an edge will be constructed between two nodes as long as their timestamp information overlaps over 0.1 second. h m = [ h t | | h a | | h v ] denotes the node representation in G m , concatenated by h t , h a and h v . Cross-modal graphs can capture hidden information of multi-modal instances.
+Algorithm 1 [Images not available. See PDF.]
+Multimodal Heterogeneous Graph Construction
+
+Learning graph representation In MDFFND(Lv et al. 2025), text and image nodes are first processed through GAT(Veličkovic et al. 2018) to learn their respective embedding before being used for fusion. In this paper, we model video news using a heterogeneous graph network and directly employ HGT (Hu et al. 2020) to learn node embedding, which allows different relational associations to be incorporated into the node embeddings. Based on the unimodal and cross-modal graphs, we adopt a two-layer heterogeneous graph neural network (HGTs) to update node information through a strategy of aggregating weighted neighbor information. For unimodal graphs, the hidden vectors h t , h a and h v , along with the corresponding constructed graphs G t , G a and G v , are fed as inputs into the HGTs layer to obtain unimodal graph representations r t , r a and r v : 1
+r t = READOUT ( HGTs ( h t , G t ) ) , 2
+r v = READOUT ( HGTs ( h v , G v ) ) , 3
+r a = READOUT ( HGTs ( h a , G a ) ) . where HGTs ( · ) denotes the operations of the HGTs layer, and the READOUT ( · ) function represents the graph representation generated by aggregating the average representation of the nodes.
+For the cross-modal graph, we also use HGT to model the correlation relations in the graph. In order to mine more clues for distinguishing real and fake news videos, HGT is used to extract cross-modal correlations. Given a cross-modal graph G m of a cross-modal instance, the representation of the cross-modal graph r m is obtained by: 4
+r m = READOUT ( HGT ( h m , G m ) ) . To this end, owing to the merit of heterogeneous graph networks which can adjust the weight of associated edges according to the attention mechanism during the training process, the degree of association between nodes in the cross-modal fully connected graph can be quantified by the associated edges, thereby obtaining an approximate representation of the graph.
+Multimodal graph contrastive learning In this section, we introduce the multimodal graph contrastive learning strategy to learn the graph representation of multi-modal instances. As shown in Fig. 2, our multimodal graph contrastive learning strategy consists of two parts: the intra-modal level and the inter-modal level. Here for each level, we introduce a fully-supervised contrastive loss based on news video labels and a self-supervised contrastive loss based on graph augmentations, to explore more appropriate graph structure for obtaining accurate graph representation.
+Graph contrastive learning at the intra-modal level Fully-supervised contrastive loss based on news video labels Inspired by the work on fully-supervised contrastive learning (Khosla et al. 2020), for a batch, we lervage news video labels as the supervised signal to obtain fully-supervised contrastive loss for calculating the similarity between the examples in one class and contrasting them with the examples in the other class. Specifically, given K examples in a batch, the examples can be divided into two classes, S 1 and S 2 , according to the news video labels. For the anchor example s i ∈ S 1 , a positive pair can be denoted as ( s i , s j ), here s j ∈ S 1 and j ≠ i , and the examples in S 2 are regarded as negative ones. The pairwise objective ℓ 1 ( r i M , r j M ) between the unimodal graph representation r i M of s i and the graph representation r j M of s j ∈ S 1 are defined as: 5
+ℓ 1 ( r i M , r j M ) = - log e s i m ( r i M , r j M ) / ι Σ sup 6
+Σ sup = ∑ s k ∈ S 1 , k ≠ i e s i m ( r i M , r k M ) / ι + ∑ s l ∈ S 2 e s i m ( r i M , r l M ) / ι where M ∈ { t , v , a } , s i m ( · ) is the similarity function, s i m ( u , r ) = u T r / ‖ u ‖ ‖ r ‖ , and ι is the temperature parameter. We calculate the supervised contrastive loss on the unimodal graph representations by using news video labels. The calculation of intra-modal supervised contrastive loss L sup intra is: 7
+L sup intra = ∑ M ∑ s i ∈ S 1 1 | S 1 - 1 | ∑ s j ∈ S 1 , j ≠ i ℓ 1 ( r i M , r j M ) + ∑ s k ∈ S 2 1 | S 2 - 1 | ∑ s l ∈ S 2 , l ≠ k ℓ 1 ( r k M , r l M )
+We detail the computational process in Algorithm 2.
+Algorithm 2 [Images not available. See PDF.]
+Intra-modal Supervised Contrastive Loss Computation
+
+Self-supervised contrastive loss based on graph augmentations To apply the self-supervised contrastive learning, we employ augmentation data by supplementary and corrupting graphs. The augmented graphs U , V are obtained by randomly deleting or adding a certain ratio of edges (You et al. 2020). We set the proportion of edges are perturbed to be 30%.
+Based on the graph augmentation, for an anchor graph representation r i M , we regard the representation derived by the corresponding augmented graph u i M as the positive sample, while others are regarded as negative samples. For the K examples in a batch, the pairwise objective ℓ 2 ( r i M , u i M ) between r i M and u i M is defined as: 8
+ℓ 2 ( r i M , u i M ) = - log e s i m ( r i M , u i M ) / ι Σ self 9
+Σ self = e s i m ( r i M , u i M ) / ι + ∑ j = 1 K l [ j ≠ i ] [ e s i m ( r i M , r j M ) / ι + e s i m ( r i M , u j M ) / ι ] where l [ j ≠ i ] ∈ { 0 , 1 } is the indicator function and equals 1 iff j ≠ i . The intra-modal self-supervised contrastive loss L self intra is as follow: 10
+L self intra = 1 2 K ∑ M ∑ i = 1 K [ ℓ 2 ( u i M , r i M ) + ℓ 2 ( r i M , u i M ) ]
+We detail the computational process in Algorithm 3.
+Algorithm 3 [Images not available. See PDF.]
+Intra-modal Self-supervised Contrastive Loss Computation
+
+Graph contrastive learning at the inter-modal level Corresponding to Section 3.3.1, we perform the fully-supervised contrastive loss and the self-supervised contrastive loss on the multimodal graph representations r m , and obtain the inter-modal supervised and self-supervised contrastive loss L sup inter , L self inter , which are defined as: 11
+L sup inter = ∑ s i ∈ S 1 1 | S 1 - 1 | ∑ s j ∈ S 1 , j ≠ i ℓ 1 ( r i m , r j m ) + ∑ s k ∈ S 2 1 | S 2 - 1 | ∑ s l ∈ S 2 , l ≠ k ℓ 1 ( r k m , r l m ) 12
+L self inter = 1 2 K ∑ i = 1 K [ ℓ 2 ( u i m , r i m ) + ℓ 2 ( r i m , u i m ) ]
+News video classification The representation r m of the multi-modal instance is fed as input into the fully connected layer and Softmax layer to predict the results of the given news video. The formal representation of the fake news video network is as follows: 13
+y ^ = S o f t m a x ( r m W + b ) where W is a parameter matrix, b is a bias term, and y ^ = [ y ^ 0 , y ^ 1 ] represents the predicted probability vector with y ^ 0 and y ^ 1 indicate the predicted probability of label being 0(real news) and 1(fake news) respectively. y ∈ { 0 , 1 } denotes the ground truth label of news video. Thus, the cross-entropy loss function is defined as follows: 14
+L ce = - y log ( y ^ 1 ) - ( 1 - y ) log ( y ^ 0 ) The total loss function L of the framework is defined as follows: 15
+L = L ce + λ 1 ∗ L sup intra + L sup inter + λ 2 ∗ L self intra + L self inter where λ 1 and λ 2 are hyperparameters to control the effects of different types of loss functions.
+Experiments In this section, we conduct experiments to evaluate the performance of the proposed method. We first introduce the dataset and evaluation metrics, and then compare the proposed method with several baseline methods. We also conduct some parameter experiments. Finally, we conduct ablation experiments to analyze the effectiveness of the proposed method.
+Experimental Setup Dataset and metrics We conduct experiments and analysis using the fake news video dataset (Qi et al. 2023a). The dataset contains 3654 news video, including 1827 real news videos and 1827 fake news videos. The statistical information for the dataset is shown in Table 2. We use the same data split as FakeSV (Qi et al. 2023a). Specifically, the data is divided into five folds, and for each fold, the dataset is divided into training and test sets at the event level in a 4:1 ratio to ensure that there is no event overlap between different sets. For each video, original frames are extracted and utilized for sub sequent analysis as SV-FEND does. For audio modality, it is segmented into chunks of a fixed duration of 0.96 seconds which is the standard size of VGGish model. The evaluation metrics include accuracy, F1 score, precision and recall. The evaluation metrics are defined as follows: 16
+Accuracy = T P + T N T P + T N + F P + F N , F 1 = 2 ∗ T P 2 ∗ T P + F P + F N , P r e c i s i o n = TP T P + F P , R e c a l l = TP T P + F N , where TP is the number of true positive samples, TN is the number of true negative samples, FP is the number of false positive samples, and FN is the number of false negative samples.
+Table 2. Dataset statistical features
+Column name
+Value
+
+Video data
+Yes
+
+Video title
+Yes
+
+Number of real news videos
+1827
+
+Number of fake news videos
+1827
+
+Number of events
+738
+
+Language
+Chinese
+
+Whether it is published
+Yes
+
+Data source
+Douyin, Kuaishou
+
+
+Implementation details The text embedding size L is 252. The number of heads of the attention mechanism is 4. The weight of the fully-supervised contrastive loss factor λ 1 is 18. The weight of the self-supervised contrastive loss factor λ 2 is 4. The dropout rate is 30% to avoid overfitting.The proportion of edges are perturbed is 30%. The number of epoch is set to be 12. The hardware environment consists of 128GB of memory, an Intel i9 CPU, and a GeForce RTX 3090 graphics card with 24GB of VRAM. And the training time is about 17minutes.
+Table 3 Performance comparisons among different models on the dataset
+Modal
+Method
+Accuracy
+F1
+Precision
+Recall
+
+Text
+Hc feas+SVM
+70 . 22 ± 2.10
+70 . 31 ± 2.21
+70 . 37 ± 2.18
+70 . 33 ± 2.20
+
+Text-CNN
+74 . 66 ± 2.31
+74 . 62 ± 2.30
+74 . 79 ± 2.41
+74 . 66 ± 2.31
+
+BERT
+76 . 82 ± 3.33
+76 . 80 ± 3.34
+76 . 89 ± 3.33
+76 . 82 ± 3.33
+
+Video
+VGG19+Att
+64 . 27 ± 2.08
+64 . 15 ± 2.14
+64 . 63 ± 2.27
+64 . 41 ± 2.23
+
+Faster R-CNN+Att
+70 . 69 ± 2.80
+70 . 58 ± 2.76
+71 . 03 ± 2.99
+70 . 69 ± 2.80
+
+Audio
+emo feas+SVM
+60 . 64 ± 1.22
+60 . 61 ± 1.24
+60 . 67 ± 1.20
+60 . 64 ± 1.22
+
+VGGish
+66 . 78 ± 1.12
+66 . 63 ± 1.13
+67 . 07 ± 1.20
+66 . 78 ± 1.12
+
+MM
+(Shang et al. 2021)
+75 . 04 ± 3.28
+75 . 02 ± 3.29
+75 . 11 ± 3.27
+75 . 04 ± 3.28
+
+SV-FEND
+77 . 47 ± 3.47
+77 . 41 ± 3.47
+77 . 71 ± 3.57
+77 . 45 ± 3.48
+
+MMFND
+76 . 32 ± 2.62
+76 . 35 ± 2.45
+76 . 43 ± 2.67
+76 . 27 ± 2.79
+
+MDF-FND
+76 . 52 ± 3.49
+76 . 82 ± 2.29
+76 . 05 ± 3.17
+76 . 36 ± 2.58
+
+MGCL(ours)
+79.35 ± 2.64
+79.30 ± 2.65
+79.55 ± 2.64
+79.33 ± 2.65
+
+The best results are in bold. T&S denotes title and script. KF denotes Keyframes. MM denotes multimodal. AM denotes All modalities. KF&A denotes Keyframes and audio
+Table 4 Comparison of ablation study results of different variants of the proposed method. The best results are in bold.
+Method
+Accuracy
+F1
+Precision
+Recall
+
+MGCL
+79.35
+79.30
+79.55
+79.33
+
+w/o text, video, audio
+66.24
+66.18
+66.87
+66.22
+
+w/o text
+70.41
+70.18
+70.92
+70.37
+
+w/o video
+77.83
+77.73
+78.19
+77.79
+
+w/o audio
+77.86
+77.84
+78.07
+77.87
+
+w/o fully-supervised learning
+78.11
+78.09
+78.24
+78.1
+
+w/o self-supervised learning
+78.36
+78.33
+78.46
+78.35
+
+w/o relation types
+77.51
+77.47
+77.67
+77.50
+
+
+Baseline methods We compare the proposed method with the following baseline methods to show the performance of the proposed method:
+- Hc feas+SVM : It is a traditional text classification baseline that uses hand-crafted linguistic features with a Support Vector Machine classifier. We include it to demonstrate the advantage of deep learning-based feature extraction.
+
+- Text-CNN : It uses the textual features of the video title and script as input to the Text-CNN (Palod et al. 2019) model for classification. We select this model as a classic and strong deep learning baseline for text classification. It effectively captures local semantic features via convolutional kernels.
+
+- BERT : We employ the pre-trained BERT model as a powerful representative of modern transformer-based text encoders. It establishes a high-performance upper bound for textual modality in our task.
+
+- VGG19+Att : It feeds visual features of video keyframes extracted by VGG19 into the attention mechanism to fuse the features for classification, providing strong vision-only baselines.
+
+- Faster R-CNN+Att : It fuses visual features of video keyframes extracted by Faster R-CNN (Ren et al. 2015), and uses the attention mechanism for classification, providing strong vision-only baselines.
+
+- emo feas+SVM : It feeds the audio features of the video extracted by the emotional audio feature extraction method (Hou et al. 2020) into SVM for classification. We include it to compare against traditional acoustic prosody analysis.
+
+- VGGish : It feeds the audio features of the video extracted by VGGish into SVM for classification. We include it to compare against traditional acoustic prosody analysis.
+
+- Shang et al. 2021 Shang et al. (2021): It uses the script in the video to guide visual feature learning. Then it adopts MFCC features to augment the textual features learned from the script. At last, it uses a co-attention model to fuse visual and acoustic information for classification. It is a highly relevant approach that also fuses multi-modal information for fake video detection.
+
+- SV-FEND (Qi et al. 2023a): Textual, visual and acoustic features are extracted. Then, a cross-modal transformer is used to fuse the features for detect fake news video. It is a very recent and strong baseline specifically designed for fake news video detection.
+
+- MMFND (Ma et al. 2024): It adopts paired CLIP encoders to extract modality-aligned depth representations which measures the cross-modal correlations. It is a highly relevant approach that fuses multi-modal information.
+
+- MDF-FND (Lv et al. 2025):It develops a dynamic fusion framework for semantic-level multimodal fake news detection which can dynamically integrate the weights of both text and image modalities.
+
+
+
+Results and analysis Table 3 shows the comparison of different models on the dataset. From Table 3, we have the following observations:
+- Generally, we can observe that the MGCL outperforms all baselines in terms of accuracy and F1 score which shows the importantce of the complex correlation information between differnt modalities in verifing the authenticity of news videos.
+
+- According to the best results of each unimodal-based methods(i.e. BERT, Faster R-CNN+Att and VGGish), the method BERT achieves the best performance, which means that the importance of textul feature in detecting fake news video. Meanwhile, the method based on visual modality (i.e. Faster R-CNN+Att) achieves better performance than the method based on acoustic modality(i.e. VGGish), which shows that the visual modality is more important than the acoustic modality in detecting fake news video.
+
+- The detection effect of the multimodal method (Shang et al. 2021) is not as good as the BERT method based on unimodal text data. One possible reason is that when it extracts speech information from acoustic modality data, the noise information is introduced. Even so, it performs better than the method base on visual modality(i.e. VGG19+Att and Faster R-CNN+Att), which shows that the extracted speech information is effective. Bert-based method directly etracts textual feature from video title and script which make it achieve better performance.
+
+- The multimodal methods (MMFND, MDF-FND, SV-FEND and MGCL) outperform the unimodal methods, which shows that the multimodal information is effective for detecting fake news video. The proposed method MGCL outperforms the other ones, which shows the effectiveness of the complex correlation information between differnt modalities in detection fake news video. The limited fusion of only text and image modalities in both MMFND and MDF-FND contributes to their suboptimal performance relative to MGCL.
+
+
+
+Ablation study In this section, we conduct ablation experiments to analyze the effectiveness of the proposed method. We compare the proposed method with different variants of the proposed method. More specifically, the compared variants of MGCL are implemented as follows: 1) w/o text, video, audio : we remove the text, video, audio information, only adopt the fused multimodal information for detecting fake news video; 2) w/o text : we remove the text information; 3) w/o video : we remove the visual information; 4) w/o audio : we remove the acoustic information; 5) w/o fully-supervised learning : we do not take fully-supervised contrastive learning loss into consideration; 6) w/o self-supervised learning : we do not take self-supervised constrastive learning loss into consideration; 7) w/o relation type : we do not take different relation type into consideration; The ablation study results are shown in Table 4.
+The importance of each modality data in detecting fake news video can be analyzed through ablation experiments. From Table 4, we have the following observations:
+- The proposed method outperforms the ablation methods, which proves the effectiveness of the proposed method. The results show that all modality data are effective for improving the detection of fake news video.
+
+- The effects of the single modality. From the results of w/o text, video, audio , w/o text , w/o video , w/o audio , we can observe that the textual modality data is the most effective for detecting fake news video compared with the other two modality data. The visual modality data is more effective than the acoustic modality data. The three single modality data provide useful information to classify the news video.
+
+- The effects of the fully-supervised contrastive learning loss and the self-supervised contrastive learning loss. The performance of w/o fully-supervised learning and w/o self-supervised learning is worse than MGCL, which shows that they are effective. The performance of w/o self-supervised learning is better than w/o fully-supervised learning , which shows that the fully-supervised contrastive learning loss is more effective.
+
+- The effects of the different relation types. The variant w/o relation types, which simplifies the heterogeneous graph into a homogeneous one, shows a performance drop. This confirms that explicitly modeling the diverse, fine-grained relationships between different types of nodes is beneficial.
+
+
+
+Parameter analysis In this section, we conduct parameter experiments to analyze the impact of different hyperparameters on the performance of the proposed method. We optimized one hyperparameter at a time while keeping all others fixed. After identifying a locally optimal value for the current parameter, we fixed that value and proceeded to optimize the next parameter. This process was iterated until all parameters converged to a stable combination. We analyze the impact of the number of heads of the attention mechanism, the weight of the fully-supervised contrastive learning loss λ 1 , the weight of the self-supervised contrastive learning loss factor λ 2 , and the dimension of feature on the performance of the proposed method. The results of the parameter analysis are shown in Fig. 3. Fig. 3 [Images not available. See PDF.]
+Impact of the values of the four parameters
+
+Impact of the weight of the fully-supervised contrastive learning loss factor To evaluate the impact of the weight of the fully-supervised contrastive learning loss factor λ 1 on the performance of the proposed method, we conduct experiments with different values of λ 1 . We vary λ 1 from 0 to 40 in steps of 2. The results are shown in Fig. 3(a). We can observe that the performance shows a slightly increases from 0 to 18, while it decreases from 20 to 40. Therefore, the weight of the supervised loss factor λ 1 is set to 18.
+Impact of the weight of the self-supervised contrastive learning loss factor To evaluate the impact of the weight of the self-supervised contrastive learning loss factor λ 2 on the performance of the proposed method, we conduct experiments with different values of λ 2 . We vary λ 2 from 0 to 9. The results are shown in Fig. 3(b). We can observe that the performance of the proposed method slightly increases from 0 to 4, while it decreases from 5 to 9. Therefore, the weight of the contrastive loss factor λ 2 is set to 4.
+Impact of the dimension of feature To evaluate the impact of the dimension of feature on the performance of the proposed method, we conduct experiments with different values of the dimension of feature. We vary the dimension of feature from 180 to 332 by step 8. The results are shown in Fig. 3(c). We can observe that the performance increase from 180 to 252, while it decreases slightly from 260 to 332. Therefore, the dimension of feature is set to 252.
+Impact of the number of head of the attention mechanism To evaluate the impact of the number of heads, we conduct experiments with different values of the number of heads. As the number of heads must be divisible by feature dimension, we set the range of the number of the heads to [2,3,4,6,7,9,12,14,18,21,28]. The results are shown in Fig. 3(d). We can observe that the performance of MGCL increases as the number of heads grows until 4. Therefore, the number of heads is set to 4.
+T-SNE Visualizations for the contrastive feature space In Fig. 4, we present a t-SNE visualization (van der Maaten and Hinton 2008) to analyze the representation space learned by the proposed method. The two colors correspond to the two class labels. Compared to the ablation variant without contrastive learning (MGCL without contrastive learning), our full model (MGCL) exhibits a markedly clearer separation between the two classes. The enhanced inter-class separation and reduced number of outliers suggest that the features learned by MGCL are more discriminative. These results demonstrate that the introduced contrastive learning objective effectively improves the quality of the fused multimodal representations. Fig. 4 [Images not available. See PDF.]
+T-SNE visualizations of the features before classifier that are learned by MGCL, and MGCL without contrastive learning on the test dataset
+
+Training dynamics and convergence behavior We provide empirical verification of training stability and learning dynamics through detailed loss trajectory analysis. As illustrated in Fig. 5, both training and validation loss curves demonstrate stable and consistent convergence behavior throughout the training process. We can observe the training loss shows a consistent decreasing pattern from an initial value of 2.147 to 1.732, indicating effective and stable optimization throughout the training epochs. The validation loss reaches its minimum value of 0.548 at epoch 11 and maintains relative stability, without significant signs of overfitting observed. The parallel trends between training and validation loss curves suggest good generalization capability of the proposed model. Fig. 5 [Images not available. See PDF.]
+The training and validation loss
+
+Conclusion In this paper, we propose a multimodal fake news video detection method based on heterogeneous graph contrastive learning. The method encodes textual, acoustic and visual data, fuses multimodal data features through a heterogeneous graph network transformer for classification. In order to capture the relations between multimodal data, we propose a unimodal and cross-modal graph construction method to explore the hidden relations across modalities. We design a multimodal contrastive learning method to learn graph representation without explicitly aligning the modality data. The fully-supervised contrastive learning loss for unimodal and cross-modal to capture the similarity of the same class data and the difference between different classes of data. The self-supervised contrastive learning loss is used to discover the appropriate graph structure. The experimental results show that the proposed method outperforms several baseline methods. Multi-layer heterogeneous graph transformer and large-batch contrastive learning framework are computationally intensive and require substantial GPU memory. We will explore linear-complexity attention variants to improve the efficiency of the graph transformer in the future. While the proposed framework effectively determines the veracity of entire videos, it does not localize the specific segments or elements that contribute to its misleading nature. We identify fine-grained misinformation localization as a paramount direction for future work. We plan to investigate techniques such as temporal action localization for pinpointing misleading segments and visual grounding for identifying deceptive objects or scenes. We focus on the single Chinese FakeSV dataset and the relatively small data scale, which may affect cross-lingual and cross-cultural generalizability. Future work will include evaluating the model on multilingual datasets using cross-lingual transfer techniques, and developing a larger, public multimodal dataset.
+Acknowledgements This work is supported by National Key Research and Development Program of China (2024YFC3016801), Fundamental Research Funds for the Central Universities (3142021009, 3142020018), the Anhui Science and Technology University Science Foundation (Grant No. XWYJ202301), the Key Discipline Construction Project of Anhui Science and Technology University (Grant No. XK-XJGY002), and the Hebei Province Higher Education Teaching Reform Research and Practice Project (2022GJJG 477). The authors are grateful for the anonymous reviewers whose comments helped improve and clarify this manuscript.
+Footnotes 1 The spaCy toolkit is used to obtain the dependency tree of a sentence: https://spacy.io/.
+Publisher's Note Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References Bu Y, Sheng Q, Cao J, et al (2023) Combating Online Misinformation Videos: Characterization, Detection, and Future Directions. In: Proceedings of the 31st ACM International Conference on Multimedia. Association for Computing Machinery, New York, NY, USA, MM ’23, pp 8770–8780, https://doi.org/10.1145/3581783.3612426
+Bu Y, Sheng Q, Cao J, et al (2024) FakingRecipe: Detecting Fake News on Short Video Platforms from the Perspective of Creative Process. In: Proceedings of the 32nd ACM International Conference on Multimedia. Association for Computing Machinery, Melbourne VIC Australia, MM ’24, pp 1351–1360, https://doi.org/10.1145/3664647.3680663
+Choi H, Ko Y (2021) Using Topic Modeling and Adversarial Neural Networks for Fake News Video Detection. In: Proceedings of the 30th ACM International Conference on Information and Knowledge Management. ACM, Virtual Event Queensland Australia, pp 2950–2954, https://doi.org/10.1145/3459637.3482212
+Cui, W; Zhang, X; Shang, M. Multi-Modality Frequency-Aware Cross Attention Network for Fake News Detection. Journal of Intelligent and Fuzzy Systems ; 2024; 46 , 1 pp. 433-455. [DOI: https://dx.doi.org/10.3233/JIFS-233193]
+Cui, W; Zhang, X; Shang, M. Multi-View mutual learning network for multimodal fake news detection. Expert Syst Appl ; 2025; 279 , [DOI: https://dx.doi.org/10.1016/j.eswa.2025.127407] 127407.
+Feng, S; Yu, G; Liu, D et al. MHR: A Multi-Modal Hyperbolic Representation Framework for Fake News Detection. IEEE Trans Knowl Data Eng ; 2025; 37 , 4 pp. 2015-2028. [DOI: https://dx.doi.org/10.1109/TKDE.2025.3528951]
+Guo B, Ding Y, Yao L, et al (2020) The Future of False Information Detection on Social Media: New Perspectives and Trends. ACM Comput Surv 53(4):68:1–68:36. https://doi.org/10.1145/3393880
+Guo, Y; Li, Y; Zhen, K et al. CAMFND: Cross-modal adaptive-aware learning for multimodal fake news detection. Pattern Recogn Lett ; 2025; 195 , pp. 1-7. [DOI: https://dx.doi.org/10.1016/j.patrec.2025.02.035]
+Guo, Z; Li, Y; Yang, Z et al. Cross-Modal Attention Network for Detecting Multimodal Misinformation From Multiple Platforms. IEEE Transactions on Computational Social Systems ; 2024; 11 , 4 pp. 4920-4933. [DOI: https://dx.doi.org/10.1109/TCSS.2024.3373661]
+Hershey S, Chaudhuri S, Ellis DPW, et al (2017-03, 2017) CNN Architectures for Large-Scale Audio Classification. In: 2017 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP), pp 131–135, https://doi.org/10.1109/ICASSP.2017.7952132
+Hou R, Perez-Rosas V, Loeb S, et al (2020-03-12, 2019) Towards Automatic Detection of Misinformation in Online Medical Videos. In: 2019 International Conference on Multimodal Interaction. Association for Computing Machinery, New York, NY, USA, ICMI ’19, pp 235–243, https://doi.org/10.1145/3340555.3353763
+Hu, L; Zhao, Z; Qi, W et al. Multimodal Matching-Aware Co-Attention Networks with Mutual Knowledge Distillation for Fake News Detection. Inf Sci ; 2024; 664 , [DOI: https://dx.doi.org/10.1016/j.ins.2024.120310] 120310.
+Hu Z, Dong Y, Wang K, et al (2020) Heterogeneous Graph Transformer. In: Proceedings of The Web Conference 2020. Association for Computing Machinery, New York, NY, USA, p 2704–2710, https://doi.org/10.1145/3366423.3380027
+Huang Z, Hu Y, Zeng Z, et al (2023-07, 2023) Multimodal Stacked Cross Attention Network for Fine-Grained Fake News Detection. In: 2023 IEEE International Conference on Multimedia and Expo (ICME). IEEE, Brisbane, Australia, pp 2837–2842, https://doi.org/10.1109/ICME55011.2023.00482
+Jing J, Wu H, Sun J, (2023–01, et al (2023) Multimodal Fake News Detection via Progressive Fusion Networks. Inf Process Manage 60(1):103120. https://doi.org/10.1016/j.ipm.2022.103120
+Khattar D, Goud JS, Gupta M, et al (2019) MVAE: Multimodal Variational Autoencoder for Fake News Detection. In: The World Wide Web Conference. Association for Computing Machinery, New York, NY, USA, WWW ’19, pp 2915–2921, https://doi.org/10.1145/3308558.3313552
+Khosla P, Teterwak P, Wang C, et al (2020) Supervised contrastive learning. In: Proceedings of the 34th International Conference on Neural Information Processing Systems. Curran Associates Inc., Red Hook, NY, USA, NIPS ’20, pp 18661–18673
+Kim, J; Shin, Y; Jung, G et al. A hybrid detection method for YouTube fake news using related video data. Eng Appl Artif Intell ; 2025; 156 , [DOI: https://dx.doi.org/10.1016/j.engappai.2025.111130] 111130.
+Kipf TN, Welling M (2017) Semi-Supervised Classification with Graph Convolutional Networks. In: 5th International Conference on Learning Representations, ICLR 2017, Toulon, France, April 24-26, 2017, Conference Track Proceedings. OpenReview.net, pp 1–14
+Kumari, R; Ekbal, A. AMFB: Attention based Multimodal Factorized Bilinear Pooling for Multimodal Fake News Detection. Expert Syst Appl ; 2021; 184 , [DOI: https://dx.doi.org/10.1016/j.eswa.2021.115412] 115412.
+Li, S; Yao, T; Li, S et al. Semantic-Enhanced Multimodal Fusion Network for Fake News Detection. Int J Intell Syst ; 2022; 37 , 12 pp. 12235-12251. [DOI: https://dx.doi.org/10.1002/int.23084]
+Li X, Xiao X, Li J, (2022–04-12, et al (2022) A CNN-based Misleading Video Detection Model. Sci Rep 12(1):6092. https://doi.org/10.1038/s41598-022-10117-y
+Luvembe, AM; Li, W; Li, S et al. CAF-ODNN: Complementary Attention Fusion with Optimized Deep Neural Network for Multimodal Fake News Detection. Inf Process Manage ; 2024; 61 , 3 [DOI: https://dx.doi.org/10.1016/j.ipm.2024.103653] 103653.
+Lv, H; Yang, W; Yin, Y et al. MDF-FND: A dynamic fusion model for multimodal fake news detection. Knowl-Based Syst ; 2025; 317 , [DOI: https://dx.doi.org/10.1016/j.knosys.2025.113417] 113417.
+Ma J, Zhang L, Liu Y, et al (2024) Multi-task network guided multimodal fusion for fake news detection. In: The 16th Asian Conference on Machine Learning (Conference Track).https://openreview.net/forum?id=3dzeN4vEFy
+van der Maaten L, Hinton G (2008) Visualizing data using t-sne. Journal of Machine Learning Research 9(86):2579–2605. http://jmlr.org/papers/v9/vandermaaten08a.html
+McCrae S, Wang K, Zakhor A (2022) Multi-modal Semantic Inconsistency Detection in Social Media News Posts. In: MultiMedia Modeling, vol 13142. Springer International Publishing, Cham, p 331–343. https://doi.org/10.1007/978-3-030-98355-0_28
+Medina Serrano JC, Papakyriakopoulos O, Hegelich S (2020) NLP-based Feature Extraction for the Detection of COVID-19 Misinformation Videos on YouTube. In: Verspoor K, Cohen KB, Dredze M, et al (eds) Proceedings of the 1st Workshop on NLP for COVID-19 at ACL 2020. Association for Computational Linguistics, Online, pp 1–6
+Nadeem, MI; Ahmed, K; Zheng, Z et al. SSM: Stylometric and Semantic Similarity Oriented Multimodal Fake News Detection. Journal of King Saud University - Computer and Information Sciences ; 2023; 35 , 5 [DOI: https://dx.doi.org/10.1016/j.jksuci.2023.101559] 101559.
+Niu, T; Ma, S; Yan, D et al. CR-FND: Robustness-enhanced multimodal fake news detection against content variance. Neurocomputing ; 2025; 638 , [DOI: https://dx.doi.org/10.1016/j.neucom.2025.130190] 130190.
+Palod P, Patwari A, Bahety S, et al (2019) Misleading Metadata Detection on YouTube. In: Advances in Information Retrieval: 41st European Conference on IR Research, ECIR 2019, Cologne, Germany, April 14–18, 2019, Proceedings, Part II 41. Springer, pp 140–147, https://doi.org/10.1007/978-3-030-15719-7_18
+Papadopoulou, O; Zampoglou, M; Papadopoulos, S. A Corpus of Debunked and Verified User-Generated Videos. Online Inf Rev ; 2018; 43 , 1 pp. 72-88. [DOI: https://dx.doi.org/10.1108/OIR-03-2018-0101]
+Peng, L; Jian, S; Kan, Z et al. Not All Fake News Is Semantically Similar: Contextual Semantic Representation Learning for Multimodal Fake News Detection. Inf Process Manage ; 2024; 61 , 1 [DOI: https://dx.doi.org/10.1016/j.ipm.2023.103564] 103564.
+Qi, P; Bu, Y; Cao, J et al. FakeSV: A Multimodal Benchmark with Rich Social Context for Fake News Detection on Short Video Platforms. Proceedings of the AAAI Conference on Artificial Intelligence ; 2023; 37 , 12 pp. 14444-14452. [DOI: https://dx.doi.org/10.1609/aaai.v37i12.26689]
+Qi P, Zhao Y, Shen Y, et al (2023b) Two Heads Are Better Than One: Improving Fake News Video Detection by Correlating with Neighbors. In: Rogers A, Boyd-Graber J, Okazaki N (eds) Findings of the Association for Computational Linguistics: ACL 2023. Association for Computational Linguistics, Toronto, Canada, pp 11947–11959, https://doi.org/10.18653/v1/2023.findings-acl.756
+Qian S, Hu J, Fang Q, et al (2021) Knowledge-aware Multi-Modal Adaptive Graph Convolutional Networks for Fake News Detection. ACM Transactions on Multimedia Computing, Communications, and Applications 17(3):98:1–98:23. https://doi.org/10.1145/3451215
+Qu, Z; Meng, Y; Muhammad, G et al. QMFND: A Quantum Multimodal Fusion-Based Fake News Detection Model for Social Media. Information Fusion ; 2024; 104 , [DOI: https://dx.doi.org/10.1016/j.inffus.2023.102172] 102172.
+Ren S, He K, Girshick R, et al (2015) Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks. In: Advances in Neural Information Processing Systems, vol 28. Curran Associates, Inc., pp 91–99
+Shang L, Kou Z, Zhang Y, et al (2021-12-15, 2021) A Multimodal Misinformation Detector for COVID-19 Short Videos on TikTok. In: 2021 IEEE International Conference on Big Data (Big Data). IEEE, Orlando, FL, USA, pp 899–908. https://doi.org/10.1109/BigData52589.2021.9671928
+Simonyan K, Zisserman A (2015) Very Deep Convolutional Networks for Large-Scale Image Recognition. In: Bengio Y, LeCun Y (eds) 3rd International Conference on Learning Representations, ICLR 2015, San Diego, CA, USA, May 7-9, 2015, Conference Track Proceedings, pp 1–14
+Song, C; Ning, N; Zhang, Y et al. A Multimodal Fake News Detection Model based on Crossmodal Attention Residual and Multichannel Convolutional Neural Networks. Inf Process Manage ; 2021; 58 , 1 [DOI: https://dx.doi.org/10.1016/j.ipm.2020.102437] 102437.
+Sormeily A, Dadkhah S, Zhang X, et al (2024) MEFaND: A Multimodel Framework for Early Fake News Detection. IEEE Transactions on Computational Social Systems pp 1–17. https://doi.org/10.1109/TCSS.2024.3355300
+Truică, CO; Apostol, ES; Karras, P. DANES: Deep Neural Network Ensemble Architecture for Social and Textual Context-Aware Fake News Detection. Knowl-Based Syst ; 2024; 294 , [DOI: https://dx.doi.org/10.1016/j.knosys.2024.111715] 111715.
+Uppada, SK; Ashwin, BS; Sivaselvan, B. A Novel Evolutionary Approach-Based Multimodal Model to Detect Fake News in OSNs Using Text and Metadata. J Supercomput ; 2024; 80 , 2 pp. 1522-1553. [DOI: https://dx.doi.org/10.1007/s11227-023-05531-6]
+Veličkovic P, Cucurull G, Casanova A, et al (2018) GRAPH ATTENTION NETWORKS. In: International Conference on Learning Representations
+Wang, J; Qian, S; Hu, J et al. Positive Unlabeled Fake News Detection via Multi-Modal Masked Transformer Network. IEEE Trans Multimedia ; 2024; 26 , pp. 234-244. [DOI: https://dx.doi.org/10.1109/TMM.2023.3263552]
+Wang L, Zhang C, Xu H, et al (2023) Cross-Modal Contrastive Learning for Multimodal Fake News Detection. In: Proceedings of the 31st ACM International Conference on Multimedia. Association for Computing Machinery, New York, NY, USA, MM ’23, pp 5696–5704, https://doi.org/10.1145/3581783.3613850
+Wu, L; Long, Y; Gao, C et al. MFIR: Multimodal Fusion and Inconsistency Reasoning for Explainable Fake News Detection. Information Fusion ; 2023; 100 , [DOI: https://dx.doi.org/10.1016/j.inffus.2023.101944] 101944.
+Wu, L; Liu, P; Zhao, Y et al. Human Cognition-Based Consistency Inference Networks for Multi-Modal Fake News Detection. IEEE Trans Knowl Data Eng ; 2024; 36 , 1 pp. 211-225. [DOI: https://dx.doi.org/10.1109/TKDE.2023.3280555]
+Xue, J; Wang, Y; Tian, Y et al. Detecting Fake News by Exploring the Consistency of Multimodal Data. Inf Process Manage ; 2021; 58 , 5 [DOI: https://dx.doi.org/10.1016/j.ipm.2021.102610] 102610.
+Yan F, Zhang M, Wei B et al (2024) FMC: Multimodal fake news detection based on multi-granularity feature fusion and contrastive learning. Alex Eng J 109:376–393. https://doi.org/10.1016/j.aej.2024.08.103
+Yang H, Zhang J, Zhang L et al (2024) MRAN: Multimodal Relationship-Aware Attention Network for Fake News Detection. Computer Standards and Interfaces 89:103822. https://doi.org/10.1016/j.csi.2023.103822
+Yin, M; Chen, W; Zhu, D et al. Enhancing video rumor detection through multimodal deep feature fusion with time-sync comments. Information Processing & Management ; 2025; 62 , 1 [DOI: https://dx.doi.org/10.1016/j.ipm.2024.103935] 103935.
+You Y, Chen T, Sui Y, et al (2020) Graph contrastive learning with augmentations. In: Proceedings of the 34th International Conference on Neural Information Processing Systems. Curran Associates Inc., Red Hook, NY, USA, NIPS ’20, pp 5812–5823
+Yu, C; Ma, Y; An, L et al. BCMF: A Bidirectional Cross-Modal Fusion Model for Fake News Detection. Inf Process Manage ; 2022; 59 , 5 [DOI: https://dx.doi.org/10.1016/j.ipm.2022.103063] 103063.
+Zeng Z, Wu M, Li G, et al (2023a) Correcting the Bias: Mitigating Multimodal Inconsistency Contrastive Learning for Multimodal Fake News Detection. In: 2023 IEEE International Conference on Multimedia and Expo (ICME). IEEE, Brisbane, Australia, pp 2861–2866, https://doi.org/10.1109/ICME55011.2023.00486
+Zeng Z, Wu M, Li G, et al (2023b) An Explainable Multi-view Semantic Fusion Model for Multimodal Fake News Detection. In: 2023 IEEE International Conference on Multimedia and Expo (ICME). IEEE, Brisbane, Australia, pp 1235–1240, https://doi.org/10.1109/ICME55011.2023.00215
+Zeng Z, Luo M, Kong X, et al (2024) Mitigating World Biases: A Multimodal Multi-View Debiasing Framework for Fake News Video Detection. In: Proceedings of the 32nd ACM International Conference on Multimedia. Association for Computing Machinery, Melbourne VIC Australia, MM ’24, pp 6492–6500, https://doi.org/10.1145/3664647.3681673
+Zhang Q, Liu J, Zhang F, et al (2023) Hierarchical Semantic Enhancement Network for Multimodal Fake News Detection. In: Proceedings of the 31st ACM International Conference on Multimedia. Association for Computing Machinery, New York, NY, USA, MM ’23, pp 3424–3433, https://doi.org/10.1145/3581783.3612423
+Zhang, X; Dadkhah, S; Weismann, AG et al. Multimodal Fake News Analysis Based on Image-Text Similarity. IEEE Transactions on Computational Social Systems ; 2024; 11 , 1 pp. 959-972. [DOI: https://dx.doi.org/10.1109/TCSS.2023.3244068]
+Zhou Y, Yang Y, Ying Q, et al (2023) Multimodal Fake News Detection via CLIP-Guided Learning. In: 2023 IEEE International Conference on Multimedia and Expo (ICME). IEEE, Brisbane, Australia, pp 2825–2830. https://doi.org/10.1109/ICME55011.2023.00480
+Zong L, Zhou J, Lin W, et al (2024) Unveiling Opinion Evolution via Prompting and Diffusion for Short Video Fake News Detection. In: Ku LW, Martins A, Srikumar V (eds) Findings of the Association for Computational Linguistics ACL 2024. Association for Computational Linguistics, Bangkok, Thailand and virtual meeting, pp 10817–10826. https://doi.org/10.18653/v1/2024.findings-acl.642

@@ -1,0 +1,1091 @@
+Introduction
+In the digital era, online freedom of speech bears a dual nature. While it facilitates dismantling information barriers, the unbridled expression of personal opinions concurrently fosters an environment ripe for spreading false information. Among these, fake news, constituting a persistent form of false information [1], has garnered comprehensive interdisciplinary attention on a global scale [2]. The enduring repercussions of fake news reverberate across multiple domains, including politics [3], business [4], health [5], and society [6] at large. Researchers have diligently sought effective strategies for identifying fake news to mitigate the detrimental consequences. These strategies encompass diverse approaches, the most common of which are content-based methods and social-context-based methods [7]. The former focus on detecting news content authenticity with text [8, 9–10] and other modal information [11, 12], while the latter analyze extended social context clues [13, 14–15].
+Typically, within the scope of content-based type, existing text-based methodologies can be categorized into two perspectives [16]: pattern-based [9, 17, 18–19] and fact-based [8, 10, 20, 21]. Pattern-based methods are dedicated to learning the shared writing style or stylometric signals in fake news and generalizing them to previously unseen detection scenarios. Fake news often employs attention-grabbing vocabulary capable of inducing significant emotional fluctuations, achieving wide viral spread. Moreover, concerning event descriptions, fake news tends to fabricate details or exaggerate facts. By inciting intense resonance or dissonance within the public, fake news attains higher levels of mass participation and significantly enhanced media exposure. As depicted in Fig. 1, several illustrative examples of fake and real posts are presented.
+Fig. 1 [Images not available. See PDF.]
+The left dialogue boxes demonstrate fake (red) and real (green) news examples. Representative words are shown on the right side (color figure online)
+
+A primary observation [22] is that fake news frequently employs absolute terms and portrays events in a manner that is either ambiguous or contradictory to common sense, aiming to captivate people’s attention (e.g., “no matter how", “maximum", and “result in death"). Conversely, authentic news leans towards a relatively measured stance, employing words that provide a sense of assurance and describing events with compelling provenance and substantiation (e.g., “is trying to", “will", and “police confirm"). This phenomenon prompts an investigation into whether a substantial disparity exists in the word usage patterns between fake and authentic news.
+Drawing from the observations above, we propose the following hypothesis: A discernible tendency in word usage exists between fake and real news . To substantiate the credibility of this assertion, a preliminary experiment was conducted utilizing a Chinese benchmark dataset [16]. Here are the details about the major steps of the processing flow. First, we apply a chi-square test to classify the segmented words in the labeled news. Next, we employ vocabulary filtering to retain only nouns, verbs, adjectives, adverbs, and punctuation marks, which constitute the basic lexicons. Then, for the filtered words, we use synonym augmentation technology (in this case, ChatGPT1) to expand the lexicons. Finally, the visualization result of word embedding after being encoded by BERT [23] is shown in Fig. 2. This visualization underscores the segregation of terms employed in fake news (depicted in red) and those manifest in genuine news (depicted in green) within the latent semantic space. This finding motivates us to incorporate these lexical distinctions into fake news detection and endow our model with the discriminative potential to recognize such distinctions.
+Fig. 2 [Images not available. See PDF.]
+Visualization of representative word embeddings. ( Fake-Ori : original words extracted from the Chinese training set [16] that has much more tendency to appear in fake news; Fake-Aug : augmented synonyms for original words with the help of ChatGPT (https://chat.openai.com/); Likewise, Real-Ori and Real-Aug denote words under similar processes.)
+
+Apart from the pattern-based perspective, fact-based approaches offer valuable insights for detecting fake news. These methods evaluate the authenticity of a post with the assistance of relevant articles that furnish pertinent contextual information. However, the complete truth may not yet be unveiled, and the credibility of relevant articles procured through keyword-based queries on search engines could only be sometimes guaranteed. Consequently, the model should excel in contrasting fact-based elements and develop the capacity to assign distinct weights to each pertinent article. This paper introduces an authenticity-aware weight, enabling our model to gauge the degrees of authenticity associated with relevant articles autonomously.
+To benefit from both perspectives, researchers have endeavored to amalgamate these viewpoints into a cohesive framework. Sheng et al. [16] introduced a plug-in guidance framework generating token-level preference maps from the pattern- and fact-based perspectives and ensured mitigating interference from non-preferred parts as possible. Nevertheless, unlike their tendency to completely separate the two perspectives, we believe there can be deeper integration and guidance between them. For instance, especially when the authenticity of the retrieved evidence cannot be fully guaranteed, the pattern-based angle can help decide the reliability of factual evidence.
+Based on the investigation above, challenges still exist in benefiting from both the pattern- and fact-based perspectives for fake news detection: - How can we identify distinctive word patterns shown in fake and real news?
+
+- How can we utilize these different tendencies in word usage for fake news detection?
+
+- How can we detect fake news with incompletely verified relevant articles as factual evidence?
+
+- How can we effectively complement pattern- and fact-based perspectives and bridge mutual guidance for deeper interaction?
+
+To address aforementioned challenges, we present a hierarchical dual-view model for fake news detection. To tackle C1, we design fake- and truth-aware lexicons (Sect. 3.2) to capture the discernible tendency in word usage patterns. For C2, we design a claim-aware hierarchical attention network (Sect. 3.3) and introduce a lexicon attention loss (Sect. 3.6), and in this way, the word-level attention module can prioritize more attention to the words shown in our designed lexicons. To tackle C3, we devise a lexicon-guided interaction network (Sect. 3.4) that assigns authenticity weights for each relevant article whose authenticity is unknown. Lastly, for C4, we implement a joint detection module (Sect. 3.5) to detect fake news from both patterns- and fact- perspectives, and moreover, the fake- and truth-aware authenticity weights for relevant articles based on two lexicons is how our model utilizes the pattern view to guide the fact view. Our contributions are outlined as follows:
+- The truth-aware and fake-aware lexicons are devised to enhance the identification of distinctive linguistic variances between fake and real news.
+
+- A claim-aware hierarchical attention network is put forward in the pattern view and a lexicon-guided interaction network is designed in both pattern and fact views.
+
+- Based on abovementioned two lexicons and two network modules, a hierarchical dual-view model for fake news detection guided by discriminative lexicons (Lexi-FEND) is proposed.
+
+- Extensive experiments on two public datasets substantiate the superiority of the proposed Lexi-FEND model over prevailing state-of-the-art benchmarks.
+
+
+The rest of the paper is laid out as follows. We delve into the related work in Sect. 2. Section 3 provides the problem definition of fake news detection and a detailed description of the framework of our proposed Lexi-FEND model. In Sect. 4, we outline the experimental setup, results and analysis. Finally, we draw a conclusion and sketch out future vision in Sect. 5.
+Related work
+The task of fake news detection involves utilizing automated methods to verify the authenticity of a news piece [7]. Related terms [1, 24, 25] encompass rumor detection, fact verification, and information credibility evaluation. We do not differentiate these terms in this section specifically, as their research methods exhibit some similarities. In general, existing approaches can be categorized into two main groups: content-based methods and social-context-based methods [7].
+Social-context-based methods
+From the perspective of utilizing social context features, various factors have been considered, including user profiles [14, 26, 27–28], news spreaders [29, 30–31], crowd feedback [32, 33–34], and social interactions [15, 35, 36, 37, 38, 39, 40–41]. For example, social bots can be super-spreaders of low-credibility content [42]. Graph-based architectures [43, 44–45] and adversarial learning procedures [46, 47] have been explored in digging into heterogeneous information networks and further tackling non-IID data. Sequential data in both temporal and spatial forms [48, 49, 50–51] can provide rich insight for information analysis. Such social context factors occur naturally during news spread and provide valuable insights into user preferences. Given the wealth of available social features, it would be imprudent to refrain from utilizing them to mitigate the significant harm caused by fake news in various aspects of society. Consequently, an intriguing research direction involves developing a unified framework integrating fake news detection and mitigation. Wang et al. [52] demonstrated such feasibility by implementing concrete news recommendation strategies based on individual users’ perspectives.
+From the perspective of propagation trends, many researchers focus on exploring the distinctive patterns of how fake news spreads with diverse social context features. Specifically, some researchers have discovered that modeling different directions in the news propagation path can aid in identifying potential social context features. For instance, Ma et al. [13] proposed a tree-structured recursive neural network that incorporated top-down and bottom-up routes, effectively connecting the news content with propagation information. Building upon this approach, Bian et al. [53] further enhanced the model by introducing bidirectional graph convolutional networks, highlighting the importance of the top-down direction in conveying propagation information and the bottom-up direction in carrying dispersion information. However, these traditional methods may exhibit fragility when confronted with deliberately designed false information and corresponding conversations. To address this issue, Sun et al. [54] developed a graph adversarial contrastive learning method that captured invariant features and improved robustness. Similarly, Lin et al. [55] showed the effectiveness of conducting an adversarial contrastive learning framework in detecting fake posts, particularly in low-resource scenarios. These contrast-aware methods inspire us to explore the distinguishable word utilization aspect in our work.
+Comprehensive studies on other social-context-based methods have been presented in [56, 57–58]. However, due to the costs associated with timeliness and privacy concerns, challenges exist in utilizing social context as an aided feature for detection.
+Content-based methods
+During the early stage of fake news dissemination, there is a scarcity of propagation information available. Consequently, news content emerges as a valuable resource for detecting the authenticity of a news piece. For a news piece, analyzing its content can provide valuable insights into determining whether the news is genuine or fake.
+On the one hand, many studies have emphasized pattern-based methods for analyzing textual features, including stylometric and linguistic characteristics [17, 59, 60, 61, 62, 63–64]. For instance, Yang et al. [63] extracted eight high-level linguistic features that significantly influenced news quality. Although delicately designed, hand-crafted approaches are typically expensive and difficult to be applied in complex situations. Przybyla [64] demonstrated that a neural stylometric model could capture distinct language features associated with fake news, such as sensational and affective vocabularies. Such stylometric methods serve as inspiration for exploring the unique patterns between fake news and real news. Emotion signal is another crucial detection factor [9, 11, 18, 19, 65]. For instance, Ajao et al. [18] verified the existence of a relationship between fake texts and their sentiments, highlighting that incorporating sentimental signals as an auxiliary could outperform text-only methods. Zhang et al. [9] introduced the concept of “dual emotion", encompassing both publisher emotion and social emotion, and suggested that these two signals could differentiate between fake and real scenarios. In addition, other research methods have inspired fake news detection, including sentence interaction [66], anomaly detection [67], news environment perception [68], multi-modality fusion [11, 12], and multi-domain adaptation [69, 70–71].
+On the other hand, fact-based methods have also been proven effective. These frameworks consider introducing relevant external factual sources as an auxiliary when detecting fake news [8, 10, 20, 21, 72, 73, 74–75]. Such factual sources primarily include information from search engines and knowledge graphs. Besides, the attention mechanism has been widely used in recent natural language processing tasks [76, 77]. Compared to traditional deep neural networks, it excels in encoding sequential data in parallel and distributing word segments with varying degrees of emphasis. In the realm of fake news detection, the attention mechanism is also helpful in improving the detection effect. Popat et al. [8] explored the relationships among claims, relevant articles, and their corresponding sources using word-level attention mechanisms. Vo and Lee [20] applied a hierarchical multi-head attention network at both word and document levels, demonstrating its efficacy in identifying important words and evidence. Additionally, to expand the verification scale and facilitate users, Botnevik et al. [78] developed a browser extension that queries online evidence using web search engines. Apart from online relevant articles, utilizing or constructing knowledge graphs is another approach to verify the factuality of information [72, 79]. However, to verify factual information more purely, fact-based methods often remove patterned words from relevant articles [16]. When the retrieved knowledge cannot be fully guaranteed to be correct, this method will fail to gain help from pattern-based methods in judging the authenticity of relevant articles.
+To this end, recent trends in fake news detection involve the use of hybrid methods from dual views. Sheng et al. [16] proposed a dual-view detection framework and proved such collaboration could outperform individual methods by leveraging the respective advantages of these two complementary components. Similarly, using factual and pattern-based insights, Guo et al. [80] devised an interpretable detection framework combining evidence graph features from labeled historical news and plug-in pattern features, including semantics, emotion, and styles. Beyond this, other works [22, 81, 82] also explored the possibility of profiting from both content- and social-context-based perspectives. Therefore, integrating perception information from various views is an essential direction for fake news detection. Our work shares similarities with Sheng et al. [16]. However, the significant difference between us is that they ignored the facticity of relevant articles, handling the pattern- and fact-based perspectives in completely independent ways, which is far from the real-world situation. To address this issue, in this paper, we assign an authenticity-aware weight to each relevant article based on our constructed lexicons, allowing the pattern view to provide guidance to the fact view.
+The hierarchical dual-view model for fake news detection guided by discriminative lexicons
+We first formulate the problem definition of fake news detection. Subsequently, we develop a hierarchical dual-view model for fake news detection guided by discriminative lexicons (Lexi-FEND) based on the assumption that fake news exhibits distinct word usage tendencies compared to real news. Lexi-FEND includes four key components: (1) fake- and truth-aware lexicon construction (Sect. 3.2), (2) claim-aware hierarchical attention network (Sect. 3.3), (3) lexicon-guided interaction network (Sect. 3.4), and (4) joint detection (Sect. 3.5). Our training objectives include guiding the model in learning: (a) the pattern features of the source post2, (b) the relations between the source post and its relevant articles3, (c) the credibility weights of relevant articles. The overall architecture of the proposed Lexi-FEND model is illustrated in Fig. 3.
+Fig. 3 [Images not available. See PDF.]
+The framework of the proposed Lexi-FEND model
+
+Problem definition of fake news detection
+Let C = { c i } i = 1 m represent a claim having m clauses, where each clause c i = { w c i 1 , w c i 2 , … , w c i q } consists of q words. Correspondingly, we have a set of relevant articles A = { A i } i = 1 n associated with C , where n denotes the number of articles, and each article A i = { w a i 1 , w a i 2 , … , w a i k } comprises k words. In addition, we construct a truth-aware lexicon consisting of words that tend to appear in real news and a fake-aware lexicon comprising words that tend to be associated with fake news, denoted by D r and D f , respectively.
+In this work, we treat fake news detection as a binary classification task, where the ground truth label, denoted as y , takes the value of 0 for real news and 1 for fake news. The objective of training is to learn a function F : F ( C , A , D r , D f ) → y .
+Fake- and truth-aware lexicon construction
+To address the challenge of distinguishing words with different patterns shown in fake and real news, we construct fake- and truth-aware lexicons to classify words based on authenticity preferences. These two lexicons are crucial to our methodology and serve as a connecting thread throughout the entire process. Considering issues related to data accessibility and data leakage, our approach begins by selecting the fake and real posts from the training dataset used in [16] as the foundation of our lexicons. To investigate the potential correlations between words used in news articles and their corresponding labels, we first employ the χ 2 -test to categorize segmented words with different tendencies towards authenticity (i.e., fake or real). We then apply vocabulary filtering to retain only nouns, verbs, adjectives, adverbs, and punctuation marks, which constitute the original fake-aware lexicon D f and the original truth-aware lexicon D r . Next, to cover a broader range of possible scenarios and achieve improved generalization performance, we expand the synonym lexicons with the following three stages. In the generation stage, we leverage ChatGPT with the following prompt: “You are now a reliable synonym generator. Please print the top 10 words with the closest meaning to ‘XXX’ and their probability values. If you don’t know the answer to a question, please don’t share false information.". In the filtering stage, we call ChatGPT with the following prompt: “You are now a reliable synonym judge. Please identify whether A and B are synonyms. If you think any word is irrational, please point it out and provide a corresponding explanation.". In the checking stage, we manually remove the rarely-used and reduplicate words in two lexicons. Table 1 shows the overall statistics of the two lexicons. Table 1. Details of the fake- and truth-aware lexicons
+Statistic
+Weibo
+Twitter
+
+Fake
+Real
+Fake
+Real
+
+Origin Words
+278
+196
+39
+34
+
+Deduplicated Synonyms
+1655
+1159
+568
+571
+
+Total
+1933
+1355
+607
+605
+
+
+Claim-aware hierarchical attention network
+The claim text plays a crucial role in the early stage of detecting fake news, as it contains a wealth of valuable information to be explored. We propose a hierarchical attention network operating at both the word and clause levels to effectively capture a given claim’s semantic and stylometric features.
+Claim word-level encoder. Considering the advantages of Gated Recurrent Unit (GRU) [83] in effectively processing sequential text data with a reduced number of parameters, similar to the lexicon word-level encoder, we incorporate bidirectional GRU (Bi-GRU) to model contextual information in both forward and backward directions. 1
+h → c i j = GRU → c-w ( e c i j ) , j ∈ [ 1 , q ] , h ← c i j = GRU ← c-w ( e c i j ) , j ∈ [ q , 1 ] , where e c i j ∈ R D is the word embedding of the j- th word w c i j in the i- th clause, and the subscript ‘c-w’ is the abbreviation for ‘claim-word’.
+To incorporate semantic information more effectively, we propose a method that involves two parallel passes for each word. In this approach, we concatenate the bidirectional hidden states to generate comprehensive representations for each word. 2
+h c i j = [ h → c i j ; h ← c i j ] , where h c i j ∈ R 2 H and H represents the hidden size of GRU .
+Word-level attention. We aim for our model to prioritize words with distinct authenticity tendencies, specifically the words in our lexicons, over common words. To address this, we propose a word-level attention module that assigns authenticity-aware weights a c i j to each word w c i j : 3
+a c i j = e x p ( w 1 T h c i j ) ∑ u = 1 q e x p ( w 1 T h c i u ) , where w 1 ∈ R 2 H is the parameter vector.
+Then, for the i- th clause c i , we sum all word representations based on their weights to get the initial clause representation, denoted by h c i ∈ R 2 H , which combines all the semantic knowledge of words with distinct authenticity-aware weights, as follows: 4
+h c i = ∑ j = 1 q a c i j h c i j . Clause-level attention. Although existing works on fake news detection have paid little attention to clause-level information, we support integrating this fine-grained level. The reason is that each clause in a news article contains distinct information with varying levels of credibility. In other words, not every clause in a fake news piece necessarily conveys false information. Thus, we propose the design of a clause-level attention module to ensure that the Lexi-FEND model focuses more on clauses that are more likely to be associated with fake content: 5
+a c i = σ ( w 2 T h c i ) , 6
+h c i ′ = a c i h c i , where w 2 ∈ R 2 H is a parameter vector, σ is the sigmoid function and h c i ′ is the advanced clause representation for the i -th clause.
+Clause-level encoder. Despite variations in authenticity degrees, it is crucial to recognize that each clause is not isolated but rather interconnected within the overall context. To establish connections among the clauses, similar to the word-level encoding layer, we introduce a GRU-based clause-level encoder. 7
+c → i = GRU → c-c ( h c i ′ ) , i ∈ [ 1 , m ] , c ← i = GRU ← c-c ( h c i ′ ) , i ∈ [ m , 1 ] , where the subscript ‘c-c’ represents the abbreviation for ‘claim-clause’. Then, we concatenate bidirectional hidden vectors to acquire the overall representation for each clause: 8
+c i = [ c → i ; c ← i ] , where c i ∈ R 2 H .
+Finally, we average hidden states of m clauses for representing the whole claim: 9
+C = 1 m ∑ i = 1 m c i .
+Lexicon-guided interaction network
+Apart from the news piece, relevant news articles provide an additional perspective for fake news detection. Utilizing such information calls for identifying the core semantic aspects related to the given news piece. Often, relevant articles may contain extraneous information unrelated to the central event content. To ensure our model focuses on the essential entities that warrant comparison, we propose a multi-head cross-attention module to restrict attention to relevant entities.
+However, not all relevant articles, primarily collected from web search engines, can be considered entirely truthful [16]. In light of this, we aim to develop a model that automatically assigns weights to these articles based on their authenticity. To address this, we split the previously designed multi-head cross-attention module into two distinct parts: the fake-aware and truth-aware multi-head cross-attention modules. These modules capture the relationships between a given claim and its relevant articles while considering their authenticity weights.
+Lexicon word-level encoder. Since language models trained on large corpora have demonstrated excellent capabilities in capturing semantic knowledge, we leverage Word2Vec for Chinese [84, 85] and Glove for English [86] to encode each word w f i ∈ D f and w r i ∈ D r into embedding vectors e f i ∈ R D and e r i ∈ R D , respectively. Here, D represents the embedding dimension. To capture comprehensive latent background knowledge within the two distinct lexicons, we employ two Bi-GRUs to facilitate learning long-term textual information. 10
+h → i f = GRU → f ( e f i ) , i ∈ [ 1 , | D f | ] , h ← i f = GRU ← f ( e f i ) , i ∈ [ | D f | , 1 ] . 11
+h → i r = GRU → r ( e r i ) , i ∈ [ 1 , | D r | ] , h ← i r = GRU ← r ( e r i ) , i ∈ [ | D r | , 1 ] . After concatenating two parallel encoding vectors, we can obtain word embeddings h i f ∈ R 2 H f and h i r ∈ R 2 H r as follows: 12
+h i f = [ h → i f ; h ← i f ] , 13
+h i r = [ h → i r ; h ← i r ] , where H f and H r represent the hidden sizes of GRU f and GRU r , respectively. Each word representation encompasses contextual knowledge that is specific to h i f and h i r . Then, we apply an average operation to derive the whole lexicon representations e f and e r : 14
+e f = 1 | D f | ∑ i = 1 | D f | h i f , 15
+e r = 1 | D r | ∑ i = 1 | D r | h i r . Article-level encoder. We first apply an exclusive Bi-GRU to encode each word for every relevant article as follows: 16
+A → i j = GRU → a ( e a i j ) , j ∈ [ 1 , k ] , A ← i j = GRU ← a ( e a i j ) , j ∈ [ k , 1 ] , 17
+A i j = [ A → i j ; A ← i j ] , where e a i j denotes the embedding vector of the j- th word w a i j in the i- th article. A i j ∈ R 2 H denotes the word representation after combining two-way information. By concatenating all word representations, we gain each article representation A i ∈ R 2 H × k : 18
+A i = [ A i 1 ⊕ … ⊕ A i j ⊕ … ⊕ A i k ] . Fake-aware multi-head cross-attention. Determining the semantic contributions of the multiple words within each relevant article is essential. To address this, we employ a multi-head cross-attention module to capture the relationship between the claim and each word in the article.
+Firstly, inspired by [20], we create a new matrix C w ′ ∈ R 2 H × k for k articles by replicating the claim representation obtained from the word-level encoder C w k times. This duplication allows us to broaden the scope of comparison across various aspects using the h -head cross-attention module. 19
+C w = 1 mq ∑ i = 1 m ∑ j = 1 q h c i j , 20
+Θ i = softmax ( W 2 tanh ( W 1 [ A i ; C w ′ ] ) ) , where W 1 ∈ R t × 4 H , W 2 ∈ R h × t and softmax means applying softmax function to each column in a matrix. In this way, Θ i ∈ R h × k models h different attention distributions on k words in the i- th article A i . Then, the final article representation vector, denoted by A i ′ ∈ R h 2 H , can be calculated as follows: 21
+A i ′ = g ( Θ i A i T ) , where function g ( · ) flattens a matrix into a vector.
+However, as mentioned above, not all relevant articles can be considered authentic. In our approach, we employ lexicons as guidance to enable the Lexi-FEND model to automatically learn the fake-aware authenticity weight for the i -th article A i , denoted by a f i , as follows. 22
+a f i = e x p ( e f T A i ′ ) ∑ u = 1 n e x p ( e f T A u ′ ) . In this case, H f = H r = h H .
+Next, we sum each article representation based on their fake-aware authenticity weights to get the fake-aware article representation A f ∈ R h 2 H : 23
+A f = ∑ i = 1 n a f i A i ′ . Truth-aware multi-head cross attention. Similar to the fake-aware multi-head cross-attention, we can obtain the truth-aware authenticity weight a r i and truth-aware article representation A r : 24
+a r i = e x p ( e r T A i ′ ) ∑ u = 1 n e x p ( e r T A u ′ ) , 25
+A r = ∑ i = 1 n a r i A i ′ , where A r ∈ R h 2 H .
+Joint detection
+To aggregate information from pattern-based and fact-based perspectives, we concatenate dual-view representation vectors as the final feature and feed it into an MLP layer to get the predictive label: 26
+y ^ = softmax ( W s T ( C ⊕ A f ⊕ A r ) ) , where W s ∈ R 2 H + h 2 H + h 2 H is a parameter vector of the MLP layer.
+Losses
+To achieve the training goal, we adopt two kinds of losses:
+Cross-entropy loss. As a binary classification task, we minimize the cross-entropy loss between the predictive label y ^ and the ground-truth label y : 27
+L ce = - ( y log y ^ + ( 1 - y ) log ( 1 - y ^ ) ) . Lexicon attention loss. Under the pattern-based view, we aim to prevent the Lexi-FEND model from being distracted by irrelevant words with weak pattern polarity. To achieve this, we introduce a lexicon attention loss. Specifically, we encourage the model to pay more attention to words present in our lexicons and learn a larger margin, denoted by m : 28
+L la = ∑ m a x ( 0 , m - ( 1 l D ∑ j = 1 q X D - 1 l ND ∑ j = 1 q X ND ) ) , where l D and l ND are the numbers of lexicon and non-lexicon words in clause c i , which contains q words. Attention weights for lexicon words and non-lexicon words in clause c i are defined as X D and X ND , respectively: 29
+X D = a c i j , w c i j ∈ c i ∩ D r ∩ D f , 0 , otherwise , 30
+X ND = a c i j , w c i j ∈ c i - D r - D f , 0 , otherwise . The formation of the overall loss is as follows: 31
+L = L ce + α L la , where α guides the model to achieve the best trade-off between two losses.
+Experiments
+Datasets
+In this study, we perform experiments on two real-world datasets in Chinese and English. Both of them consist primarily of posts , relevant articles , and corresponding two-category labels (fake/real). The statistical details of the two datasets are presented in Table 2. Table 2. Details of the Weibo and Twitter datasets
+Statistic
+Weibo
+Twitter
+
+Train
+Val
+Test
+Total
+Train
+Val
+Test
+Total
+
+Posts
+Fake
+1896
+632
+633
+3161
+3419
+1140
+1140
+5699
+
+Real
+1920
+640
+641
+3201
+5406
+1802
+1802
+9010
+
+Total
+3816
+1272
+1274
+6362
+8825
+2942
+2942
+14,709
+
+Relevant articles
+17,849
+12,419
+
+
+Weibo dataset [16]. In terms of posts , this Chinese benchmark dataset expands upon previous works [9, 87]. The dataset comprises news pieces collected and verified by Weibo Community Management Center4 and NewsVerify,5 spanning from April 2014 to November 2018. It comprises 6,362 posts, with 3,161 identified as fake and 3,201 as real news items. The dataset is split into train, validation, and test sets, with a ratio of approximately 3:1:1. For relevant articles , the dataset includes fact-checking articles [88] and other relevant articles obtained from Baidu News. After removing duplicates, there are a total of 17,849 articles available for analysis.
+Twitter dataset [16]. To address the issue of severe imbalance between fake and real news pieces in the posts , this English dataset combines three benchmark datasets [89, 90–91], resulting in a total of 14,709 posts (5699 fake and 9010 real). For the collection of relevant articles , fact-checking articles from [89, 90–91] are included, along with supplemental relevant articles obtained by querying Google News using the post titles. The overall English article base consists of 12,419 articles. Notably, the number of relevant articles is less than that of original posts, primarily due to the Twitter dataset covering a smaller range of topics than the Weibo dataset.
+Baselines
+To verify the effectiveness of our proposed Lexi-FEND model, we choose eight competitive text-based approaches in three categories as baselines:
+Pattern-based methods
+These methods focus on the content of a given post, emphasizing observation from a pattern view, such as the textual features and emotional signals.
+- Bi-LSTM [92] is an advanced variant of the traditional long-short term memory (LSTM). It can create more effective latent semantic representations for the current word by incorporating forward and backward contextual information.
+
+- RoBERTa [93] is a robustly optimized BERT [23] pretraining approach. It employs the dynamic masking strategy for learning comprehensive semantic representation and the byte-pair encoding for supporting more “unknown" tokens.
+
+- EANN-Text [12] is the text-only variant of event adversarial neural networks (EANN), which utilizes TextCNN to extract informative features from textual content. It eliminates event-specific features to handle newly emerging events.
+
+- BERT-Emo [9] utilizes bidirectional encoder representation from transformers (BERT) to capture the emotional signals conveyed by news publishers and comments. We specifically choose the publisher emotion as the base model.
+
+
+
+Fact-based methods
+These methods identify the authenticity of a given post with the help of relevant articles as external evidence.
+- DeClarE [8] incorporates a word-level claim-specific attention mechanism to capture the interaction between claims and articles, treating all articles equally important. We exclude the source embedding part due to data unavailability.
+
+- EVIN [21] is an interpretable evidence inference framework that aims to capture distilled semantic conflicts between claims and relevant articles. It removes irrelevant or distracted conflicts and obtains purified and finely-grained explainable evidence.
+
+- MAC [20] incorporates a hierarchical multi-head attentive network at the word and document level. We have not included information about the articles’ publishers and claims’ speakers in the base model.
+
+- KAHAN [74] introduces news towards entities (N-E) attention and comments towards entities (C-E) attention for capturing the corresponding relationship. We exclude C-E attention since we do not use the comment information.
+
+
+
+Dual-view methods
+These methods identify the credibility of a given post from both pattern-based and fact-based perspectives.
+- Pref-FEND ♢ [16] implies a variant building upon Pref-FEND. It integrates Bi-LSTM for pattern-view and DeClarE for fact-view, effectively harnessing the strengths of each view and reducing interference from non-preferred components.
+
+- IKA [80] is an interpretable detection approach integrating pattern-based features, such as semantic, emotion, and style, and fact-based features from evidence graphs constructed using the historical annotated news.
+
+- Pref-FEND ♠ [16] is another variant of Pref-FEND. It incorporates BERT-Emo as the pattern-based model and MAC as the fact-based model. As the current state-of-the-art method, this fused version offers significant improvements by leveraging the strengths of both pattern-based and fact-based approaches in dual views.
+
+
+
+Experimental details
+We maintain the same settings for part of the baseline models as in [16], keeping the initial token embeddings obtained from pretrained models in HuggingFace’s Transformers, i.e., bert-base-chinese and bert-base-uncased. In the proposed Lexi-FEND model, we employ sgns.weibo.bigram-char 6 [85] for Chinese and glove.840B.300d 7 [86] for English to obtain word embeddings. For Chinese word tokenization and clause segmentation, we use LTP 8 [94] and SnowNLP ,9 respectively. For English, we employ NLTK 10 [95]. We retain the top 5 relevant articles, with a maximum sequence length of 200 for each post. In both the post and its relevant articles, we use the same Bi-GRU in the word-level encoder, achieving parameter sharing and reducing the parameter count. We conduct a grid search over hyper-parameters, including the trade-off factor α ∈ { 0.1 , 0.2 , 0.3 , 0.4 , 0.5 } , the margin m ∈ { 0.3 , 0.35 , 0.4 , 0.45 , 0.5 } , the dimensionality of Bi-GRU ∈ { 64 , 128 } , and the initial learning rate l r ∈ { 1 e - 3 , 1 e - 4 , 1 e - 5 } for the Adam optimizer [96]. The batch size is set to 32. As evaluation metrics, we report the overall accuracy (Acc.), macro F1 score (macF1), and precision, recall, F1 score of each class (fake/real). All experiments are performed on an NVIDIA GeForce RTX 2080 Ti GPU. Table 3. Performance comparison between the Lexi-FEND model and baselines
+Method
+Weibo
+
+Acc
+macF1
+P fake
+R fake
+F1 fake
+P real
+R real
+F1 real
+
+Pattern-based
+
+  Bi-LSTM
+0.667
+0.660
+0.626
+0.820
+0.710
+0.744
+0.516
+0.610
+
+  RoBERTa †
+0.681
+0.677
+0.645
+0.796
+0.713
+0.738
+0.568
+0.642
+
+  EANN-Text
+0.692
+0.690
+0.860
+0.785
+0.717
+0.739
+0.601
+0.663
+
+  BERT-Emo
+0.712
+0.708
+0.667
+0.839
+0.743
+0.787
+0.587
+0.672
+
+Fact-based
+
+  DeClarE
+0.684
+0.678
+0.642
+0.820
+0.720
+0.755
+0.549
+0.636
+
+  EVIN
+0.707
+0.706
+0.683
+0.768
+0.690
+0.738
+0.647
+0.690
+
+  MAC
+0.724
+0.723
+0.695
+0.793
+0.741
+0.763
+0.657
+0.706
+
+  KAHAN †
+0.735
+0.735
+0.735
+0.731
+0.733
+0.736
+0.739
+0.738
+
+Dual-view
+
+  Pref-FEND ♢
+0.714
+0.712
+0.684
+0.788
+0.732
+0.754
+0.640
+0.692
+
+  IKA †
+0.746
+0.745
+0.755
+0.722
+0.738
+0.737
+0.769
+0.753
+
+  Pref-FEND ♠
+0.756
+0.754
+0.714
+0.848
+0.775
+0.816
+0.665
+0.733
+
+  Lexi-FEND (Ours)
+0 . 766 ± 0.006
+0 . 765 ± 0.006
+0.737
+0.821
+0.777
+0.801
+0.710
+0.753
+
+  Lexi-FEND+BERT (Ours)
+0 . 773 ± 0.005
+0 . 773 ± 0.005
+0.771
+0.776
+0.773
+0.777
+0.772
+0.775
+
+Method
+Twitter
+
+Acc
+macF1
+P fake
+R fake
+F1 fake
+P real
+R real
+F1 real
+
+Pattern-based
+
+  Bi-LSTM
+0.767
+0.732
+0.753
+0.923
+0.829
+0.811
+0.522
+0.635
+
+  RoBERTa †
+0.769
+0.766
+0.886
+0.714
+0.791
+0.654
+0.855
+0.741
+
+  EANN-Text
+0.770
+0.725
+0.742
+0.960
+0.837
+0.881
+0.472
+0.614
+
+  BERT-Emo
+0.794
+0.762
+0.769
+0.950
+0.850
+0.873
+0.550
+0.675
+
+Fact-based
+
+  DeClarE
+0.786
+0.753
+0.765
+0.941
+0.844
+0.853
+0.543
+0.663
+
+  EVIN
+0.783
+0.761
+0.788
+0.884
+0.833
+0.773
+0.623
+0.690
+
+  MAC
+0.791
+0.764
+0.777
+0.924
+0.844
+0.829
+0.581
+0.683
+
+  KAHAN †
+0.806
+0.801
+0.881
+0.790
+0.833
+0.715
+0.832
+0.769
+
+Dual-view
+
+  Pref-FEND ♢
+0.812
+0.792
+0.803
+0.917
+0.857
+0.832
+0.645
+0.727
+
+  IKA †
+0.815
+0.794
+0.804
+0.921
+0.859
+0.838
+0.646
+0.730
+
+  Pref-FEND ♠
+0.814
+0.801
+0.829
+0.877
+0.853
+0.786
+0.715
+0.749
+
+Lexi-FEND (Ours)
+0 . 844 ± 0.001
+0 . 833 ± 0.001
+0.856
+0.897
+0.876
+0.824
+0.762
+0.792
+
+Lexi-FEND+BERT (Ours)
+0 . 851 ± 0.002
+0 . 842 ± 0.002
+0.869
+0.890
+0.880
+0.820
+0.789
+0.804
+
+The bold values represent the best results in all models
+Pref-FEND ♢ and Pref-FEND ♠ represent ‘Pref-FEND works with Bi-LSTM and DeClarE’ and ‘Pref-FEND works with BERT-Emo and MAC’, respectively. Except for re-implementing the code ( † ), we follow the results in [16], which are the only available results on the two datasets. We report the average and standard deviation of our accuracy and macF1 scores obtained in 10 runs
+
+Performance comparison
+We compare our approach with eight representative baselines, as shown in Table 3. Based on the experimental results, we have the following observations:
+Firstly, among pattern-based methods, BERT-Emo achieves the best performance. This finding illustrates the effectiveness of utilizing the additional emotion signal, which is a strong stylometric feature for the fake news detection task.
+Secondly, among fact-based methods, MAC and KAHAN outperform DeClarE and EVIN. This result indicates that the hierarchical attention mechanism can capture more efficient aspect-specific information than the single-level attention mechanism.
+Thirdly, dual-view methods consistently outperform their single-view counterparts within equivalent conditions. Guided by Pref-FEND, Pref-FEND ♢ exhibits superior performance to both Bi-LSTM and DeClarE. Similarly, Pref-FEND ♠ surpasses the performance of both BERT-Emo and MAC. The efficacy of Pref-FEND stems from its ability to shield the primary single-view base models from the distraction posed by non-preferred information. Notably, as one of these dual-view strategies, our proposed approach attains optimal performance. Specifically, on the Weibo dataset, we observe an average macro F1 score increase of 8.13% over pattern-based methods and 5.45% over fact-based methods. This trend is echoed in the Twitter dataset, where our approach achieves an average macro F1 score increase of 8.68% over pattern-based methods and 6.33% over fact-based methods. Against the backdrop of the prevailing state-of-the-art technique, our method excels further, demonstrating an enhanced macro F1 score by 1.1% on Weibo and 3.2% on Twitter. Considering the excellent performance of BERT [23] in natural language processing, we also change the text-encoder Word2Vec and Glove into BERT and find a slight enhancement both in the Weibo and Twitter datasets. Such superiority over the state-of-the-art method is attributed to the following three differences between Pref-FEND and our method. The first one is Pref-FEND utilizes prior knowledge such as emotion dictionaries to identify the general stylistic tokens, while Lexi-FEND constructs fake- and truth-aware lexicons to discriminate a clearer boundary, which serves as a better startup. The second one is that Pref-FEND lets two views work independently, whereas Lexi-FEND benefits from deeper interaction between two views based on constructed pattern-aware lexicons. The third one is that Pref-FEND uses relevant articles as factual evidence despite their truthiness, while Lexi-FEND introduces an authenticity-aware weight for each relevant article, which is more consistent with the real-world situation.
+Fourthly, the overall performance of the proposed Lexi-FEND model on the Twitter dataset outpaces that of the Weibo dataset. One possible rationale is that English word embeddings encapsulate a richer information spectrum owing to their training on a larger corpus. Additionally, the Weibo dataset encompasses a broader array of topics and events compared to the Twitter dataset, implying a more intricate context for fake news detection. In terms of computational complexity, since Lexi-FEND employs the traditional attention mechanism ( O ( n ) ) for the claim-aware hierarchical attention network and the multi-head cross attention mechanism ( O ( n 2 ) ) for the lexicon-guided interaction network, the overall complexity is O ( n 2 ) , where n represents the number of tokens in the input sentence.
+Ablation study
+To evaluate the effectiveness of the components of our proposed method, as shown in Table 4, we implement ablation experiments with the following six variants in four groups:
+The first ablation group aims to evaluate the ensemble version and the clause-level design related to a source post: Table 4. Ablation study
+Method
+Weibo
+
+Acc
+macF1
+P fake
+R fake
+F1 fake
+P real
+R real
+F1 real
+
+Lexi-FEND
+0 . 766 ± 0.006
+0 . 765 ± 0.006
+0.737
+0.821
+0.777
+0.801
+0.710
+0.753
+
+1
+w / o articles + lexicons
+0.757
+0.756
+0.778
+0.714
+0.745
+0.739
+0.799
+0.768
+
+w / o clause
+0.730
+0.730
+0.728
+0.730
+0.729
+0.732
+0.730
+0.731
+
+2
+w / o articles
+0.760
+0.759
+0.784
+0.712
+0.747
+0.740
+0.807
+0.772
+
+3
+w / o lexicons ( → mean)
+0.749
+0.748
+0.773
+0.700
+0.735
+0.729
+0.797
+0.762
+
+w / o lexicons ( → sum)
+0.745
+0.745
+0.743
+0.744
+0.743
+0.747
+0.746
+0.746
+
+4
+w / o L la
+0.761
+0.760
+0.772
+0.736
+0.753
+0.751
+0.785
+0.767
+
+Method
+Twitter
+
+Acc
+macF1
+P fake
+R fake
+F1 fake
+P real
+R real
+F1 real
+
+Lexi-FEND
+0 . 844 ± 0.001
+0 . 833 ± 0.001
+0.856
+0.897
+0.876
+0.824
+0.762
+0.792
+
+1
+w / o articles + lexicons
+0.828
+0.818
+0.853
+0.870
+0.861
+0.787
+0.762
+0.775
+
+w / o clause
+0.833
+0.819
+0.836
+0.906
+0.869
+0.828
+0.719
+0.770
+
+2
+w / o articles
+0.832
+0.822
+0.856
+0.871
+0.864
+0.791
+0.769
+0.780
+
+3
+w / o lexicons ( → mean)
+0.836
+0.824
+0.847
+0.894
+0.870
+0.816
+0.745
+0.779
+
+w / o lexicons ( → sum)
+0.829
+0.818
+0.848
+0.878
+0.863
+0.796
+0.752
+0.773
+
+4
+w / o L la
+0.834
+0.826
+0.872
+0.853
+0.863
+0.776
+0.803
+0.789
+
+The bold values represent the best results in all models
+“ w / o ": without; “articles": lexicon-guided interaction network utilizing relevant articles; “lexicons": fake- and truth-aware lexicons and lexicon attention loss; “clause": clause-level attention in the claim-aware hierarchical attention network; “mean": employing the mean pooling layer for the final relevant article representation rather than allocating the proposed article weight; “sum": using the simple addition to get the final representation of relevant articles
+
+
+- w / o articles + lexicons: Remove the entire articles and lexicons component, resulting in a 0.9% decrease in the macro F1 score on Weibo and 1.5% on Twitter. Although valuable information in the source post can contribute to achieving a relatively good detection score, introducing valuable auxiliary knowledge, such as relevant articles and additional lexicons, further enhances fake news detection.
+
+- w / o clause: Remove the clause-level module. The experimental results show a noticeable performance degradation on both the Weibo and Twitter datasets. Notably, the clause-level module plays a more crucial impact on the Weibo dataset. The reason could be attributed to the fine-grained clause segmentation principles in the Chinese context.
+
+
+In the second ablation group, we check the influence of the post’s relevant articles:
+- w / o articles: Exclude all components related to relevant articles. This omission leads to a demonstrated decline of over 0.6% on the macro F1 score on both the Weibo and Twitter datasets. This decline may be attributed to relevant articles typically covering analogous topics or fact-based events related to the source post. Although our approach differs from the strict fact-checking task, relevant articles from search engines can effectively characterize the interaction between the source post and its contemporary news environment.
+
+
+We set up the third ablation group to verify the authenticity-aware weights of relevant articles guided by lexicons:
+- w / o lexicons ( → mean): Substitute lexicon-guided authenticity-aware weight allocation with the mean pooling layer for all article representations in this experiment. The results show a 1.7% decline on Weibo and 0.9% on Twitter in terms of the macro F1 score. This decline indicates that the Lexi-FEND model assigning distinct weights to relevant articles based on their credibility tendencies significantly contributes to detecting fake news.
+
+- w / o lexicons ( → sum): Substitute lexicon-guided authenticity-aware weights with the sum of all relevant article representations after the plain multi-head cross-attention module. However, the results indicate that this direct approach of connecting each relevant article may not lead to performance improvement as it is not receiving exclusive attention from them.
+
+
+Lastly, we remove the lexicon attention loss module in the fourth ablation group to validate its necessity:
+- w / o L la : Exclude the guidance of lexicon attention loss. From the experimental results, we observe that when lacking this additional guidance, the macro F1 score decreases by 0.5% on the Weibo dataset and 0.7% on the Twitter dataset. It may profit from our intention of prioritizing words with strong pattern polarity.
+
+
+
+Lexicon analysis
+In the proposed Lexi-FEND model, we construct two discriminative lexicons based on distinct authenticity-aware word usage tendencies between fake and real news. The role of constructed lexicons can be summarized as follows: - Guiding the model to prioritize words with prominent authenticity tendencies over common words;
+
+- Allocating authenticity-aware weights to relevant articles.
+To verify the rationality and effectiveness of our lexicon construction design, we conducted comparative experiments involving two different construction processes, as shown in Table 5.
+
+
+- w / Ori: In the first variant, we exclusively utilize original words from the training sets of the benchmark datasets [16]. A comparison with our discriminative lexicon reveals a decline of 1.2% on the macF1 score on the Weibo dataset and a 1.3% decline on the Twitter dataset. This discrepancy may arise due to the inferior word coverage in the unseen test scenarios.
+
+- w / Ori+Syn: In addition to our original lexicon, we conduct a trial using a synonym expansion method by leveraging Python packages, namely “synonyms" for Chinese11 and “nltk" for English.12 Our experimental results indicate that the performance of this synonym expansion method is slightly superior to the original version of the lexicon but falls short compared to the lexicon enhanced with ChatGPT. These findings suggest that large language models may be capable of identifying better synonyms by assimilating an extensive range of language patterns through training on massive datasets.
+
+- w / o Noise Words: Noise words are those for fake news and real news may differ, but they might be synonyms. To understand their influence on detection performance, we conduct an additional experiment. These words only make up 2.6% and 0.2% of the total lexicons in the Weibo and Twitter datasets, which is a very small fraction. The experimental results show a slight increase in performance after removing these noise words.
+
+
+Table 5. Lexicon analysis
+Method
+Weibo
+
+Acc
+macF1
+P fake
+R fake
+F1 fake
+P real
+R real
+F1 real
+
+Lexi-FEND
+0.766 ± 0.006
+0.765 ± 0.006
+0.737
+0.821
+0.777
+0.801
+0.710
+0.753
+
+w / Ori
+0.754
+0.753
+0.776
+0.708
+0.740
+0.735
+0.799
+0.765
+
+w / Ori + Syn
+0.754
+0.754
+0.775
+0.712
+0.742
+0.737
+0.796
+0.765
+
+w / o noise words
+0 . 768
+0 . 766
+0.813
+0.692
+0.747
+0.735
+0.842
+0.785
+
+Method
+Twitter
+
+Acc
+macF1
+P fake
+R fake
+F1 fake
+P real
+R real
+F1 real
+
+Lexi-FEND
+0.844 ± 0.001
+0.833 ± 0.001
+0.856
+0.897
+0.876
+0.824
+0.762
+0.792
+
+w / Ori
+0.833
+0.820
+0.837
+0.903
+0.869
+0.825
+0.723
+0.771
+
+w / Ori + Syn
+0.839
+0.825
+0.836
+0.916
+0.874
+0.843
+0.717
+0.775
+
+w / o noise words
+0 . 845
+0 . 834
+0.856
+0.897
+0.876
+0.824
+0.762
+0.792
+
+The bold values represent the best results in all models
+‘Ori’ represents only covering filtered original words in the training data. ‘Syn’ denotes corresponding expanded synonyms using Python synonym packages, while in the proposed Lexi-FEND, ChatGPT is utilized for synonym expansion. ‘Noise words’ are the words in fake news and real news that may differ but could be synonyms
+
+Lexicon word-level encoder analysis
+In the lexicon word-level encoder, we employ two GRUs to encode the words in the fake- and truth-aware lexicons, hoping the whole lexicon representations can contain contextual information and capture the overall atmosphere. To verify its effectiveness, we conducted two variants of lexicon word-level encoder, as shown in Table 6.
+- w / random order: Random shuffle the word orders in lexicons and then employ Bi-GRU as the word encoder. The experimental results show mild decreases both in the Weibo and Twitter datasets. It implies that even if the word order in the lexicons is disrupted, the overall lexicon representation is still able to capture contextual knowledge and the overall lexicon atmosphere as a whole.
+
+- w / single word: Directly average the embedding vector of each word in the lexicons to form the whole lexicon representation. The experimental results demonstrate a significant decrease in the two datasets. Specifically, the macF1 scores on the Weibo and Twitter datasets dropped by 0.8% and 0.9%, respectively. This phenomenon may result from dealing with the words in the lexicons in isolation, losing the perception of contextual knowledge and the overall atmosphere of the lexicon.
+
+
+Table 6. Lexicon word-level encoder analysis
+Method
+Weibo
+
+Acc
+macF1
+P fake
+R fake
+F1 fake
+P real
+R real
+F1 real
+
+Lexi-FEND
+0 . 766 ± 0.006
+0 . 765 ± 0.006
+0.737
+0.821
+0.777
+0.801
+0.710
+0.753
+
+w / random order
+0.763
+0.763
+0.747
+0.790
+0.768
+0.780
+0.736
+0.758
+
+w / single word
+0.758
+0.757
+0.789
+0.701
+0.742
+0.734
+0.814
+0.772
+
+Method
+Twitter
+
+Acc
+macF1
+P fake
+R fake
+F1 fake
+P real
+R real
+F1 real
+
+Lexi-FEND
+0 . 844 ± 0.001
+0 . 833 ± 0.001
+0.856
+0.897
+0.876
+0.824
+0.762
+0.792
+
+w / random order
+0.839
+0.829
+0.860
+0.880
+0.870
+0.803
+0.774
+0.788
+
+w / single word
+0.833
+0.824
+0.864
+0.863
+0.863
+0.784
+0.785
+0.785
+
+The bold values represent the best results in all models
+‘Random Order’ represents random shuffling of the order of words in the lexicons. ‘Single Word’ denotes averaging the word encoding vector of each independent word, while in Lexi-FEND, Bi-GRU is used to encode the words in the lexicons
+
+Case study
+
+Fig. 4 [Images not available. See PDF.]
+Case study for a fake post (translated into English)
+
+This section presents a case study to provide a more detailed analysis of how our model processes a post through a fine-grained procedure. The analysis comprises three main aspects: word-level attention, clause-level attention, and lexicon attention loss. Figure 4 illustrates an example of a fake post discussing whether Coca-Cola’s subsidiary, “Minute Maid", contains a banned pesticide, reducing brand credibility.
+At the word-level attention, we represent diverse attention degrees the model assigns to each word using different text background colors. The model concentrates the most on keywords such as “Coca-Cola", “Minute Maid", “Carbendazim", “unqualified brand", and the special symbol “ ◯ " used to indicate the web link.
+At the clause-level attention, the model assigns credibility to three clauses. We use highlighted horizontal lines with varying shades. The lighter the color is, the less trustworthiness the model attributes to the clause. The last clause, “ ◯ Web link", is deemed the least credible. The post’s low credibility score and high fake-biased attention score are the lack of reliable link sources. Therefore, it is essential to have trustworthy web links to establish higher credibility for news that relies on factual evidence.
+Fig. 5 [Images not available. See PDF.]
+Attention analysis. Visualize the attention weights of the key fragment consisting of 20 keywords in the first relevant article A 1 related to the fake post example in the case study
+
+Fig. 6 [Images not available. See PDF.]
+Analysis for the news length in the Weibo and Twitter datasets
+
+Lastly, we incorporate lexicon attention loss, denoted by the yellow box, to highlight words captured in lexicons. The word “link" is emphasized in this post, indicating the model’s suggestion for more specific and persuasive web links to play a crucial role in authenticating this post.
+Attention analysis
+In the Lexi-FEND model, another indispensable component is the interaction between the source post and relevant articles. As shown in Fig. 5, we visualize the multi-head cross-attention module. It models the relationships between the example post in the case study and its most relevant article A 1 . We set the number of attention heads h as 5. The visualization reveals distinct emphases in the five attention heads. For instance, the first attention head h 1 focuses more on words describing the overall event, such as “Minute Maid", “contained", “pesticide", “caused", and “cerebral". Conversely, the third attention head h 3 places greater emphasis on specific companies and characters, such as “Coca-Cola" and “experts", while the fifth attention head h 5 is more attuned to information about countries or locations, like “American". These varying emphases exemplify the effectiveness of our multi-head cross-attention module.
+Fig. 7 [Images not available. See PDF.]
+Error analysis
+
+News length analysis
+We conduct experiments to investigate how changes in news length would affect the detection results. Based on our findings in Fig. 6, we observe that the accuracy and macro F1 score generally improve as the length of news increases. This may be due to the fact that the model has difficulty fully comprehending short news articles. As more relevant information is provided, the detection performance is significantly enhanced. For both the Weibo and Twitter datasets, we find that the best detection performance is achieved when the news length is set to 200. However, when we continue to increase the news length to 250, there is a downward trend in performance. We speculate that this could be because too much irrelevant information is included, which could have distracted the model from identifying the key features of the news article.
+Error analysis
+Figure 7 demonstrates error analysis on the Weibo and Twitter datasets. Specifically, we respectively sample 30 pieces of data from two datasets to analyze six situations when our model would be ineffective. As can be observed, the two most common causes are “plain narration and lack of supportive evidence" and “inadequate information in the source post". It inspires us to explore how to find external evidence to support the same event as the source post, especially if it is narrated. Moreover, when little information is reported in the source post, other auxiliary information, such as post-time and contemporary hot events, can be considered.
+Conclusion
+In this work, we introduce a hierarchical dual-view model for fake news detection guided by discriminative lexicons (Lexi-FEND). We employ a hierarchical attention network to represent the source post in the pattern-based view. Additionally, we construct two lexicons to guide the Lexi-FEND model to prioritize words exhibiting strong authenticity polarity. Within the fact-based view, we devise a lexicon-guided interaction network. This network identifies crucial entities necessitating comparison and autonomously learns the authenticity-aware weight of each associated article. The proposed Lexi-FEND model is extensively evaluated on two publicly available datasets in distinct languages. The outcomes show that our approach surpasses prevailing methodologies. Furthermore, the introduced lexicons demonstrate their utility as valuable indicators within the context of fake news detection. In the future, we will explore the possibility of taking advantage of large language models for fake news detection. This exploration might encompass the integration of domain knowledge during the fine-tuning phase and the incorporation of diverse data augmentation strategies.
+Acknowledgements
+The authors would like to express our gratitude to all editors and anonymous reviewers for their invaluable suggestions which improve the quality of our manuscript. This work is partially supported by the Yibin Science and Technology Program (No. 2023SF004), the Sichuan Science and Technology Program (Nos. 2022YFG0378, 2023YFS0424, 2023YFH0058 and 2023YFQ0044), and the Engineering Research Center for ICH Digitalization and Multi-source Information Fusion (Fujian Polytechnic Normal University), Fujian Province University (G3-KF2022).
+Author contributions
+Sijia Yang: methodology, software, data curation, writing-original draft. Xianyong Li: supervision, writing-review and editing, funding acquisition, formal analysis. Yajun Du: funding acquisition, investigation, validation. Dong Huang: data curation, formal analysis. Xiaoliang Chen: funding acquisition, formal analysis. Yongquan Fan: formal analysis, software. Shumin Wang: software, formal analysis. All authors contributed to the manuscript revision and read and approved the submitted version.
+Availability of data and materials
+The datasets generated during and analyzed during the current study are available from the corresponding author upon reasonable request.
+Declarations
+Conflict of interest
+All sources of funding are our research projects. There are no potential conflict of interest. The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+1 https://chat.openai.com/.
+2 In this context, “post" and “claim" are semantically equivalent.
+3 The terms “articles" and “documents" are semantically equivalent.
+4 https://service.account.weibo.com.
+5 https://www.newsverify.com.
+6 https://github.com/Embedding/Chinese-Word-Vectors.
+7 https://nlp.stanford.edu/projects/glove/.
+8 https://github.com/HIT-SCIR/ltp.
+9 https://pypi.org/project/snownlp/.
+10 https://github.com/nltk/nltk.
+11 https://github.com/chatopera/Synonyms.
+12 https://wordnet.princeton.edu/.
+Publisher's Note
+Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References
+1. Kumar S, Shah N (2018) False information on web and social media: a survey. arXiv:1804.08559
+2. Lazer, DM; Baum, MA; Benkler, Y; Berinsky, AJ; Greenhill, KM; Menczer, F; Metzger, MJ; Nyhan, B; Pennycook, G; Rothschild, D. The science of fake news. Science ; 2018; 359 , 6380 pp. 1094-1096. [DOI: https://dx.doi.org/10.1126/science.aao2998]
+3. Linden, S; Panagopoulos, C; Roozenbeek, J. You are fake news: political bias in perceptions of fake news. Media Culture Soc ; 2020; 42 , 3 pp. 460-470. [DOI: https://dx.doi.org/10.1177/0163443720906992]
+4. Petratos, PN. Misinformation, disinformation, and fake news: cyber risks to business. Bus Horiz ; 2021; 64 , 6 pp. 763-774. [DOI: https://dx.doi.org/10.1016/j.bushor.2021.07.012] 1520.90052
+5. Rocha YM, Moura GA, Desidério GA, Oliveira CH, Lourenço FD, Figueiredo Nicolete LD (2021) The impact of fake news on social media and its influence on health during the covid-19 pandemic: a systematic review. J Public Health 1–10
+6. Duffy, A; Tandoc, E; Ling, R. Too good to be true, too good not to share: the social utility of fake news. Inf Commun Soc ; 2020; 23 , 13 pp. 1965-1979. [DOI: https://dx.doi.org/10.1080/1369118X.2019.1623904]
+7. Shu, K; Sliva, A; Wang, S; Tang, J; Liu, H. Fake news detection on social media: a data mining perspective. ACM SIGKDD Explor Newsl ; 2017; 19 , 1 pp. 22-36. [DOI: https://dx.doi.org/10.1145/3137597.3137600] 0922.39004
+8. Popat K, Mukherjee S, Yates A, Weikum G (2018) Declare: debunking fake news and false claims using evidence-aware deep learning. In: Proceedings of the 2018 conference on empirical methods in natural language processing, pp 22–32
+9. Zhang X, Cao J, Li X, Sheng Q, Zhong L, Shu K (2021) Mining dual emotion for fake news detection. In: Proceedings of the web conference 2021, pp 3465–3476
+10. Ma J, Gao W, Joty S, Wong K-F (2019) Sentence-level evidence embedding for claim verification with hierarchical attention networks. In: Proceedings of the 57th annual meeting of the association for computational linguistics, pp 2561–2571
+11. Cui L, Wang S, Lee D (2019) Same: sentiment-aware multi-modal embedding for detecting fake news. In: Proceedings of the 2019 IEEE/ACM international conference on advances in social networks analysis and mining, pp 41–48
+12. Wang Y, Ma F, Jin Z, Yuan Y, Xun G, Jha K, Su L, Gao J (2018) Eann: event adversarial neural networks for multi-modal fake news detection. In: Proceedings of the 24th Acm Sigkdd international conference on knowledge discovery & data mining, pp 849–857
+13. Ma J, Gao W, Wong K-F (2018) Rumor detection on twitter with tree-structured recursive neural networks. In: Proceedings of the 56th annual meeting of the association for computational linguistics (volume 1: long papers), pp 1980–1989
+14. Shu K, Wang S, Liu H (2019) Beyond news contents: the role of social context for fake news detection. In: Proceedings of the twelfth ACM international conference on web search and data mining, pp 312–320
+15. Guo H, Cao J, Zhang Y, Guo J, Li J (2018) Rumor detection with hierarchical social attention network. In: Proceedings of the 27th ACM international conference on information and knowledge management, pp 943–951
+16. Sheng Q, Zhang X, Cao J, Zhong L (2021) Integrating pattern-and fact-based fake news detection via model preference learning. In: Proceedings of the 30th ACM international conference on information & knowledge management, pp 1640–1650
+17. Zhou X, Li J, Li Q, Zafarani R (2023) Linguistic-style-aware neural networks for fake news detection. arXiv:2301.02792
+18. Ajao O, Bhowmik D, Zargari S (2019) Sentiment aware fake news detection on online social networks. In: ICASSP 2019-2019 IEEE international conference on acoustics, speech and signal processing (ICASSP). IEEE, pp 2507–2511
+19. Giachanou A, Rosso P, Crestani F (2019) Leveraging emotional signals for credibility detection. In: Proceedings of the 42nd international ACM SIGIR conference on research and development in information retrieval, pp 877–880
+20. Vo N, Lee K (2021) Hierarchical multi-head attentive network for evidence-aware fake news detection. In: Proceedings of the 16th conference of the European chapter of the association for computational linguistics: main volume, pp 965–975
+21. Wu L, Rao Y, Sun L, He W (2021) Evidence inference networks for interpretable claim verification. In: Proceedings of the AAAI conference on artificial intelligence, vol 35, pp 14058–14066
+22. Ni, S; Li, J; Kao, H-Y. Mvan: multi-view attention networks for fake news detection on social media. IEEE Access ; 2021; 9 , pp. 106907-106917. [DOI: https://dx.doi.org/10.1109/ACCESS.2021.3100245] 07871533
+23. Devlin J, Chang M-W, Lee K, Toutanova K (2018) Bert: pre-training of deep bidirectional transformers for language understanding. arXiv:1810.04805
+24. Guo, B; Ding, Y; Yao, L; Liang, Y; Yu, Z. The future of false information detection on social media: new perspectives and trends. ACM Comput Surv (CSUR) ; 2020; 53 , 4 pp. 1-36. 1434.31002
+25. Pierri, F; Ceri, S. False news on social media: a data-driven survey. ACM SIGMOD Rec ; 2019; 48 , 2 pp. 18-27. [DOI: https://dx.doi.org/10.1145/3377330.3377334] 1411.34106
+26. Shu K, Wang S, Liu H (2018) Understanding user profiles on social media for fake news detection. In: 2018 IEEE conference on multimedia information processing and retrieval (MIPR). IEEE, pp 430–435
+27. Cui J, Kim K, Na SH, Shin S (2022) Meta-path-based fake news detection leveraging multi-level social context information. In: Proceedings of the 31st ACM international conference on information & knowledge management, pp 325–334
+28. Chen, X; Zhou, F; Trajcevski, G; Bonsangue, M. Multi-view learning with distinguishable feature fusion for rumor detection. Knowl-Based Syst ; 2022; 240 , [DOI: https://dx.doi.org/10.1016/j.knosys.2021.108085] 1503.11109108085.
+29. Yang, Y; Yang, R; Li, Y; Cui, K; Yang, Z; Wang, Y; Xu, J; Xie, H. Rosgas: adaptive social bot detection with reinforced self-supervised gnn architecture search. ACM Trans Web ; 2023; 17 , 3 pp. 1-31. [DOI: https://dx.doi.org/10.1145/3572403] 1435.94094
+30. Hays C, Schutzman Z, Raghavan M, Walk E, Zimmer P (2023) Simplistic collection and labeling practices limit the utility of benchmark datasets for twitter bot detection. In: Proceedings of the ACM web conference 2023, pp 3660–3669
+31. Peng H, Zhang J, Huang X, Hao Z, Li A, Yu Z, Yu PS (2024) Unsupervised social bot detection via structural information theory. ACM Trans Inf Syst 1–42
+32. Ma J, Gao W, Wong K-F (2018) Detect rumor and stance jointly by neural multi-task learning. In: Companion proceedings of the the web conference 2018, pp 585–593
+33. Shu K, Cui L, Wang S, Lee D, Liu H (2019) defend: explainable fake news detection. In: Proceedings of the 25th ACM SIGKDD international conference on knowledge discovery & data mining, pp 395–405
+34. Yang Z, Ma J, Chen H, Lin H, Luo Z, Chang Y (2022) A coarse-to-fine cascaded evidence-distillation neural network for explainable fake news detection. In: Proceedings of the 29th international conference on computational linguistics, pp 2608–2621
+35. Ruchansky N, Seo S, Liu Y (2017) Csi: a hybrid deep model for fake news detection. In: Proceedings of the 2017 ACM on conference on information and knowledge management, pp 797–806
+36. Liu Y, Wu Y-F (2018) Early detection of fake news on social media through propagation path classification with recurrent and convolutional networks. In: Proceedings of the AAAI conference on artificial intelligence, vol 32, pp 354–361
+37. Khoo LMS, Chieu HL, Qian Z, Jiang J (2020) Interpretable rumor detection in microblogs by attending to user interactions. In: Proceedings of the AAAI conference on artificial intelligence, vol 34, pp 8783–8790
+38. Nguyen V-H, Sugiyama K, Nakov P, Kan M-Y (2020) Fang: leveraging social context for fake news detection using graph representation. In: Proceedings of the 29th ACM international conference on information & knowledge management, pp 1165–1174
+39. Lu Y-J, Li C-T (2020) Gcan: graph-aware co-attention networks for explainable fake news detection on social media. In: Proceedings of the 58th annual meeting of the association for computational linguistics, pp 505–514
+40. Tu, K; Chen, C; Hou, C; Yuan, J; Li, J; Yuan, X. Rumor2vec: a rumor detection framework with joint text and propagation structure representation learning. Inf Sci ; 2021; 560 , pp. 137-151. [DOI: https://dx.doi.org/10.1016/j.ins.2020.12.080] 1435.90006
+41. Liu, B; Sun, X; Meng, Q; Yang, X; Lee, Y; Cao, J; Luo, J; Lee, RK-W. Nowhere to hide: online rumor detection based on retweeting graph neural networks. IEEE Trans Neural Netw Learn Syst ; 2024; 35 , 4 pp. 4887-4898. [DOI: https://dx.doi.org/10.1109/TNNLS.2022.3161697]
+42. Shao, C; Ciampaglia, GL; Varol, O; Yang, K-C; Flammini, A; Menczer, F. The spread of low-credibility content by social bots. Nat Commun ; 2018; 9 , 1 pp. 1-9. [DOI: https://dx.doi.org/10.1038/s41467-018-06930-7]
+43. Feng S, Tan Z, Li R, Luo M (2022) Heterogeneity-aware twitter bot detection with relational graph transformers. In: Proceedings of the AAAI conference on artificial intelligence, vol 36, pp 3977–3985
+44. Wu Q, Yang Y, He B, Liu H, Wang X, Liao Y, Yang R, Zhou P (2023) Heterophily-aware social bot detection with supervised contrastive learning. arXiv:2306.07478
+45. Guo, Z; Yu, K; Jolfaei, A; Li, G; Ding, F; Beheshti, A. Mixed graph neural network-based fake news detection for sustainable vehicular social networks. IEEE Trans Intell Transp Syst ; 2023; 24 , 12 pp. 15486-15498. [DOI: https://dx.doi.org/10.1109/TITS.2022.3185013]
+46. Yang Y, Yang R, Peng H, Li Y, Li T, Liao Y, Zhou P (2023) Fedack: federated adversarial contrastive knowledge distillation for cross-lingual and cross-model social bot detection. In: Proceedings of the ACM Web conference 2023, pp 1314–1323
+47. Zeng X, Peng H, Li A (2023) Adversarial socialbots modeling based on structural information principles. arXiv:2312.08098
+48. Chen, Y; Lin, M; He, Z; Polat, K; Alhudhaif, A; Alenezi, F. Consistency-and dependence-guided knowledge distillation for object detection in remote sensing images. Expert Syst Appl ; 2023; 229 , [DOI: https://dx.doi.org/10.1016/j.eswa.2023.120519] 120519.
+49. Xu, X; Lin, M; Luo, X; Xu, Z. Hrst-lr: a hessian regularization spatio-temporal low rank algorithm for traffic data imputation. IEEE Trans Intell Transp Syst ; 2023; 24 , 10 pp. 11001-11017. [DOI: https://dx.doi.org/10.1109/TITS.2023.3279321] 1150.35378
+50. Chen, H; Lin, M; Liu, J; Yang, H; Zhang, C; Xu, Z. Nt-dptc: a non-negative temporal dimension preserved tensor completion model for missing traffic data imputation. Inf Sci ; 2024; 653 , [DOI: https://dx.doi.org/10.1016/j.ins.2023.119797] 07764397119797.
+51. Zhong, M; Lin, M; He, Z. Dynamic multi-scale topological representation for enhancing network intrusion detection. Comput Secur ; 2023; 135 , [DOI: https://dx.doi.org/10.1016/j.cose.2023.103516] 1278.81086103516.
+52. Wang S, Xu X, Zhang X, Wang Y, Song W (2022) Veracity-aware and event-driven personalized news recommendation for fake news mitigation. In: Proceedings of the ACM web conference 2022, pp 3673–3684
+53. Bian T, Xiao X, Xu T, Zhao P, Huang W, Rong Y, Huang J (2020) Rumor detection on social media with bi-directional graph convolutional networks. In: Proceedings of the AAAI conference on artificial intelligence, vol 34, pp 549–556
+54. Sun T, Qian Z, Dong S, Li P, Zhu Q (2022) Rumor detection on social media with graph adversarial contrastive learning. In: Proceedings of the ACM web conference 2022, pp 2789–2797
+55. Lin H, Ma J, Chen L, Yang Z, Cheng M, Guang C (2022) Detect rumors in microblog posts for low-resource domains via adversarial contrastive learning. In: Findings of the association for computational linguistics: NAACL 2022, pp 2543–2556
+56. Jin Z, Cao J, Zhang Y, Luo J (2016) News verification by exploiting conflicting social viewpoints in microblogs. In: Proceedings of the AAAI conference on artificial intelligence, vol 30, pp 2972–2978
+57. Glenski, M; Weninger, T; Volkova, S. Propagation from deceptive news sources who shares, how much, how evenly, and how quickly?. IEEE Trans Comput Soc Syst ; 2018; 5 , 4 pp. 1071-1082. [DOI: https://dx.doi.org/10.1109/TCSS.2018.2881071]
+58. Hu, L; Wei, S; Zhao, Z; Wu, B. Deep learning for fake news detection: a comprehensive survey. AI Open ; 2022; 3 , pp. 133-155. [DOI: https://dx.doi.org/10.1016/j.aiopen.2022.09.001] 1240.91030
+59. Horne B, Adali S (2017) This just in: fake news packs a lot in title, uses simpler, repetitive content in text body, more similar to satire than real news. In: Proceedings of the international AAAI conference on web and social media, vol 11, pp 759–766
+60. Rashkin H, Choi E, Jang JY, Volkova S, Choi Y (2017) Truth of varying shades: analyzing language in fake news and political fact-checking. In: Proceedings of the 2017 conference on empirical methods in natural language processing, pp 2931–2937
+61. Volkova S, Shaffer K, Jang JY, Hodas N (2017) Separating facts from fiction: linguistic models to classify suspicious and trusted news posts on twitter. In: Proceedings of the 55th annual meeting of the association for computational linguistics (volume 2: short papers), pp 647–653
+62. Potthast M, Kiesel J, Reinartz K, Bevendorff J, Stein B (2018) A stylometric inquiry into hyperpartisan and fake news. In: Proceedings of the 56th annual meeting of the association for computational linguistics (volume 1: long papers), pp 231–240
+63. Yang Y, Cao J, Lu M, Li J, Lin C-W (2019) How to write high-quality news on social network? Predicting news quality by mining writing style. arXiv:1902.00750
+64. Przybyla P (2020) Capturing the style of fake news. In: Proceedings of the AAAI conference on artificial intelligence, vol 34, pp 490–497
+65. Fan C, Yan H, Du J, Gui L, Bing L, Yang M, Xu R, Mao R (2019) A knowledge regularized hierarchical approach for emotion cause analysis. In: Proceedings of the 2019 conference on empirical methods in natural language processing and the 9th international joint conference on natural language processing (EMNLP-IJCNLP), pp 5614–5624
+66. Vaibhav V, Mandyam R, Hovy E (2019) Do sentence interactions matter? Leveraging sentence level representations for fake news classification. In: Proceedings of the thirteenth workshop on graph-based methods for natural language processing (TextGraphs-13), pp 134–139
+67. Zhang Y, Chen W, Yeo CK, Lau CT, Lee BS (2017) Detecting rumors on online social networks using multi-layer autoencoder. In: 2017 IEEE technology & engineering management conference (TEMSCON). IEEE, pp 437–441
+68. Sheng Q, Cao J, Zhang X, Li R, Wang D, Zhu Y (2022) Zoom out and observe: news environment perception for fake news detection. In: Proceedings of the 60th annual meeting of the association for computational linguistics (volume 1: long papers), pp 4543–4556
+69. Nan Q, Cao J, Zhu Y, Wang Y, Li J (2021) Mdfend: multi-domain fake news detection. In: Proceedings of the 30th ACM international conference on information & knowledge management, pp 3343–3347
+70. Zhu, Y; Sheng, Q; Cao, J; Nan, Q; Shu, K; Wu, M; Wang, J; Zhuang, F. Memory-guided multi-view multi-domain fake news detection. IEEE Trans Knowl Data Eng ; 2023; 35 , 7 pp. 7178-7191.
+71. Huang, Y; Gao, M; Wang, J; Yin, J; Shu, K; Fan, Q; Wen, J. Meta-prompt based learning for low-resource false information detection. Inf Process Manag ; 2023; 60 , 3 [DOI: https://dx.doi.org/10.1016/j.ipm.2023.103279] 103279.
+72. Hu L, Yang T, Zhang L, Zhong W, Tang D, Shi C, Duan N, Zhou M (2021) Compare to the knowledge: Graph neural fake news detection with external knowledge. In: Proceedings of the 59th annual meeting of the association for computational linguistics and the 11th international joint conference on natural language processing (volume 1: long papers), pp 754–763
+73. Dun Y, Tu K, Chen C, Hou C, Yuan X (2021) Kan: knowledge-aware attention network for fake news detection. In: Proceedings of the AAAI conference on artificial intelligence, vol 35, pp 81–89
+74. Tseng Y-W, Yang H-K, Wang W-Y, Peng W-C (2022) Kahan: knowledge-aware hierarchical attention network for fake news detection on social media. In: Companion proceedings of the web conference 2022, pp 868–875
+75. Jiang, G; Liu, S; Zhao, Y; Sun, Y; Zhang, M. Fake news detection via knowledgeable prompt learning. Information Processing & Management ; 2022; 59 , 5 [DOI: https://dx.doi.org/10.1016/j.ipm.2022.103029] 103029.
+76. Zhang Z, Zhou Z, Wang Y (2022) Ssegcn: syntactic and semantic enhanced graph convolutional network for aspect-based sentiment analysis. In: Proceedings of the 2022 conference of the North American chapter of the association for computational linguistics: human language technologies, pp 4916–4925
+77. Zhao X, Peng H, Dai Q, Bai X, Peng H, Liu Y, Guo Q, Yu PS (2023) Rdgcn: reinforced dependency graph convolutional network for aspect-based sentiment analysis. arXiv:2311.04467
+78. Botnevik B, Sakariassen E, Setty V (2020) Brenda: browser extension for fake news detection. In: Proceedings of the 43rd international ACM SIGIR conference on research and development in information retrieval, pp 2117–2120
+79. Pan JZ, Pavlova S, Li C, Li N, Li Y, Liu J (2018) Content based fake news detection using knowledge graphs. In: The semantic web–ISWC 2018: 17th international semantic web conference, Monterey, October 8–12, 2018, Proceedings, Part I 17, pp 669–683
+80. Guo H, Zeng W, Tang J, Zhao X (2023) Interpretable fake news detection with graph evidence. In: Proceedings of the 32nd ACM international conference on information and knowledge management, pp 659–668
+81. Li J, Ni S, Kao H-Y (2021) Meet the truth: leverage objective facts and subjective views for interpretable rumor detection. In: Findings of the association for computational linguistics: ACL-IJCNLP 2021, pp 705–715
+82. Wu, Y; Sun, J; Yuan, X; Huang, Z; Dai, J. Dual-channel early rumor detection based on factual evidence. Expert Syst Appl ; 2024; 238 , [DOI: https://dx.doi.org/10.1016/j.eswa.2023.121928] 121928.
+83. Cho K, Merrienboer B, Gulcehre C, Bougares F, Schwenk H, Bengio Y (2014) Learning phrase representations using rnn encoder-decoder for statistical machine translation. In: Conference on empirical methods in natural language processing (EMNLP), pp 1724–1734
+84. Mikolov, T; Sutskever, I; Chen, K; Corrado, GS; Dean, J. Distributed representations of words and phrases and their compositionality. Adv Neural Inf Process Syst ; 2013; 26 , pp. 3111-3119.
+85. Li S, Zhao Z, Hu R, Li W, Liu T, Du X (2018) Analogical reasoning on Chinese morphological and semantic relations. In: Proceedings of the 56th annual meeting of the association for computational linguistics (volume 2: short papers), pp 138–143
+86. Pennington J, Socher R, Manning CD (2014) Glove: global vectors for word representation. In: Proceedings of the 2014 conference on empirical methods in natural language processing (EMNLP), pp 1532–1543
+87. Ma J, Gao W, Mitra P, Kwon S, Jansen BJ, Wong K-F, Cha M (2016) Detecting rumors from microblogs with recurrent neural networks. In: Proceedings of the Twenty-fifth international joint conference on artificial intelligence, pp 3818–3824 (2016)
+88. Sheng Q, Cao J, Zhang X, Li X, Zhong L (2021) Article reranking by memory-enhanced key sentence matching for detecting previously fact-checked claims. In: Proceedings of the 59th annual meeting of the association for computational linguistics and the 11th international joint conference on natural language processing (volume 1: long papers), pp 5468–5481
+89. Shaar S, Babulkov N, Da San Martino G, Nakov P (2020) That is a known lie: detecting previously fact-checked claims. In: Proceedings of the 58th annual meeting of the association for computational linguistics, pp 3607–3618
+90. Vo N, Lee K (2020) Where are the facts? Searching for fact-checked information to alleviate the spread of fake news. In: Proceedings of the 2020 conference on empirical methods in natural language processing (EMNLP), pp 7717–7731
+91. Kochina E, Liakata M, Zubiaga A (2018) All-in-one: multi-task learning for rumour verification. In: Proceedings of the 27th international conference on computational linguistics, pp 3402–3413
+92. Graves, A; Schmidhuber, J. Framewise phoneme classification with bidirectional lstm and other neural network architectures. Neural Netw ; 2005; 18 , 5–6 pp. 602-610. [DOI: https://dx.doi.org/10.1016/j.neunet.2005.06.042] 0925.81109
+93. Liu Y, Ott M, Goyal N, Du J, Joshi M, Chen D, Levy O, Lewis M, Zettlemoyer L, Stoyanov V (2019) Roberta: a robustly optimized bert pretraining approach. arXiv:1907.11692
+94. Che W, Feng Y, Qin L, Liu T (2021) N-LTP: an open-source neural language technology platform for Chinese. In: Proceedings of the 2021 conference on empirical methods in natural language processing: system demonstrations, pp 42–49
+95. Bird, S; Klein, E; Loper, E. Natural language processing with Python: analyzing text with the natural language toolkit ; 2009; Beijing, O’Reilly Media Inc: 1187.68630
+96. Kingma DP, Ba J (2015) Adam: a method for stochastic optimization. In: 3rd international conference on learning representations, San Diego

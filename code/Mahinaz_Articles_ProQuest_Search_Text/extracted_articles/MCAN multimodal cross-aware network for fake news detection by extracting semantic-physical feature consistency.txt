@@ -1,0 +1,893 @@
+Introduction
+The widespread adoption of information technology has undoubtedly brought numerous benefits, most notably the rapid and extensive spread of information. However, this convenience has also raised a concerning issue: the proliferation of complex and misleading content on social networks [1]. This has resulted in the widespread spread of fake news, fueling various social issues such as the propagation of extreme ideologies, the manipulation of public opinion, and even social unrest [2]. Social media posts, as the primary vehicles for rapid information dissemination, have become the main focus of fake news detection efforts.
+Social platforms like Weibo and Twitter serving as main channels for accessing information in today’s society. In the modern era, information has become increasingly multimodal, meaning it combines various forms of media, such as text and images, to enhance communication and provide a richer user experience. This contrasts with single-modal information, which relies on only one form of media, such as text alone, to convey a message [3]. However, this multidimensional nature of information makes it more difficult to ascertain authenticity. Each modality of data can contribute to the propagation of fake news to varying degrees. People often share posts without thoroughly verifying the source or the accuracy of the information. In many cases, an appealing headline is enough to prompt thousands of shares, regardless of the authenticity or validity of the content. In Fig. 1, real examples from Weibo and Twitter demonstrate the difficulty in determining the authenticity of posts based on texts and images. Fake news strategically uses persuasive language and attention-grabbing visuals, making it difficult to assess their truthfulness. This intentional approach is designed to increase their spread and impact. Given this challenge, researchers have developed automated technologies for detecting fake news. [See PDF for image]
+Fig. 1 Examples of Weibo and Twitter fake and real posts
+
+
+The traditional fake news detection methods are mostly based on single-modal data [4, 5]. Typically, Ma et al. proposed the approach to utilize temporal changes in aggregated information for detecting fake news from microblogs, employing RNNs (Recurrent Neural Networks) as their core methodology. Deep learning methods are being used in this field for the first time [6]. Similarity, Duong et al. proposed an aware provenance approach for fake news detection, utilizing RNN as the foundation of their method [7]. Their approach incorporated both provenance information and text content of the posts, aiming to enhance the accuracy of fake news detection. But they both neglected to dig deeper into the content of the post. However, an increasingly prevalent phenomenon that cannot be ignored is the inclusion of multiple modalities in social media news, such as texts, pictures. These different modalities often exhibit complementary and enhanced relationships with each other which traditional fake news detection works ignored. Fortunately, there have been significant advancements in fake news detection methods that leverage text-image content-based features. Cui et al. devised a novel approach by constructing a triplet comprising news publisher, user, and news (containing both texts and image) and then subjected this triplet to deep network processing for the purpose of detecting fake news [8]. Zeng et al. used a deep learning network based on bi-directional LSTM (long and short-term memory) to detect fake news by capturing texts and image features on a publicly available dataset [9]. Giachanou et al. considered the correlation between posts titles using a pre-trained model to obtain text and image features for fusion to detect fake news [10]. Qian et al. detect fake news by pre-training models to extract features from images and text, followed by a cross-modal attention mechanism [11]. Many existing methods in the fake news detection task utilize simple concatenation of image and text features or rely on pre-trained models like VGG19 to extract features, followed by feature fusion [12]. However, these methods often overlook the deeper connections within the multimodal nature of text-image information, lacking targeted processing of such information in the context of fake news detection.
+These shortcomings highlight the challenges faced by certain fake news detection methods, particularly in capturing key features with physical and statistical characteristics, such as text writing style and image tampered. Consequently, there is significant room for improvement in enhancing the effectiveness of fake news detection [13]. The writing styles between fake and real news text differ greatly [14]. To spread fake news, the text of these posts often contains stronger emotional language, such as sarcasm, name-calling, or excessive intonation, which is intentionally fabricated to make the content appear more authentic [15]. The frequency and statistical characteristics of these related words exhibit distinct patterns. In addition, the images accompanying the text content are often tampered with to varying degrees during their spread, a factor that has been largely overlooked in most existing studies. Since many studies do not tailor feature extraction specifically for fake news detection, it is essential to integrate multiple features from posts to improve detection performance.
+In order to response the aforementioned challenges, this work introduces a new approach called MCAN (Multimodal Cross-Aware Network). MCAN consists of three main subnetworks: (1) Text feature extraction subnetwork, (2) Image feature extraction subnetwork, and (3) Multimodal feature fusion subnetwork. In addition to traditional semantic feature extraction methods, the Text Feature Extraction Subnetwork captures differences in sentence construction between fake and real texts in posts; while, the Image Tampered Feature Extractor identifies features of altered image segments. The features extracted through these modules are then passed into the Multimodal Feature Fusion Subnetwork, where the network leverages its cross-aware ability to effectively capture subtle correlations across modalities by emphasizing the interrelationships between different feature types. Finally, the learned features are fed into the fake news detector for classification.
+This paper is structured as follows: Sect. 2 provides an introduction to the related work, Sect. 3 describes the problem addressed in this work, Sect. 4 presents the detailed model proposed, Sect. 5 describes the experimental data and relevant settings, Sect. 6 provides an analysis of the experiments and results, and Sect. 7 concludes with a summary and outlook. The main contributions of this work are as follows: - This study proposes the MCAN method for fake news detection, which combines multimodal semantic-physical consistency features and captures the correlation between information from each modality.
+
+- Building upon traditional methods of extracting text and image features, this work introduces novel feature extraction methods to acquire physical features including text writing style and image tampered.
+
+- Cross-Attention Blocks reduce the impact of noise during cross-modal fusion by balancing effective and irrelevant features through an attention mechanism. High-dimensional features extracted by pre-trained models such as BERT and ResNet50 are further optimized using these blocks, enhancing meaningful interactions between modalities while suppressing misaligned or redundant information. This results in richer and more reliable representations for classification tasks.
+
+- We utilize a widely used dataset that includes both Chinese and English datasets to demonstrate the applicability of our model and its superior performance compared to the baseline model. The model parameters are clearly and thoroughly explained.
+
+
+Related work
+Fake news, also referred to as false information, encompasses unverified and highly relevant statements that circulate among the public [16]. To detect fake news and protect users from its impact, it is essential to extract distinctive features from potential fake news content. In recent years, there has been a significant surge in research focused on tackling the detection of such content. Previous studies on fake news detection have focused on single-modal or multimodal data, aiming to identify and counter misinformation.
+Single-modal fake news detection methods
+Early efforts in fake news detection focused on single-modal content, primarily text-based detection. These early approaches extracted text-based features through manual selection of linguistic cues, a process that was not only costly but also required expert knowledge and proved difficult to generalize [17, 18]. Zhang et al. proposed a two-layer approach for fake news detection, which transforms a document-based corpus into representations based on topics and events [19]. This method enhances detection effectiveness by identifying fake topics and fake events. Recently, Deep Neural networks, known for their effectiveness in information classification tasks, have been widely adopted by researchers in the field of fake news detection. Ma et al. introduced an RNN-based model that automatically learns hidden representations of temporal textual features, surpassing methods that rely on manually crafted features [6]. Chen et al. introduced a text feature extraction method for fake news detection, utilizing soft attention and a combination of RNN with attention mechanism and LSTM neural network [20]. This approach effectively captures the contextual features of the text. Similarly, Yu et al. presented a model based on Convolutional Neural Network (CNN) that extracts low-level local–global features from input sequences and establishes high-level interactions among essential features [21]. Kausar et al. proposed a hybrid model that using N-gram with TF-IDF for content-based feature extraction and employs deep learning model Bi-directional LSTM to extract sequential features for fake news detection [22]. Taher et al. conducted a comprehensive evaluation of the effects of embedding vector size, window size, and minimum word frequency on deep neural networks using a news headline corpus [23]. The study aims to identify the most suitable configuration that enhances the accuracy of fake news detection. Additionally, the attention mechanism is utilized to further explore the features that are more relevant and effective for fake news detection. Wang et al. introduced the concept of EDUs (elementary discourse units) and utilizes Text-CNN, gated recursive units, and a global attention mechanism to capture the consistency between successive EDUs [24]. These two EDU representations are then combined to create an enhanced text representation for the detection of fake news. Fake news detection for image modal information alone is challenging. Qi et al. fused visual information in the frequency and pixel domains to detect fake news [25]. While Single-modal fake news detection has achieved a certain level of accuracy, it often overlooks the multimodal characteristics of fake news information.
+Multimodal fake news detection methods
+In recent years, there has been an increasing focus among scholars on deep learning methods based on multimodal data, driven by the recognition of the diverse modal information present in posts. In the early works of multimodal fake news detection, the approach mainly involved directly combining text and image modalities without considering their intricate relationships [26]. For example, Singh et al. combined multiple modal features into a prediction model using various machine learning techniques [27]. Experimental results demonstrated that the multimodal approach outperformed the single-modal methods, showing its effectiveness in detecting fake news. These methods acknowledge the importance of leveraging multiple modalities to enhance the performance of machine learning models in various tasks. In response to this problem, Wang et al. proposed EANN (event adversarial neural network), for effectively detecting newly emerged fake news events by leveraging multimodal features [28]. Li et al. fused image and text features and then uses an adaptive event network to filter the content features of potential fake news posts to be detected [29]. Multimodal integration goes beyond merely combining features, highlighting the connections between different modalities. The cross-modal attention mechanism plays a pivotal role in capturing the relationships and dependencies between different modalities effectively. By leveraging this mechanism, the model can focus on the most informative and relevant aspects across modalities, leading to enhanced performance in capturing the intricate relationships within multimodal data. Guo et al. proposed a Mutual Attention Neural Network, which can learn the relationships between different modalities and accurately capture the inter-modal features, thereby enhancing the accuracy of fake news detection [30]. Chen et al. utilized pre-training to extract text and image features. They proposed a model that employs a multi-head self-attention mechanism and incorporates a memory network to detect fake news. [31]. Jin et al. used LSTM and attention mechanisms to fuse text and image modal information for fake news detection [32]. Wu et al. proposed a fake news detection method based on similarity after extracting features from multimodal information [33]. Song et al. leveraged residual networks and multi-head attention mechanisms to extract high-dimensional features from both text and images [34]. This approach enhances the representation of text and image data, leading to improved performance in fake news detection. Yadav et al. introduced a novel approach for fake news detection by incorporating attention mechanism computation on both the text and sliced image data [35]. Regrettably, these models lack in-depth feature extraction of text and image information, as well as the calculation of deep correlations between them, which limits restricts their applicability.
+In light of the limitations in existing fake news detection methods, we propose a novel network model called MCAN. MCAN enhances fake news detection by performing three functions: extracting semantic features from text and images, capturing physical features like writing style and image tampered, and using a deep attention mechanism to uncover correlations.
+Problem formulation
+This work focuses on detecting fake news posts by analyzing multimodal data, which includes both images and texts, to determine their authenticity. The problem is formulated as follows: given a post P = t , v containing textual information ( t ) and visual information ( v ). Our objective is to develop a deep learning modal M that leverages both types of data to predict whether the post is real post ( y  = 0) or fake post ( y  = 1). To achieve this mapping of M t , v → y ∈ 0 , 1 , we propose the MCAN framework.
+In the following sections, we present a detailed explanation of the derivation and operation of the MCAN model. By combining the information contained in both textual and visual modalities and applying attention mechanisms, our model aims to capture crucial patterns and correlations that play a key role in distinguishing real posts from fake posts. Through extensive experiments and evaluations on datasets from social platforms, we demonstrate the superiority of the MCAN model over traditional methods, showcasing its potential in combating the spread of fake news in posts across various social platforms.
+Model
+Model framework
+The proposed model framework is illustrated in Fig. 2. The model contains three main subnetworks: (1) Text Feature Extraction Subnetwork, (2) Image Feature Extraction Subnetwork, and (3) Multimodal Feature Fusion Subnetwork. Then, it passes through a fully connected layer and outputs the predicted fake/real posts probabilities through a softmax function. We have marked the dimensions of the main features, where BS represents the batch size. The model's predicted output is denoted as y ^ , and the true label is denoted as y . [See PDF for image]
+Fig. 2 Framework of the proposed model
+
+
+First, by feeding image and text from posts pending detection, the text and image feature extraction subnetworks extract multidimensional features from the inputs, which can be further processed by downstream tasks. We use pre-trained BERT [36] and ResNet50 [37] models to extract the semantic features of texts and images, as these models have demonstrated strong performance in capturing complex patterns and contextual information [13, 38, 39–40]. Additionally, we apply the GCN model [41] and the ELA algorithm to obtain the physical level features of text and image information. These methods will be introduced in the next part. After that, we obtain the consistent features from i -th post.
+Furthermore, effectively fusing features from text and images is critical for detecting fake news in text-image multimodal posts. To achieve this, we employ a fusion module based on the cross-attention mechanism, called the Multimodal Feature Fusion Subnetwork, which is built using Cross-Attention Blocks. This subnetwork automatically assigns weights to different features tensors, extracting useful information and suppressing irrelevant noise through attention weight allocation. It enables the model to acquire higher-dimensional abstract general features, thereby enhancing its ability to detect fake news. The following section will provide a comprehensive explanation of each component, offering further insights into their functionalities and implementation details.
+Text feature extraction subnetwork
+- Text semantic feature extractor
+
+
+Most related work of fake news detection use traditional word embedding to gain text feature, ignoring the relationship between words and sentences and language sequence. To overcome this limitation, the proposed model integrates BERT (Bi-directional Encoder Representations from Transformers), a pre-trained model based on the Transformer architecture. BERT’s bi-directional training allows it to capture both left and right context, enhancing its ability to understand and generate contextually relevant representations. This enables the model to effectively extract semantic information and capture key contextual relationships, improving performance in tasks such as fake news detection. We get the text semantic features by this way as show in Eq. (1): 1
+t i BERT = 1 L ∑ l = 1 L BERT ( t i ) ( l )
+Which t i means the text from i- th post, BERT ( t i ) ( l ) represents the feature vector at the l -th position of the i -th post extracted by BERT. To reduce the dimensionality of the text features output by BERT and adapt them for subsequent tasks, we perform averaging over the sequence positions. Specifically, the tensor output by BERT has a shape of ( L , 768), where L is the sequence length, dynamically padded or truncated based on the actual length of the input text, usually up to a maximum length of 512. We average the features across the sequence positions to obtain a fixed-length vector of 768 dimensions, resulting in t i BERT . This process not only reduces the dimensionality but also captures the overall features of the text. By transforming variable-length text sequences into a fixed-length vector, it facilitates feature fusion in subsequent stages. - Writing style feature extractor
+
+
+In the context of fake news detection, it is essential to consider the unique writing style and emotional factors inherent in fake news texts. Unfortunately, many existing works tend to overlook the global text writing style information, which is crucial for capturing the distinctive features of fake news text. So, we propose taking into account various factors that influence writing style, with word choice and frequency being key elements. The specific words used and their frequency can significantly influence the delivery, tone, and overall impression of a piece of writing, and are considered physical features that reflect the text's formal properties [42].
+To effectively capture the feature of writing style in the fake news detection task and narrow the scope of text feature extraction to this specific aspect, we employ the Graph Convolutional Network (GCN) model [43]. It can capture the relationship between nodes represent such as words, events and other agents which can be connected to a network [44]. By leveraging GCN, we can gain deeper insights into word usage patterns in fake news texts.
+The requirements of GCN for input data types force us to convert textual content into graph form. Combine PMI and TF-IDF methods can construct a network of texts words relationship as the input graph data of model. Here is Eq. (2): 2
+A ij PMI ( i , j ) i , j are words , PMI ( i , j ) > 0 TF - IDF ij i is document , j word 1 i = j 0 otherwise
+PMI (Pointwise Mutual Information) is a statistical measure used to quantify the association between two discrete events. PMI measures the extent to which the occurrence of one event affects the probability of the other event happening. In this study, we use the PMI approach to measure the connections between words. The PMI value between a pair of words, i and j , is calculated as follows: 3
+PMI ( i , j ) = log 2 p ( i , j ) p ( i ) p ( j ) 4
+p ( i , j ) = Count ( i , j ) N 5
+p ( i ) = Count ( i ) N
+In the PMI calculation, N represents the total number of sliding windows in the corpus constructed by the words from all posts in the target datasets. N represents the number of sliding windows that contain both word i and word j ; while, N is the total number of sliding windows in the corpus. The positive value of PMI indicates the high correlation of words; while, negative one show minimal correlation in the corpus which we do not considered.
+TF-IDF (Term Frequency-Inverse Document Frequency) is a numerical statistic widely used in information retrieval and text mining. It assesses the significance of a term in a document by considering both its frequency in the document (TF) and its rarity across a collection of documents (IDF). The TF component calculates the frequency of a term within a specific document; while, the IDF component measures the distinctiveness of the term across the entire document collection. By multiplying the TF and IDF scores together, the TF-IDF score is obtained, providing a valuable metric for evaluating the importance of terms in a given context.
+After getting the text word graph by above method required for GCN input as shown in Fig. 3. The box on the left side of figure shows the relationship between texts and words in the dataset (In the Weibo dataset, the matrix consists of 9528 texts and 45,763 words; while, the Twitter dataset contains 13,746 texts and 214,755 words). The right side of figure show an example of a text from a post with the words which construct it. The relationship graph between the sentence numbered 0 (indicated by the red node) and the 44 words that make up the sentence. The degree of the word nodes closer to node 0 is greater, and the thickness of the connected edges indicates the magnitude of the weights between the sentence word nodes. [See PDF for image]
+Fig. 3 Graph of text word network
+
+
+We use two layers GCN as the fake/real text writing style feature extractor. In order to aggregate the nodes of fake/real, they are finally fed into a softmax classifier: 6
+Z = softmax ( A ~ Relu ( A ~ X W 0 ) W 1 ) 7
+A ~ = D - 1 2 A D - 1 2
+The weight parameters W 0 and W 1 can be trained through the utilization of gradient descent. Equation (7) is the normalized symmetric adjacency matrix, D ( D ii = ∑ j A ij ) is the degree matrix. The loss function is formulated as the cross-entropy error calculated over all labeled texts: 8
+L = - ∑ d ∈ y D ∑ f = 1 F Y df l n Z df
+In the provided equation, y D denotes the set of text indices that have corresponding labels. The dimension of the output features, represented by F , is equal to the number of classes, where in this study, F is set to 2 to distinguish between the classes of "fake" and "real." The label indicator matrix, denoted as Y , is structured such that each row corresponds to a text, and each column represents a class label. The elements of matrix Y indicating whether a text belongs to the specific class of "fake" (1) or "real" (0).
+By pre-training the constructed text-GCN model, we then obtain the hidden layer feature vector t i GCN for the fake/real text writing style from the i -th post, where the dimension of the feature is 200. We describe this process simply as Eq. (9). 9
+t i GCN = GCN ( t i )
+Image feature extraction subnetwork
+- Image Semantic Feature Extractor
+
+
+Images contain a diverse range of semantic content, including recognizable objects, scenes, actions, emotions, contextual information, and abstract concepts. Analyzing and interpreting these elements contributes to understanding the meaning and context portrayed in the image.
+Image feature extraction was once a challenging task that required manual design and fine-tuning of complex algorithms. Traditional methods, which relied on handcrafted features, struggled to capture high-level and abstract features, resulting in limited performance. Additionally, these methods were computationally expensive and lacked transfer learning capabilities, making feature extraction both time-consuming and less generalizable. The introduction of pre-trained models revolutionized the process by providing automatically learned, discriminative representations that could be applied to various tasks, simplifying image feature extraction and improving its performance.
+The pre-trained ResNet50 model is widely used for extracting image features in fake news detection due to its deep architecture, pre-training on large datasets like ImageNet, and strong generalization capabilities. This model effectively captures intricate details and learn hierarchical representations of images. By using pre-training on large image datasets, ResNet50 has already acquired generic image features, which helps save training time and computational resources. These qualities make ResNet50 a powerful tool for analyzing visual content and enhancing the effectiveness of fake news detection algorithms.
+We can obtain the image semantic features ResNet 50 ( v i ) by feeding the image v i from the i -th post into the pre-trained ResNet50 model. Specifically, the fully connected (fc) layer of the ResNet50 model we use has been modified to output a 1024-dimensional feature vector instead of the original 2048-dimensional output. This allows us to extract the image's semantic representation in a more compact form, which can then be used for downstream tasks such as fake news detection.
+We describe this process simply as Eq. (10): 10
+v i semantic = ResNet 50 ( v i ) - Image Tampered Feature Extractor
+
+
+The attached image in a post carries a significant amount of information, and traditional methods often overlook the possibility of image manipulation. Therefore, it is crucial to develop techniques that effectively utilize image content and analyze potential alterations. By recognizing the tampered segments in the image, we can extract the physical features of the image at this level. This technique aims to improve the accuracy and comprehensiveness of fake news detection algorithms by considering the influence of manipulated images.
+ELA (Error Level Analysis) is a forensic image analysis technique used to detect digital image manipulation or tampered. It works by comparing the error levels in different regions of an image to identify areas that may have been altered or manipulated. ELA works contain two main steps: Error Level Generation and Visualization:
+(a) Error Level Generation: The original image is first resaved at a specific compression quality level, typically a relatively low value. This resaved image is considered the baseline or reference image. The difference in error levels between the baseline image and the original image is computed for each pixel.
+(b) Error Level Visualization: The computed error levels are mapped to a color scale or grayscale to create an error level map. Higher error levels are represented by brighter or more saturated colors; while, lower error levels are represented by darker or desaturated colors.
+We present some samples to illustrate the function of ELA as shown in Fig. 4. Four images from Twitter and Weibo dataset have been used to ELA convert. Two of them from fake news posts, others are from real ones. It can be observed some parts of two images show obviously high gloss arear, mean that parts have been tampered by some methods. These samples reveal a rule that the images attached to fake posts may have varying degrees of tampered. The tampered images may originate from fake posts, but images from real posts are not necessarily completely free from tampering either. In any case, this method can effectively detect and uncover the tampered parts of an image, thereby enhancing the overall effectiveness of fake news detection. Additionally, ResNet50's ability to generalize well enables it to extract meaningful and discriminative features from manipulated or tampered images. [See PDF for image]
+Fig. 4 Some samples of ELA from images
+
+
+So, we get tampered information v i ELA by ELA from i -th original image v i . Then, we extract features from v i ELA by feeding it into the pre-trained ResNet50 model to obtain the corresponding 1024-dimensional features, similar to v i semantic . Therefore, we can get the image tampered features v i tampered as shown in Eq. (11): 11
+v i tampered = Resnet 50 ( v i ELA )
+Multimodal feature fusion subnetwork
+In this work, posts contain two modal information: text and image. For more useful information to be revealed, considered different modal have its independent information, cross-attention mechanism can adjustments suitable importance between different modal. This subnetwork aims to explore and leverage the interplay between different modules' features. By analyzing and mining the information embedded in these feature representations, we can uncover the internal and external connections of textual and visual elements. To achieve this purpose, attention mechanism is the key.
+The attention mechanism is a widely used technique in deep learning that enables the model to assign different levels of importance to different parts of the input. By learning attention weights, the attention mechanism allows the model to selectively focus on important information, thus improving its performance and effectiveness in the given task [45]. In the context of multimodal classification, the attention mechanism is particularly valuable as it helps the classifier become aware of the varying importance levels among different modalities. This enables the model to effectively leverage information from both text and images, making it more adept at detecting fake news or other tasks that involve multiple types of data.
+So, we construct Cross-Attention Block as the composition of Multimodal feature fusion subnetwork to extract more useful information from different inputs. - Cross-Attention Blocks
+
+
+The cross-attention mechanism has been widely used in various context learning and feature fusion tasks [46, 47–48]. Each Initial and Bimodal Cross-Attention Block follows the structure shown in Fig. 5. The term “Bimodal” simply refers to the use of cross-attention between text and image modalities, without fundamentally altering the general cross-attention mechanism. Meanwhile, the Initial Cross-Attention Block is used to fuse two types of features from a single model like t i BERT and t i GCN . The Block have two inputs, X ml and X nl , which represent two different feature vectors. Notably, in this work, we utilize the Multi-Head Attention mechanism, enabling the model to attend to multiple aspects of the input simultaneously. By employing multiple attention heads, each attending to different parts or aspects of the input, the model can capture diverse and complementary information. This enables a more comprehensive understanding and representation of the data, leading to improved performance in the fake news detection task. [See PDF for image]
+Fig. 5 Illustrate of Cross-Attention Blocks
+
+
+Taking one of the inputs X ml as an example, it passes through a cross-attention layer as shown in Fig. 6. The input feature vector X ml is assigned to multiple attention heads for processing. The number of attention heads, H , should be able to completely divide the dimension of the input feature vector X ml , denoted as d k . The query from X ml , and the key, and value from X nl of the h -th head can be represented as Q m l , h , K n l , h , and V n l , h , respectively. W Q m l , h , W K n l , h , and W V n l , h represent the transformation matrices for the Q m l , h , K n l , h , and V n l , h . The specific values of these transformation matrices can be learned through training the model. [See PDF for image]
+Fig. 6 Illustrate of two kind Attention Layers with Multi-head Attention
+
+
+Therefore, the calculation of the cross-attention layer is as follows: 12
+Attention Q m l , h W Q m l , h , K n l , h W K n l , h , V n l , h W V n l , h n → m = softmax Q m l , h W Q m l , h · K n l , h W K n l , h d k / H · V n l , h W V n l , h 13
+h e a d n l → m l h = Attention ( Q m l , h W Q m l , h , K n l , h W K n l , h , V n l , h W V n l , h ) n l → m l 14
+X ml cross = Multihead Q ml , K nl , V nl = Concat [ head n l → m l 1 , head n l → m l 2 , . . . , head n l → m l H ] 15
+X ml ′ = LayerNorm ( X ml cross + X ml )
+Here, softmax refers to the softmax function, and Eq. (13) is a simplified version of Eq. (12). In Eq. (14), Concat represents the concatenation of outputs from multiple attention heads, followed by a residual connection and a normalization layer as shown in Eq. (15). Similarly, we obtain X nl ′ .
+Further, X ml ′ and X nl ′ are concatenated into X m l , n l ′ as shown in Eq. (16): 16
+X m l , n l ′ = X ml ′ ⊕ X nl ′
+Subsequently,  X m l , n l ′ is passed through a self-attention layer. Unlike the cross-attention mechanism, the self-attention mechanism comes from a single input, X m l , n l ′ . Therefore, the corresponding query, key, and value can be represented as Q , K , and V , with their transformation matrices being W Q , W K , and W V . The calculation process is as follows: 17
+Attention ( Q W Q , K W K , V W V ) = softmax Q W Q · K W K d k / H · V W V 18
+h e a d h = Attention ( Q W Q , K W K , V W V ) 19
+X ′ m l , n l self = Multihead ( Q , K , V ) = Concat [ head 1 , head 2 , . . . , head H ] 20
+X m l , n l ″ = LayerNorm ( X ′ m l , n l self + X m l , n l ′ )
+Furthermore, through residual connections, a feedforward layer (FFN), and layer normalization, the output of the l -th Cross-Attention Block is obtained as X ~ m l , n l : 21
+FFN ( X m l , n l ″ ) = max ( 0 , X m l , n l ″ W 1 + b 1 ) W 2 + b 2 22
+X ~ m l , n l = LayerNorm ( FFN ( X m l , n l ″ ) + X m l , n l ″ )
+Thus far, we have outlined the primary functions within the Cross-Attention Block.
+From the previous steps, we extracted four types of features separately from the Text feature extraction subnetwork and the Image feature extraction subnetwork. In the Multimodal feature fusion subnetwork, we deeply integrate these four types of features to extract the textual and visual features of the posts. To achieve this, we utilize Initial Cross-Attention Blocks for initial feature fusion and further high-dimensional feature integration. - Initial Intra-Modal Feature Fusion
+
+
+Earlier, we obtained textual features t i BERT and t i GCN from the Text feature extraction subnetwork, and image features v i semantic and v i tampered from the Image feature extraction subnetwork. Initially, we need to fuse the intra-modal features separately: t i BERT and t i GCN are processed through an Initial Cross-Attention Block for text, and similarly, the image features v i semantic and v i tampered are processed in the same way. Subsequently, we obtain the preliminary fused features t ~ i and v ~ i of the text-image modalities, where t ~ i has a feature dimension of 968 and v ~ i has a feature dimension of 2048. - High-Level Fusion of Image-Text Features
+
+
+As shown in Fig. 7, this part aims to capture increasingly abstract and higher-level representations of the input data. At each layer, the model refines the representations based on the information gathered from the previous layers, enabling it to learn more nuanced and sophisticated features. We enable multi-layer Bimodal Cross-Attention Block by determining the dimension lengths of t ~ i and v ~ i . That is, the dimension length of the two feature inputs of each Block is the same as that of the first, which ensures that the two features of each Block are derived from the earliest two features. The output of the last Block is represented as R N , which serves as the final multimodal representation with a 3016-dimensional vector. N denotes the number of Bimodal Cross-Attention Blocks, treated as a hyperparameter. [See PDF for image]
+Fig. 7 Illustrate of two kind Attention Layers with Multi-head Attention
+
+
+Predictor
+The final embedding, multimodal representation denoted as R N . Subsequently, R N is passed through a fully connected layer and final softmax function to produce the final prediction. The fake news predictor can be defined as follows: 23
+Z = R N W + b 24
+y ^ = Softmax ( Z )
+Here, W represents the weights matrix, b is the biases of fully connected layer. y ^  ∈ (0,1) is the output probability. The dimension of Z is determined by the shape of W , with its output dimension, referred to as the fusion dimension, being treated as a hyperparameter. The ground truth label y = [ y 0 , y 1 ] , where y 0 and y 1 represent a given post being classified as real (0) or fake (1), respectively.
+To define the loss function L ( θ ) , cross-entropy is adopted. It is computed as follows: 25
+L ( θ ) = - y log ( y ^ ) - ( 1 - y ) log ( 1 - y ^ )
+In the given Eq. (25), θ represents the model parameters. The objective of the model is to minimize the loss function L ( θ ) for each post by learning the optimal values of θ through backpropagation. To achieve this, stochastic gradient descent is employed to train the model. In particular, the AdamW optimizer is chosen, which incorporates adaptive learning rates and momentum [49].
+Optimization strategies for training
+The parameters in the model, such as weights ( W ) and biases ( b ), are updated through the following steps: first, the loss function between the model's predicted values and the ground truth is computed; then, the gradients of the loss function with respect to each parameter are calculated via backpropagation; finally, the parameters are adjusted using the AdamW optimizer to minimize the loss function.
+Here, the AdamW optimizer combines adaptive learning rate adjustment and weight decay mechanisms [49], improving the efficiency of the optimization process, which is an improvement over the Adam optimizer, and the latter is an enhancement over the traditional gradient descent algorithm.
+To compute the gradient of the model parameters θ based on the loss function and the backpropagation rule, we need to calculate the gradients of each layer of the model. However, given the complexity of the model, it would be extremely tedious to list the gradients for each layer using the chain rule. Therefore, we will use the model's final output as an example to illustrate the calculation:
+- (1) The gradient (i.e., derivative) of the loss function L (Eq. 25) with respect to the model output Z (Eq. 23) is given by: 26
+∂ L ∂ Z = ∂ L ∂ y ^ · ∂ y ^ ∂ Z
+
+- (2) For Eq. (25), the gradient of the binary cross-entropy loss function is as follows 27
+∂ L ∂ y ^ = - y y ^ + 1 + y 1 - y ^
+
+- (3) For Eq. (24), the gradient of the softmax function is as follows: 28
+∂ y ^ ∂ Z = y ^ · ( 1 - y ^ )
+
+- (4) Substituting Eq. (27) and (28) into Eq. (26) simplifies to: 29
+∂ L ∂ Z = y ^ - y
+
+- (5) Use the chain rule to calculate the gradient of the loss function with respect to the parameters: 30
+g t = ∂ L ∂ θ t = ∂ L ∂ Z · ∂ Z ∂ θ t
+Here, θ t refers to the parameters of the model's final layer at the current training step t  (where θ t  represents both the weight matrix W and the bias  b in Eq. 23), and  ∂ Z ∂ θ t denotes the gradient g t of the model's output Z with respect to the parameters θ t .
+
+- (6) Calculate the first and second moments of the gradient: 31
+m t = β 1 · m t - 1 + ( 1 - β 1 ) · g t 32
+v t = β 2 · v t - 1 + ( 1 - β 2 ) · g t 2
+Here,  m t  and  v t  represent the first and second moment estimates at time step  t , respectively.  m t  is used to obtain the first moment estimate of the historical gradients through exponential moving average, providing a gradient estimate with momentum, which helps accelerate the learning process and stabilize the direction. v t is used to compute the exponential moving average of the squared historical gradients, offering an adaptive learning rate for each parameter. Based on past gradient changes, it allows for finer adjustments to the update magnitude of each weight during the learning process.  g t  is the gradient at time step  t . β ₁ and β ₂ are hyperparameters, typically set to 0.9 and 0.999, respectively. They are decay coefficients used to control the weight of historical gradient information in the first and second moments.
+
+- (7) Bias correction for the first and second moments: 33
+m ^ t = m t 1 - β 1 t 34
+v ^ t = v t 1 - β 2 t
+Here, m ^ t and v ^ t are the bias-corrected first and second moment estimates. The correction is applied to offset the underestimation of the first and second moments during the early stages of training.
+
+- (8) Update the model parameters: 35
+θ t + 1 = θ t - α v ^ t + ε m ^ t 36
+θ t + 1 = θ t - α v ^ t + ε m ^ t - α · λ · θ t
+
+
+
+Equation (36) shows that AdamW improves the original Adam parameter update method in Eq. (35). Here, θ t represents the parameters at time step t , α is the learning rate, and ε is a very small value to prevent division by zero. λ is a configurable weight decay coefficient set to 0.01, and the weight decay term α · λ · θ t is subtracted directly from the updated parameters rather than being added to the gradient calculation.
+When the value of the loss function L ( θ ) reaches the expected task performance, such as when the model's predictions on the test set no longer improve during parameter updates, the process of updating the model parameters will stop.
+Experimental design and data
+In this section, we will provide an overview of the social platform datasets used in our experiments. We will also describe the model settings and baseline methods, compare our proposed model's performance with the baselines on the datasets, and conduct an in-depth analysis of the experimental results. Furthermore, we have visualized the main subnetworks of the model for additional analysis. We aim to answer the following research questions:
+- RQ1: Can our proposed model achieve higher accuracy in identifying fake or real posts compared to baselines?
+
+- RQ2: Are the four classes of features incorporated in the model effective in improving the accuracy of detecting fake or real posts?
+
+
+
+Evaluation metrics
+To address above questions and provide evidence, we conducted a series of experiments comparing the performance of our proposed model with existing methods. For this purpose, we employed several metrics, including Accuracy, F1 Score, Precision, and Recall, specifically for predicting fake or real posts. These metrics are essential in evaluating machine learning and information retrieval systems. Accuracy measures overall correctness, the F1 score balances precision and recall, precision assesses the proportion of correct positive predictions, and recall measures the ability to correctly identify positive samples.
+The formula for calculating the evaluation index is shown in the following equations: 37
+Accuracy = T P + T N T P + T N + F P + F N 38
+Precision = TP T P + F P 39
+Recall = TP T P + F N 40
+F1 = 2 × Precall × Recall Precall + Recall
+These metrics enable us to gain valuable insights into the model's accuracy and its capability to distinguish between fake and genuine news effectively. Here, TP represents the number of correctly identified positive (fake posts) samples, TN denotes the number of correctly identified negative (real posts) samples, FP indicates the number of real posts samples wrongly classified as fake, and FN represents the number of fake news samples wrongly classified as real.
+Dataset description
+The multimodal datasets from Twitter and Weibo used in this work have been widely employed in previous related works. Its relevant statistical information is shown in Table 1. Table 1. Statistics of the used two real-world datasets
+Dataset
+Fake news
+Real news
+Images
+
+Twitter
+7488
+6258
+514
+
+Weibo
+4749
+4779
+9528
+
+
+Twitter dataset: The Twitter dataset used for the Verifying Multimedia Use task focuses on distinguishing between real and fake news shared on the platform. It covers various events such as Hurricane Sandy, Boston Bombing, and more. Each data point includes text content, attached images or videos, and additional user profile information. Only instances with both text content and attached images are considered for analysis, excluding those with excessively short text or meaningless symbols. For non-English languages, translation to English is performed using the Baidu translate API. To maintain data integrity, event types in the training, validation, and test sets are carefully processed to avoid overlap [50].
+Weibo dataset: The Weibo dataset is a valuable resource for detecting fake news, covering posts with text content, user profiles, and attached images. Verified instances of fake news were collected from Sina Weibo's official debunking system, similar to Twitter. The dataset spans from May 2012 to January 2016, and for comparison, authentic news articles verified by Xinhua News Agency were included. The data was carefully processed to remove symbols with meaningless text and ensure data integrity, with the training and test sets avoiding event overlap following a previous method [51].
+Dataset preprocess
+Twitter dataset: The training and test sets have been pre-divided by the official authorities, with no overlap between event types, to prevent data leakage. After obtaining the pre-divided training and testing datasets from the official source, considering that this work focuses solely on text and images, we retained only the image and text data. Regarding the text data, we translated non-English text into English to maintain language consistency. Then, we removed all types of regular symbols and numbers from the text and deleted data with a text length of fewer than 5 characters. For the image data, since multiple posts in this dataset share a common image, we reused these images when assigning images to individual posts, ensuring that each post includes one text and one image. Importantly, no data augmentation was applied to the data in this study.
+Weibo dataset: After acquiring the Weibo dataset, similar to the Twitter dataset, we first removed meaningless symbols and numbers. Considering that the text is in Chinese, we segment each Chinese text into multiple understandable independent words, which helps with model training. For the image part, we downloaded images using URL links. For images that could not be downloaded or were corrupted, a randomly generated image was used as a substitute to ensure that each post in the dataset includes valid text and image. Importantly, no data augmentation was applied to the data in this study.
+Experimental setup
+The Tweet dataset comprises a development set and a separate test set, ensuring no overlap with events covered by previous work. As for the Weibo datasets, the data division follows the consistent approach adopted in prior research, where 70% of the news instances are allocated for training, 10% for validation, and the remaining 20% for the testing set. The default dimensions for the sentence vector output from the BERT pre-training model are set to 768; while, the writing style feature vector is set to 200, which is the default for the text-GCN submodule. For image inputs, the images are resized to 224 × 224 to match the input size of the pre-trained ResNet50 model. The last classification layer of the pre-trained ResNet50 model is removed, resulting in an output feature vector length of 2048. The number of attention heads and Bimodal Cross-Attention Blocks of the proposed model have an impact on the experimental results. We will provide detailed information about them, along with other hyperparameters, in the following section.
+Baselines
+We chose mainstream baseline methods in the research field for comparison when transitioning from single-modal to multimodal approaches. For example, methods for detecting fake news based on text and images separately, as well as methods that have been used with the same datasets as those used in this work in recent years. We compared our proposed fake news detection method with several baseline methods as follows: - Textual [52]. The goal of the Textual component is to utilize a Bi-directional Long Short-Term Memory (Bi-LSTM) Network to model the textual content of the news. The Bi-LSTM is followed by a 32-dimensional fully connected layer to capture higher-level features. Finally, a softmax layer is employed for the ultimate classification.
+
+- Visual [52]. The objective of the Visual component is to model the images attached to news posts using a pre-trained VGG-19 model. After extracting features from the VGG-19, these features are passed through two fully connected layers with dimensions of 1024 and 32, respectively. These fully connected layers aim to capture and distill relevant information from the image data for further classification purposes.
+
+- VQA (Visual Question Answering) [53]: VQA aims to provide answers to questions based on a given image. As VQA is a multi-classification task, we adapted it by replacing the multi-class classifier with a binary classifier.
+
+- NeuralTalk [54]: The NeuralTalk model generates natural language descriptions from visual information. To adapt it for fake news detection, we defined its feature representation as the average output of the RNN at each time step. The feature representations are then fed into a fully connected layer for prediction.
+
+- att-RNN (2017) [32]: att-RNN is an RNN-based multimodal fake news detection model. It incorporates attention mechanisms to fuse joint representations of textual features, user profile features, and visual features.
+
+- EANN (2018) [28]: EANN is a multi-task learning fake news detection model that learns shared feature representations among all posts using an additional adversarial component. Textual and visual feature representations are obtained using a CNN-based textual features extractor and VGG-19 network, respectively. For a fair comparison, we removed the adversarial component.
+
+- MVAE (2019) [52]: MVAE is a method that leverages a multimodal fusion framework for fake news detection. It employs a Variational Autoencoder to reconstruct textual and visual feature representations from a shared latent representation.
+
+- SAFE (2020) [33]: SAFE uses neural networks to obtain the potential representations of text and visual information and concatenates the similarity features between modalities to identify fake news.
+
+- MCNN (2021) [13]: MCNN uses the consistency of multimodal data and captures the overall characteristics of news to identify fake news.
+
+- CAFE (2023) [55]: CAFE employs adaptive aggregation of unimodal features and cross-modal correlations to accurately identify fake news.
+
+- MRAN (2024) [56]: MRAN improves fake news detection by capturing relationships within and between text and images using hierarchical semantic features.
+
+
+Table 2 outlines the differences between MCAN and existing works. Compared to previous research, MCAN pays more attention to the physical level lexical information in text processing. Additionally, similar to existing works, it still leverages external knowledge from pre-trained models to enhance detection performance. It also utilizes attention mechanisms to automatically assign weights to different features, improving the accuracy of the model's detection. Table 2. Differences between our method and the baseline methods are shown in table below:
+Method
+Modality
+Attention mechanism
+External knowledge
+Physical level feature
+
+Text
+Image
+Text
+Image
+Text
+Image
+
+Textual
+√
+
+Visual
+√
+
+VQA
+√
+√
+
+Neural Talk
+√
+√
+
+att-RNN (2017)
+√
+√
+√
+
+EANN (2018)
+√
+√
+√
+
+MVAE (2019)
+√
+√
+√
+
+SAFE (2020)
+√
+√
+√
+
+MCNN (2021)
+√
+√
+√
+√
+√
+√
+
+CAFÉ (2023)
+√
+√
+√
+√
+
+MRAN (SOTA) (2024)
+√
+√
+√
+√
+√
+
+MCAN (ours)
+√
+√
+√
+√
+√
+√
+√
+
+
+Experiment result
+Comparisons of different models
+Table 3 illustrate the performance of different methods in fake news detection task on Twitter and Weibo dataset, respectively. It is evident that multimodal methods outperform unimodal methods, and the model proposed in this study achieves higher detection accuracy for both fake and real posts compared to the existing works. Table 3. Experimental result of different methods on dataset
+Dataset
+Method
+Accuracy
+Fake News
+Real News
+
+Precision
+Recall
+F1
+Precision
+Recall
+F1
+
+Twitter
+Textual
+0.526
+0.586
+0.553
+0.569
+0.469
+0.526
+0.496
+
+Visual
+0.596
+0.695
+0.518
+0.593
+0.524
+0.700
+0.599
+
+VQA
+0.631
+0.765
+0.509
+0.611
+0.550
+0.794
+0.650
+
+Neural Talk
+0.610
+0.728
+0.504
+0.595
+0.534
+0.752
+0.625
+
+att-RNN (2017)
+0.664
+0.749
+0.615
+0.676
+0.589
+0.728
+0.651
+
+EANN (2018)
+0.648
+0.810
+0.498
+0.617
+0.584
+0.759
+0.660
+
+MVAE (2019)
+0.745
+0.801
+0.719
+0.758
+0.689
+0.777
+0.730
+
+SAFE (2020)
+0.766
+0.777
+0.795
+0.786
+0.752
+0.731
+0.742
+
+MCNN (2021)
+0.784
+0.778
+0.781
+0.779
+0.790
+0.787
+0.788
+
+CAFÉ (2023)
+0.806
+0.807
+0.799
+0.803
+0.805
+0/813
+0.809
+
+MRAN (SOTA) (2024)
+0.855
+0.861
+0.857
+0.859
+0.847
+0.816
+0.831
+
+MCAN (ours)
+0.917
+0.852
+0.992
+0.917
+0.992
+0.854
+0.918
+
+Weibo
+Textual
+0.643
+0.662
+0.578
+0.617
+0.609
+0.685
+0.647
+
+Visual
+0.608
+0.610
+0.605
+0.607
+0.607
+0.611
+0.609
+
+VQA
+0.736
+0.797
+0.634
+0.706
+0.695
+0.838
+0.760
+
+Neural Talk
+0.726
+0.794
+0.713
+0.692
+0.684
+0.840
+0.754
+
+att-RNN (2017)
+0.772
+0.854
+0.656
+0.742
+0.720
+0.889
+0.795
+
+EANN (2018)
+0.782
+0.827
+0.697
+0.756
+0.752
+0.863
+0.804
+
+MVAE (2019)
+0.824
+0.854
+0.769
+0.809
+0.802
+0.875
+0.837
+
+SAFE (2020)
+0.763
+0.833
+0.659
+0.736
+0.717
+0.868
+0.785
+
+MCNN (2021)
+0.824
+0.809
+0.779
+0.795
+0.839
+0.870
+0.854
+
+CAFÉ (2023)
+0.861
+0.812
+0.645
+0.719
+0.875
+0.943
+0.908
+
+MRAN (SOTA) (2024)
+0.903
+0.904
+0.908
+0.906
+0.897
+0.892
+0.894
+
+MCAN (ours)
+0.904
+0.910
+0.902
+0.906
+0.897
+0.906
+0.901
+
+
+Figure 8 provides a visualization of the learned feature representations R N by the model using Twitter and Weibo data. These representations combine all four types of features, showing a more distinct separation. The visualizations offer valuable insights into the discriminative power of the extracted features, showcasing the model's capacity to capture relevant patterns and representations in the data. [See PDF for image]
+Fig. 8 t-SNE visualization of the Multimodal Representation of the Weibo and Twitter test sets learned by the model
+
+
+Model prediction examples
+Figure 9 displays the model's predictions for fake and real posts in the test set. Specifically, the model made more errors in predicting real posts on Twitter, with a total of 87 errors. This could be attributed to the fact that some real posts share similar features with fake posts, such as belonging to the same event topic. Conversely, the Weibo dataset exhibits a more balanced distribution of fake and real posts, resulting in a less significant disparity in the model's errors in predicting these two categories. [See PDF for image]
+Fig. 9 Confusion matrix of test set predicted by MCAN
+
+
+Figure 10 above illustrates examples of correct and wrong predictions made by the model. Cases (1.1), (1.2), (2.1), and (2.2) are examples from Weibo data; whereas, cases (1.3), (1.4), (2.3), and (2.4) are examples from Twitter data. In the cases where the model predicted correctly, the text in Weibo posts (1.1) and (1.2) on the Chinese social platform is relatively lengthy, and the corresponding original images are authentic photos. Conversely, in the accurately predicted Twitter posts, the ELA-processed image from the fake news post (1.4) exhibits higher pixel brightness compared to the image from the real post (1.3), a feature learned by the model. [See PDF for image]
+Fig. 10 Examples of correct and wrong predictions by MCAN. Each case is labeled with both the prediction and the actual label
+
+
+In terms of wrong predictions, one Weibo post (2.1) has comparatively short text, possibly making it challenging for the model to extract meaningful text features. Moreover, the ELA-processed images from the wrongly predicted Weibo posts (2.1) and (2.2) display evident tampered, likely due to added text and watermarks. While this indicates the model has learned features related to image tampered, its focus on these features may contribute to wrong predictions. Similarly, in the Twitter data, the image tampered in post (2.4) is less apparent, leading to the model's wrong prediction. The use of text vocabulary resembling that of real posts in the wrongly predicted content may further confuse the model, resulting in wrong predictions.
+Parameter analysis
+In this work, each of the various hyperparameters comprising the model has an impact on its final performance. To find the optimal hyperparameter combination suitable for a specific dataset, we used grid search to explore the best hyperparameter combination. Here is table for hyperparameter optimization:
+Based on Table 4 shown above, there will be a total of 648 hyperparameter combinations. Considering the space constraints of the article, we provide the top three and bottom three hyperparameter combinations in terms of performance on the dataset as shown in Table 5. Table 6 provides the optimal parameter combinations of the model in the two dataset categories, along with the resulting model parameter count and floating-point operations per second (FLOPs). It is noticeable that, potentially due to the prevalence of short text in Twitter posts, the model requires a greater number of parameters to learn more efficient features; while, the Weibo dataset exhibits the opposite trend. Table 4. Model hyperparameter optimization List
+Hyperparameter
+Range of selection
+
+Learning rate (lr)
+[0.001, 0.0001, 0.00001]
+
+Dropout (dp)
+[0.1, 0.2, 0.5]
+
+Fusion dimension (fd)
+[64, 128, 256]
+
+The number of Bimodal Cross-Attention Blocks (#BCAB)
+[1–6]
+
+The number of attention heads (#H)
+[1, 2, 4, 8]
+
+Table 5. Partial hyperparameter optimization results
+Dataset
+lr
+dp
+fd
+#BCAB
+#H
+Accuracy
+F1
+
+Twitter
+0.001
+0.2
+256
+3
+4
+0.917
+0.917
+
+0.0001
+0.1
+256
+3
+1
+0.914
+0.914
+
+0.001
+0.2
+64
+1
+8
+0.910
+0.910
+
+0.001
+0.5
+128
+6
+2
+0.458
+0.314
+
+0.001
+0.5
+64
+6
+8
+0.458
+0.314
+
+0.00001
+0.5
+64
+6
+8
+0.458
+0.314
+
+Weibo
+0.001
+0.5
+128
+2
+1
+0.904
+0.904
+
+0.001
+0.5
+256
+6
+1
+0.903
+0.903
+
+0.0001
+0.5
+128
+2
+1
+0.903
+0.903
+
+0.001
+0.5
+256
+6
+2
+0.516
+0.340
+
+0.001
+0.5
+64
+6
+8
+0.516
+0.340
+
+0.001
+0.5
+128
+5
+4
+0.484
+0.326
+
+Table 6. Best model parameters for dataset prediction performance with time and space complexity
+Dataset
+lr
+dp
+fd
+#BCAB
+#H
+Parameters
+FLOPS
+
+Twitter
+0.001
+0.2
+256
+3
+4
+154,345,441
+154,425,120
+
+Weibo
+0.001
+0.5
+128
+2
+1
+49,899,649
+50,006,304
+
+
+To explore the impact of attention heads and Bimodal Cross-Attention Blocks, we conducted experiments on the Twitter and Weibo datasets based on MCAN's best parameters, varying these factors to assess their effect on prediction accuracy.
+As shown in Fig. 11, for the Twitter dataset, variations in the number of heads and Blocks significantly affect the model's prediction accuracy. When both are set to 1, the model performs relatively well on the Twitter dataset; however, further increasing the number of heads and Blocks leads to a decrease in accuracy. Yet, at a certain number of Blocks and attention heads, the model achieves optimal prediction accuracy. Continuing to increase the number of attention heads and Blocks beyond this point results in decreased accuracy. This phenomenon may be due to the model's stronger generalization ability when the attention heads and Blocks are fewer, but it fails to learn more effective knowledge. Conversely, when reaching a certain number of encoding layers and attention heads, the model learns more effective knowledge, leading to higher prediction accuracy. However, as the model's complexity increases and the network reaches a certain depth, its performance may temporarily plateau, making further improvements challenging. This can eventually lead to overfitting, resulting in a decline in performance on the test set. For the Weibo dataset, due to the rich text and image content, the model more easily captures meaningful information, resulting in less impact from the number of Blocks and attention heads. However, there is an optimal value for these parameters. [See PDF for image]
+Fig. 11 Impact of the number of Bimodal Cross-Attention Blocks and the number of attention heads on model prediction accuracy
+
+
+Architecture ablation analysis
+In this section, we evaluated the effectiveness of four feature extraction methods. Table 2 presents the performance results of various variant models or methods on the Twitter and Weibo datasets. Considering that the semantic content of text is the primary reference for identifying posts as real or fake, subsequent ablation experiments were based on the module using the pre-trained BERT model to extract text semantic features. We gradually added components that constitute the complete architecture, starting from the basic configuration.
+The ablation experiments were divided into two parts: (1) variant models of the MCAN network based on the pre-trained BERT model for semantic feature extraction, with additional features incrementally added; (2) variant models of the MCAN network with one type of feature removed. Through these ablation experiments, we assessed the contribution of each feature to the overall performance of the model: - MCAN (BERT): The variant MCAN network relies solely on the text semantic feature extractor, which is based on the pre-trained BERT model. The all cross-attention layers are replaced entirely by self-attention layers. Remove the parts where no feature vectors pass through.
+
+- MCAN (BERT + GCN): The variant MCAN network includes only the text semantic feature extractor and the writing style feature extractor, with the latter based on the GCN method, yet it still processes the outputs through an Initial Cross-Attention Block to generate text features. Since this part involves only the text modality, the subsequent cross-attention layers in the Bimodal Cross-Attention Blocks are replaced with self-attention layers.
+
+- MCAN (BERT + Image semantic): The variant MCAN network includes text semantic features by pre-trained BERT model and image semantic features. In this variant MCAN network, there is no Initial Cross-Attention Blocks, and the structure of the Bimodal Cross-Attention Blocks remains unchanged.
+
+- MCAN (BERT + Image tampered): Similar to the variant network MCAN (BERT + Image semantic), the difference lies in replacing the input of pre-trained ResNet50 model for extracting image tampered features with ELA-processed images.
+
+- MCAN w/o GCN: In this variant network, the text writing style feature extractor based on the GCN method is removed from the text feature extraction subnetwork, leaving only text semantic features extracted by pre-trained BERT model. As a result, there is no Initial Cross-Attention Block for text; while, the structure elsewhere remains unchanged.
+
+- MCAN w/o Image semantic: This variant network removes the image semantic feature extractor submodule. Therefore, there is no Initial Cross-Attention Block for image; while, the rest of the network structure remains unchanged.
+
+- MCAN w/o Image tampered: Similar to MCAN w/o Image semantic, the removed feature is the image tampered feature extractor.
+
+
+These results demonstrate the impact of including different components or features on model performance for each dataset.
+From Table 7, it is evident that the method MCAN (BERT) solely based on BERT-extracted text semantic features already shows some effectiveness in detecting real or fake posts. The addition of text writing style feature extractor further enhances the detection performance of the MCAN (BERT + GCN) model. Similarly, adding image semantic features also improves detection accuracy in the MCAN (BERT + Image semantic) model. However, incorporating physical features of image tampered segments after ELA processing in the MCAN (BERT + Image tampered) model leads to a decrease in detection accuracy. This could be attributed to the conflicting nature between the physical features of image tampered and the semantic features of text, resulting in a reduction in the model's detection capability. This decline in accuracy is more pronounced in the case of the Twitter dataset, likely due to the widespread use of identical images in Twitter posts. Table 7. Architecture ablation analysis of proposed model
+Ablation Model
+Accuracy
+F1
+
+Twitter
+Weibo
+Twitter
+Weibo
+
+MCAN (BERT)
+0.727
+0.897
+0.720
+0.897
+
+MCAN (BERT + GCN)
+0.759
+0.900
+0.752
+0.900
+
+MCAN (BERT + Image semantic)
+0.760
+0.899
+0.754
+0.899
+
+MCAN (BERT + Image tampered)
+0.548
+0.889
+0.547
+0.889
+
+MCAN w/o GCN
+0.893
+0.892
+0.893
+0.892
+
+MCAN w/o Image semantic
+0.862
+0.888
+0.862
+0.888
+
+MCAN w/o Image tampered
+0.766
+0.889
+0.760
+0.889
+
+MCAN
+0.917
+0.904
+0.918
+0.904
+
+
+The second part of the ablation experiments involved removing individual features one by one. Firstly, MCAN w/o GCN, model without the text writing style feature based on the GCN method showed a slight decrease in performance on both the Twitter and Weibo datasets, indicating that the writing style feature extractor contributes positively to overall detection accuracy. Secondly, MCAN w/o Image semantic, model removing the original image semantic feature extractor led to a decrease in performance on the Twitter dataset but had a smaller impact on the Weibo dataset, highlighting the importance of image semantic features, particularly on Twitter. Thirdly, MCAN w/o Image tampered, model removing the image tampered feature extractor significantly decreased model performance on both datasets, emphasizing the crucial role of these features. Finally, the complete MCAN model, incorporating all feature extraction methods, achieved the highest accuracy and F1 scores on both datasets, demonstrating the comprehensive effectiveness of the combined approach.
+Interpretability analysis
+Figures 12 and 13 present visualizations of the features extracted by MCAN during the prediction process on the test set, using t-SNE dimensionality reduction. In the visualization, blue dots represent real posts; while, red dots represent fake posts. Starting from the leftmost, the visualization includes feature vectors obtained from four types of feature extraction methods. These vectors are further divided into fused features of text and image, followed by visualizations of output feature vectors from the First and the Latest Bimodal Cross-Attention Block. [See PDF for image]
+Fig. 12 Visualization of features output dimensionality reduction of the main part of MCAN (Twitter Dataset)
+
+[See PDF for image]
+Fig. 13 Visualization of features output dimensionality reduction of the main part of MCAN (Weibo Dataset)
+
+
+Figures reveal that the main modules of the MCAN network play a crucial role in feature extraction for distinguishing between fake and real posts in the final classification results. For Twitter data, where posts have shorter texts, the text feature extraction method proves highly effective in capturing textual information. Additionally, since Twitter posts often share the same images, the extraction of image features is relatively prominent. The Bimodal Cross-Attention Blocks further extract the combined features of text and image, laying an effective foundation for the final fake/real post classifier.
+In contrast, for Weibo posts, which primarily consist of lengthy texts with potentially similar semantic content, the text style feature extractor appears more effective than the pre-trained BERT model. Moreover, through the attention mechanism, the text feature extraction subnetwork successfully captures meaningful textual features. Despite the rich image content in the Weibo dataset, extracting semantic features from original images and ELA-processed image tampered features using pre-trained models did not yield highly effective results. However, the Bimodal Cross-Attention Blocks enhance the effectiveness of the final multimodal feature representation by integrating text and image features.
+Conclusion
+This work aims to tackle the challenges in the task of fake news detection by providing a new perspective on exploring the multidimension features of images and text and their high-dimensional inter-modal correlations. In pursuit of this goal, we propose an innovative fake news detection model called MCAN (Multimodal Cross-Aware Network). In addition to conventional semantic feature extraction using pre-trained models, we incorporate task-specific feature extraction modules that cater specifically to fake news detection. These modules employ graph neural networks to extract writing style features indicative of texts and employ image tampered feature extraction to identify manipulated segments in social media images, thus emphasizing the significance of images in the context of fake news detection. Furthermore, by integrating attention mechanism, we focus on mining features of varying depths from the multi-layer Cross-Attention Blocks. Through extensive experimentation on publicly available datasets, we validate the effectiveness of our approach and compare it with existing methods, demonstrating that our model is better suited to the task of fake news detection and exhibits exceptional generalization performance.
+In the future, we will consider incorporating more modal information for this task, such as the propagation features of posts, to better utilize relevant information in the fake news detection model.
+Author contributions
+Yaozeng Zhang contributed to conceptualization, methodology, original draft preparation, and software. Jing Ma contributed to supervision. Yuguang Jia contributed to validation and visualization.
+Funding
+This work was supported by the National Natural Science Foundation of China (72174086).
+Data availability
+The program can be found on GitHub: https://github.com/yaozengzhang/MCAN.git.
+Declarations
+Conflict of interest
+The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+Consent to publish
+The images from social networking platforms presented in the text are all sourced from publicly available datasets and have been widely cited, thus allowing their publication.
+Publisher's Note
+Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References
+1. Allcott, H; Gentzkow, M. Social media and fake news in the 2016 election. J Econ Perspect ; 2017; 31 , 2 pp. 211-236. [DOI: https://dx.doi.org/10.1257/jep.31.2.211]
+2. Meel, P; Vishwakarma, DK. Fake news, rumor, information pollution in social media and web: a contemporary survey of state-of-the-arts, challenges and opportunities. Expert Syst Appl ; 2020; 153 , [DOI: https://dx.doi.org/10.1016/j.eswa.2019.112986] 112986.
+3. Jin, Z; Cao, J; Zhang, Y et al. Novel visual and statistical image features for microblogs news verification. IEEE Trans Multimedia ; 2016; 19 , 3 pp. 598-608. [DOI: https://dx.doi.org/10.1109/TMM.2016.2617078]
+4. Sadeghi, F; Bidgoly, AJ; Amirkhani, H. Fake news detection on social media using a natural language inference approach. Multimedia Tools Appl ; 2022; 81 , 23 pp. 33801-33821. [DOI: https://dx.doi.org/10.1007/s11042-022-12428-8]
+5. Mallik, A; Kumar, S. Word2Vec and LSTM based deep learning technique for context-free fake news detection. Multimedia Tools Appl ; 2024; 83 , 1 pp. 919-940. [DOI: https://dx.doi.org/10.1007/s11042-023-15364-3]
+6. Ma J, Gao W, Mitra P, et al. (2016) Detecting rumors from microblogs with recurrent neural networks. In: Proceedings of the 25th International Joint Conference on Artificial Intelligence (IJCAI 2016). 3818–3824.
+7. Huang Z, Xiao X, Cao X (Eds.) (2017) Databases Theory and Applications: 28th Australasian Database Conference, ADC 2017; Brisbane, QLD, Australia, September 25–28, 2017; Proceedings, Springer
+8. Cui L, Wang S, Lee D (2019) SAME: sentiment-aware multi-modal embedding for detecting fake news. In: Proceedings of the 2019 IEEE/ACM International Conference on Advances in Social Networks Analysis and Mining. New York, NY, USA: Association for Computing Machinery, pp. 41–48.
+9. Zeng, J; Zhang, Y; Ma, X. Fake news detection for epidemic emergencies via deep correlations between text and images. Sustain Cities Soc ; 2021; 66 , [DOI: https://dx.doi.org/10.1016/j.scs.2020.102652] 102652.
+10. Giachanou A, Zhang G, Rosso P (2020) Multimodal multi-image fake news detection. In: 2020 IEEE 7th International Conference on Data Science and Advanced Analytics (DSAA). pp 647–654
+11. Qian S, Wang J, Hu J, et al. (2021) Hierarchical multi-modal contextual attention network for fake news detection. In: Proceedings of the 44th International ACM SIGIR Conference on Research and Development in Information Retrieval. New York, NY, USA: Association for Computing Machinery, pp 153–162
+12. Ma J, Gao W, Wong K-F (2019) Detect rumors on twitter by promoting information campaigns with generative adversarial learning. In: The World Wide Web Conference. New York, NY, USA: Association for Computing Machinery, pp 3049–3055
+13. Xue, J; Wang, Y; Tian, Y et al. Detecting fake news by exploring the consistency of multimodal data. Inf Process Manage ; 2021; 58 , 5 [DOI: https://dx.doi.org/10.1016/j.ipm.2021.102610] 102610.
+14. Alkhodair, SA; Ding, SHH; Fung, BCM et al. Detecting breaking news rumors of emerging topics in social media. Inf Process Manage ; 2020; 57 , 2 [DOI: https://dx.doi.org/10.1016/j.ipm.2019.02.016] 102018.
+15. Zhang X, Cao J, Li X, et al. (2021) Mining dual emotion for fake news detection. In: Proceedings of the Web Conference 2021. New York, NY, USA: Association for Computing Machinery, pp 3465–3476
+16. Yang Z, Wang C, Zhang F, et al. (2015) Emerging rumor identification for social media with hot topic detection. In: 2015 12th Web Information System and Application Conference (WISA). pp 53–58
+17. Rubin, VL; Chen, Y; Conroy, NK. Deception detection for news: three types of fakes. Proc Associat Inf Sci Technol ; 2015; 52 , 1 pp. 1-4. [DOI: https://dx.doi.org/10.1002/pra2.2015.145052010083]
+18. Ruchansky N, Seo S, Liu Y (2021) CSI: a hybrid deep model for fake news detection. In: Proceedings of the 2017 ACM on Conference on Information and Knowledge Management. New York, NY, USA: Association for Computing Machinery, pp 797–806
+19. Zhang, C; Gupta, A; Kauten, C et al. Detecting fake news for reducing misinformation risks using analytics approaches. Eur J Oper Res ; 2019; 279 , 3 pp. 1036-1052. [DOI: https://dx.doi.org/10.1016/j.ejor.2019.06.022]
+20. Chen, T; Li, X; Yin, H et al.et al. Ganji, M; Rashidi, L; Fung, BCM et al.et al. Call attention to rumors: deep attention based recurrent neural networks for early rumor detection. Trends and applications in knowledge discovery and data mining ; 2018; Cham, Springer International Publishing: pp. 40-52. [DOI: https://dx.doi.org/10.1007/978-3-030-04503-6_4]
+21. Yu F, Liu Q, Wu S, et al. (2017) A Convolutional Approach for Misinformation Identification, Twenty-Sixth International Joint Conference on Artificial Intelligence. https://doi.org/10.24963/ijcai.2017/545.
+22. Kausar, N; AliKhan, A; Sattar, M. Towards better representation learning using hybrid deep learning model for fake news detection. Soc Netw Anal Min ; 2022; 12 , 1 165. [DOI: https://dx.doi.org/10.1007/s13278-022-00986-6]
+23. Taher Y, Moussaoui A, Moussaoui F (2022) Automatic fake news detection based on deep learning, FasTtext and news title. Int J Adv Comput Sci Appl, 13(1)
+24. Wang, Y; Wang, L; Yang, Y et al. Detecting fake news by enhanced text representation with multi-EDU-structure awareness. Expert Syst Appl ; 2022; 206 , [DOI: https://dx.doi.org/10.1016/j.eswa.2022.117781] 117781.
+25. Qi P, Cao J, Yang T, et al. (2019) Exploiting multi-domain visual information for fake news detection. In: 2019 IEEE International Conference on Data Mining (ICDM). pp 518–527
+26. Singhal S, Shah RR, Chakraborty T, et al. (2019) SpotFake: a multi-modal framework for fake news detection. In: 2019 IEEE Fifth International Conference on Multimedia Big Data (BigMM). pp 39–47
+27. Singh, VK; Ghosh, I; Sonagara, D. Detecting fake news stories via multimodal analysis. J Am Soc Inf Sci ; 2021; 72 , 1 pp. 3-17.
+28. Wang Y, Ma F, Jin Z, et al. (2018) EANN: event adversarial neural networks for multi-modal fake news detection. In: Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining. New York, NY, USA: Association for Computing Machinery, pp 849–857
+29. Li, S; Yao, T; Li, S et al. Semantic-enhanced multimodal fusion network for fake news detection. Int J Intell Syst ; 2022; 37 , 12 pp. 12235-12251. [DOI: https://dx.doi.org/10.1002/int.23084]
+30. Guo, Y. A mutual attention based multimodal fusion for fake news detection on social network. Appl Intell ; 2023; 53 , 12 pp. 15311-15320. [DOI: https://dx.doi.org/10.1007/s10489-022-04266-w]
+31. Chen, J; Wu, Z; Yang, Z et al. Multimodal fusion network with contrary latent topic memory for rumor detection. IEEE Multimedia ; 2022; 29 , 1 pp. 104-113. [DOI: https://dx.doi.org/10.1109/MMUL.2022.3146568]
+32. Jin Z, Cao J, Guo H, et al. (2017) Multimodal fusion with recurrent neural networks for rumor detection on microblogs. In: Proceedings of the 25th ACM International Conference on Multimedia. New York, NY, USA: Association for Computing Machinery, pp 795–816
+33. Zhou X, Wu J, Zafarani R (2020) SAFE: Similarity-Aware Multi-modal Fake News Detection. In: Lauw HW, Wong RC-W, Ntoulas A, et al. (eds.) Advances in Knowledge Discovery and Data Mining. Cham: Springer International Publishing, pp 354–367
+34. Song, C; Ning, N; Zhang, Y et al. A multimodal fake news detection model based on crossmodal attention residual and multichannel convolutional neural networks. Inf Process Manage ; 2021; 58 , 1 [DOI: https://dx.doi.org/10.1016/j.ipm.2020.102437] 102437.
+35. Yadav A, Gaba S, Khan H, et al. (2023) Etma: Efficient transformer-based multilevel attention framework for multimodal fake news detection. IEEE Trans Comput Soc Syst
+36. Devlin J, Chang M W, Lee K, et al. (2018) Bert: pre-training of deep bidirectional transformers for language understanding. arXiv preprint arXiv:1810.04805
+37. He K, Zhang X, Ren S, et al. (2016) Deep residual learning for image recognition. In: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition. pp 770–778
+38. Chen, X et al. Identifying Cantonese rumors with discriminative feature integration in online social networks. Expert Syst Appl ; 2023; 215 , [DOI: https://dx.doi.org/10.1016/j.eswa.2022.119347] 119347.
+39. Comito, C; Caroprese, L; Zumpano, E. Multimodal fake news detection on social media: a survey of deep learning techniques. Soc Netw Anal Min ; 2023; 13 , 1 101. [DOI: https://dx.doi.org/10.1007/s13278-023-01104-w]
+40. Zhang, K; Cao, J; Pi, D. A novel fine-grained rumor detection algorithm with attention mechanism. Neurocomputing ; 2024; 583 , [DOI: https://dx.doi.org/10.1016/j.neucom.2024.127595] 127595.
+41. Yao, L; Mao, C; Luo, Y. Graph convolutional networks for text classification. Proc AAAI Conf AI ; 2019; 33 , 01 pp. 7370-7377.
+42. Halliday MAK (2019) Linguistic function and literary style: an inquiry into the language of William Golding's' The Inheritors, Essays in modern stylistics. Routledge, pp 325–360
+43. Kipf TN, Welling M (2016) Semi-supervised classification with graph convolutional networks. arXiv preprint arXiv:1609.02907
+44. Le Q, Mikolov T (2014) Distributed representations of sentences and documents. In: Xing EP, Jebara T (eds.) Proceedings of the 31st International Conference on Machine Learning. Bejing, China: PMLR, pp 1188–1196
+45. Vaswani A, Shazeer N, Parmar N, et al. (2017) Attention is all you need. Adv Neural Inf Process Syst, 30
+46. Rehman, MZU; Nawaz, R; Ullah, MS et al. A context-aware attention and graph neural network-based multimodal framework for misogyny detection. Inf Process Manage ; 2025; 62 , 1 [DOI: https://dx.doi.org/10.1016/j.ipm.2024.103895] 103895.
+47. Chen, C; Han, D; Chang, CC. CAAN: context-aware attention network for visual question answering. Pattern Recogn ; 2022; 132 , [DOI: https://dx.doi.org/10.1016/j.patcog.2022.108980] 108980.
+48. Qu L, Liu M, Cao D, Nie L, Tian Q (2020) Context-aware multi-view summarization network for image-text matching. In: Proceedings of the 28th ACM International Conference on Multimedia. New York, NY, USA: Association for Computing Machinery, pp 1047–1055
+49. Loshchilov I, Hutter F (2017) Fixing weight decay regularization in Adam. arXiv preprint, arXiv:1711.05101.
+50. Boididou, C; Papadopoulos, S; Zampoglou, M; Apostolidis, L; Papadopoulou, O; Kompatsiaris, Y. Detection and visualization of misleading content on Twitter. Int J Multimedia Inf Retr ; 2018; 77 , 1 pp. 1-86.
+51. Jin Z, Cao J, Guo H, Zhang Y, Luo J (2017) Multimodal fusion with recurrent neural networks for rumor detection on microblogs. In: Proceedings of the 25th ACM International Conference on Multimedia, ACM, pp 795–816
+52. Khattar D, Goud JS, Gupta M, et al. MVAE: Multimodal Variational Autoencoder for Fake News Detection. In: The World Wide Web Conference. New York, NY, USA: Association for Computing Machinery, pp. 2915–2921.
+53. Antol S, Agrawal A, Lu J, et al. (2015) Vqa: Visual question answering. In: Proceedings of the IEEE International Conference on Computer Vision. pp 2425–2433
+54. Vinyals O, Toshev A, Bengio S, et al. (2015) Show and tell: a neural image caption generator. In: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition. pp 3156–3164
+55. Chen Y, Li D, Zhang P, et al. (2022) Cross-modal ambiguity learning for multimodal fake news detection. In: Proceedings of the ACM Web Conference 2022. New York, NY, USA: Association for Computing Machinery, pp 2897–2905
+56. Yang, H; Zhang, J; Zhang, L et al. MRAN: multimodal relationship-aware attention network for fake news detection. Comput Stand Interfaces ; 2024; 89 , [DOI: https://dx.doi.org/10.1016/j.csi.2023.103822] 103822.

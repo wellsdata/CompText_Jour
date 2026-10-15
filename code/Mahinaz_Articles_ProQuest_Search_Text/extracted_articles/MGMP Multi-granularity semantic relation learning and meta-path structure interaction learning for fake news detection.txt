@@ -1,0 +1,1197 @@
+[See PDF for image]
+Fig. 1 Schematic diagram of the global semantic relationships in news text. In the word-news structure graph, a news article is composed of various words, and the same word is also connected to different news articles. The diagram displays multiple news articles that use the same word, but in different contexts, “contest" sometimes refers to a competition, and other times to a dispute or challenge, emphasizing how the meaning of a word changes depending on its surrounding context
+
+
+Introduction
+The advancement of mobile internet technologies and social media platforms has amplified global information accessibility while simultaneously increasing the risks of fake news propagation. Originally limited to print media, fake news has adapted to successive technological developments spanning broadcast media to modern digital ecosystems centered on social networks and online news platforms [1]. Paradoxically, the same mechanisms enabling efficient information exchange also accelerate the viral dissemination of misinformation. These dynamics distort public discourse, undermine institutional trust, and threaten democratic processes through large-scale manipulation. This phenomenon has established computational fake news detection as an urgent priority for interdisciplinary research in computer science and social informatics.
+Early detection approaches initially concentrated on linguistic feature analysis through text mining techniques [2, 3, 4, 5–6] combined with structured knowledge integration [7, 8–9]. These methods encountered fundamental limitations involving laborious feature engineering processes and unsustainable knowledge base curation requirements. Subsequent innovations introduced advanced architectures including VROC [10], which employs variational auto-encoders for contextual embedding generation, and MsynFD [11], utilizing syntactic dependency graphs enhanced with subgraph aggregation mechanisms. While these developments improved local semantic interpretation, they demonstrated limited capacity for identifying cross-document semantic pattern replication. Pretrained language models (PLMs) such as BERT [12] and RoBERTa [13] advanced content representation learning [14, 15, 16–17], yet remained fundamentally constrained by localized semantic processing frameworks. Modern large language models (LLMs) [18, 19–20] demonstrate enhanced semantic understanding capabilities but lack systematic approaches for modeling inter-document relationships-a critical limitation in identifying coordinated misinformation campaigns across multiple sources. As demonstrated in Fig. 1, lexical semantics exhibit substantial contextual dependence across news items, with identical terminology acquiring divergent meanings through distinct propagation pathways. Conventional localized analytical frameworks prove insufficient for capturing such context-driven semantic variations, frequently leading to erroneous classifications in detection systems.
+Graph neural networks (GNNs) have emerged as structural detection frameworks for fake news analysis. While Bi-GCN [21] utilizes bidirectional graph convolution to model information propagation, its reliance on homogeneous graph structures inadequately integrates user attributes with semantic content representations. The SAFER framework [22] incorporates user profiling features but compromises structural fidelity through homogeneous graph representations. Recent heterogeneous graph approaches demonstrate progress through methods such as GAMC [23], which employs self-supervised learning from dissemination contexts, and FinerFact [24], implementing dual-channel kernel graph networks for evidentiary analysis. Emerging architectures including the dual-layer graph design in Us-DeFake [25] combined with meta-path strategies in HGATRD [26] and Hetero-SCAN [27] enhance structural feature extraction, yet remain fundamentally constrained by localized path analysis limitations. As illustrated in Fig. 2, the multi-scale heterogeneous graph architecture-encompassing user interaction networks, cross-platform diffusion patterns, and news-source relationships-contains vital propagation signatures that current methodologies fail to fully exploit, primarily due to incomplete modeling of global interaction dynamics across multiple network layers. [See PDF for image]
+Fig. 2 An example of fake news propagation in a heterogeneous graph. Node S 1 represents YouTube, and node S 2 represents RT, two distinct media platforms. S 1 publishes two unrelated news articles, C 1 and C 2 , linked through their common publisher. S 2 publishes article C 3 , and C 1 and C 3 are connected via citation relationships between the sources. Although users U 1 and U 2 have no direct friendship, both retweet C 1 . Additionally, while C 1 and C 2 are unrelated in content, they are both retweeted by U 2 , suggesting shared tags. Establishing user friendships could reveal further connections
+
+
+To address the issues mentioned, This paper proposes the joint learning model M ulti- G ranularity Semantic Relation Learning and M eta- P ath Structure Interaction Learning for fake news detection (MGMP). This global perspective emphasizes comprehensively analyzing and predicting the behaviors and trends of fake news by identifying semantic connections among news content, interactions between news, users, and sources, as well as information dissemination paths. Firstly, the multi-grained global semantic relation learning module updates the embedding representations of news nodes to determine the global semantic relationships between news texts. In the fine-grained embedding learning at the word level, document sequences are constructed using news texts related to each word, and an attention mechanism is applied to the document sequences of each word to obtain a comprehensive embedding representation for each word. Subsequently, in the coarse-grained embedding learning at the document level, the word embedding representations learned from the fine-grained embedding are utilized to construct the word sequences for each news article. A convolutional neural network is then employed to learn the embedding representation of each news article based on the word sequence embeddings. Secondly, based on the updated news node representations from the multi-grained global semantic relation learning module, the meta-path global interaction learning module defines meta-paths encompassing different aspects of news. Through global interaction of news dissemination structures under specific meta-paths utilizing a multi-head self-attention mechanism, it reveals patterns and regularities in the spread of fake news. Finally, the final embedding of news nodes is obtained by aggregating different meta-paths, which is then used for fake news detection. The Conclusion section summarizes the findings of the paper. The contributions of this paper can be summarized in the following three aspects:
+- Improve the global comprehensiveness of information sources in terms of detecting fake news by taking into account both the semantic content and the network structure of news dissemination.
+
+- Enhance the accuracy of recognizing the global semantic context of news nodes in fake news detection by the multi-granularity of fine-grained embedding learning at the word level and coarse-grained embedding learning at the document level.
+
+- Enhance the accuracy of identifying network structural features in fake news detection by meta-paths and multi-head attention mechanisms which can reveal anomalous patterns in the network structure of news propagation.
+
+
+The outline structure of this paper is as follows. Section 1 establishes the research context and motivation. Section 2 reviews related work in semantic and structural detection paradigms. Section 3 formalizes key concepts and notation. Section 4 details MGMP’s architecture. Section 5 presents comparative experiments across benchmark datasets. Section 6 discusses limitations and future directions, followed by concluding remarks.
+Related work
+The objective of fake news detection is to distinguish between rumor and real news based on relevant information from news texts posted on social media sources, including text content, propagation patterns, graph structures, etc. The related work can be categorized into two main approaches: content-based and graph-based approaches.
+The content-based approach
+Content-based fake news detection research has evolved from shallow feature analysis to deep semantic modeling, with its core objective centered on identifying misinformation by analyzing textual patterns and semantic features within news articles. Early research primarily focused on textual feature analysis, detecting fake news by examining linguistic style differences in lexical choices, syntactic structures, and information presentation between fake and authentic news [2, 3, 5, 6, 28]. Subsequently, researchers began incorporating external features [7, 8–9, 29] such as the "viral" dissemination patterns of news propagation and source credibility to enhance detection accuracy, while also exploring thematic and domain-specific characteristics of news content [30, 31]. Furthermore, attention shifted toward user attributes and comment analysis, leveraging sentiment analysis techniques to extract skepticism signals from user feedback [14, 32, 33] and employing graph neural networks to model interactions between news articles and their associated comments [34]. Technologically, the field transitioned from traditional CNN [5, 28] and RNN [6] architectures for local feature extraction and sequential modeling to deep semantic understanding enabled by pretrained language models like BERT [12, 15, 16, 35] and RoBERTa [13, 36].For instance, GBCA [37] trains on the propagation structure of fake news through graph classification tasks, and then utilizes the BERT model to extract semantic features of the fake news.In recent years, the emergence of large language models has enabled comprehensive detection frameworks that simultaneously analyze linguistic structures, user interactions, and propagation pathways [18, 19–20, 38]. However, these models face challenges including hallucination risks and high computational costs, necessitating further advancements in robustness and efficiency to address the evolving complexity of misinformation ecosystems. Table 1. References of Fake News Detection
+Method
+Local
+Global
+Local
+Global
+
+Semantics
+Semantics
+Interaction
+Interaction
+
+TextCNN [5]
+✓
+
+TextRNN [6]
+✓
+
+FTT [30]
+✓
+
+MsynFD [11]
+✓
+
+BERT [12]
+✓
+
+RoBERTa [13]
+✓
+
+Vroc [10]
+✓
+
+M3FEND [31]
+✓
+
+HeteroSGT [34]
+✓
+✓
+
+GBCA [37]
+✓
+
+ARG [18]
+✓
+
+GenFEND [19]
+✓
+
+LlaMA [20]
+✓
+
+GCN [39]
+✓
+
+GAT [40]
+✓
+
+GraphSAGE [41]
+✓
+
+Bi-GCN [21]
+✓
+
+HAN [42]
+✓
+
+TriFN [43]
+✓
+
+HetGNN [44]
+✓
+
+HML [45]
+✓
+
+SAFER [22]
+✓
+✓
+
+FANG [46]
+✓
+✓
+
+GLAN [47]
+✓
+✓
+
+Hetero-SCAN [27]
+✓
+✓
+
+SureFac [48]
+✓
+✓
+
+Us-DeFake [25]
+✓
+✓
+
+DECOR [49]
+✓
+✓
+
+GETAE [50]
+✓
+✓
+
+FinerFact [24]
+✓
+✓
+
+ComoareNet [51]
+✓
+✓
+
+GCAN [52]
+✓
+✓
+
+DHCF [53]
+✓
+✓
+
+MRE-FND [54]
+✓
+✓
+
+GAMC [23]
+✓
+✓
+
+PSGT [55]
+✓
+✓
+
+CSDA [56]
+✓
+✓
+
+HGATRD [26]
+✓
+✓
+
+GenFEND [19]
+✓
+✓
+
+MGMP(ours)
+✓
+✓
+
+
+The graph-based approach
+Graph-based approaches, also referred to as social context-aware methods, identify fake news by modeling complex relational interactions among heterogeneous nodes within information propagation networks. Research in this domain has evolved from early-stage homogeneous graph modeling to advanced heterogeneous graph fusion. Initial studies primarily utilized graph neural networks and graph convolutional networks to directly capture structural features of news propagation paths, thereby revealing dissemination patterns of misinformation [21, 39, 40–41]. However, these methods were constrained by homogeneous graph frameworks, limiting their ability to comprehensively model global information flow and complex social dynamics. Subsequent research shifted toward constructing heterogeneous graphs incorporating diverse node types and relational edges, such as news articles, users, and comments [42, 43, 44–45, 56, 57]. For instance, PSGT [55] innovatively employs relational propagation graphs as positional encodings for graph transformers to model user propagation depth and distance-sensitive graph transformations.
+Researchers further developed hybrid models integrating linguistic features with graph structures [22, 23, 25, 47, 48, 50], such as GAMC [23], which enhances graph-attentive multichannel convolutional networks through self-supervised signals derived from news context and content. Us-DeFake [25] adopts a dual-layer graph architecture to separately capture news propagation features and user interaction patterns, while GETAE [50] integrates multidimensional analyses of news content, shared contexts, and user network characteristics for detection.Recent advancements focus on incorporating heterogeneous information, including news topic mining [51], external news data utilization [54], and path-based structural [26, 27] modeling to construct enriched heterogeneous graphs. Nevertheless, despite these developments, current methods still face limitations in global semantic comprehension and holistic interaction modeling, highlighting the need for enhanced frameworks to address these challenges in dynamic, adversarial environments.Table 1 presents all the references. Table 2. Notations used in this paper
+Notations
+Definitions
+
+G
+A graph G = V , E
+
+V
+A set of nodes in the graph G
+
+E
+A set of edges in the graph G
+
+P
+A set of Meta-Path
+
+A
+A set of types of nodes A = { A s , A c , A u }
+
+A s , A c , A u
+Node type: source,news,user
+
+c , u , s
+Initial node embedding for news, users, and source.
+
+w
+Word representations
+
+P
+Meta-Path representations
+
+p
+Meta-Path instance representations
+
+p ( v ,  u )
+A meta-path instance connecting node v and u
+
+M v P
+The set of meta-path-P based neighbors of node v
+
+N v P
+The set of meta-path- P -based instance of node v
+
+a , q
+Attention vectors
+
+R d
+d -dimensional Euclidean space
+
+h v
+Embedding representation of the target node v
+
+σ ( · )
+Activation function
+
+||
+Vector concatenation
+
+· T
+Transpose operation
+
+⊙
+Element-wise multiplication
+
+This table presents definitions of some important terms related to this article
+
+[See PDF for image]
+Fig. 3 The overall framework of the MGMP. (a) Multi-granularity Global Semantic Learning: Construct document sequences for each word and apply attention mechanisms to obtain comprehensive embeddings. Use these embeddings to form word sequences for news articles, and employ convolutional neural networks to derive article embeddings from these sequences; (b) Meta-Path based global interaction learning: Using updated news node representations from module (a), define meta-paths covering various news aspects and conduct global interactions within the news dissemination structure through a multi-head self-attention mechanism based on these meta-paths.(c) Meta-path Aggregation and Fake news detection: Aggregate different meta-paths to obtain the final embedding of the news nodes and perform fake news detection
+
+
+Preliminaries and notations
+In this section, we provide definitions for some important terms related to this article. Additionally, Table 2 summarizes commonly used symbols in this article for quick reference.
+Definition 1
+Heterogeneous Graph  [58]. A heterogeneous graph is defined as a graph G = V , E associated with a node type mapping function ϕ : V → A and an edge type mapping function ψ : E → R . A and R denotes the predefined sets of node types and edge types, respectively, with ∣ A ∣ + ∣ R ∣ > 2 .
+Definition 2
+Meta-Path  [58]. A Meta-Path P is defined as a path in the form of A 1 ⟶ R 1 A 2 ⟶ R 2 ⋯ ⟶ R l A l (abbreviated as A 1 A 2 ⋯ A l ), which describes a composite relation R = R 1 ∘ R 2 ∘ ⋯ ∘ R n between node types A l and A l + 1 , where ∘ denotes the composition operator on relations.
+Definition 3
+Meta-Path Instance  [59]. Given a Meta-Path P of a heterogeneous graph, a Meta-Path instance p of P is defined as a node sequence in the graph following the schema defined by P .
+Definition 4
+Heterogeneous Graph Embedding  [59]. Given a heterogeneous graph G = V , E , with node attribute matrices X A i ∈ R ∣ V A i ∣ × d A i for node types A i ∈ A , heterogeneous graph embedding is the task to learn the d-dimensional node representations h v ∈ R d for all v ∈ V with d ≪ ∣ V ∣ that are able to capture rich structural and semantic information involved in G .
+Definition 5
+Meta-path-based Neighbors  [59]. Given a meta-path P in G , the meta-path-based neighbors of node v is defined as the set of nodes that connect with node v via a meta-path instance of p . If meta-path P is symmetrical, the meta-path-based neighbors of node v contain itself.
+The proposed methodology
+In this section, the model proposed in this paper is elaborately described, with its overall structure depicted in Fig. 3. The model comprises three main components: Multi-granularity global semantic learning, Meta-path based global interaction learning, and Meta-path Aggregation and Fake news detection.
+Multi-granularity global semantic learning
+The fine-grained word embedding learning constructs news sequences related to each word and applies attention mechanisms to capture semantic nuances of words across different contexts, revealing global semantic relationships between words; The coarse-grained document embedding learning treats each document as a whole to convey information and intentions, facilitating the distinction of semantic differences between documents, even when they contain similar words or phrases, by recognizing their unique viewpoints or emotional tendencies through holistic embedding representations. Combining the two enables simultaneous consideration of direct relationships between words and the significance and role of news as a whole within its context. This approach allows for a more comprehensive learning of the global semantic relationships between news texts, improving the accuracy and depth of news content processing.
+Fine-grained word embedding learning
+Each news is composed of different words, and similarly, each word is connected to different news articles. In fine-grained word embedding learning, given a news sequence index associated with a word w i as ( c 1 i , c 2 i , c 3 i , . . . , c L w i i ) , where L w i represents the number of news associated with the word w i . Through lookup, the news sequence index is transformed into news embeddings ( c 1 i , c 2 i , c 3 i , . . . , c L w i i ) , where the initial embedding c j i ∈ R d 0 is randomly initialized from a normal distribution.
+In the news sequence, the uniqueness of each news article’s emotional tendency, theme, context, and so forth, imparts distinct meanings and influences to the same word across different articles. As a result, the importance of each news article in learning word embedding representations varies. Therefore, this paper utilizes an attention mechanism to learn the weight of each news node. Given the i -th word w i and its associated j -th news c j i , together forming the node pair ( i ,  j ), the importance of the news c j i for the word w i is learned through the attention coefficient e i , j , which is calculated as follows: 1
+e i , j = L e a k y R e L U a T · c j i , 2
+α i , j = s o f t m a x ( e i , j ) = e x p e i , j ∑ k ∈ L w i e x p e i , k , where · T denotes the transpose operation. The attention coefficient e i , j is computed by multiplying the embedded news node representation with the attention vector a . The attention values are then normalized using the softmax function to obtain the coefficient α i , j .
+Next, the news representations associated with node w i and their corresponding coefficients are aggregated to update the embedding representation of the word node: 3
+w i 1 = σ ∑ j ∈ L w i α i , j · c j i , where w i 1 ∈ R d w represents the updated embedding of the word w i , and σ ( · ) denotes the ReLU nonlinear function.
+Finally, the attention mechanism is extended to multi-head attention to learn more stable embeddings. Specifically, the above formula is transformed K times, and the learned representations are concatenated to obtain the final output representation of the word node: 4
+w i ′ = ‖ K k = 1 σ ( ∑ j ∈ L w i α i , j k W k c j i ) , where || denotes the concatenation operation, α i , j k represents the normalized attention coefficient obtained from the k -th attention mechanism, and W k represents the weight matrix corresponding to the linear transformation of the input. By feeding the word sequence into the attention network, the embedding representation of the word nodes can be obtained as D = w 1 ′ , w 2 ′ , w 3 ′ , . . . , w p ′ ∈ R p × d w , p represents the number of words.
+Coarse-grained document embedding learning
+Coarse-grained embedding learning for documents places greater emphasis on the overall semantic content of an entire news article. The word embedding vectors, updated at a fine-grained level based on individual words, are reassembled into the word sequence of each news item, capturing the global semantics of the news. Given that the news content in the dataset used in this paper primarily comprises short texts, the CNN is chosen to encode the news. CNN [5] is capable of naturally handling the word order information within the text.
+Let w i ′ ∈ R d w represent the d w -dimensional word vector corresponding to the i -th word in the news. Assuming each news article contains M words, if the length of the news is less than M , the sequence is padded with "0" indices for the word nodes; if the length exceeds M , the news sequence is truncated at the end. The representation of a news article with length M is: 5
+x 1 : M = w 1 ′ ; w 2 ′ ; ⋯ ; w M ′ , where x j : j + k represents the concatenation of the word x j with the word x j + k . The convolution operation involves a filter W ∈ R M × d w , which is applied to a window consisting of h words to generate a new feature in the word embedding matrix: 6
+o p = σ ( W ∗ x p : p + h - 1 ) . The convolution layer is applied to extract the feature map 7
+o = [ o 1 , o 2 , … , o M - h + 1 ] ∈ R M - h + 1 . Subsequently, a max pooling operation is applied to the feature map: 8
+o ^ = max ( o ) . From the operations described, a single feature is extracted from one filter. The CNN layer uses d w / 3 filters to obtain multiple features. Finally, the outputs from various filters are concatenated, and x j ′ ∈ R d x serves as the embedding representation of the j -th news article.
+Meta-path based global interaction learning
+For updating the embedding representations of news nodes based on the multi-grained global semantic relation learning module, it is necessary to learn their global propagation structure. This paper leverages the definition of various meta-paths to mine potential relationships among news, users, and sources, and employs a multi-head self-attention mechanism to learn from the meta-path instances, thereby gaining an understanding of the complex propagation paths and global interactions among news.
+Extraction and encoding of meta-path instances
+Based on specific relationships in the news propagation network structure, different meta-paths P are defined, constructing a set of meta-paths P = { P 1 , P 2 , ⋯ , P N } . Under different meta-paths, the meta-path instances are obtained with the target node as the starting node, from which the embedding representations of the corresponding nodes are extracted. For the heterogeneous graph of the news propagation structure G = V , E , three types of nodes A = { A s , A c , A u } represent source, news, and user, respectively. The initial embeddings of user and source nodes, randomly initialized from a normal distribution, are represented by u ∈ R n u × d u and s ∈ R n s × d s , respectively. The news node embeddings x ′ ∈ R n c × d c are obtained from the Multi-granularity global semantic learning module discussed in the previous section.
+In the real world, each news item typically involves a large number of users, and sources often publish numerous news articles. To address this, the process begins by extracting meta-path instances starting from the target node. Cosine similarity between each node within a meta-path instance is calculated and averaged to obtain a similarity score for each meta-path instance. These similarity scores are then ranked, and the top q ranked meta-path instances are selected to generate meta-path embeddings.
+After selecting the meta-path instances with high similarity scores, it is necessary to aggregate the nodes within the selected meta-path instances. For the target node v , under a specific meta-path P ∈ P , there exists a meta-path instance set M v P = { p v 1 , p v 2 , . . . , p v q } , where for the meta-path instance p v i , the RotatE [60] encoder is adopted to encode different node types A = { A s , A c , A u } . This aggregates all node features on the meta-path instances into a single vector set { h v 1 , h v 2 , . . . , h v q } , each h v i ∈ R d can be interpreted as the embedding representation of news node v for the i -th meta-path instance under meta-path P .
+Self-attention-based meta-path instance learning
+After obtaining the embeddings of the meta-path instances, a self-attention mechanism is employed to enhance the learning of the target node’s meta-path instance representations. Given the prominent performance of the self-attention mechanism in node learning tasks, a multi-head self-attention module is used to learn from the meta-path instances of the target node v under a specific meta-path P . The multi-head attention module has three inputs: a query matrix Q ∈ R n q × d , a key matrix K ∈ R n k × d , and a value matrix V ∈ R n v × d , where n q , n k , and n v represent the number of meta-path instances, and d denotes the embedding dimension of the meta-path instances. The basic learning process is as follows: 9
+A t t Q , K , V = s o f t m a x Q K T d p V , where K T represents the transpose of K .
+In the multi-head self-attention mechanism, Q , K , and V are divided into H heads, with each head simulating the relationships between Q , K , and V from a different perspective, corresponding to an attention module. For every head q in the range ∀ q ∈ 1 , H , the output representation of head q is: 10
+h q , v P = A t t h v P W q Q , h v P W q K , h v P W q V , where W q Q , W q K , W q V ∈ R d × d / H are learnable weight matrices. Then, the output features from the multi-head attention are concatenated together and linearly transformed, ultimately outputting the learned representation h v P ∈ R q × d , specifically as follows: 11
+h v P = h 1 , v P ; h 2 , v P ; . . . ; h H , v P W o , where W o ∈ R d × d is a learnable weight matrix. Then, a feedforward neural network (a two-layer fully connected neural network) is used to obtain the learned meta-path embeddings, which are averaged to produce the following: 12
+Z v P = M E A N σ W A 1 ( h v P ) T + b 1 W A 2 + b 2 , where W A 1 , W A 2 ∈ R q × d are learnable matrices, and b 1 , b 2 ∈ R q are bias parameters.
+Meta-path aggregation and fake news detection
+After aggregating the meta-path instances for the target node, an inter-meta-path aggregation layer is needed to aggregate the semantic information revealed by all meta-paths. Then, a classification function is applied to the target node for fake news detection.
+Meta-path aggregation
+For the target node v ∈ A A c , there is a set of vectors: { Z v P 1 , Z v P 2 , ⋯ , Z v P N } , where N represents the number of meta-paths. Different meta-paths represent different aspects of the news, and the final embedding representations of the news node are not equally important. Therefore, we employ an attention mechanism to assign different weights to different meta-paths.
+First, for each meta-path P i ∈ P , the transformed specific meta-path vectors for all nodes v ∈ A A c are averaged to provide a summary. 13
+S P i = 1 ∣ A A c ∣ ∑ v ∈ A A c t a n h W A c · Z v P i + b A c , where W A c ∈ R d m × d and b A c ∈ R d m are learnable parameters.Then, we use attention mechanism to aggregate all the meta-paths of the target node v .
+Then, an attention mechanism is used to aggregate all the meta-paths for the target node v : 14
+e P i = t a n h q A c T · S P i , 15
+β P i = e x p e P i ∑ P ∈ P e x p e P , 16
+Z v P = ∑ P ∈ P β P · Z v P , where q A c ∈ R d m is a parameterized attention vector for node type A c , and β P i can be interpreted as the relative importance of meta-path P i for nodes of type A c . For each meta-path P i ∈ P , β P i is calculated, and a weighted sum of all the specific meta-path vectors for node v is computed, resulting in the final news representation vector Z v P .
+Finally, an additional linear transformation and a nonlinear function are used to project the node embeddings into a vector space with the desired output dimension: 17
+Z v = σ W e · Z v P , where W e ∈ R d e × d m is a weight matrix, this projection is understood as a linear classifier used for node classification.
+Fake news detection
+The final representation of the target news vector is passed to a classification layer to obtain the classification results. During the training process, the predicted results and existing labels are used to calculate the loss, and the backpropagation algorithm is used to update the learnable parameters of the model. Cross-entropy loss is used, which is as follows: 18
+L = - ∑ y l o g P fake + 1 - y l o g P real , where y represents the one-hot vector for the label of the news node.The forward propagation algorithm of the MGMP in this paper is detailed in Algorithm 1.
+[See PDF for image]
+Algorithm 1 Forward Propagation.
+
+Table 3. Statistics of the datasets
+Datasets
+News
+Nodes
+Edge
+Metapath
+
+FANG
+Fake News: 410
+News(C): 943
+C-S: 943
+CSC CUC
+
+Real News: 533
+Source(S): 412
+C-U: 42576
+CSSC CUUC
+
+User(U): 37345
+U-U: 5993
+SCUCS UCSCU
+
+S-S: 2965
+
+HealthStory
+Fake News: 449
+News(C):1591
+C-S: 1591
+CSC CUC
+
+Real News: 1142
+Source(S): 102
+C-U: 103831
+SCUCS UCSCU
+
+User(U): 63723
+
+PolitiFact
+Fake News: 120
+News(C): 240
+C-S: 91
+CSC CUC
+
+Real News: 120
+Source(S): 91
+C-U: 32791
+CUUC
+
+User(U): 23865
+U-U: 574744
+SCUCS UCSCU
+
+This table shows the statistical details of the dataset used in this article, specifically the number of meta-paths and meta-path instances defined for three datasets in the context of the global interaction learning process
+
+Experiments
+In this section, we conduct extensive experiments to answer the following questions:
+- EQ1: Does the MGMP outperform all baseline methods in fake news detection?
+
+- EQ2: Does the MGMP benefit from multiple relations?
+
+- EQ3: How efficiently does the MGMP run on large-scale datasets?
+
+- EQ4: Is the MGMP sensitive to the parameters?
+
+
+
+Experimental settings
+Datasets
+To evaluate the effectiveness of the MGMP in the task of fake news detection, three real-world datasets were used for experimentation: FANG [46], HealthStory [61] and PolitiFact [62, 63]. Table 3 shows the statistical details of the dataset used in this article.
+FANG
+It is compiled and organized based on the Twitter dataset collected by Nguyen et al. [46] for rumor classification and fake news detection.This paper organizes the original news content and retrieves relevant information via the provided news URLs. Each news article includes a list of publishing sources and participating users, as well as recorded citation relationships between news sources and the follow relationships among users.
+HealthStory
+The FakeHealth dataset is a comprehensive repository specifically built by Dai et al. [61] for detecting fake news in the health domain. This dataset includes two subsets: HealthStory and HealthRelease; however, this study only utilizes the HealthStory subset. The HealthStory dataset not only provides news content with rich features but also includes a news-user social network and each news article’s media source. The source for the HealthStory dataset is the medical information review website HealthNewsReview, which evaluates a news article’s reliability based on 10 criteria and provides a score from 1 to 5, with ratings ranging from 1 to 5. Similar to the original study that released the FakeHealth dataset, an article is considered fake news if its score is below 3, and real news if otherwise.
+PolitiFact
+The PolitiFact dataset is a nonprofit news organization dedicated to fact-checking political statements. Its dataset primarily stems from the organization’s verification results of the authenticity of various political statements and declarations. It encompasses diverse types of political discourse and news, including political advertisements, statements, policy proposals, among others. This dataset contains news articles annotated by leading fact-checking websites, along with relevant social user interactions from Twitter.
+Baselines
+To demonstrate the superiority of the MGMP over other fake news detection methods, this paper compares the MGMP with other existing fake news detection methods. Benchmark detection methods can be categorized into text-based methods and graph-based methods.
+In fake news detection, text-based methods typically involve the following steps: Firstly, extracting features from the text for training and judgment purposes. Then, training machine learning or deep learning models to classify the text, establishing a fake news classifier.
+- Doc2Vec+SVM  [64] is a paragraph embedding technique based on Word2Vec [65]. It learns representation vectors using skip-gram and CBOW models and is considered an unsupervised learning method for learning latent document representations.
+
+- TextCNN+SVM  [5] utilizes pre-trained word embeddings and convolutional neural networks for sentence-level classification. The model captures word order features in news text using multiple convolutional filters.
+
+- RoBERTa  [13] is a large language model based on the BERT architecture with essential improvements to enhance performance on natural language processing tasks.
+
+- ARG  [18] explores LLMs’ potential in fake news detection, designing an adaptive network where SLMs gain insights from LLMs’ rationales.
+
+
+In the detection of fake news, graph-based methods are a common strategy that integrates multiple elements such as news, users, and sources to form a propagation structure graph. By analyzing information such as network topology, user behavior, and information propagation paths within the propagation structure graph, relationships and characteristics between nodes are captured for the purpose of detecting fake news.
+- GAT  [40] is a graph neural network based on graph attention mechanisms used for learning node representations by adaptively focusing on different neighboring nodes to capture rich relationship information in the graph.
+
+- GraphSAGE  [41] is a general inductive framework that learns a function utilizing node feature information to generate embeddings by sampling and aggregating features from the local neighborhood of nodes for learning node representations.
+
+- HAN  [42] is an extension of GAT [40] on heterogeneous graphs. It employs meta-path extraction strategies and attention mechanisms to learn node representations, handling complex graph structures with different types of nodes and edges.
+
+- SAFER  [22] utilizes a pre-trained RoBERTa [13] encoder to generate text-based features of article content and a trained GNN to generate user embeddings that preserve information about different aspects of shared content. The two vectors are concatenated for fake news detection.
+
+- FANG  [46] defines node encoding functions to obtain structural representations of arbitrary users and source nodes and utilizes user engagement time to enrich the structural representation of news nodes. The detection task is decomposed into multiple subtasks, optimizing the final detection results through an aggregated loss function.
+
+- HGATRD  [26] constructs a tweet-word-user heterogeneous graph based on rumor text content and the source tweet propagation structure. It applies a heterogeneous graph attention network framework using meta-paths to capture global semantic relationships of text content and global structural information of source tweet propagation for rumor detection.
+
+- DECOR  [49] Based on empirical observations, fake news and real news nodes exhibit different degree distributions. By utilizing degree-corrected masks to adjust the edge weights of the news participation graph and suppress noise, and then jointly optimizing with a GNN-based classifier to predict news accuracy.
+
+- Hetero-SCAN  [27] defines two meta-paths that cover different aspects of news (users and publishing sources), learns meta-path instances using attention mechanisms and GRU [66], and aggregates them to learn representations of news nodes.
+
+
+Table 4. Parameter settings on different datasets
+Parameters
+FANG
+HealthStory
+PolitiFact
+
+text maximum length
+100
+80
+120
+
+number of heads in self-attention
+8
+8
+8
+
+number of heads in attention
+8
+8
+7
+
+number of metapath instances
+80
+120
+120
+
+batch size
+32
+32
+32
+
+learning rate
+1e-3
+1e-3
+1e-3
+
+dropout
+0.5
+0.5
+0.5
+
+patience
+20
+20
+20
+
+kernel sizes
+(3,4,5)
+(3,4,5)
+(3,4,5)
+
+Table 5. Performance comparison of MGMP with other baseline models.(%)
+Method
+FANG
+HealthStory
+PolitiFact
+
+Acc.
+AUC
+f1-score
+Acc.
+AUC
+f1-score
+Acc.
+AUC
+f1-score
+
+fake
+real
+fake
+real
+fake
+real
+
+Doc2Vec
+63.121
+64.312
+62.319
+63.889
+54.622
+56.112
+42.553
+62.500
+75.833
+75.529
+76.033
+75.630
+
+TextCNN
+68.085
+68.865
+67.153
+68.966
+58.403
+63.938
+51.232
+63.736
+72.500
+72.437
+72.727
+72.269
+
+RoBERTa
+78.723
+80.481
+78.261
+79.167
+55.042
+67.514
+54.468
+55.602
+80.833
+79.825
+82.443
+78.899
+
+ARG
+83.688
+83.612
+82.963
+84.354
+67.227
+72.955
+60.204
+72.143
+92.500
+92.132
+92.562
+92.437
+
+GAT
+67.376
+69.235
+67.143
+67.606
+58.824
+63.847
+51.000
+64.493
+78.333
+78.298
+80.303
+75.926
+
+GraphSAGE
+72.340
+72.653
+71.533
+73.103
+64.286
+69.673
+56.853
+69.534
+78.333
+77.010
+80.597
+75.472
+
+HAN
+68.085
+68.000
+66.667
+69.388
+61.765
+60.812
+46.784
+70.164
+80.000
+81.268
+81.818
+77.778
+
+SAFER
+72.340
+74.593
+71.533
+73.103
+63.445
+70.093
+56.716
+68.364
+84.167
+83.514
+84.800
+83.478
+
+FANG
+70.213
+71.369
+70.000
+70.423
+61.765
+68.554
+55.610
+66.421
+82.500
+82.025
+83.200
+81.739
+
+HGATRD
+78.723
+80.578
+78.571
+78.873
+62.605
+71.169
+58.216
+66.160
+87.500
+86.367
+86.726
+88.189
+
+DECOR
+81.560
+82.941
+81.690
+81.429
+64.706
+72.103
+58.416
+69.343
+91.667
+92.421
+91.935
+91.379
+
+Hetero-SCAN
+82.979
+84.423
+82.857
+83.099
+66.387
+71.984
+59.184
+71.429
+91.667
+91.673
+91.525
+91.803
+
+MGMP w/GNN
+81.560
+81.342
+79.688
+83.117
+66.387
+68.821
+55.556
+72.973
+90.833
+91.257
+91.339
+90.265
+
+MGMP w/LSTM
+74.468
+77.685
+76.316
+72.308
+60.504
+63.982
+51.042
+66.901
+84.167
+83.842
+83.478
+84.800
+
+MGMP w/Attention
+80.142
+82.259
+80.822
+79.412
+65.546
+72.538
+59.406
+70.073
+90.000
+89.745
+89.831
+90.164
+
+MGMP
+85.816
+87.040
+85.507
+86.111
+68.067
+75.406
+62.000
+72.464
+94.167
+94.182
+94.215
+94.118
+
+This table presents the comparison results between the MGMP and the baseline models, with the MGMP demonstrating the best performance. Among them, MGMP w/GNN denotes the use of GNN to aggregate metapath instances. Similarly, MGMP w/Attention and MGMP w/LSTM utilize Attention and LSTM, respectively, to aggregate metapath instances
+
+Evaluation metrics
+For a binary classification task, due to the class imbalance in the HealthStory dataset, the evaluation is performed using Acc ., f 1 - s c o r e real , f 1 - s c o r e - t r u e  [67], and AUC  [68] accuracy is the ratio of correctly predicted instances to the total number of instances, given by A c c . = T P + T N T P + T N + F P + F N , where TP (True Positives) represents the number of correctly predicted positive samples; TN (True Negatives) represents the number of correctly predicted negative samples; FP (False Positives) represents the number of negative samples incorrectly predicted as positive; and FN (False Negatives) represents the number of positive samples incorrectly predicted as negative.In the binary classification task of fake news detection, to accurately identify fake news, fake news is defined as the positive class and real news as the negative class.
+The f 1 - s c o r e fake , targeting fake news as the positive class, measures the model’s comprehensive performance in detecting fake news, balancing Precision and Recall. Similarly, f 1 - s c o r e real targets fake news as the negative class. f 1 - s c o r e fake = 2 × P r e . fake × R e c . fake P r e . fake + R e c . fake , where P r e . fake = TP T P + F P , R e c . fake = TP T P + F N . f 1 - s c o r e real = 2 × P r e . real × R e c . real P r e . real + R e c . real , where P r e . real = TN T N + F P , R e c . real = TN T N + F N .
+AUC (Area Under the Curve) refers to the area under the ROC curve, used to evaluate the performance of a classification model, especially in the case of class imbalance. The higher the AUC value, the better the model’s performance.
+Parameter settings
+In each dataset, 70% of the news is used as the training set, while the remaining 30% is further divided equally into validation and test sets. News, user, and source nodes in the model are initialized with 300-dimensional embeddings generated from normal distribution.Regarding hyperparameters, for the proposed model implemented in PyTorch, Adam optimizer is utilized with an initial learning rate of 1 e - 3 , gradually decreased during training. Table 4 shows the details of the Parameter used on different datasets.
+Performance evaluation(EQ1)
+Comparing the MGMP with three publicly available datasets baselines, the results are presented in Table 5. On the FANG dataset, MGMP demonstrated particularly notable improvements, achieving 85.816% accuracy-a 2.837% increase over the best baseline Hetero-SCAN (82.979%)-and an AUC score of 87.040%, representing a 2.617% enhancement. For the PolitiFact dataset, MGMP attained state-of-the-art performance with 94.167% accuracy and 94.182% AUC, outperforming suboptimal models ARG and DECOR in accuracy while simultaneously exceeding 94% f1-scores for both fake and real categories. On the challenging HealthStory dataset, MGMP achieved 68.067% accuracy (0.84% improvement over ARG’s 67.227%), demonstrating effective capture of rumor propagation patterns.Compared to the plain-text model RoBERTa, MGMP showed superior performance with 7.093% higher accuracy on FANG, along with domain-specific accuracy improvements of 0.84% and 2.5% on HealthStory and PolitiFact respectively, confirming its cross-domain adaptability. The model also surpassed DECOR by achieving a 2.36% average AUC improvement across all three datasets, highlighting the effectiveness of its multi-type node interaction mechanism.
+It is noteworthy that different variants of the MGMP also demonstrated impressive performance in their respective areas of expertise. However, compared to these variants, the MGMP still exhibited significant advantages in overall performance. For instance, although the MGMP w/GNN variant achieved an accuracy of 90.833% on the PolitiFact dataset, it was still lower than the 94.167% accuracy of the MGMP. Similarly, the AUC value of the MGMP w/Attention variant on the HealthStory dataset was also lower than that of the MGMP, further proving the rationality of the multi-head self-attention mechanism employed by the MGMP.
+To emphasize the superiority of the MGMP in news representation, we employed t-SNE technology to visualize the news representations on a two-dimensional plane. t-SNE served as a pivotal method here, enabling the visualization of high-dimensional data reduced to a two-dimensional space. Upon inspecting Figs. 4, 5, 6 and 7, it becomes apparent that the news representations produced by the MGMP exhibit tighter clustering compared to those generated by other methods. This clearly demonstrates that the MGMP has achieved substantial advancements in the field of news representation compared to existing approaches. [See PDF for image]
+Fig. 4 t-SNE of the TextCNN
+
+
+Ablation study(EQ2)
+The study conducts ablation experiments on different components of the MGMP to investigate the contributions of its submodules, with the results reported in Table 6. The variants are designed as follows:
+- MG: Ignoring coarse-grained and fine-grained multi-granularity global semantic relationship learning.
+
+- MG(F): Ignoring fine-grained embedding learning at the word level.
+
+- MG(C): Ignoring coarse-grained embedding learning at the document level.
+
+- MP: Ignoring meta-path-based global interaction learning module.
+
+- MHSA: Ignoring the multi-head self-attention mechanism for learning meta-path instance representations of news nodes.
+
+- Attention: Using addition instead of attention mechanism for fusion.
+
+
+[See PDF for image]
+Fig. 5 t-SNE of the HGATRD
+
+[See PDF for image]
+Fig. 6 t-SNE of the Hetero-SCAN
+
+
+The ablation studies on MGMP reveal that its core framework for fake news detection fundamentally relies on the integration of multi-granularity semantic relation learning and metapath interaction modules. Removing the multi-granularity global semantic learning component (-MG) caused significant performance degradation across all three datasets, notably reducing accuracy by 8.511% and AUC by 7.887% on FANG. The elimination of fine-grained word-level embeddings (-MG(F)) particularly impacted HealthStory with a 5.882% accuracy decrease, while removing coarse-grained document embeddings (-MG(C)) showed relatively minor effects on PolitiFact, reducing AUC by 6.617%. The most substantial performance drops occurred when discarding the metapath module (-MP), resulting in 9.220% accuracy reduction on FANG and 7.165% AUC decline on HealthStory, emphasizing the critical role of heterogeneous network structure modeling.The multi-head self-attention mechanism (-MHSA) removal led to 7.610% AUC deterioration on HealthStory, confirming the importance of weighted feature allocation for metapath representations. Similarly, eliminating the attention fusion mechanism (-Attention) reduced PolitiFact’s AUC by 2.199%, indicating the necessity of precise feature integration strategies for political news verification. These experiments collectively demonstrate that synergistic combination of multi-granular semantic parsing, metapath structural modeling, and dynamic attention mechanisms substantially enhances model adaptability.
+Time efficiency(EQ3)
+To assess the runtime performance of MGMP in large-scale social networks, we first examined the variations in AUC across training sets of different proportions and compared it with several baseline models, as illustrated in Fig. 8. Secondly, we also compared the computational costs of MGMP with those of the baseline models in terms of time and memory, as shown in Table 7. [See PDF for image]
+Fig. 7 t-SNE of the MGMP
+
+Table 6. Quantitative results for ablation study.(%)
+Method
+FANG
+HealthStory
+PolitiFact
+
+ACC.
+AUC
+ACC.
+AUC
+ACC.
+AUC
+
+-MG
+77.305
+79.153
+58.824
+66.083
+85.000
+87.144
+
+-MG(F)
+79.433
+80.732
+62.185
+70.400
+86.667
+83.362
+
+-MG(C)
+80.142
+80.159
+62.605
+69.482
+87.500
+87.565
+
+-MP
+76.596
+78.331
+60.924
+68.241
+83.333
+86.280
+
+-MHSA
+80.142
+81.535
+61.765
+67.796
+87.500
+84.163
+
+-Attention
+82.270
+83.548
+65.126
+72.453
+91.667
+91.983
+
+MGMP
+85.816
+87.040
+68.067
+75.406
+94.167
+94.182
+
+This table presents the results of ablation experiments conducted on different components of the MGMP
+
+[See PDF for image]
+Fig. 8 A line chart showing the AUC values of different models with varying proportions of the training set, from left to right, for the FANG dataset, the HealthStory dataset, and the PolitiFact dataset
+
+Table 7. Running time and GPU memory cost
+Method
+FANG
+HealthStory
+PolitiFact
+
+Time
+Mem (MB)
+Time
+Mem (MB)
+Time
+Mem (MB)
+
+(s/epoch)
+(s/epoch)
+(s/epoch)
+
+RoBERTa
+6.370
+3244.743
+3.222
+1006.324
+4.365
+988.220
+
+SAFER
+32.544
+2679.201
+31.006
+1981.047
+26.142
+2528.176
+
+HGATRD
+18.367
+3053.093
+19.411
+2005.223
+13.439
+1354.436
+
+Hetero-SCAN
+10.342
+3634.106
+20.149
+2479.109
+11.326
+1906.117
+
+MGMP w/Attention
+1.446
+2098.223
+0.716
+957.340
+1.251
+700.323
+
+MGMP
+0.621
+2647.915
+1.237
+803.771
+0.302
+788.765
+
+
+In the overall performance comparison on the FANG dataset, MGMP’s absolute advantage stands out prominently. Across all training proportions, MGMP achieves the highest AUC values. In small data scenarios, where the training set ratio ranges from 10% to 30%, MGMP’s AUC value at 10% data volume already reaches 82.362%, far exceeding other models. This demonstrates MGMP’s exceptional feature extraction capability with limited samples. In large-scale data scenarios, with training set ratios of 50% to 90%, MGMP’s AUC values continue to increase with data volume, from 85.597% to 89.461%, indicating its efficient utilization of large-scale data. In contrast, Hetero-SCAN’s performance improvement is limited, with only a 1.342-percentage-point increase, suggesting that MGMP’s structural design is better suited for scalability. Furthermore, comparing MGMP with its variant incorporating an Attention mechanism, at 10% data volume, MGMP’s AUC value is 82.362%, while the model that aggregates meta-path instances through Attention is only 76.191%, a significant gap that illustrates the rationality of MGMP’s application of the self-attention mechanism. As data volume increases, the gap between the two widens further. At 90% data volume, MGMP outperforms its Attention-based variant by 7.072%, demonstrating MGMP’s more thorough optimization in big data scenarios. Similarly, in the HealthStory and PolitiFact datasets, MGMP exhibits significant performance advantages across different training proportions. As the training set proportion increases, MGMP’s performance improves more notably, enabling it to better leverage large-scale data for performance enhancement. Additionally, MGMP demonstrates stable performance improvements across different training proportions, showcasing its strong model stability and generalization capability.
+From Table 7, the performance of the MGMP model stands out in terms of runtime and memory consumption across the three datasets: FANG, HealthStory, and PolitiFact. From the perspective of runtime, on the FANG dataset, the MGMP model boasts a runtime of just 0.621s/epoch, significantly lower than all other models. On the HealthStory dataset, although its runtime increases slightly to 1.237s/epoch, this remains far below that of other models. On the PolitiFact dataset, the MGMP model’s runtime is an impressive 0.621s/epoch, demonstrating its efficient processing capabilities. Meanwhile, in terms of memory consumption, the MGMP model also exhibits stable performance. Especially when running quickly, its memory consumption remains relatively low. Taking the PolitiFact dataset as an example, the memory consumption of the MGMP model is only 788.765MB, a figure that is not only lower than that of other models but also further proves the efficiency and stability of the MGMP model in terms of processing speed and resource utilization. In summary, the MGMP model demonstrates exceptional performance in terms of processing speed, memory consumption, and overall stability.
+Parameter analysis(EQ4)
+Number of heads in attention
+The number of attention heads is a vital hyperparameter. Multi-head attention is used for word-level embedding learning, while multi-head self-attention focuses on aggregating meta-path instances. Both help the model capture diverse data aspects and enhance representation. Validating this hyperparameter is essential for model performance, as shown by the AUC heatmap in Fig. 9 across different settings of H and K . [See PDF for image]
+Fig. 9 Heatmap of Attention Head Counts and AUC Values Across Different Datasets: Specifically, from left to right, these represent the FANG dataset, the HealthStory dataset, and the PolitiFact dataset. In these heatmaps, K denotes the Number of Heads in the Attention Mechanism, while H denotes the Number of Heads in the Self-Attention Mechanism
+
+
+From the Fig. 9, it is clearly observable that for all three different datasets, when the values of H and K are low, the AUC values of the model are generally on the lower side. This phenomenon reveals the constraint effect of too few heads on model performance. Specifically, when the number of heads in the model is insufficient, it may not be able to comprehensively and deeply capture the diverse features of the input data, thereby limiting the representation ability of the model. As the values of H and K gradually increase, the AUC values on the FANG and HealthStory datasets exhibit similar trends. They both experience an initial rise, reaching optimal performance when H is 8 and K is 8, and then show a downward trend. This trend may imply that after the number of heads increases to a certain extent, the model begins to introduce redundant information. This redundant information not only fails to provide additional useful information to the model but also increases its complexity and training difficulty, making it difficult for the model to effectively filter and learn truly useful features during the training process. In contrast, in the PolitiFact dataset, the trend of AUC values shows an initial increase and then stabilizes. This indicates that increasing the number of heads to a certain extent can indeed improve model performance. However, after the number of heads increases to a certain number, the performance improvement becomes insignificant. This phenomenon may be related to the relatively small amount of data in the PolitiFact dataset. In cases with limited data, an excessive number of heads may cause the model to be more prone to overfitting, thereby failing to maintain good generalization ability on unseen data.
+Number of meta-path instances
+Table 3 lists the meta-paths in the dataset. To validate their effectiveness, experiments with various meta-path combinations are conducted in this paper using the FANG dataset. These include basic single-path combinations (CSC, CUC), deep semantics analysis (CSSC, CUUC), multi-hop paths (UCSC, SCUC), and combinations of dual, triple, and quad paths. The results are presented in Table 8. Table 8. AUC values for different numbers of meta-path instances under various meta-path combinations in the FANG dataset.(%)
+Metapath
+40
+60
+80
+100
+120
+140
+160
+180
+
+CSC
+64.460
+64.891
+65.511
+66.148
+66.727
+67.193
+67.391
+66.148
+
+CUC
+66.148
+69.896
+70.907
+71.374
+72.431
+72.869
+72.822
+71.536
+
+CSSC
+63.443
+63.805
+64.260
+66.762
+68.370
+70.472
+69.344
+69.897
+
+CUUC
+72.822
+73.012
+74.269
+74.893
+75.084
+76.379
+76.147
+75.286
+
+UCSCU
+74.117
+74.893
+75.478
+77.152
+78.018
+77.588
+75.557
+75.369
+
+SCUCS
+76.571
+76.533
+75.907
+79.463
+79.652
+79.033
+78.052
+78.403
+
+CSSC+CUUC
+73.400
+75.084
+76.536
+76.801
+76.184
+75.286
+74.500
+74.893
+
+CSSC+UCSC
+76.769
+77.152
+78.251
+82.977
+82.357
+80.904
+80.716
+80.088
+
+CSSC+SCUC
+76.801
+78.403
+78.642
+80.716
+80.326
+79.932
+79.266
+79.074
+
+CUC+UCSCU
+75.557
+81.142
+82.196
+81.764
+81.809
+81.532
+79.463
+79.345
+
+CUUC+SCUC
+80.904
+80.716
+84.223
+83.791
+83.173
+81.291
+81.923
+81.891
+
+CUUC+UCSC
+75.907
+79.463
+80.088
+83.875
+83.607
+83.400
+80.716
+79.892
+
+SCUC+UCSC
+82.357
+84.269
+85.081
+85.755
+83.441
+83.791
+83.173
+83.053
+
+UCSC+SCUC+CSSC
+80.474
+84.039
+84.699
+83.441
+82.543
+82.825
+82.394
+81.142
+
+UCSC+SCUC+CUUC
+80.281
+84.852
+87.040
+86.299
+86.923
+85.755
+85.285
+85.121
+
+UCSC+CSSC+CUUC
+78.052
+80.326
+82.357
+82.433
+82.000
+81.184
+81.378
+78.727
+
+SCUC+CSSC+CUUC
+78.403
+79.345
+80.088
+81.532
+80.904
+79.463
+80.716
+80.163
+
+CSSC+CUUC+SCUC+UCSC
+81.146
+82.580
+85.670
+85.516
+82.785
+78.018
+77.040
+77.711
+
+
+Experimental results indicate that the user interaction path CUC achieves an AUC of 72.86%, outperforming the content dissemination path CSC with an AUC of 67.391%. This underscores the discriminatory power of user behavior in detecting fake news. The four-hop path CUUC, with an AUC of 76.379%, improves upon CUC, suggesting that deep user relationships help capture group dissemination patterns. SCUC peaks at an AUC of 79.652%, surpassing other single paths. The dual-path combination SCUC+UCSC exceeds SCUC, emphasizing the synergy between different node types. Similarly, CSSC+UCSC significantly improves over CSSC, proving the value of content-user heterogeneous features. However, the combination CSSC+CUUC falls below CUUC, suggesting redundancy in long homogeneous paths. The global optimal AUC of 87.04% is achieved by the three-path combination CSCU+SCUC+CUUC, which leverages various paths for comprehensive information capture. While three-path combinations outperform dual-paths by an average of 3.2%, the four-path combination experiences a sharp drop, indicating a risk of over-parameterization. Therefore, careful selection of meta-paths is essential; an appropriate choice can significantly enhance model performance. [See PDF for image]
+Fig. 10 The number of meta-path instances for various meta-path combinations across different datasets is presented. From left to right, the figures depict the HealthStory dataset and the PolitiFact dataset. In these figures, the hyperparameter q represents the number of meta-path instances
+
+[See PDF for image]
+Fig. 11 The variation of AUC values across different news text lengths for various datasets is illustrated. Here, M denotes the length of the news text
+
+
+For the FANG dataset, the UCSC meta-path outlines the news-sharing process, delves into news sources, and uncovers potential correlations between news items. The SCUC meta-path reveals how news sources reach users through content, while also exploring diverse news information through user feedback or behavior analysis. The CUUC meta-path vividly displays the dynamics of news dissemination among users, where news, once noticed by a user, can quickly spread to others through their social networks, influencing the news content that other users focus on. This combination fully demonstrates that in the FANG dataset, news dissemination not only relies on traditional distribution channels but is also significantly influenced by users’ social relationships, reflecting the complexity and diversity of news dissemination patterns in social media environments.
+Additionally, similar ablation studies were conducted in the HealthStory dataset and the PolitiFact dataset, yielding similar conclusions. In the HealthStory dataset, the UCSC+SCUC combination achieves the best performance when the top 120 meta-path instance similarity scores are considered. In the PolitiFact dataset, the UCSCU+CUUC combination achieves the best AUC value of 94.182%, higher than the UCSCU+SCUCS+CUUC combination (91.001%). The details are shown in Fig. 10. These results further confirm the critical role of selecting the appropriate meta-path and their combinations in improving model performance.
+Length of news text
+To gain a deeper understanding of the impact of M setting on model performance, we conducted a detailed analysis specifically on the hyperparameter M, with the results shown in Fig. 11.
+The length of news articles significantly affects classification task performance. Short articles may lack sufficient information, while longer ones tend to improve model performance. For the FANG dataset, AUC peaks at 80 words then declines slightly, stabilizing after 120 words due to padding issues. The HealthStory dataset shows smoother AUC changes with increasing words, reflecting the specialized nature of healthcare news. The PolitiFact dataset AUC increases most significantly with word count, peaking and stabilizing at 100 words. Political datasets may see a sharp AUC rise within 20 to 60 words due to sensational language in early parts of articles.
+Discussion
+Compared to traditional text-based methods like Doc2Vec [64] and TextCNN [5] combined with SVM classifiers for fake news detection, these approaches excel in processing individual text information but often overlook cross-text and cross-context semantic associations, failing to capture the broader fake news dissemination networks formed by shared semantic patterns among different news articles. While RoBERTa [13] and ARG [18] large language models have made significant strides in NLP, they show limitations when applied to global semantic learning. Compared to MGMP, RoBERTa, despite its robust pre-training on large-scale text corpora, may not excel at capturing subtle semantic relationships and patterns across multiple news articles and contexts. Similarly, while ARG has impressive language generation and understanding capabilities, it lacks the precise control and specificity needed to accurately identify and analyze the complex networks within fake news dissemination.
+Unlike homogeneous graph embedding methods (e.g., GCN [39], GraphSAGE [41]) or heterogeneous approaches (e.g., HAN [42]), which prioritize local neighborhoods and overlook global information flows, our MGMP leverages meta-paths to model cross-type node interactions in news dissemination, enhancing flexibility in heterogeneous graph learning. Compared to existing fake news detection frameworks, MGMP addresses critical limitations: (1) SAFER [22] and DECOR [49] simplify multi-typed relationships into homogeneous graphs, losing structural semantics; (2) Hetero-SCAN [27] inadequately integrates dynamic propagation trajectories; (3) HGATRD [26] focuses on text semantics but neglects social-contextual interactions; and (4) most methods fail to preserve semantic commonalities across news items, despite HGATRD word-news subgraph attempt, which ignores textual sequentiality.In contrast, MGMP introduces two innovations: (1) Multi-grained semantic learning that captures global semantic relationships between news articles while preserving textual sequential information, and (2) Meta-path-guided interaction learning that employs multi-head self-attention to model global contextual interactions along defined meta-paths. This dual mechanism enables comprehensive modeling of both semantic dependencies and dissemination patterns, revealing unique fake news propagation regularities. Experiments demonstrate MGMP’s superiority in accuracy and robustness over baselines, attributable to its balanced integration of semantic and structural granularities.
+Although the study has made significant advances in the detection of fake news by introducing an innovative framework based on multi-granularity learning and meta-paths, thereby increasing the accuracy and robustness of the detection, there are also some limitations. As a starting point, we did not fully consider the impact of time on the dynamics of news propagation. The flow of information and influence in the propagation of news changes over time, and the influence and propagation patterns of the same news can vary greatly over time. By analyzing news content and propagation networks statically, the model is unable to capture this dynamic change, which may limit its ability to handle real-time data streams and predict news propagation trends. Second, the quality and diversity of the datasets we use greatly influence the performance of our model.
+Conclusion
+As a result of this study, we propose a fake news detection model, MGMP, with multi-grained semantics and meta-path interaction from a global perspective, aiming to capture global semantic information and global interaction relationships in the propagation network more effectively. The MGMP considers both the fine-grained semantic similarity and relevance between words, as well as the global semantic relationships between different news. Furthermore, it can more effectively capture the global interactions in the news propagation network, providing new insights and methods to address the challenges of fake news and having the potential to provide more reliable and accurate news information for society.
+In the future, we can explore the introduction of time series analysis and dynamic graph models to simulate and predict the temporal dependencies in the news dissemination process, enabling real-time detection of fake news. These dynamic analysis methods will bring new research directions and insights into the field of fake news detection.
+Acknowledgements
+This work was supported by the National Natural Science Foundation of China under Grant 72074117 Postgraduate Research & Practice Innovation Program of Jiangsu Province KYCX24-2388.
+Author Contributions
+Conceptualization, methodology, funding acquisition, supervision: Baozhen Lee; methodology, software, formal analysis and investigation, writing original draft preparation: Dandan Cao; visualization, writing review and editing: Tingting Zhang. All authors have read and agreed to the published version of the manuscript.
+Data Availability
+The datasets analysed during the current study are available from the corresponding author on reasonable request.
+Declarations
+Conflicts of Interest
+The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+Publisher's Note
+Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References
+1. Shu, K; Sliva, A; Wang, S; Tang, J; Liu, H. Fake news detection on social media: A data mining perspective. SIGKDD Explor Newsl ; 2017; 19 , 1 pp. 22-36. [DOI: https://dx.doi.org/10.1145/3137597.3137600]
+2. Castillo C, Mendoza M, Poblete B (2011) Information credibility on twitter. In: Proceedings of the 20th International Conference on World Wide Web. WWW’11, pp 675–684. https://doi.org/10.1145/1963405.1963500
+3. Rubin, VL; Lukoianova, T. Truth and deception at the rhetorical structure level. J Assoc Inf Sci Technol ; 2015; 66 , 5 pp. 905-917. [DOI: https://dx.doi.org/10.1002/asi.23216]
+4. Potthast M, Kiesel J, Reinartz K, Bevendorff J, Stein B (2018) A stylometric inquiry into hyperpartisan and fake news. In: Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), pp 231–240. https://doi.org/10.18653/v1/P18-1022
+5. Kim Y (2014) Convolutional neural networks for sentence classification. In: Proceedings of the 2014 conference on empirical methods in natural language processing (EMNLP). EMNLP’14, pp 1746–1751. https://doi.org/10.3115/v1/D14-1181
+6. Liu P, Qiu X, Huang X (2016) Recurrent neural network for text classification with multi-task learning. In: Proceedings of the 25th international joint conference on artificial intelligence. IJCAI’16, pp 2873–2879. https://doi.org/10.48550/arXiv.1605.05101
+7. Hu L, Yang T, Zhang L, Zhong W, Tang D, Shi C, Duan N, Zhou M (2021) Compare to the knowledge: Graph neural fake news detection with external knowledge. In: Proceedings of the 59th annual meeting of the association for computational linguistics and the 11th international joint conference on natural language processing, pp 754–763. https://doi.org/10.18653/v1/2021.acl-long.62
+8. Koloski B, Stepišnik Perdih T, Robnik-Šikonja M, Pollak S, Škrlj B (2022) Knowledge graph informed fake news classification via heterogeneous representation ensembles. Neurocomput 496(C)208–226. https://doi.org/10.1016/j.neucom.2022.01.096
+9. Popat K, Mukherjee S, Strötgen J, Weikum G (2018) Credeye: A credibility lens for analyzing and explaining misinformation. In: Companion proceedings of the the web conference 2018. WWW’18, pp 155–158. https://doi.org/10.1145/3184558.3186967
+10. Cheng M, Nazarian S, Bogdan P (2020) Vroc: Variational autoencoder-aided multi-task rumor classifier based on text. In: Proceedings of the web conference 2020. WWW’20, pp 2892–2898. https://doi.org/10.1145/3366423.3380054
+11. Xiao L, Zhang Q, Shi C, Wang S, Naseem U, Hu L (2024) Msynfd: Multi-hop syntax aware fake news detection. In: Proceedings of the ACM on web conference 2024. WWW’24, pp 4128–4137. https://doi.org/10.1145/3589334.3645468
+12. Devlin J, Chang MW, Lee K, Toutanova K (2019) BERT: Pre-training of deep bidirectional transformers for language understanding. In: Proceedings of the 2019 conference of the North American chapter of the association for computational linguistics: Human language technologies, Vol 1 (Long and Short Papers), pp 4171–4186. https://doi.org/10.18653/v1/N19-1423
+13. Zhuang L, Wayne L, Ya S, Jun Z (2021) A robustly optimized BERT pre-training approach with post-training. In: Proceedings of the 20th Chinese national conference on computational linguistics, pp 1218–1227. https://doi.org/10.1007/978-3-030-84186-7_31
+14. Zhang X, Cao J, Li X, Sheng Q, Zhong L, Shu K (2021) Mining dual emotion for fake news detection. In: Proceedings of the web conference 2021. WWW’21, pp 3465–3476. https://doi.org/10.1145/3442381.3450004
+15. Kaliyar, RK; Goswami, A; Narang, P. Fakebert: Fake news detection in social media with a bert-based deep learning approach. Multim Tools Appl ; 2021; 80 , 8 pp. 11765-11788. [DOI: https://dx.doi.org/10.1007/S11042-020-10183-2]
+16. Mosallanezhad A, Karami M, Shu K, Mancenido MV, Liu H (2022) Domain adaptive fake news detection via reinforcement learning. In: Proceedings of the ACM web conference 2022. WWW’22, pp 3632–3640. https://doi.org/10.1145/3485447.3512258
+17. Sheng Q, Cao J, Zhang X, Li R, Wang D, Zhu Y (2022) Zoom out and observe: News environment perception for fake news detection. In: Proceedings of the 60th annual meeting of the association for computational linguistics (Volume 1: Long Papers), pp 4543–4556. https://doi.org/10.18653/v1/2022.acl-long.311
+18. Hu B, Sheng Q, Cao J, Shi Y, Li Y, Wang D, Qi P (2024) Bad actor, good advisor: exploring the role of large language models in fake news detection. In: Proceedings of the 38th AAAI conference on artificial intelligence and 36th conference on innovative applications of artificial intelligence and 14th symposium on educational advances in artificial intelligence. AAAI’24/IAAI’24/EAAI’24. https://doi.org/10.1609/aaai.v38i20.30214
+19. Nan Q, Sheng Q, Cao J, Hu B, Wang D, Li J (2024) Let silence speak: Enhancing fake news detection with generated comments from large language models. In: Proceedings of the 33rd ACM international conference on information and knowledge management. CIKM’24, pp 1732–1742. https://doi.org/10.1145/3627673.3679519
+20. Touvron H, Lavril T, Izacard G, Martinet X, Lachaux MA, Lacroix T, Rozière B, Goyal N, Hambro E, Azhar F, Rodriguez A, Joulin A, Grave E, Lample G (2023) Llama: Open and efficient foundation language models. ArXiv preprint abs/2302.13971
+21. Bian, T; Xiao, X; Xu, T; Zhao, P; Huang, W; Rong, Y; Huang, J. Rumor detection on social media with bi-directional graph convolutional networks. Proceedings of the AAAI conference on artificial intelligence ; 2020; 34 , pp. 549-556. [DOI: https://dx.doi.org/10.1609/aaai.v34i01.5393]
+22. Chandra S, Mishra P, Yannakoudakis H, Nimishakavi M, Saeidi M, Shutova E (2020) Graph-based modeling of online communities for fake news detection. arXiv preprint arXiv:2008.06274
+23. Yin, S; Zhu, P; Wu, L; Gao, C; Wang, Z. Gamc: an unsupervised method for fake news detection using graph autoencoder with masking. Proceedings of the AAAI conference on artificial intelligence ; 2024; 38 , pp. 347-355. [DOI: https://dx.doi.org/10.1609/aaai.v38i1.27788]
+24. Jin Y, Wang X, Yang R, Sun Y, Wang W, Liao H, Xie X (2022) Towards fine-grained reasoning for fake news detection. In: Proceedings of the AAAI conference on artificial intelligence, vol 36, pp 5746–5754. arXiv2110.15064
+25. Su X, Yang J, Wu J, Zhang Y (2023) Mining user-aware multi-relations for fake news detection in large scale online social networks. In: Proceedings of the 16th ACM international conference on web search and data mining. WSDM’23, pp 51–59. https://doi.org/10.1145/3539597.3570478
+26. Huang Q, Yu J, Wu J, Wang B (2020) Heterogeneous graph attention networks for early detection of rumors on twitter. In: 2020 international joint conference on neural networks (IJCNN), pp 1–8. https://doi.org/10.1109/IJCNN48605.2020.9207582
+27. Cui J, Kim K, Na SH, Shin S (2022) Meta-path-based fake news detection leveraging multi-level social context information. In: Proceedings of the 31st ACM international conference on information & knowledge management. CIKM’22, pp 325–334. https://doi.org/10.1145/3511808.3557394
+28. Yu F, Liu Q, Wu S, Wang L, Tan T (2017) A convolutional approach for misinformation identification. In: Proceedings of the 26th international joint conference on artificial intelligence. IJCAI’17, pp 3901–3907. https://doi.org/10.24963/ijcai.2017/545
+29. Koloski, B; Stepišnik Perdih, T; Robnik-Šikonja, M; Pollak, S; Škrlj, B. Knowledge graph informed fake news classification via heterogeneous representation ensembles. Neurocomputing ; 2022; 496 , pp. 208-226. [DOI: https://dx.doi.org/10.1016/j.neucom.2022.01.096]
+30. Hu B, Sheng Q, Cao J, Zhu Y, Wang D, Wang Z, Jin Z (2023) Learn over past, evolve for future: Forecasting temporal trends for fake news detection. In: Proceedings of the 61st annual meeting of the association for computational linguistics (Volume 5: Industry Track), pp 116–125. https://doi.org/10.18653/v1/2023.acl-industry.13
+31. Zhu, Y; Sheng, Q; Cao, J; Nan, Q; Shu, K; Wu, M; Wang, J; Zhuang, F. Memory-guided multi-view multi-domain fake news detection. IEEE Trans Knowl Data Eng ; 2023; 35 , 7 pp. 7178-7191. [DOI: https://dx.doi.org/10.1109/TKDE.2022.3185151]
+32. Liu F, Zhang X, Liu Q (2023) An emotion-aware approach for fake news detection. IEEE Trans Comput Soc Syst 1–9. https://doi.org/10.1109/TCSS.2023.3335269
+33. Indu, V; Thampi, SM. Misinformation detection in social networks using emotion analysis and user behavior analysis. Patt Recognit Lett ; 2024; 182 , pp. 60-66. [DOI: https://dx.doi.org/10.1016/j.patrec.2024.04.007]
+34. Zhang Y, Ma X, Wu J, Yang J, Fan H (2024) Heterogeneous subgraph transformer for fake news detection. In: Proceedings of the ACM web conference 2024. WWW’24, pp 1272–1282. https://doi.org/10.1145/3589334.3645680
+35. Alghamdi, J; Lin, Y; Luo, S. Unveiling the hidden patterns: A novel semantic deep learning approach to fake news detection on social media. Eng Appl Artif Intell ; 2024; 137 , [DOI: https://dx.doi.org/10.1016/j.engappai.2024.109240] 109240.
+36. Rakib Mollah MA, Kabir MMJ, Kabir M, Reza MS (2023) Detection of fake news with roberta based embedding and modified deep neural network architecture. In: 2023 26th international conference on computer and information technology (ICCIT), pp 1–6. https://doi.org/10.1109/ICCIT60459.2023.10441206
+37. Zhang, Z; Lv, Q; Jia, X; Yun, W; Miao, G; Mao, Z; Wu, G. Gbca: Graph convolution network and bert combined with co-attention for fake news detection. Patt Recognit Lett ; 2024; 180 , pp. 26-32. [DOI: https://dx.doi.org/10.1016/j.patrec.2024.02.014]
+38. Karaoğlan, KM. Novel approaches for fake news detection based on attention-based deep multiple-instance learning using contextualized neural language models. Neurocomputing ; 2024; 602 , [DOI: https://dx.doi.org/10.1016/j.neucom.2024.128263] 128263.
+39. Kipf TN, Welling M (2017) Semi-supervised classification with graph convolutional networks. In: 5th international conference on learning representations, ICLR, Toulon, France, April 24-26, 2017, Conference track proceedings. https://doi.org/10.48550/arXiv:1609.02907
+40. Velikovi P, Cucurull G, Casanova A, Romero A, Lió P, Bengio Y (2018) Graph attention networks. Int Conf Learn Represent. arXiv1710.10903
+41. Hamilton WL, Ying R, Leskovec J (2017) Inductive representation learning on large graphs. In: Proceedings of the 31st international conference on neural information processing systems. NIPS’17, vol 30, pp 1025–1035. https://doi.org/10.48550/arXiv:1706.02216
+42. Han Y, Karunasekera S, Leckie C (2020) Graph neural networks with continual learning for fake news detection from social media. arXiv:2007.03316
+43. Shu K, Wang S, Liu H (2019) Beyond news contents: The role of social context for fake news detection. In: Proceedings of the 12th ACM international conference on web search and data mining. WSDM’19, pp 312–320. https://doi.org/10.1145/3289600.3290994
+44. Zhang C, Song D, Huang C, Swami A, Chawla NV (2019) Heterogeneous graph neural network. In: Proceedings of the 25th ACM SIGKDD international conference on knowledge discovery & data mining. KDD’19, pp 793–803. https://doi.org/10.1145/3292500.3330961
+45. Li M, Zhang Y, Xu H, Li X, Gao C, Wang Z (2025) Learning complex heterogeneous multimodal fake news via social latent network inference. arXiv preprint arXiv:2501.15508
+46. Nguyen, VH; Sugiyama, K; Nakov, P; Kan, MY. Fang: leveraging social context for fake news detection using graph representation. Commun. ACM ; 2022; 65 , 4 pp. 124-132. [DOI: https://dx.doi.org/10.1145/3517214]
+47. Yuan C, Ma Q, Zhou W, Han J, Hu S (2019) Jointly embedding the local and global relations of heterogeneous graph for rumor detection. 2019 IEEE international conference on data mining (ICDM), pp 796–805. https://doi.org/10.1109/ICDM.2019.00090
+48. Yang R, Wang X, Jin Y, Li C, Lian J, Xie X (2022) Reinforcement subgraph reasoning for fake news detection. In: Proceedings of the 28th ACM SIGKDD conference on knowledge discovery and data mining. KDD’22, pp 2253–2262. https://doi.org/10.1145/3534678.3539277
+49. Wu J, Hooi B (2023) Decor: Degree-corrected social graph refinement for fake news detection. In: Proceedings of the 29th ACM SIGKDD conference on knowledge discovery and data mining. KDD’23, pp 2582–2593. https://doi.org/10.1145/3580305.3599298
+50. Truica C, Apostol ES, Marogel M, Paschke A (2024) GETAE: graph information enhanced deep neural network ensemble architecture for fake news detection. CoRR arXiv:2412.01825
+51. Hu L, Yang T, Zhang L, Zhong W, Tang D, Shi C, Duan N, Zhou M (2021) Compare to the knowledge: Graph neural fake news detection with external knowledge. In: Proceedings of the 59th annual meeting of the association for computational linguistics and the 11th international joint conference on natural language processing (Volume 1: Long Papers), pp 754–763. https://doi.org/10.18653/v1/2021.acl-long.62
+52. Lu YJ, Li CT (2020) GCAN: Graph-aware co-attention networks for explainable fake news detection on social media. In: Proceedings of the 58th annual meeting of the association for computational linguistics, pp 505–514. https://doi.org/10.18653/v1/2020.acl-main.48
+53. Wang, H; Tang, P; Kong, H; Jin, Y; Wu, C; Zhou, L. Dhcf: Dual disentangled-view hierarchical contrastive learning for fake news detection on social media. Inf Sci ; 2023; 645 , [DOI: https://dx.doi.org/10.1016/j.ins.2023.119323] 119323.
+54. Han, L; Zhang, X; Zhou, Z; Liu, Y. A multifaceted reasoning network for explainable fake news detection. Inf Process Manag ; 2024; 61 , 6 [DOI: https://dx.doi.org/10.1016/j.ipm.2024.103822] 103822.
+55. Zhu J, Gao C, Yin Z, Li X, Kurths J (2024) Propagation structure-aware graph transformer for robust and interpretable fake news detection. In: Proceedings of the 30th ACM SIGKDD conference on knowledge discovery and data mining. KDD’24, pp 4652–4663. https://doi.org/10.1145/3637528.3672024
+56. Gong S, Sinnott RO, Qi J, Paris C (2024) Less is more: Unseen domain fake news detection via causal propagation substructures. CoRR arXiv:2411.09389
+57. Soga, K; Yoshida, S; Muneyasu, M. Exploiting stance similarity and graph neural networks for fake news detection. Patt Recognit Lett ; 2024; 177 , pp. 26-32. [DOI: https://dx.doi.org/10.1016/j.patrec.2023.11.019]
+58. Sun, Y; Han, J. Mining heterogeneous information networks: principles and methodologies. Synth LectData Min Knowl Discov ; 2012; 3 , 2 pp. 1-159.653497 [DOI: https://dx.doi.org/10.2200/S00433ED1V01Y201207DMK00]
+59. Fu X, Zhang J, Meng Z, King I (2020) Magnn: Metapath aggregated graph neural network for heterogeneous graph embedding. In: Proceedings of the web conference 2020. WWW’20, pp 2331–2341. https://doi.org/10.1145/3366423.3380297
+60. Zhou X, Yi Y, Jia G (2021) Path-rotate: Knowledge graph embedding by relational rotation of path in complex space. In: 2021 IEEE/CIC international conference on communications in China (ICCC), pp 905–910. https://doi.org/10.1109/ICCC52777.2021.9580273
+61. Dai, E; Sun, Y; Wang, S. Ginger cannot cure cancer: Battling fake health news with a comprehensive data repository. Fourteenth International AAAI conference on web and social media ; 2020; 14 , pp. 853-862. [DOI: https://dx.doi.org/10.1609/icwsm.v14i1.7350]
+62. Shu K, Mahudeswaran D, Wang S, Lee D, Liu H (20230) Fakenewsnet: A data repository with news content, social context, and spatiotemporal information for studying fake news on social media. Big data 8(3)171–188. https://doi.org/10.1089/big.2020.0062
+63. Shu, K; Sliva, A; Wang, S; Tang, J; Liu, H. Fake news detection on social media: A data mining perspective. SIGKDD Explor Newsl ; 2017; 19 , 1 pp. 22-36. [DOI: https://dx.doi.org/10.1145/3137597.3137600]
+64. Le Q, Mikolov T (2014) Distributed representations of sentences and documents. In: Proceedings of the 31st international conference on international conference on machine learning - Vol 32. ICML’14, pp 1188–1196. https://doi.org/10.48550/arXiv.1405.4053
+65. Mikolov T, Chen K, Corrado G, Dean J (2013) Efficient estimation of word representations in vector space. arXiv preprint arXiv:1301.3781
+66. Chung J, Gülçehre Ç, Cho K, Bengio Y (2014) Empirical evaluation of gated recurrent neural networks on sequence modeling. CoRR arXiv:1412.3555
+67. Sokolova, M; Lapalme, G. A systematic analysis of performance measures for classification tasks. Inf Process Manag ; 2009; 45 , 4 pp. 427-437. [DOI: https://dx.doi.org/10.1016/j.ipm.2009.03.002]
+68. Huang J, Ling CX (2005) Using auc and accuracy in evaluating learning algorithms. IEEE Trans Knowl Data Eng 17(3):299–310. https://doi.org/10.1109/TKDE.2005.50

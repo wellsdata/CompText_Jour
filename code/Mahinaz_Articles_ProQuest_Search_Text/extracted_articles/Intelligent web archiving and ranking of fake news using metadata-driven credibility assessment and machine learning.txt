@@ -1,0 +1,951 @@
+Introduction
+There is not much that separates one digital news platform from another in terms of access and use. Anyone who wants to send a news article can easily and quickly do so between portable smart devices. In case of emergencies and urgent updates, most digital news platforms result to bundled news with very little time spent in detailed and thoughtful analysis. Most of these news articles also run the risk of extremal issues like link rot, content drift, and loss of a digital scared infrastructure. Estimates suggest that nearly 80% of web pages die within a year, and broken link rot affects more than 13% of scholarly references within 27 months 1, 2–3 . Archiving tools do exist, and while some describe long-term access challenges as technical, most access and long-term challenges are is of a semantic and informational nature 4, 5–6 .
+The advent of swiftly changing digital platforms of news made much of traditional print formats obsolete very quickly. Print formats, as a news source, are static and do not easily lend themselves to change in access and dissemination speed 7 . So long as news content is of a single medium curation, validation and the maintenance of a content loom large in the challenge of spaced access. Rapid circulation of automated embedded curation with user contribution and algorithms makes validation and curation difficult 8, 9, 10–11 .
+Existing preservation frameworks such as the Open Archival Information System (OAIS) Reference Model have provided essential guidance for archival storage, ingest, and access protocols 6 . Similarly, the Web Archiving Life Cycle Model (WALCM) offers a practical operational workflow for selection, capture, storage, and replay 12 . However, these established models lack formal, embedded mechanisms for evaluating the credibility or trustworthiness of content before archiving. Even systematic approaches to web preservation emphasize methodological consistency in capture and storage but generally assume that editorial judgment or external validation has already been applied 13 . As a result, current frameworks fall short of integrating automated credibility filtering and ranking—an increasingly urgent requirement given the sophistication and scale of contemporary misinformation.
+Credibility in digital news is a multidimensional construct involving factors such as source authority, journalistic integrity, topical relevance, social endorsement, and alignment with verified information. The sophistication of modern misinformation makes it challenging to distinguish reliable news from manipulative or misleading content. If such content is preserved without credibility checks, it risks distorting historical records, biasing AI models trained on archived data, and misleading future audiences. Although prior research has identified numerous credibility signals (e.g., publisher reputation, author profile, content-based cues, social engagement), most efforts operate separately from archiving workflows, leaving a critical gap between preservation infrastructure and credibility assessment.
+To address this gap, we propose the Enhanced Web Preservation Framework (EWPF)—a comprehensive system that integrates credibility analytics directly into the digital news archiving process. EWPF is built on four pillars: (i) identification of credibility signals via a Multivocal Literature Review, (ii) principled weighting of these signals using the Analytic Hierarchy Process (AHP), (iii) automated classification using machine learning, and (iv) transparent visualization of credibility scores through an interactive interface.
+Accordingly, this study aims to develop and evaluate a credibility-aware framework for digital news preservation that integrates automated trust assessment into the web archiving process. Specifically, the objectives are to (1) define and operationalize digital news credibility through a synthesis of academic and grey literature; (2) identify and weight key credibility factors using the Analytic Hierarchy Process (AHP); (3) construct and annotate an 800-article dataset aligned with these factors; (4) develop and evaluate machine-learning models for credibility classification and ablation analysis; (5) implement the Enhanced Web Preservation Framework (EWPF) embedding credibility scoring within the archiving workflow; and (6) design an interactive interface for transparent visualization of trust scores.
+Research methodology
+In order to achieve the research objectives, a systematic method was produced and implemented which is depicted in the phase-related flowchart in Figure  1. Firstly, we undertook a comprehensive MLR which uncovered 14 notable credibility factors that are applicable in the domain of web content preservation. Based on these credibility factors, the Enhanced Web Preservation Framework (EWPF) and a related Credibility Ranking Algorithm were developed to rank and rate web pages.
+In the next phase, a custom dataset was constructed and linked to the framework, and its prototype and space complexity were estimated. To maximize classification effectiveness, a machine learning algorithm was integrated into the EWPF in the subsequent phase. The implementation of a web interface was later established to enable real-time execution and data fusion, identifying web content as either credible or less credible.
+The details of each step of the methodology are provided in the subsequent sub-sections. Fig. 1 [Images not available. See PDF.]
+Research methodology flowchart.
+
+Identifying credibility factors through MLR
+In a previous research paper, Abrar et al. 14 , we conducted a Multivocal Literature Review (MLR) in the process of identifying and isolating influential factors that lead to the credibility of online news stories. The MLR process involved reviewing a combination of peer-reviewed scholarly materials and grey literature, including technical reports, blogs, and trade publications, to develop a more in-depth view on the data regarding the measurement and definition of credibility in online news contexts.
+The goal of the MLR was to identify thorough, practically applicable, and empirically tested credibility indicators that could serve as the basis for constructing intelligent news filtering and archiving systems. Through stringent inclusion and exclusion criteria, followed by thematic analysis, we identified 14 key credibility factors that are broad in their application and recognized in both academic and practice environments, as shown in Table 1. Table 1. Identified credibility factors through MLR.
+Code
+Credibility Factor
+
+CF-1
+Number of Views
+
+CF-2
+Reputation of the Content Creator
+
+CF-3
+Content Creator’s Followers on Social Media
+
+CF-4
+Impartiality
+
+CF-5
+Frequent Sharing
+
+CF-6
+Number of Likes
+
+CF-7
+Publisher’s Reputation
+
+CF-8
+Source
+
+CF-9
+Relevancy of the Contents
+
+CF-10
+Reader’s Feedback
+
+CF-11
+Background Knowledge
+
+CF-12
+Content Creator’s Association
+
+CF-13
+Belonging to the News Place
+
+CF-14
+Latest Updates
+
+
+Each of these factors contributes uniquely to the overall credibility and archival value of a news report. In this study, we integrate these credibility factors as essential evaluation parameters in the design of our credibility-aware digital preservation system. The thorough integration of these factors into our algorithm and system design ensures that only credible content is given priority for long-term digital archiving.A detailed canonical mapping of these 14 credibility factors, including their transformations and weights, is provided in Section Canonical mapping of credibility factors.
+Development of EWPF
+Building upon the general web preservation framework proposed by Muzammil et al. 13 , we developed an Enhanced Web Preservation Framework (EWPF) specifically tailored to preserve credible digital news stories. This was achieved by explicitly integrating the credibility factors identified through the MLR 14 , as presented in Table 1, into each step of the framework. The overall structure of the proposed EWPF is illustrated in Fig. 2. Fig. 2 [Images not available. See PDF.]
+Enhanced web preservation framework (EWPF).
+
+The following subsections systematically describe the steps involved in developing EWPF for preserving credible digital news stories and detail the integration of each credibility factor within the framework.
+Steps in developing EWPF (process overview with operationalization)
+I. Defining the Archive Scope. We constrain preservation to the news domain and textual content to optimize storage and retrieval efficiency. Formally, 1
+Operationalization: is resolved via site taxonomy and schema.org types (e.g., NewsArticle); is inferred from MIME and DOM analysis. Sources: HTTP headers, HTML microdata/JSON-LD, sitemap and robots metadata. Thresholds: Non-textual primary objects (audio/video) are excluded unless accompanied by a canonical text transcript.
+II. Understanding the Target Web Structure (Pre-credibility Filtering). We first gate content by topical/lexical relevance independent of trust signals. Let 2
+where C is crawled content and q is a topic/query context.
+Operationalization: with default BM25 parameters , . Sources: Full text from DOM extraction; query terms seeded from collection scope notes and controlled vocabularies. Threshold : chosen on a validation split to maximize F1 for “on-topic” labels.
+III. Identifying preservable resources. Target objects include news articles, institutional posts, and relevant long-form blog entries (text-dominant pages). Operationalization: Rule-based URL patterns + DOM heuristics (presence of headline/date/byline/body) with confidence (calibrated on labeled pages).
+IV. Defining the designated community. Primary users (educators, students, researchers, general readers) inform descriptive granularity and access policies. Operationalization: Community requirements mapped to metadata fields (e.g., author, place, event entities) and to retrieval facets.
+V. Prioritizing resources. We allocate capture/curation effort with MoSCoW categories, encoded as: 3
+Operationalization: P ( r ) is derived from the credibility score S ( r ) (see Eq. 5) by discretizer with cut-points learned to maximize macro-F1 between predicted MoSCoW bins and curator labels.
+VI. Selecting capture strategy. We select among browser-based ( b ), crawler-based ( c ), and authoring-system ( a ) capture to maximize fidelity-per-cost: 4
+Operationalization: normalized efficiency (pages/hour success rate / CPU-time); normalized fidelity (resource completeness, dynamic content coverage, replay integrity). Sources: Capture logs, replay QA (checksum match, missing resource rate). Thresholds: Choose per site profile; override to b if JS-heavy pages have .
+VII. Applying the selection policy (credibility gate). Items advance to archival packaging only if their credibility score exceeds : 5
+where S ( r ) is the weighted factor score (defined in §3.4). Threshold : set on a validation fold using ROC analysis (Youden’s J ) and checked against curator workload constraints.
+VIII. Metadata identification. We capture descriptive (title, author, date, outlet), structural (headings, hyperlinks, canonical URL), and administrative (capture date, tool version) metadata. Standards: Dublin Core, PREMIS, and schema.org NewsArticle. Operationalization: Factor-specific fields (e.g., publisher.name, geotags) are persisted for auditability and downstream explanation.
+IX. Archival packaging and access. Resources are packaged in WARC with CDXJ/secondary indexes for full-text and fielded search; integrity ensured via fixity (SHA-256) and Memento-style time-maps. Operationalization: Retrieval ranking may incorporate factor-level features to improve transparency.
+Credibility factors integration within EWPF (operationalization and empirical rationale)
+Let represent the set of literature-derived credibility factors, and their corresponding AHP-derived weights (see Methods, §2). Each factor is normalized to a range [0, 1], and missing values are imputed using the robust median or a domain-specific prior. The overall credibility score for a given resource r is defined as: This score drives both prioritization ( , Eq. 3) and admission filtering (Eq. 5). Each credibility factor contributes to specific steps of the Enhanced Web Preservation Framework (EWPF). Their measurements, operational justifications, and thresholds are summarized below, with a crosswalk provided in Table 2.
+Operational descriptions of credibility factors
+
+- Number of Views (CF1): . Operational justification: Indicates public attention; higher view counts help prioritize high-visibility news during retrieval (Steps v, viii, ix).
+
+- Reputation of Content Creator (CF2): Normalized composite of verified expertise and historical reliability. Operational justification: Strengthens admission and selection policies by favoring credible authors (Steps i, v, vii, ix).
+
+- Followers of Content Creator (CF3): Log-scaled social media followers; capped to avoid bias. Operational justification: Reflects influencer credibility and audience size, improving prioritization and retrieval relevance (Steps i, v, vii, ix).
+
+- Impartiality (CF4): Stance classification score; flags balanced reporting. Operational justification: Filters biased or polarized sources before inclusion in the preservation scope (Step v).
+
+- Frequent Sharing (CF5): Cross-platform share rate normalized to engagement intensity. Operational justification: Indicates viral reach and collective interest, influencing prioritization and ranking (Steps v–ix).
+
+- Number of Likes (CF6): Normalized social endorsement count. Operational justification: Reflects audience agreement; strengthens prioritization and metadata-based retrieval (Steps v–ix).
+
+- Publisher’s Reputation (CF7): Outlet trust score based on verified institutional ratings. Operational justification: Reinforces publisher authority in selection and metadata tagging (Steps v–ix).
+
+- Source Credibility (CF8): Verifies origin via HTTPS, DKIM/DMARC, or institutional URLs. Operational justification: Ensures provenance integrity from initial scoping to access delivery (Steps i, ii, v–ix).
+
+- Content Relevancy (CF9): Topical similarity via BM25/cosine metrics. Operational justification: Aligns archived content with thematic scope, optimizing retrieval relevance (Steps i, ii, v–ix).
+
+- Reader’s Feedback (CF10): Aggregated sentiment and polarity of community comments. Operational justification: Serves as post-publication validation and enhances trust modeling during selection (Steps i, v, vii–ix).
+
+- Background Knowledge (CF11): Claim–evidence overlap using external factual sources. Operational justification: Anchors content credibility in verifiable knowledge bases (Steps i, ii, v–ix).
+
+- Creator’s Association (CF12): Captures author’s institutional or editorial affiliation. Operational justification: Adds provenance accountability, preventing inclusion of unaffiliated or dubious creators (Steps ii, vii–ix).
+
+- Belonging to News Place (CF13): Measures geo-alignment between author origin and event location. Operational justification: Confirms local relevance and contextual legitimacy of news sources (Steps i, ii, v–viii).
+
+- Latest Updates (CF14): , representing recency decay. Operational justification: Promotes timely and up-to-date articles, ensuring temporal accuracy in archival decisions (Steps i, v–ix).
+
+Table 2 Credibility-factor cross-walk with operational justifications ( indicates factor influence at that step; brief one-line operational justification provided per ).
+Factor
+i Scope
+ii Structure
+iii Resource ID
+iv Community
+v Prioritization
+vi Capture
+vii Selection Policy
+viii Metadata
+ix Access/Retrieval
+
+CF1 – Number of Views
+Highlights trending content for archiving
+Prioritizes visibility for selection
+Improves retrieval relevance
+
+CF2 – Creator Reputation
+Filters credible authors early
+Enhances credibility weighting
+Supports selection policy
+Improves retrieval ranking
+
+CF3 – Followers
+Identifies influential creators
+Supports prioritization
+Informs selection
+Boosts recall in retrieval
+
+CF4 – Impartiality
+Ensures balanced reporting
+
+CF5 – Frequent Sharing
+Captures virality cues
+Affects capture scheduling
+Supports selection decisions
+Enhances metadata
+Boosts accessibility
+
+CF6 – Likes
+Indicates social approval
+Improves capture priority
+Informs selection
+Adds engagement metadata
+Improves ranking
+
+CF7 – Publisher Reputation
+Validates institutional trust
+Refines capture filter
+Governs selection
+Ensures reliable metadata
+Assures credible retrieval
+
+CF8 – Source Credibility
+Validates verified origins
+Ensures structural authenticity
+Supports ranking reliability
+Improves capture validation
+Tags source metadata
+Strengthens access trust
+
+CF9 – Content Relevancy
+Aligns with thematic focus
+Filters irrelevant topics
+Guides prioritization
+Affects capture scope
+Enables semantic tagging
+Improves search alignment
+
+CF10 – Reader Feedback
+Incorporates community input
+Connects to user perspectives
+Validates trust metrics
+Informs selection
+Enhances metadata
+Improves feedback-based retrieval
+
+CF11 – Background Knowledge
+Links to external evidence
+Supports factual grounding
+Improves scoring
+Refines capture
+Enhances metadata traceability
+Improves result quality
+
+CF12 – Creator Association
+Maps institutional affiliations
+Validates authorship
+Tags organizational metadata
+Ensures accountable retrieval
+
+CF13 – Belonging to News Place
+Confirms local relevance
+Verifies spatial alignment
+Guides prioritization
+Optimizes capture
+Adds geo-metadata
+
+CF14 – Latest Updates
+Ensures recency
+Prioritizes timely stories
+Triggers dynamic capture
+Tracks version metadata
+Improves freshness in retrieval
+
+
+Independent ground-truth validation
+In order to ensure that the appraisal of the Enhanced Web Preservation Framework was not tainted by any form of possible label effects, circularity was prevented by constructing an independent validation corpus because of the usage of the 14 identified Credibility Factors (CFs). This auxiliary data was 200 digital news samples selected in the different topical areas: politics, health, technology, and social issues). Two independent domain experts, who are formally trained in journalism and annotated each article information verification. The disagreements were decided by consensus and the final credibility labels were cross-verified with. These also contain IFCN-approved repositories like PolitiFact and Snopes. This process ensured that that is, all ground-truth labels were not dependent on the CF-derived framework.
+Equally, validation corpus underwent the same processing pipeline with the primary dataset which includes data normalization. Aggregated credibility scoring, and AHP-based weighting–care should be taken that the labels of the experts were used exclusively to validate and not for model fitting. This process provided opportunity to evaluate the EWPF without bias in relation to its predictive consistency verified fact-check labels.
+Results and comparative evaluation
+Table 3 provides a summary of the comparison between the credibility classification, as predicted by EWPF, and the independent fact-check ground truth. The measures of evaluation were Accuracy, F1-Score, Precision, Recall, and Cohens Kappa to represent inter-source agreement and model reliability. Table 3. Performance of EWPF credibility predictions against independent fact-check ground truth labels.
+Metric
+EWPF vs. Fact-Check Labels
+Interpretation
+
+Accuracy
+0.83
+High overall alignment between predicted and verified labels
+
+F1-Score
+0.81
+Balanced precision–recall performance
+
+Precision
+0.84
+Reliable detection of credible articles
+
+Recall
+0.79
+Stable sensitivity to credible vs. non-credible differentiation
+
+Cohen’s Kappa
+0.78
+Substantial agreement with fact-checker annotations
+
+
+The findings suggest that the EWPF had an 83% and Cohen Kappa of 0.78 which is very high agreement with external fact-checking results. These results confirm the external strength of the framework and substantiate that the suggested explainable 14-factor model reflects the dimensions of credibility that have been identified by independent experts and among fact-checking authorities.
+This validation procedure confirms the empirical plausibility of the framework and ensures the transparency of the methods. This strategy clarifies that EWPF’s credibility ranking is not an internal product but actually explicable and endorses the quality of digital news sources externally.
+Canonical mapping of credibility factors
+To ensure uniformity for all identified credibility factors regarding definitions, transformations, and weights, we provide a standard Credibility Factor (CF) mapping that serves as a single reference point throughout the study. This mapping aligns the factor codes (CF-IDs) presented in Table 4 with their corresponding names, formal definitions, applied transformations, and Analytic Hierarchy Process (AHP)–derived weights. It ensures coherence among Tables  1, 2 the AHP weighting process, and the dataset implementation described in Section  Applying dataset. Table 4 Canonical mapping of credibility factors.
+CF-ID
+Credibility Factor (CF) Name
+Definition
+Transformation Applied
+AHP Weight
+
+CF1
+Number of Views
+Total number of times the news item has been viewed by readers.
+Log-normalized scaling
+0.072
+
+CF2
+Reputation of Content Creator
+Trustworthiness of the author based on verified credentials or expert background.
+Min–max normalization
+0.081
+
+CF3
+Followers of Content Creator
+Total followers or subscribers across the creator’s verified social media platforms.
+Log scaling
+0.066
+
+CF4
+Impartiality
+Degree of neutrality in reporting, free from political or emotional bias.
+Binary encoding (0 = biased, 1 = neutral)
+0.079
+
+CF5
+Frequent Sharing
+Frequency of content sharing across social networks, indicating virality.
+Log normalization
+0.064
+
+CF6
+Number of Likes
+Volume of audience reactions and engagement received on social platforms.
+Log scaling
+0.073
+
+CF7
+Publisher’s Reputation
+Historical trustworthiness and editorial standards of the publishing organization.
+Min–max normalization
+0.087
+
+CF8
+Source Credibility
+Verification and originality of the cited or referenced information source.
+Binary encoding (1 = verified, 0 = unverified)
+0.070
+
+CF9
+Relevancy of Contents
+Degree of topical alignment with ongoing or trending real-world events.
+BM25-based relevancy scoring
+0.089
+
+CF10
+Reader’s Feedback
+Aggregate sentiment and polarity derived from user comments and reactions.
+Sentiment normalization
+0.094
+
+CF11
+Background Knowledge
+Presence of factual support and cross-verifiable external references.
+TF–IDF normalization
+0.077
+
+CF12
+Creator’s Association
+Institutional or organizational affiliation of the content creator.
+Binary encoding (1 = associated, 0 = independent)
+0.083
+
+CF13
+Belonging to News Place
+Whether the content creator has geographic or contextual ties to the event’s location.
+Categorical encoding
+0.065
+
+CF14
+Latest Updates
+Temporal freshness of content relative to the real-time event progression.
+Temporal decay normalization
+0.095
+
+Note. (CF-ID Name Definition Transformation Weight).
+
+Ablation study on the EWPF
+To evaluate the individual impact of each CF defined in the canonical mapping (Section Canonical mapping of credibility factors) on the performance of the EWPF, a comprehensive ablation study was conducted. The objective of this analysis is to determine the extent to which each factor contributes to the final credibility score and ranking of digital news stories.
+For each of the fourteen CFs discussed above in the MLR and ranked through the AHP, I systematically removed each CF one at a time and held the remaining CFs constant. We then evaluated the modified framework again with the F1-score, a well-acknowledged and authoritative statistic of precision, accurate and recall of classification and ranking frameworks.
+Per the definitions of CFs set out in Section Canonical mapping of credibility factors and the transformations and AHP-derived weights, I ensured uniformity across all figures and tables in terms CF-IDs, names, and weights, thus resolving the ambiguities and mismatches I rectified in previous iterations of the experiment. Fig. 3 [Images not available. See PDF.]
+Impact of removing individual credibility factors on framework accuracy.
+
+As illustrated in Table 5, the baseline performance of the EWPF, with all 14 credibility factors included, yielded an F1-score of 0.89. The most significant drop in performance ( F1 = 0.09) occurred with the removal of CF10 (Reader’s Feedback) as shown in Fig. 3. This was followed by CF14 (Latest Updates) ( F1 = 0.07) and CF12 (Content Creator’s Association) ( F1 = 0.07). This implies that crowd-based validation, recentness of information, and author provenance are the most significant components of credibility in the framework proposed. Table 5 Impact of individual credibility factor removal on F1-Score (canonical mapping aligned).
+CF-ID
+Credibility Factor Removed
+F1-Score After Removal
+F1 (Performance Drop)
+
+CF1
+Number of Views
+0.86
+0.03
+
+CF2
+Reputation of Content Creator
+0.85
+0.04
+
+CF3
+Followers of Content Creator
+0.87
+0.02
+
+CF4
+Impartiality
+0.86
+0.03
+
+CF5
+Frequent Sharing
+0.83
+0.06
+
+CF6
+Number of Likes
+0.82
+0.07
+
+CF7
+Publisher’s Reputation
+0.84
+0.05
+
+CF8
+Source Credibility
+0.86
+0.03
+
+CF9
+Relevancy of Contents
+0.85
+0.04
+
+CF10
+Reader’s Feedback
+0.80
+0.09
+
+CF11
+Background Knowledge
+0.81
+0.08
+
+CF12
+Content Creator’s Association
+0.82
+0.07
+
+CF13
+Belonging to News Place
+0.83
+0.06
+
+CF14
+Latest Updates
+0.82
+0.07
+
+
+Top-contributing credibility factors
+The factors producing the largest performance degradation upon removal were CF10 (Reader’s Feedback), CF14 (Latest Updates), CF12 (Content Creator’s Association), CF11 (Background Knowledge), and CF5 (Frequent Sharing).
+As shown in Fig. 4, these results indicate that social, contextual, and temporal cues play pivotal roles in the framework’s decision-making process. More specifically, reader feedback and user engagement constitute a form of validation after publication, and temporal recency and creator credibility facilitate currency and retention of responsibility. Fig. 4 [Images not available. See PDF.]
+Top contributing credibility factors based on canonical CF mapping.
+
+Least-contributing credibility factors
+Contrastingly, the deletion of CF3 (Followers of Content Creator), CF1 (Number of Views), CF4 (Impartiality), CF8 (Source Credibility) and CF2 (Reputation of Content Creator) led to small decreases in F1-score ( F1<0.04).
+These factors as presented in Fig.  5 are informative in discrete situations, but give weaker marginal information when other stronger features interact in the same context, like community validation and temporal updates. This fact indicates that such less-impactful features may be selectively omitted or down-weighted when there is a constraint on computation or data, without leading to a considerable change in model accuracy. Fig. 5 [Images not available. See PDF.]
+Least contributing credibility factors based on canonical CF mapping.
+
+Interpretation of ablation analysis
+The recalculated ablations demonstrate not just the credibility factors that have the greatest impact on the performance of EWPF, but also why. The analysis gives rise to three major mechanisms, including community validation, temporal grounding, and provenance accountability each working towards a different element of credibility modeling.
+Community / social-proof signals
+
+- CF10 (Reader’s Feedback) is the one where collective judgement is considered, i.e. all the reactions, corrections and confirmations of the crowd are summed up with that gone the individual wants to tamper with this process of self-correction which creates more false negatives on controversial news items.
+
+- CF6 (Number of Likes) and CF5 (Shares Consistently) by their structure are patterns in the public domain of interaction and sharing, and while independent of manipulation, with CF10, they also increase vulnerability to social scrutiny at the start, as they are designed to flag suspicious content in a timely manner.
+
+
+
+Temporal grounding
+
+- CF14 (Latest Updates) is such that the assessments of models indicate the latest state of developing stories. Without this factor, old or obsolete information can be falsely classified as credible creating false positives on stale information
+
+- CF11 (Background Knowledge) brings in factual support making it less dependent on transient or incomplete signals.
+
+
+
+Provenance and accountability
+
+- CF12 (CF12 (Content Creator’s Association) associates authors with reputable organizations or institutions, which imposes accountability and preserving attributable authorship. Not including this aspect compromises the reliability of the sources whose affiliations are not very clear.
+
+- CF7 (Publisher Reputation) fills this in as it models editorial reliability, which implies consistency with the greater institutional credibility terrain.
+
+
+
+Lower-impact signals
+Other factors CF1 (Number of Views), CF2 (Reputation of Content Creator), CF3 (Followers), CF4 (Impartiality) and CF8). (Source Credibility) show reduced declines in performance. Their impacts tend to be in more vigor with social, temporal or provenance characteristics, and diminishing marginal contributions emerge as a result of the addition of these primary cues.
+Complementarity and deployment guidance
+Community (CF10), temporal (CF14 + CF11) and provenance (CF12 + CF7) signals are complementary to each other establishing a consistent basis of estimation of credibility. We suggest that we focus on these high-impact deployments in the first place in practical deployments factors as a subset of core features, and adding CF5 and CF6 as extra bridge features to improve early recall on live or other developing news events. Less important factors may be incorporated without penalty to achieve a tradeoff between interpretability and the cost of computing.
+Development of credibility ranking algorithm
+In order to facilitate smart digital preservation involving credibility, we came up with a powerful and understandable algorithm that we refer to as Digital News Credibility and Ranking Algorithm (DNCRA) (see Algorithm 1). The algorithm scores the credibility of each incoming story of news based on 14 proven credibility predictors discovered through our Multivocal Literature Review (MLR) and subject poll. These cues are properties of source credibility, author credibility, linguistic clues and cross-source congruence.
+Our Credibility Ranking Algorithm occurs as a problem of multi-criteria decision analysis (MCDA) where different indicators are required to be normatively combined into a single score, which is policy consistent. We use the Analytic Hierarchy Process (AHP) since it produces expert value trade-offs through a pairwise comparison, produces ratio scale weights that can be inputted to an additive value model, and is governed by inherent governance due to documented judgment matrices and consistency indices. This transparency allows weight perturbation auditability, version control, and principled sensitivity analysis, which are crucial in preservation pipelines that use explicit risk preferences. Conversely, data-based weighting systems like learning-to-rank assume large, high-quality ground-truth rankings; in systems of credibility, labels are limited, noisy or proxy engagement cues which might be miscalibrated with trustworthiness and subject to gameplay. AHP thus provides a theoretically based, explainable and policy controllable, basis of weighting with data-driven approaches as further refinements when vetted labels can be used.
+The algorithm will follow the following steps: - Credibility indicator extraction: For each news story, it identifies relevant credibility features using a dedicated module aligned with our EWPF up to Step 9.
+
+- Numerical normalization: Each credibility factor is converted into a normalized numerical value (e.g., via min-max scaling or a defined scoring rubric).
+
+- Ranking table (AHP Weights): The algorithm employs a fixed Analytic Hierarchy Process (AHP)-based ranking table of relative importance of each factor (weights are the results of expert pairwise comparisons). In order to further improve the transparency of the derivation of the factor weights, we solicited the indicator weights based on the Analytic Hierarchy Process (AHP) with a balanced expert panel (N = 12), which consisted of journalism/media verification (3), information retrieval/NLP (3), security (3), and data science (3). The 14 credibility indicators were independently and anonymously assessed using the Saaty 19 scale; pairwise comparisons of the 14 creditworthiness measures were aggregated with the help of the geometric mean and the Consistency Ratio (CR) of a matrix was calculated. Matrices with CR which were greater than 0.10 were returned to the panel to undergo a second, Delphi-style round in order to explain discrepancies, where final weights could be normalized such that they added up to 1. To measure inter-expert agreement, we calculated the Kendall coefficient of concordance (W = 0.81, 95% CI 0.72 0.88) and presented the interquartile range (IQR) of weights of each indicator to describe the dispersion. In order to reduce bias, we offered standardized definitions and examples of the indicators, and judging in isolation to reduce anchoring and dominance, balanced panel representation across sectors, and noted/revealed conflicts of interest (there was no deployment authority among panelists). Sensitivity analyses were then done with normalized weights altered by 10-20% up and down, with rankings recomputed, and the robustness summarized. through the between baseline and perturbed rankings as measured by Kendall (0.93) and the percentage of items that change by more than k = 5 positions (7.0). Anonymized pair-wise-comparison matrices, raw and normalized weights, CR values, and analysis. To make scripts reproducible, they are given in the supplementary materials.
+
+- Weighted score calculation: For every news item, a weighted sum of factor scores is computed to generate the final credibility score.
+
+- Batch processing & ranking: All news items are processed, scored, and sorted in descending order of credibility scores.
+
+- Optional enhancements:
+- Thresholding: A minimum credibility score can be applied to filter out low-trust items.
+
+- Explainability Layer: A SHAP (SHapley Additive exPlanations)-based optional module can highlight the contribution of each factor to a story’s credibility.
+
+- Dynamic Weight Update: The AHP table can be periodically updated using ongoing crowd- or expert-sourced feedback.
+
+
+
+
+This algorithm serves as a central module within our EWPF and ensures that only credible and trustworthy content is prioritized for long-term digital archiving.
+
+Applying dataset
+We have applied transformations for proper normalization across the dataset for each of the fourteen credibility factors illustrated in the canonical mapping (Section Canonical mapping of credibility factors). To evaluate the efficacy of our Enhanced Web Preservation Framework (EWPF), we developed and used a custom dataset of 800 digital news articles, encompassing important metadata and semi-automated extraction of credibility factors. For consistency and standardization of disparate data types, all credibility factors were transformed into a numeric value in accordance with defined transformation functions. This section discusses our methodological approach to data extraction and feature processing.
+Number of views
+To capture the popularity of a news item, we implemented a scoring function f ( Q ) based on the raw number of views Q . The function is defined as: 6
+This mapping can normalize viewership into a 1–10 scale to allow for later processing. This scoring metric was applied directly to the dataset (Column Views_Score) and used later in the final calculation of credibility (see Equation  14).
+Belonging to the news place
+To evaluate geo-authenticity, we verified whether the content creator’s residence aligns with the location mentioned in the news story using: 7
+This binary variable captures spatial relevance—a critical determinant of contextual authenticity.
+Source
+Source reputation was scored based on a ranking derived from leading Pakistani news channel metrics aggregated from public repositories. We mapped channels to scores as follows in Table 6: Table 6. Channel mapping.
+Rank
+Channel Name
+Score
+
+1st
+Channel-1
+5
+
+2nd
+Channel-2
+4
+
+3rd
+Channel-3
+3
+
+4th
+Channel-4
+2
+
+5th
+Channel-5
+1
+
+Unranked
+—
+0
+
+
+This source score, labeled Source_Score , was a weighted component in the final scoring model (see Equation 14).
+Followers on social media
+Social reach was quantified via author Twitter followers. Table 7 lists anonymized sample records: Table 7. Social media accounts and their followers.
+ID
+Accounts
+Account ID
+Number of Followers
+
+1
+Journalist-1
+@Journalist-1
+20.4k
+
+2
+Journalist-2
+@Journalist-2
+2.4M
+
+3
+Journalist-3
+@Journalist-3
+33.5k
+
+4
+Journalist-4
+@Journalist-4
+361.8k
+
+5
+Journalist-5
+@Journalist-5
+2.1M
+
+6
+Journalist-6
+@Journalist-6
+3.8M
+
+7
+Journalist-7
+@Journalist-7
+24.3k
+
+8
+Journalist-8
+@Journalist-8
+22.6k
+
+9
+Journalist-9
+@Journalist-9
+3.1M
+
+10
+Journalist-10
+@Journalist-10
+1.8M
+
+11
+Journalist-11
+@Journalist-11
+1.7M
+
+12
+Journalist-13
+@Journalist-13
+3.7M
+
+13
+Journalist-14
+@Journalist-14
+8.1M
+
+14
+Journalist-15
+@Journalist-15
+3.9k
+
+15
+Journalist-16
+@Journalist-16
+106
+
+16
+Journalist-17
+@Journalist-17
+5.1M
+
+17
+Journalist-18
+@Journalist-18
+1.1M
+
+18
+Journalist-19
+@Journalist-19
+5.9M
+
+19
+Journalist-20
+@Journalist-20
+3.1M
+
+20
+Journalist-21
+@Journalist-21
+6447.7k
+
+21
+Journalist-22
+@Journalist-22
+40.4k
+
+22
+Journalist-23
+@Journalist-23
+556.6k
+
+23
+Journalist-24
+@Journalist-24
+3.4M
+
+24
+Journalist-25
+@Journalist-25
+3.5M
+
+25
+Journalist-26
+@Journalist-26
+5.1M
+
+
+Followers were transformed using the same scoring function from Equation 6, denoted here as: 8
+This metric was labeled Followers_Score and contributed to both influence and reputation.
+Reputation of the content creator
+We directly translated the authors’ follower rankings into reputation scores. The author with the highest followers received a score of 10, and the lowest received 1: 9
+This helped represent audience influence more robustly in the scoring model.
+Number of likes
+Engagement via likes was modeled using a range-based scoring function: 10
+This normalized interaction metric ( Likes_Score ) was used to reflect article reception and popularity.
+Readers’ feedback
+A dual-polarity scoring system was implemented where reader comments were classified as positive or negative. A composite score was calculated as: 11
+This helped gauge trust, sentiment, and perceived validity.
+Latest updates
+Update reliability was modeled with a bipolar scale: 12
+Values close to 5 implied minimal correction and strong accuracy; negative values implied a need for corrections, hence lower credibility.
+Background knowledge
+Expertise matching was conducted by comparing a journalist’s field with the news type: 13
+This metric informed the Background_Knowledge field.
+Frequent sharing
+We scored shareability based on a threshold criterion: 14
+This factor acted as a simple binary signal of viral credibility.
+Publisher’s reputation
+The reputation of the publisher is paramount to validate the trustworthiness of digital news articles. To gauge a value to the source, we performed an extensive search of the top news channels from multiple websites. Within these rankings, we consistently found the same channels ranked at the top, including Channel-1 through Channel-13. From these rankings, we calculated the average rankings and identified Channels-1 through Channel-5 as the top five channels.
+To quantify the publisher’s reputation, we assigned credibility scores based on ranking positions:
+- Top-ranked channel = 5
+
+- Second = 4
+
+- Third = 3
+
+- Fourth = 2
+
+- Fifth = 1
+
+
+News stories without a specified or recognized publisher were assigned a score of 0. These numerical values were later used as input in the final credibility value calculation.
+Calculating the final credibility value
+We computed the final credibility score using a weighted linear combination of all normalized factors. The formula used was: 15
+Where each term represents:
+- : Source Score
+
+- : Followers Score
+
+- : Reputation Score
+
+- : Belonging Score
+
+- : Likes Score
+
+- : Feedback Score
+
+- : Update Score
+
+- : Background Knowledge
+
+- : Shareability
+
+The weights (e.g., 12, 14, 10, etc.) were derived via the Analytic Hierarchy Process (AHP) based on expert evaluations.
+Accuracy and space complexity analysis of the EWPF
+To evaluate the effectiveness of the proposed EWPF, we implemented and tested a credibility ranking algorithm (Algorithm 1) designed to systematically assess the trustworthiness of online news articles. This algorithm is central to EWPF’s goal of preserving high-integrity web content.
+Credibility factor extraction and validation
+During the early stages of the algorithm’s development, 14 credibility factors were identified using an MLR encompassing all the relevant academic and grey literature. The identified factors span a wide range of dimensions of credibility including linguistic, contextual, source, and behavioral. The factors were contextualized and strengthened for credibility through validation, consultation and collaboration with academic experts in the domain, and practitioners from the domain. Therefore, the algorithm became more applicable in practice in various digital content verification contexts.
+Credibility scoring mechanism
+After validation, the algorithm assigns arbitrary numbers to each news article as a credibility score, developed from the validated factors weighted contributions. 16
+Where:
+- is the normalized value of credibility factor i ,
+
+- is the empirically derived weight of factor i ,
+
+- , representing the total number of validated factors.
+
+The scoring system yields an interpretable and scalable measure of trustworthiness to enable assessment of online content for both end-users and automated systems. Following extensive tests to determine performance and reliability, the algorithm was found to accurately classify credibility with a low degree of error.
+Space complexity analysis
+In order to evaluate the storage overhead incurred by credibility integration, we performed a space complexity evaluation over a dataset of 800 news articles, as demonstrated in Fig. 6. The cumulative storage required to store the credibility metadata was 18KB, implying an average footprint of: 17
+To project scalability, we estimated the required storage for 1,000 records: 18
+This represents a marginal increase of 4.5 KB, highlighting the algorithm’s lightweight nature and suitability for large-scale integration. Fig. 6 [Images not available. See PDF.]
+Space Complexities of the Archives.
+
+Applying machine learning algorithm on EWPF
+In the next phase of our work, we took a more automated approach by deploying various machine learning (ML) algorithms on the dataset containing digital news articles we obtained with the help of the EWPF and automatically classified the articles with regard to the level of credibility. This was done to conduct a test to determine the ability of various ML models to discriminate between credible and less credible news stories using features that were learned using a feature-rich set with respect to the 14 factors of credibility that we identified. This section describes the preparation of the dataset, the data transformation process, the selected models, the measures of performance, and the visualization. The findings are quite useful in the automation of credibility evaluation using a web preservation system.
+Dataset preparation and preprocessing
+A custom dataset of 800 online news articles was built with the inclusion of metadata like news ID, title, publishing date, and measures for all 14 credibility criteria (e.g., views, likes, author reputation, source, background knowledge, etc.). News articles were manually annotated as credible or less credible based on the total credibility score calculated utilizing the AHP-based Credibility Ranking Algorithm.
+To prepare the dataset for machine learning training, each text field was digitized. Where necessary, normalization and numeric encoding standardization techniques were employed. This step ensured that input features were compatible with various supervised learning models. Additionally, in order to improve the model’s robustness and generalizability, the dataset was split into training and testing portions arranged in the conventional 80/20 split ratio.
+We carried out a stratified 80/20 train-test split while maintaining class prevalence. All cross-validation folds for model selection were stratified, with a group-aware (publisher) constraint employed in a secondary analysis to mitigate potential leakage.
+Model selection and hyper-parameter tuning
+Hyperparameters were tuned via randomized search over predefined ranges with 5-fold stratified cross-validation (CV) on the training partition only. The best configuration by mean F1 was refit on the full training set and evaluated once on the held-out test set. Search spaces included:
+- Logistic regression (LR): , L2 regularization
+
+- Support vector machine (SVM): , ,
+
+- Random forest (RF): , , ,
+
+- Gradient boosting (GB): , , ,
+
+- Decision tree (DT): , ,
+
+- k-Nearest neighbors (k-NN): , ,
+
+- Naïve bayes (NB):
+
+
+Robustness and sensitivity analysis
+We estimated variance and stability by conducting 10 repeated stratified splits (mean ± SD reported) and calculating bootstrap 95% CI on held-out metrics and publisher-grouped cross-validation metrics as well as a time-based split. Decision-threshold sweeps, label-noise injection (5–10%), feature-family ablations, permutation importance, and McNemar’s tests for paired model comparisons offered additional sensitivity analyses.
+To enhance interpretability, ablation results now include confidence intervals. This depicts the relative value of each credibility factor toward model performance while accounting for sample variation. Consistency of rankings during repeated runs, robustness of uncertainty bands for top models, and the robust credibility of reader feedback, updates, and provenance as factors predictive performance suggest credibility factors robustness and impact on predictive performance.
+Machine learning models and implementation
+We implemented and compared the performance of the following machine learning classifiers using Python:
+- Logistic Regression (LR)
+
+- Decision Tree (DT)
+
+- Random Forest (RF)
+
+- Gradient Boosting (GB)
+
+- Support Vector Machine (SVM)
+
+- k-Nearest Neighbors (k-NN)
+
+- Naive Bayes (NB)
+
+
+Each model was trained on the preprocessed dataset and tested against unseen records to evaluate its generalization capability. Python libraries such as Scikit-learn, Pandas, and Matplotlib were used for model implementation and result visualization.
+Performance evaluation and metrics
+We evaluated the models using multiple performance metrics, including:
+- Accuracy : Overall correctness of the model.
+
+- Precision : Ability to avoid false positives.
+
+- Recall : Ability to identify true positives.
+
+- F1-Score : Harmonic mean of precision and recall.
+
+- Macro-F1 : Balanced measure across both credible and less credible classes, mitigating class imbalance effects.
+
+- ROC-AUC : Area under the Receiver Operating Characteristic curve, reflecting discriminative ability across thresholds.
+
+- NDCG@k (Normalized Discounted Cumulative Gain): Ranking-based measure that evaluates whether credible items are prioritized higher in model outputs.
+
+- Calibration metrics : Expected Calibration Error (ECE) and Brier Score to assess how well predicted probabilities align with observed outcomes.
+
+
+These metrics were calculated for both the credible and less credible classes. Classification reports were generated to provide detailed insights into each model’s strengths and weaknesses. Fig. 7 [Images not available. See PDF.]
+Cross-domain and cross-regional evaluation of machine learning models in the web preservation framework.
+
+Figure  7 shows the accuracies of each model while training and testing the models. The Random Forest and Gradient Boosting models had the highest accuracies, at 0.99 during testing and also showed more advanced generalization. In contrast, the two models that provided the least accuracy were the Logistic Regression and Naive Bayes models, indicating more complicated distributions of data can have some considerable influence on the success of classification. Fig. 8 [Images not available. See PDF.]
+EWPF classification report.
+
+The full classification report, which outlines precision, recall, and F1-scores per class, is found in Fig.  8. Strong performance on all metrics across both classes were shown by the Decision Tree and Random Forest. For the credible class, SVM performance was adequate, but for the less credible class, SVM performance was poor. The k-NN model had high accuracy during training, but was impacted by class imbalance for the less credible class, which is indicated by the drop in F1-score. Fig. 9 [Images not available. See PDF.]
+Test and train.
+
+In Fig.  9, model performance is visually presented and enables quick and easy identification of models that are likely overfitting. We prefer models, such as Random Forest and Gradient Boosting, that have comparable training and testing accuracy and are robust on unseen data, as demonstrated by the closeness of these values.
+Generalization under source- and time-based splits
+To further ensure that the trained models generalize beyond potential publisher- or time-related biases, additional experiments were conducted following the reviewer’s recommendation. Specifically, two complementary validation strategies were introduced: - Source-based split: all news articles from a given publisher were confined to either the training or test set to prevent publisher leakage.
+
+- Time-based split: the dataset was partitioned chronologically, using the earliest 80% of the articles for training and the most recent 20% for testing, thereby simulating future prediction scenarios.
+
+We assessed each configuration from the original experiment using the same respective feature space and hyperparameter configurations. To measure uncertainty, we report 95% bootstrap confidence intervals (CIs) over 1,000 resamples of the test predictions, which can be found in Table 8. Table 8. Generalization results under source- and time-based splits with 95% confidence intervals.
+Model
+Split Type
+Accuracy ± 95% CI
+F1-Score ± 95% CI
+ROC-AUC ± 95% CI
+
+Random Forest
+Random (5-fold)
+0.96 ± 0.01
+0.94 ± 0.02
+0.97 ± 0.01
+
+Random Forest
+Source-based
+0.94 ± 0.02
+0.93 ± 0.02
+0.96 ± 0.02
+
+Random Forest
+Time-based
+0.93 ± 0.03
+0.91 ± 0.03
+0.95 ± 0.02
+
+Gradient Boosting
+Random (5-fold)
+0.97 ± 0.01
+0.95 ± 0.01
+0.98 ± 0.01
+
+Gradient Boosting
+Source-based
+0.95 ± 0.02
+0.93 ± 0.02
+0.96 ± 0.02
+
+Gradient Boosting
+Time-based
+0.93 ± 0.03
+0.91 ± 0.03
+0.95 ± 0.03
+
+
+The performance was consistently high regardless of whether the data was split based on source or time, with minimal changes ( F10.03) from random stratified validation. The stability indicates that the models generalize well beyond particular publishers or time trends. The indicators of credibility measure inherent content characteristics, not patterns associated with specific publishers.
+As a result, leveraging these alternate validation mechanisms presented additional evidence of the framework’s robustness and less concern regarding potential data leakage or over-fitted to a publisher or time period.
+Insights, limitations, and model selection
+The results of the comparison revealed that the Random Forest, Gradient Boosting, and Decision Tree models were the best-performing classifiers for the credibility dataset. These models achieved high accuracy and could sustain performant metrics on all metrics with little sign of overfitting. Additionally, all three models can model non-linear relationships and sophisticated feature interactions, and so would be good candidates for further deployment. However, the Naive Bayes and k-NN models were not very accurate and did not deal well with class imbalance, indicating that these would not be good models in this area until optimized. Logistic Regression and SVM models are both decent performance models too; there is potential for some tuning as well as exploring feature selection options.
+Contribution to web credibility automation
+Utilizing machine learning in the EWPF greatly improves its ability to make immediate decisions about web content, therefore enhancing the overall professional role of archiving information. The combination of credibility scoring with intelligent classification requires only archiving pages that consists of high-quality, credible content. This framework enables credibility assessments through automated means.
+Website development and integration with EWPF
+In the last phase, we launched a website and applied our algorithm to the dataset provided. It is the interactive aspect of our website that allows users to engage with our dataset and analytical results. Several key pages were created as part of our design work. The key pages include the index page, author-specific pages, the All-Story page, the credible page, the LessCredible page, the Ranking page, and the Ranks detail page. Each web page serves as component of the overall presentation and organization of the data. The development of the credibility rating algorithm on the dataset was the most central aspects of our research. We examined the data via computational methods in this field to carefully analyze and make sense of the dataset’s dynamic complexity.
+The index page
+This page, which is called the index page, is the beginning of our website. It gives consumers an overall picture of the project and directs them to the necessary components. In Fig. 10, we show the Maximum ranked story which is represented by the number 391. This indicates that the news item with the highest rank value over the whole of the dataset is the holder of the index of 391, which is now held by that news item. Like this, the Minimum ranked value is set to 5, which indicates the lowest rank value that has been assigned to a news item inside the dataset. In addition, the statistic emphasizes the news item that has gotten the most positive feedback, which has garnered an impressive 9843 likes, and compares it to the news story that has garnered the least positive feedback, which has accumulated a modest 2541 likes.
+Moving to the second row and the left column, the chart presents a visual representation of the 10 news items that have garnered the most amount of viewing and admiration. It’s important to note that the figures for likes and views seem almost exactly the same in the screenshot. In the column to the right, we compare and contrast the main five channels, as depicted in Fig. 10, which can be recognized from one another because they publish the most reputable news reports. Channel-1, Channel-2, Channel-3, Channel-4, and Channel-5 are some noteworthy networks in this group. Additionally, the graph shows the extremes of the ranking values assigned to certain news pieces.
+The charts on the index page present the recurrence of the news articles throughout the different dates in a visual format. Fig. 10 [Images not available. See PDF.]
+Index page-a.
+
+The author page
+A graphical depiction of the author rankings computed by our algorithm can be seen in the Fig. 11. The arrangement for ranking comprises all writers, ranging from the author with the greatest ranking to the author with the lowest rating. The Fig. 10 Authors Ranking depicts the ranking value assigned to each individual author. The chart focuses on journalist-14 and journalist-17, who has been given credit for 32 news stories that have been deemed to have a high level of credibility, giving him the highest ranking value of 6174. These pages include stories written by persons who have attained high ranks, as well as a summary of the rankings of the authors of these narratives. Within the image labeled Fig. 12, a graphical representation is offered for each News Story, along with the news pieces considered to be their most highly regarded overall. Fig. 11 [Images not available. See PDF.]
+Authors ranking.
+Fig. 12 [Images not available. See PDF.]
+Significant story.
+
+All story page
+The news articles that were taken from the dataset are shown on this page. The graphs and tables are refreshed after a period of five seconds has passed. The charts in Fig. 13 All News Stories illustrate the credibility associated with each news story. Fig. 13 [Images not available. See PDF.]
+All stories.
+
+Credible and less credible pages
+The news stories have credibility value. The process of ranking the news pieces was the primary focus of our implementation. Additionally, we focused on the possibility that once the standard for the trustworthiness of news is established, the tales themselves may be trustworthy or less credible. The details are depicted in Fig. 14 Credible News Story. Fig. 14 [Images not available. See PDF.]
+Credible.
+
+Ranking page
+On this page, the rankings for all of the news articles are shown in Fig. 15. Additionally, it discusses the news story that was published more than once. These several news articles published are referred to as “similar news stories” for the sake of this implementation. When we click on the news article, it takes us to the story’s contents. The specifics are shown in the graphic that compares the various news. When we click on a piece of news headline, it takes us to a different page that displays the specifics of the story, as illustrated in Fig. 16. Details of comparable news stories are included in the image as a bar chart that displays the rated value for each instance in which the news was published. Fig. 15 [Images not available. See PDF.]
+Similar news atories.
+Fig. 16 [Images not available. See PDF.]
+Similar news atories details.
+
+Runtime integration, scalability, performance, and security
+Runtime integration
+The website operates as a thin client over the EWPF/DNCRA pipeline. Upon ingestion, EWPF extracts Step-9 factors, normalizes them, applies versioned AHP weights, and computes the DNCRA score; both factor values and final scores (with optional explanations) are persisted. The UI issues read-only API calls to these persisted artifacts. The 5-second refresh on designated pages is a lightweight poll of the scored index and is not a server-side full re-estimation, thus maintaining auditability and consistent semantics. All scoring functions are bound to the versioned weight files that allow for rollbacks to ensure stability, meaning when a newly deployed set of weights does not exhibit stable behavior, archivists can seamlessly revert to the last known stable weight set without affecting user access.
+Scalability, latency, and concurrent access
+The system is deployed as stateless services behind an API gateway, with an ingestion service writing to a durable queue and a scoring service consuming messages. Because online computation is linear in the number of indicators, scaling is primarily I/O-bound; horizontal scaling of scoring workers and read replicas increases throughput while keeping tail latency low. Hot endpoints ( Index, Credible/Less-Credible, Ranking ) are cached (CDN + in-memory cache) and invalidated on new scores or weight-version changes via pub/sub. Writes use idempotent keys (content hash/news ID) and optimistic upserts; reads are lock-free. Scores are immutable within a weight version, and weight updates trigger background re-scoring with an atomic version flip, providing eventual consistency for the UI and a consistent snapshot for analysis.
+From execution traces collected under simulated load (1,000 concurrent users), p95 latency was 280 ms for online credibility scoring and 200 ms for read-API calls, with a sustained throughput of 1,500 requests per second. These results confirm that the system maintains responsiveness at scale while ensuring consistent scoring semantics.
+Usability and performance evaluation
+We carried out task-based usability walk-throughs focusing on key user experiences (finding credible items, reviewing author rank, and comparing “similar news” clusters), collecting results and qualitative feedback from users that were used to refine navigation and labeling. Performance was evaluated primarily using instrumented API tracing and concurrent load generation to derive page render time, the distribution of API latency, and cache hit ratio on the API over time. When accessed concurrently, median latencies for the read endpoints all stayed under a second, with throughput remaining consistent, and the application introduced no functional regressions. Explainability computations run asynchronously or on user demand to try to keep the online path performant. Incorporating trace-based measurements (p95 latency/throughput) adds confidence to our expectation of system performance in real-world operational conditions under normal operational stress.
+Security and integrity
+To reduce the risk of adversarial submissions, the ingest path has enforced server-side validation, content type checks, sanitation of user-supplied fields, and rate limiting on records and aggregates. Each public endpoint also supports optional CAPTCHA mechanisms and IP throttling. Each item is content hashed so that duplicate submissions and replay attempts can be detected. Weight files are signed and versioned; administrative actions (e.g., weight updates) use role based access control and are recorded in immutable audit logs. Rollback procedures exist and allow weight files to be restored to a prior version if an anomaly is detected. Integrity of displayed results is derived from serving only persisted, versioned scores; similarity assignments and explanations are computed in server managed background jobs and verified before being exposed to users.
+Score and positioning
+The website is an example reference implementation made to illustrate the research contribution of credible, explainable ranking for preservation while implementing architectural practices (stateless services, queuing, caching, versioning) that parallel production. This design cleanly connects Section 6 to the paper’s primary research question by simplifying the illustration of how the EWPF is scored, served, and validated in practice without conflating UI issues with core algorithm evaluation.
+Conclusion
+In today’s digital age, sadly characterized by the rapid spread of misinformation, most current archival systems do not offer explicit, auditable trust appraisal prior to the act of archiving. This allows for low-quality or otherwise misleading content to persist in the archival record. We propose the Enhanced Web Preservation Framework (EWPF), which includes an explainable scoring component (DNCRA) that implements a multivocal literature review into fourteen indicators (i.e. source of content, user feedback, social reputation, and geo-alignment, to name a few) and then aggregates them by Analytic Hierarchy Process (AHP) weights; in particular, we see that Belonging to the News Place scored highest, while Number of Views scored lowest. Using a pre-compiled corpus of 800 news articles, we calculated credibility scores for each article showing that the commonly used classifiers, Random Forest and Gradient Boosting in particular replicate the AHP thresholding remarkably well on a holdout test set ( 0.99 accuracy). We have also developed a web interface that allows for live visualization and interaction with the ranked articles and scores, demonstrating full end-to-end integration.
+We acknowledge limitations. The selected data is fairly limited in scope and geography. Engagement signals (e.g., likes, followers) may hold some measure of bias, whether platform or demographic. Although our results from hold-out sets are promising, labels are also based on the same engagement signals used during inference, which may inflate expectations about generalizability; we still believe it is useful to focus on independent ground truth and testing across different domains. The AHP weights used in our results were elicited from experts and set during the evaluation; while doing so allows for a means of auditability of sorts, the weights will lag if misinformation tactics evolve.
+Looking at deployment operations, DNCRA scoring is done on the server side at ingestion with versioned factors and scores persisted to storage, and is read from the storage using APIs optimized for reading, which satifies the OAIS-style architecture by clearly delineating appraisal from storage and access. From a design perspective, the application can horizontally scale, use caching, and handle background re-scoring on a factor weight update, providing near real-time visibility, without reducing the auditability of the scores.
+Making generalizations beyond this context will require some extension of the indicators and models. Signals unique to language - for example provenance, geo-alignment, or update history, function fairly easily in most contexts as language-agnostic signals. Signals unique to language typically require multi-lingual NLP processing and assessment by induction per language. In addition, if multimedia (e.g., visuals and audio) is included in DNCRA, visual and audio forensics (e.g., detection of manipulation, provenance, and speech and text alignment files) could be considered additional normalized signals. To capture evidence of evolving misinformations, assembly will involve periodic re-eelication or online calibration of weights under governance, detection of drift, and continuous time-sliced evaluation.
+Automated credibility filtering has a variety of ethical and societal ramifications. False negatives can lead to the retention of harmful and misleading information, while false positives can deny the retention of legitimate information. Therefore, we recommend tiered retention (for example, put that content in quarantine/flag it, rather than simply delete it), transparency in public weight versions and criteria for scoring, precise audit logs, audit bias and fairness over time, and providing humans in the loop review in borderline cases, balancing the establishment of credible archives with transparency and accountability.
+In conclusion, evidence of the value of EWPF shows that credibility-informed, explainable appraisal can be efficiently embedded into preservation workflows, with manageable costs for operations, and an authentic pragmatic approach to saving credible content for future access and combating misinformation, while also establishing credible technical and moral pathways to establish across languages, types of media and contexts and changing information ecosystems.
+Future work
+An interesting direction for future research is to further explore the variables generated in this study by exploring their interactions and causal impact on story trustworthiness. Specifically, we will re-elicit AHP weights on a quarterly basis under documented governance and proprietary procedures to measure whether updating weights improves agreement with expert judgments and ranking stability (goal of Kendall’s ; where <10% of the items shift relative to the original ranking by > 5 positions after updating). We will also explore constrained learning-to-rank calibrated by the AHP priors to enhance the additive baseline, again with no loss of monotonicity or fairness (goal of ; expected calibration error ; equal-opportunity difference ) and also explore practical tactics and tools for verification - particularly adding fact-checking signals and provenance checks as additional, normalized, evidence into the scoring pipeline.
+To ground these advances, we will build a stratified, multi-region, time-sliced corpus (50k articles from 100 publishers over 12 months) and obtain independent labels via expert annotation and fact-check alignment with double-blind adjudication (target ). Evaluation will move beyond accuracy to macro-F1, ROC-AUC, ( ), and calibration (Brier/ECE), with variance estimated via repeated stratified splits and bootstrap CIs. To further reduce bias and improve robustness, future evaluations will employ leakage-proof designs, including source- and time-based splits with train-on-past test-on-future setups, and will additionally report confidence intervals and per-group metrics. We will assess transfer across at least three languages (per-language macro-F1 ; vs. monolingual) and extend to multimedia with image/video forensics and speech-text alignment (10k items; macro-F1 ).
+In addition, future iterations of this work will leverage fact-check datasets curated by IFCN partners and/or employ expert double-blind annotation of article-level credibility and claim-level veracity. This will enable evaluation that does not depend on engagement or follower counts, thereby mitigating popularity-driven biases and strengthening the robustness of EWPF.
+Finally, we will harden robustness, operations, and usability. Adversarial simulations (bot-inflated engagement, coordinated sharing) will test resistance ( under perturbation; 90% detection of synthetic bots). Deployment targets include online scoring  ms, read-API  ms at 1k concurrent users, and availability of 99.9%. With archivists, we will measure usability (SUS score ) and decision support (20% reduction in time-to-triage). To facilitate replication, we will release transformation functions, weight versions, evaluation scripts, and a de-identified schema subject to licensing constraints.
+Author contributions
+The original draft, conception, and methodology design, project administration, and formal analysis were all completed and undertaken by M.F.A. and M.S.. The oversight of the project was managed by A.A., who performed the validation and resourcing associated with the project and assisted in reviewing and drafting the manuscript. T.S.A. provided contributions to the investigation, formal analysis, and reviewing of the manuscript. R.U. managed the software integration, data analysis, and validation. W.K. performed the literature review, helped prepare the datasets, and coordinated the visual aspects of the research. Z.K. managed the review of related work, proofread and formatted the manuscript, and assisted in the final review of the manuscript.
+Funding
+This research has been funded by Scientific Research Deanship at the University of Hai’l, Kingdom of Saudi Arabia through project number RG-24 109.
+Data availability
+The authors confirm that the data supporting the findings of this study are available within the article.
+Declarations
+Competing interests
+The authors declare no competing interests.
+Publisher’s note
+Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+1. Khan, M. Using text processing techniques for linking news stories for digital preservation . Ph.D. thesis, Faculty of Computer Science, Preston University Kohat, Islamabad Campus, HEC (2018).
+2. Song, J; Wang, W; Gadekallu, TR; Cao, J; Liu, Y. Eppda: An efficient privacy-preserving data aggregation federated learning scheme. IEEE Trans. Netw. Sci. Eng. ; 2022; 10 , pp. 3047-3057.4648181 [DOI: https://dx.doi.org/10.1109/TNSE.2022.3153519]
+3. Fan, B., Jiang, S., Su, X., Tarkoma, S. & Hui, P. A survey on model-heterogeneous federated learning: Problems, methods, and prospects. In 2024 IEEE International Conference on Big Data (BigData) , 7725–7734 (IEEE, 2024).
+4. Grimes, C. Our new search index: Caffeine. The Official Google Blog (2010). Available at: https://googleblog.blogspot.com/2010/06/our-new-search-index-caffeine.html.
+5. Chen, M; Mao, S; Liu, Y. Big data: A survey. Mob. Netw. Appl. ; 2014; 19 , pp. 171-209. [DOI: https://dx.doi.org/10.1007/s11036-013-0489-0]
+6. Lavoie, B.F. The open archival information system reference model: Introductory guide. Mob. Netw. Appl. 33 (2), 68–81 (2004).
+7. Weinreich, H; Obendorf, H; Herder, E; Mayer, M. Not quite the average: An empirical study of web use. ACM Trans. Web ; 2008; 2 , pp. 1-31. [DOI: https://dx.doi.org/10.1145/1326561.1326566]
+8. Ntoulas, A., Cho, J. & Olston, C. What’s new on the web? the evolution of the web from a search engine perspective. In Proceedings of the 13th international conference on World Wide Web , 1–12 (2004).
+9. Lyman, P. Archiving the world wide web. Building a national strategy for digital preservation: Issues in digital media archiving 38–51 (2002).
+10. Jiang, S., Shuai, X. & Xing, G. Artfl: Exploiting data resolution in federated learning for dynamic runtime inference via multi-scale training. In 2024 23rd ACM/IEEE International Conference on Information Processing in Sensor Networks (IPSN) , 27–38 (IEEE, 2024).
+11. Shuai, X. et al. Balancefl: Addressing class imbalance in long-tail federated learning. In 2022 21st ACM/IEEE International Conference on Information Processing in Sensor Networks (IPSN) , 271–284 (IEEE, 2022).
+12. Donovan, L., Hukill, G. & Peterson, A. The web archiving life cycle model (2013).
+13. Khan, M; Rahman, AU. A systematic approach towards web preservation. Inf. Technol. Libr. ; 2019; 38 , pp. 71-90.
+14. Abrar, MF; Khan, MS; Khan, I; ElAffendi, M; Ahmad, S. Towards fake news detection: A multivocal literature review of credibility factors in online news stories and analysis using analytical hierarchical process. Electronics ; 2023; 12 , 3280. [DOI: https://dx.doi.org/10.3390/electronics12153280]

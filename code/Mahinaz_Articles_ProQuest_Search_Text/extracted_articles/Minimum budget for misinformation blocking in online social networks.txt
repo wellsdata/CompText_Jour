@@ -1,0 +1,325 @@
+Introduction Online social networks (OSNs) which have provided a strong platform for communications changed the world significantly by allowing efficient exchange of information. Billions of users have integrated social networks as their primary sources of daily information (Pham et al. 2018). However, OSNs also allow spreading misinformation and rumors, which can lead to economic losses (Domm 2013), as well as negative impacts on the public (Allcott and Gentzkow 2016). Therefore, it is necessary to develop effective strategies to block misinformation and rumors on OSNs.
+Information diffusion models are the foundations for the study on preventing misinformation. Kempe et al. (2003) first proposed two diffusion models Independent Cascade ( IC ) and Linear Threshold ( LT ) for investigating Influence Maximization ( IM ) problem. Based on such models and their variants, recently, there is an effective strategy to block the influence spread of given source by removing the nodes or edges that play an important role in propagation process from networks (Tong et al. 2010; Prakash et al. 2010; Khalil et al. 2014; Pham et al. 2018, 2017). Some works have proposed a strategy of placing monitor machines (Zhang et al. 2016a) or immunization vaccines (Zhang and Prakash 2015; Zhang et al. 2016b; Song et al. 2015) on some nodes to against the spread of known misinformation or epidemic sources. Basically, placing monitors or vaccination on a node is equivalent to removing this node from the network during propagation process under diffusion models. The authors in Zhang et al. (2016a) formulated the problem of placing monitor at a set of nodes so that information spreading from known sources of misinformation to protected central nodes is not greater than the protection threshold.
+Zhang and Prakash (2015) have developed vaccination strategies for nodes to limit the spread of disease on social networks on the IC model. The similar methods have also been applied for edges and nodes to control propagation at groups under LT model (Zhang et al. 2016b). Later on, authors in Song et al. (2015), Pham et al. (2018), Pham et al. (2017) studied the problem of limiting misinformation by combining time constraint on a various of IC and LT models, and they also designed algorithms that outperform the previous ones.
+In this paper, we investigate a dual problem of existing studies in the literature of this topic. In particular, we aim to find the smallest set of nodes whose (minimize the budget) removal from a social network reduces the influence of misinformation spread to at least a threshold γ , called Targeted Misinformation Blocking ( TMB ) problem.
+Our main contributions are summarized as follows.
+- We formulate the Targeted Misinformation Blocking problem based on both IC and LT models.
+
+- We prove that TMB problem is #P-hard under LT model and is NP-hard even when the network is a directed acyclic graph under IC model.
+
+- Under LT model, we prove that the objective function is monotone and submodular function. Base on that, we propose a nature greedy algorithm which provides a ratio of 1 + ln ( γ / ϵ ) . We further propose a scalable algorithm for TMB on large-scale networks, named STMB - LT . However, we show that influence reduction is no longer submodular under IC model and we design an efficient algorithm, called STMB - IC .
+
+- Extensive experiments are conducted on various real-world social networks. The results show that the proposed algorithms STMB - LT and STMB - IC outperform other heuristic algorithms in term of both effectiveness and scalability. In particular, STMB - IC provides significantly higher quality solution, as well as faster running time than the state-of-the-art methods.
+
+
+Organization The rest of the paper is organized as follows. We summarize the related literature in Sect. 2. Next, we introduce propagation models, problem definition and prove the results of complexity in Sect. 3. Sections 4 and 5 present our proposed algorithms under LT and IC models, respectively. The experimental results on several datasets are in Sect. 6. Finally, Sect. 7 concludes the paper.
+Related work Due to the enormous harms of misinformation to the public, misinformation blocking has been paid significant attention from academia and engineering. Some authors proposed decontamination information approaches to encounter misinformation spreading by injecting good or official information into some nodes which have been investigated (Budak et al. 2011; Nguyen et al. 2013; He et al. 2012; Tong et al. 2017; Song et al. 2017). For instance, Budak et al. (2011) investigated a problem of selecting a seed set to initialize positive cascade so that the number of users influenced by negative information is minimal. By utilizing the reverse sampling method, (Tong et al. 2017) designed an efficient randomized algorithm for rumor blocking which provide a ( 1 - 1 / e - ϵ ) -approximation with high probability. He et al. (2012) studied Influence Blocking Maximization problem which aims to choose k nodes to inject positive information in order to maximize influence reduction of negative information. They devised a ( 1 - 1 / e ) -approximation algorithm and a scalable algorithm which construct a directed acyclic graph (DAG) to estimate the local competitive influence of nodes. With the same methodology, the authors in Nguyen et al. (2013) studied β T I -Node Protectors problem which finds the smallest set seed of good information to decontaminate misinformation with the ratio of decontamination 1 - β , β ∈ ( 0 , 1 ) . In general, Tong et al. (2018b) studied misinformation containment with multiple cascades. This approach was also considered under the game theory (Tong et al. 2018a).
+Recently, there is a common campaign to block misinformation by removing the set of important links and nodes in the process of misinformation diffusion. For links removal problem, Khalil et al. (2014) first proposed ( 1 - 1 / e - ϵ ) -approximation under the LT model. By removing the set of nodes, Pham et al. (2018) studied a problem that focused on maximizing misinformation restriction within the budget and time constraints under a variant of LT model. They showed that calculating the objective function is #P-hard and designed a ( 1 - 1 / e ) -approximation and efficient heuristic algorithms. This problem was also studied in a deterministic linear threshold model in the context that all nodes have the same cost (Pham et al. 2017). Recently, the author in Nguyen et al. (2019) proposed a scalable algorithm which guarantees approximation ratio of 1 - 1 / e - ϵ for epidemic blocking problem by edges and nodes removal.
+Other approaches used vaccinating, placing monitors on a set of edges or nodes (Zhang et al. 2016a; Zhang and Prakash 2015; Zhang et al. 2016b) to reduce the influence of misinformation. These methods are equivalent to solutions of removing edges or nodes in the network. Zhang et al. (2016a) proposed τ -MP problem which aims to place monitor on minimum-size set of nodes so that the influence of misinformation converges to the center node set at most threshold τ ∈ [ 0 , 1 ] . Given a set of infected epidemic nodes in a network, Zhang and Prakash (2015) aimed to find the optimal allocation on nodes to control the out breaking of epidemics under IC model. They devised some heuristic methods without approximation guarantee. The vaccination method has also been applied for edges and nodes groups to control propagation of epidemics under LT model (Zhang et al. 2016b).
+Approaching from a dual angle of the above studies, in this work, we aim to find minimum-size nodes set whose removal reduces the influence to less than a threshold γ . The threshold can control the number of nodes influenced by misinformation in a social network. Thus, it is possible to maintain the credibility of the information that is distributed on the OSNs.
+In other contexts, Zhu et al. (2019) studied influence blocking which consider the location of competitors. Zheng and Pan (2018) investigated rumor blocking within a given community. Farajtabar et al. (2017) studied the fake news mitigation problem in social networks by combining reinforcement learning with a point process network activity model.
+Models and problem definition Firstly, we introduce the network model and two well-known diffusion models which are Linear Threshold (LT) and Independent Cascade (IC) (Kempe et al. 2003). Based on that, we then formally define the targeted misinformation blocking problem. In Table 1, the frequently used notations are summarized. Table 1 Table of symbols
+Notional
+Description
+
+n ,  m
+The number of nodes and the number of edges in G , respectively
+
+N in ( v ) , N out ( v )
+The sets of incoming, and outgoing neighbor nodes of v
+
+S
+Set of misinformation source nodes, for short is source
+
+g
+A sample graph generate from G under LT or IC model
+
+X G
+Set of all sample graphs generate from G
+
+σ S ( G )
+Influence of S in graph G
+
+h ( A )
+The reduction of influence of source S when removing set A
+
+
+Diffusion models Let G = ( V , E ) be a directed graph representing a social network with a node set V and a directed edge set E , | V | = n and | E | = m . Let N in ( v ) and N out ( v ) be the set of in-neighbors and out-neighbor of node v , respectively.
+Linear threshold model In this model, each directed edge ( u , v ) ∈ E is associated with an influence weight w ( u , v ) ∈ [ 0 , 1 ] such that ∑ u ∈ N in ( v ) w ( u , v ) ≤ 1 Given a subset S ⊆ V representing the misinformation sources (as the seed set in IM problem Kempe et al. 2003). In LT model, each node v ∈ V has two possible states, active and inactive and the influence cascades in G as follow. Firstly, every node v ∈ V uniformly chooses a threshold θ v ∈ [ 0 , 1 ] , which represents the weighted fraction of v ’s neighbors that must be active to activate v . Next the influence propagation happens in round t = 0 , 1 , 2 , … as follow:
+- At round 0, we activate nodes in S , and set all other nodes inactive.
+
+- At round t ≥ 1 , an inactive node v is activated if weighted number of its activated neighbors are greater than or equal to its threshold, i.e., ∑ in-activated neighbors v w ( u , v ) ≥ θ v
+
+- Once a node becomes activated, it status remains in the process of spreading. The influence propagation ends when no more nodes can be activated.
+
+
+
+Independent cascade model In this model, each edge e = ( u , v ) ∈ E has a probability p ( u , v ) ∈ ( 0 , 1 ) that represents the misinformation transmission from u to v . The diffusion process from a misinformation source set S is in the following steps. At step 0, we activate nodes in set S , and set all other nodes inactive. At step t ≥ 1 , the node u active at step t - 1 has a single chance to activate each currently inactive out neighbour node v with successful probability p ( u ,  v ). Once a node becomes activated, it remains in that state in all subsequent steps. The influence propagation stops when no more nodes are activated.
+Live-edge model LT and IC models are probabilistic models. Kempe et al. (2003) showed that they are equivalent to the reachability in a random graph g , called live-edge or sample graph . However, the rules for constructing live-edge graph corresponding to each model are different.
+For LT model, the sample graph g is constructed by the following rules: (1) for every v ∈ V , select at most one of its incoming edges at random, so that the edge ( u ,  v ) is selected with probability w ( u ,  v ), (2) and no edge is selected with probability 1 - ∑ u ∈ N in ( v ) w ( u , v ) . The selected edges are called live and all other edges are called blocked . The probability of generating a sample graph g from G is calculated as follows 1
+Pr [ g ] = ∏ v ∈ V p ( v , g , G ) where 2
+p ( v , g , G ) = w ( u , v ) , If ∃ u : ( u , v ) ∈ E g 1 - ∑ u : ( u , v ) ∈ E w ( u , v ) , Otherwise For IC model, we generate a sample graph g with the set of nodes be V g and the set of edges be E g by: (1) setting V g ← V , and (2) adding e = ( u , v ) ∈ E into E g with probability p ( e ) = p ( u , v ) . We can easily found that | X G | = 2 | E | , and the probability to generate g from G is: 3
+Pr [ g ] = ∏ e ∈ E g p ( e ) · ∏ e ∈ E \ E g ( 1 - p ( e ) ) In Kempe et al. (2003), the influence spread of misinformation source set S on G under LT and IC models are calculated by: 4
+σ S ( G ) = ∑ g ∈ X G Pr [ g ] | R ( g , S ) | where R ( g ,  S ) denotes the set of reachable nodes from S in g and X G is the set of all sample graphs generated from G . Especially, the influence of the set S is calculated according to the simple paths starting from u ∈ S as follows 5
+σ S ( G ) = ∑ x ∈ P ( G , S ) ∏ e ∈ x w ( e ) where P ( G , S ) is the set of all simple paths from s ∈ S to any node v ∈ G \ { S ∪ { s } } in graph G .
+Problem definition In this work, we employ nodes removal technique in Nguyen et al. (2019), Pham et al. (2018) which is equivalent to monitors placement or vaccination strategies on nodes (Zhang et al. 2016a; Zhang and Prakash 2015; Zhang et al. 2016b). The influence spread from S when removing A is the influence spread of S in induce graph G [ V \ A ] , denoted by σ S ( G \ A ) . We define that influence reduction of A is equal to the expected value of: 6
+h ( A ) = σ S ( G ) - σ S ( G \ A ) In this paper, we consider Targeted Misinformation Blocking ( TMB ) defined as follows:
+Definition 1 ( TMB problem) Let G = ( V , E ) be a directed graph representing a social network under a information diffusion model M . Given a set of misinformation source S ⊆ V and integer γ ≤ | V | , find a set A ⊆ V \ S of the smallest size nodes to remove from G so that the influence reduction, h ( A ) is equal or greater than γ .
+Complexity We can easily see that σ S ( G ) is a special case of h ( · ) . Since calculating σ S ( G ) is #P-hard under both LT and IC model (Chen et al. 2010a, b), calculating h ( · ) is also #P-hard. We next provide some hardness results of TMB problem in both LT and IC model.
+Theorem 1 For given misinformation source S under LT model, TMB problem is #P-hard even if S contains only one node.
+Proof To prove TMB is #P-hard, we reduce from s - t paths which was proved #P-hard (Valiant 1979), defined as follows:
+Definition 2 ( s - t paths problem Valiant 1979) Given a directed graph G = ( V , E ) , | V | = n , | E | = m , s - t paths problem asks to compute the number of (directed) paths from node s to node t that visit every node at most once.
+Fig. 1 [Images not available. See PDF.]
+Reduce from s - t paths to TMB
+
+Consider an instance I 1 of s - t paths problem, where G = ( V , E ) , s , t ∈ V are given. As Fig. 1 shows, from G , we construct G ′ as follows: we add a new node u and add two edges ( s ,  u ), ( t ,  u ) with weights w ( s , u ) = w ( t , u ) = 1 / 2 , we add node set Q including 2 n nodes and connect u to them with the same weight which is equal to 1. For the other edges, we set the weight which is equal to w = 1 / Δ , where Δ is the maximum in-degree of any node in G . This assumption still satisfies the LT mode since the total of in-neighbor weight is not greater than 1. Suppose P ( G , s ) as the set of all simple paths starting from s , P ( G , s , t ) is the set of all simple paths from s to t in G . We divide P ( G , s ) into two components: the set paths which have endpoint at a node in Q and the other. From Eq. (5), we have: 7
+σ S ( G ′ ) = ∑ x ∈ P ( G ′ , s ) ∏ e ∈ x w ( e ) 8
+= ∑ v ∈ G ′ \ Q ∑ x ∈ P ( G ′ , s , v ) ∏ e ∈ x w ( e ) + ∑ v ∈ Q ∑ x ∈ P ( G ′ , s , v ) ∏ e ∈ x w ( e ) = ∑ x ∈ P ( G , s ) ∏ e ∈ x w ( e ) + ∑ x ∈ P ( G ′ , s , u ) ∏ e ∈ x w ( e ) + ∑ v ∈ Q ∑ x ∈ P ( G ′ , s , v ) ∏ e ∈ x w ( e ) = σ S ( G ) + ∑ x ∈ P ( G ′ , s , u ) ∏ e ∈ x w ( e ) + ∑ v ∈ Q ∑ x ∈ P ( G ′ , s , v ) ∏ e ∈ x w ( e ) and 9
+∑ v ∈ Q ∑ x ∈ P ( G ′ , s , v ) ∏ e ∈ x w ( e ) = ∑ v ∈ Q ∑ x ∈ P ( G ′ , s , u ) w ( u , v ) ∏ e ∈ x w ( e ) = ∑ v ∈ Q ∑ x ∈ P ( G ′ , s , u ) ∏ e ∈ x w ( e ) (Due to w ( u , v ) = 1 ) = 2 n · ∑ x ∈ P ( G ′ , s , u ) ∏ e ∈ x w ( e ) Combine (8) and (9), we obtain: h ( u ) = σ S ( G ′ ) - σ S ( G ′ \ { u } ) = σ S ( G ′ ) - σ S ( G ) = ( 2 n + 1 ) · ∑ x ∈ P ( G ′ , s , u ) ∏ e ∈ x w ( e ) = ( 2 n + 1 ) · w ( s , u ) + ∑ x ∈ P ( G , s , t ) w ( t , u ) ∏ e ∈ x w ( e ) = ( 2 n + 1 ) · 1 2 + 1 2 ∑ x ∈ P ( G , s , t ) ∏ e ∈ x w ( e ) Due to w ( s , u ) = w ( t , u ) = 1 2 = 2 n + 1 2 ∑ x ∈ P ( G , s , t ) ∏ e ∈ x w ( e ) + 1 = 2 n + 1 2 ∑ i = 0 n - 1 α i w i + 1 Where α i = | P i ( G , s , t ) | . Let f ( w ) = ∑ i = 0 n - 1 α i w i , on G ′ . From the topology of G ′ , we easily see that n ≤ h ( u ) ≤ 2 n , and based on that, we found that h ( u ) = max v ∈ G ′ h ( v ) , and 0 ≤ f ( w ) < 1 . We first show that if we can determine f ( u ) ≥ β for any integer β ∈ [ 0 , 1 ] in polynomial time, we can solve s - t paths problem in polynomial time. Since the weigh w = 1 / Δ , f ( w ) is a fraction with a denominator of Δ n - 1 and the numerator at most Δ n - 1 . By using binary search from 1 to Δ n - 1 , we can find value of f ( w ). This task can be done in O ( log ( Δ n - 1 ) ) = O ( ( n - 1 ) log Δ ) = O ( n log n ) . Hence, we can calculate f ( u ) in polynomial time. We then the adjust weight w to n distinction values 1 Δ , 1 Δ + 1 , … , 1 Δ + n - 1 . By using above method, we can find value of f ( w ) corresponding to each w . Hence, we obtain a set of n linear equations ∑ i = 0 n - 1 α i w i = f ( w ) , w ∈ 1 Δ , 1 Δ + 1 , … , 1 Δ + n - 1 with { α 0 , α 2 , … , α n - 1 } as variables. The matrix of this equation is M n × n = { m ij } and m ij = w i , i , j = 0 , … , n - 1 , this is Vandermonde matrix and we can easily compute the unique solution { α 0 , α 2 , … , α n - 1 } for the linear system of equations. The total of s - t paths in G is ∑ i = 0 n - 1 α i . Therefore, if we can determine f ( u ) ≥ β for any integer β ∈ [ 0 , 1 ] in polynomial time, we can solve s - t paths problem in polynomial time.
+We now consider an instance I 2 of TMB where S = { s } , γ = 2 n + 1 2 ( β + 1 ) , β ∈ [ 0 , 1 ] . Assume that an A is a polynomial-time algorithm solving TMB problem. Consider two cases: (1) If A returns the solution set A whose size is equal to 1, we only need to select A = { u } , infer f ( w ) ≥ β ; (2) If A returns the solution set A whose size is larger than 1. In this case, besides u , some nodes are chosen into A . We infer f ( w ) < β . Therefore, A can be used to decide f ( w ) is greater than β . Hence, A can also solve the s - t paths problem. This implies that our TMB problem is at least as hard as s - t paths problem. □
+Theorem 2 TMB is NP-Hard problem event when the graph is directed acyclic graph under IC model
+Proof We first consider the decision version of TMB problem. Given the graph G = ( V , E , p ) , a positive number γ , and integer q . The decision version of TMB problem asks whether or not set nodes A ⊆ V with | A | = t so that h ( A ) ≥ γ . We found that if the decision version is NP-hard then the optimization version is NP-hard too.
+We next show that when the instance of TMB is a directed acyclic graph (DAG) is NP-hard by reducing the from known NP-hard k -densest subgraph which defined as follows
+Definition 3 ( k - densest subgraph problem Asahiro et al. 2002) Given graph G = ( V , E ) , and for two integer numbers k ≤ | V | , q ≤ | E | . The problem aims to find the subgraph has k nodes with at least q edges in G .
+Denote I 1 = ( G 1 = ( V 1 , E 1 ) , k , q ) is an instance of k -densest subgraph problem with V 1 = n , | E 1 | = m , we construct an instance I 2 = ( G 2 = ( V 2 , E 2 ) , S , t , η ) of TMB as follows. We crate a misinformation source node s . For each node u i ∈ V 1 , we add a corresponding u i ′ ∈ V 2 and add edge ( s , u i ′ ) into E 2 . For each edge e j = ( u , v ) ∈ E 1 , we create a node w j in V 2 and add ( u , w j ) and ( v , w j ) into E 2 . For convenience, we let the sets X = { u i ′ } , Y = { w j ′ } . We have | V 2 | = m + n + 1 , | E 2 | = n + m . Finally, we set the probability p ( e ) = 1 , ∀ e ∈ E 2 , η = k + q , and t = k . We now show the equivalence between two instances.
+Suppose that A ⊆ V 1 is the solution of I 1 , we can select the set node A ′ = { u i ′ | u i ∈ A } . Since there are at least q edges in the subgraph of G 1 with A is set of nodes, there are least q nodes in Y disconnected with s . Hence, h ( A ′ ) = σ s ( G 2 ) - σ s ( G 2 \ A ′ ) = 1 + n + m - ( 1 + n + m - k - p ) = k + p = γ . Therefore, A ′ is the solution of I 2 .
+Conversely, suppose that A ′ ⊆ V 2 is the solution of I 2 , i.e., | A ′ | = t and h ( A ′ ) ≥ η = k + q . Assume that A ′ = A 1 ′ ∪ A 2 ′ with A 1 ′ ⊆ X , A 2 ′ ⊆ Y . Assume that | A 1 ′ | = x , | A 2 ′ | = k - x . We found that the nodes in A 2 ′ only block (save) themselves while nodes A 1 ′ can block themselves and nodes in A 2 ′ . Therefore, h ( A 1 ′ ) = ( k + q ) - | A 2 ′ | = ( k + q ) - ( k - x ) = x + q . This means that the removal of A 1 can block misinformation influence to set of q nodes Z which is a subset of Y . For instance I 1 , we now chose the set of nodes A = { u i | u i ′ ∈ A 1 ′ } ∪ { v | e j = ( u i , v ) , w j ′ ∈ Z } . On graph G 1 , the number of edges whose both end points are in A is equal to q . Therefore, A is a solution of I 1 . □
+Algorithms for TMB on LT model Greedy algorithm We introduce an approximation algorithm that provides a ratio of 1 + ln ( γ / ϵ ) based on proving h ( · ) is a submodular and monotone function, i.e., for A ⊂ T , v ∉ T h ( A + { v } ) - h ( A ) ≥ h ( T + { v } ) - h ( T ) [Images not available. See PDF.]
+
+Theorem 3 The function h ( · ) is submodular and monotone function.
+Proof Denote N E ( A ) is set of edges that have at least endpoint in A , we have σ S ( G \ A ) = σ S ( G \ N E ( A ) . By Theorem 5 in Khalil et al. (2014), for A ⊆ T we have h ( T ) - h ( A ) = σ S ( G \ N E ( A ) ) - σ S ( G \ N E ( T ) ) ≥ 0 . Therefore h ( · ) is a monotonically increasing. We then show that the function σ S ( G \ A ) is a submodular function of the set A is the variable. Let E T , v = N E ( T + { v } ) \ N E ( T ) , E A , v = N E ( A + { v } ) \ N E ( A ) . Due to A ⊆ T , E T , v ⊆ E A , v . Thus, N E ( A ) ∪ E T , v ⊆ N E ( A + { v } ) . By Theorem 6 in Khalil et al. (2014), ∀ X ⊆ Y , e ∈ Y \ X , we have: 10
+σ S ( G \ ( X ∪ { e } ) - σ S ( G \ X ) ≤ σ S ( G \ ( Y ∪ { e } ) ) - σ S ( G \ Y ) Therefore, σ S ( G \ A ) - σ S ( G \ ( A ∪ { u } ) ) = σ S ( G \ N E ( A ) ) - σ S ( G \ N E ( A + { v } ) ) ≥ σ S ( G \ N E ( A ) ) - σ S ( G \ ( N E ( A ) ∪ E T , v ) ) ≥ σ S ( G \ N E ( T ) ) - σ S ( G \ ( N E ( T ) ∪ E T , v ) ) ( Apply the inequality ( 10 ) ) = σ S ( G \ T ) - σ S ( G \ ( T ∪ { u } ) ) Combine with h ( A ) = σ S ( G ) - σ S ( G \ A ) we easy see that h ( · ) is a submodular function. □
+Theorem 4 For any ϵ ∈ ( 0 , γ ) , Algorithm 1 return solution A satisfies h ( A ) ≥ γ - ϵ , and the size of A is within factor 1 + ln ( γ / ϵ ) of the optimal size
+The proof of Theorem 4 straightforward based on Goyal et al. (2013). Algorithm 1 simply chooses the node that provides maximum largest incremental influence reduction in each step, defined as δ ( A , u ) = h ( A + { u } ) } - h ( A ) until h ( A ) ≥ γ . The main challenge of this algorithm comes from calculating σ S ( · ) is #P-hard (see Chen et al. 2010b). Therefore, we introduce an efficiency algorithm in next subsection.
+STMB - LT algorithm In this section, we present an effective algorithm, named STMB - LT for TMB problem on LT model based on applying the idea of GREEDY-LT in Zhang et al. (2016b). We first simplify the problem by using merge algorithm in Pham et al. (2018). By this way, we merge set source S = { s 1 , s 2 , … , s k } into a supper source node I (line 1). We then assign the weight 11
+w ( I , v ) = ∑ s ∈ N in ( v ) ∩ S w ( s , v ) , v ∈ N out ( S ) and remove S from G to obtain a new instance ( G ′ , I ) . The instances of TMB before and after using merge algorithm are equivalence (Pham et al. 2018). [Images not available. See PDF.]
+
+Next, we will generate η sample graphs from the G ′ . For each sample graph g , we construct an induced tree root at I that contains reachable nodes from I by using Deep First Search (DFS) algorithm obtain set of η trees L (line 3). Denote h ( I ,  T ) is influence reduction of a node I on each tree T , we have h ( u , T ) = | { v | v ∈ sub-tree rooted u } | , and 12
+h ( I , T ) - h ( I , T \ { u } ) = h ( u , T ) We then apply the Sample Average Approximation (SAA) technique to estimate h ( A ) in near-linear time by using empirical average over set L . 13
+h ( A ) ≈ h ^ ( A ) = 1 η ∑ T ∈ L h ( I , T \ { A } ) The incremental influence reduction of node v with set A can be estimated by following equation 14
+δ ( A , u ) ≈ δ ^ ( A , u ) = h ^ ( A + u ) - h ^ ( A ) The following Lemma shows that function h ^ ( · ) is monotone and submodular.
+Lemma 1 Given L is set of η trees rooted I , h ^ ( · ) is monotone and submodular function.
+Proof For a tree T ∈ L , let X ( A ) is the set of nodes are not reachable from I when removing A . For A ⊆ B , set of nodes are not connected to I after removing A is subset of set of nodes node not connected to I after removing B , i.e., X ( A ) ⊆ X ( B ) . Therefore, h ( I , T \ A ) ≥ h ( I , T \ B ) , and ( X ( u ) ∪ X ( A ) ) \ X ( A ) ⊆ ( X ( u ) ∪ X ( B ) ) \ X ( B ) , for a node u ∉ B . Hence, h ( I , T \ ( A ∪ { u } ) ) - h ( I , T \ A ) ≥ h ( I , T \ ( B ∪ { u } ) ) - h ( I , T \ B ) . Therefore, the function h ^ ( · ) , which is the linear combination of h ( I , T \ · ) , is also monotone increasing and submodular. □
+Based on Lemma 1, we apply lazy forward method in Leskovec et al. (2007) to design STMB - LT algorithm presented in Algorithm 2. We use priority queue Q to store each node u with incremental influence reduction u . δ ( u ) as the key and other field u . cur is the iteration in which this marginal gain is last updated (line 6–7). For each iterator in main lop (line 10–22), we consider the node with the largest δ ( · ) . If u . cur is the current iteration number, meaning that its marginal gain is the largest, then u is selected into A . Node v is removed from each tree T ∈ L and h ( u , T ) , u ∈ T will be updated (line 15) in the way as follows: (1) For each children of u , we can remove them because they are not reachable from I , (2) for any ancestor v of u , we update h ( v , T \ u ) = h ( v , T ) - h ( u , T ) . If u . cur is an earlier iteration, its u . cur and u . δ ( u ) are updated in line 19–20. We also update h ( A ) function in each iterator (line 17), and the algorithm stops when h ( A ) ≥ γ - ϵ .
+Complexity Merging set S takes O ( k + | N out ( S ) | ) (line 1). Generating η sample graphs can be done by using Deep First Search (DFS) algorithm. It takes O ( η ( m + n ) ) . Calculating h ( T , u ) , ∀ u ∈ T can be done in O ( η n ) . For lazy forward phase, the total time needed takes at most O ( q η n ) where q is the number of iterations in while loop. Therefore, algorithm 2 runs in O ( η ( m + q n ) ) .
+Algorithms for TMB on IC model Integer linear programming formulation Under IC model, we view the graph G as a generative model for sample graphs. A sample graph g ∈ X G is generated from G by selecting each edge ( u , v ) ∈ E independently, with probability p ( u ,  v ). The probability that g is generated from G is 15
+Pr [ g ] = ∏ e ∈ E g p ( e ) · ∏ e ∉ E g ( 1 - p ( e ) ) For a node v ∈ V , we define a integer variable x v to represent whether or not node v is selected in solution, 16
+x v = 1 , if node v is selected in solution 0 , otherwise We assign each edge ( u ,  v ) a random Bernoulli variable λ ( u , v ) satisfying Pr [ λ ( u , v ) = 1 ] = p ( u , v ) and Pr [ λ ( u , v ) = 0 ] = 1 - p ( u , v ) . For each g ∈ X G , λ ( u , v ) ∈ { 0 , 1 } . In the view of IC model, the the values of λ ( u , v ) indicate that the infected node u can influence the neighbour node v : 17
+λ ( u , v ) = 1 , activated node u can influence the neighbor node v 0 , otherwise Denote G ′ is the residual graph after removing the selected nodes and adjacent edges from G . We define integer variables d G ( u , v ) and d G ′ ( u , v ) indicate whether node u and node v are disconnected in the G and G ′ , respectively. 18
+d G ( u , v ) = 1 , if node u and v are disconnected in G 0 , otherwise 19
+d G ′ ( u , v ) = 1 , if node u and v are disconnected G ′ 0 , otherwise In the space of all sample graphs generated from G , the influence reduction of spread of source S after removing the selected set nodes A is calculated as follows: 20
+h ( A ) = ∑ g ∈ X G Pr [ g ] ∑ u ∈ S ∑ v ∈ V \ S d g ′ ( u , v ) - d g ( u , v ) We formulate the linear integer programming for TMB , denoted by ILP, as follows: 21
+min: ∑ u ∈ V \ S x ( u ) 22
+subject to: ∑ g ∈ X G Pr [ g ] ∑ u ∈ S ∑ v ∈ V \ S d g ′ ( u , v ) - d g ( u , v ) ≥ γ 23
+d g ′ ( u , v ) ≤ x ( u ) + x ( v ) + 1 - λ g ( u , v ) , ( u , v ) ∈ g , ∀ g ∈ X G 24
+d g ′ ( u , v ) + d g ′ ( v , w ) ≥ d g ′ ( u , w ) , ∀ ( u , v ) ∈ g , ∀ g ∈ X G , w ∈ V 25
+d g ( u , v ) + d g ( v , w ) ≥ d g ( u , w ) , ∀ ( u , v ) ∈ g , ∀ g ∈ X G , w ∈ V 26
+x ( u ) = 0 , ∀ u ∈ S 27
+x ( u ) ∈ { 0 , 1 } , u ∈ V \ S 28
+d g ( u , v ) , d g ′ ( u , v ) ∈ { 0 , 1 } , u , v ∈ g , ∀ g ∈ X G The objective function (21) of ILP is to minimize the number of selected nodes. The constraint (22) guarantees that the influence reduction of S at least γ ; the constraints (23) indicate that when selecting a node in an edge ( u ,  v ), the connection between them is broken; constraints (24) and (25) are the triangle inequalities reflecting the connection condition of two nodes in the graph. The main challenge of solving this ILP is that there are exponential number of variables and constraints. That comes from the number of sample graphs is O ( 2 m ) .
+To reduce the number of constraints, we apply a weighted-averaging of all constraints in ILP. Constraints include the sample graph g are given weights Pr [ g ] . Accordingly, the constraint (23) are reduced to a single constraint 29
+d ′ ( u , v ) ≤ x ( u ) + x ( v ) + 1 - ∑ g ∈ X G Pr [ g ] λ g ( u , v ) 30
+= x ( u ) + x ( v ) + 1 - p ( u , v ) We apply the same way to other constraints resulting the relaxation of ILP, called ILPR, as follows 31
+min: ∑ u ∈ V \ S x ( u ) 32
+subject to: ∑ u ∈ S ∑ v ∈ V \ S d ′ ( u , v ) - d ( u , v ) ≥ γ 33
+d ′ ( u , v ) ≤ x ( u ) + x ( v ) + 1 - p ( u , v ) , ( u , v ) ∈ E 34
+d ′ ( u , v ) + d ′ ( v , w ) ≥ d ′ ( u , w ) , ∀ ( u , v ) ∈ E , w ∈ V 35
+d ( u , v ) + d ( v , w ) ≥ d ( u , w ) , ∀ ( u , v ) ∈ E , w ∈ V 36
+x ( u ) = 0 , ∀ u ∈ S 37
+x ( u ) ∈ { 0 , 1 } , u ∈ V \ S 38
+d ( u , v ) ∈ [ 0 , 1 ] , d ′ ( u , v ) ∈ [ 0 , 1 ] , u , v ∈ V The benefit of relaxation from ILP to ILPR is that we can reduce the number of constraints from exponential to polynomial, and provide a lower-bound on the optimal solution. A nice bound from ILPR can provide a helpful tool to evaluate the quality of the proposed algorithm. That results are presented in following lemmas.
+Lemma 2 The optimal objective value of ILPR is a lower-bound on the optimal objective value of ILP.
+Proof Let ( x ^ , d ^ g 1 , d ^ g 2 , … , d ^ g N , d ^ g 1 ′ , d ^ g 2 ′ , … , d ^ g N ′ ) is the optimal solution of ILP, where N is the number of all sample graphs. We construct the solution ( x 0 , d 0 , d 0 ′ ) with x 0 = x ^ , d 0 = ∑ g ∈ X G Pr [ g ] d g , and d 0 ′ = ∑ g ∈ X G Pr [ g ] d g ′ . The objective value of ILP is the same as the optimal objective of ILPR. We then show that ( x 0 , d 0 , d 0 ′ ) is a feasible of ILPR by the fact that it satisfies all constraint of ILPR. Indeed, we have: 39
+∑ u ∈ S ∑ v ∈ V \ S d ′ ( u , v ) - d ( u , v ) = ∑ u ∈ S ∑ v ∈ V \ S ∑ g ∈ X G Pr [ g ] d g ′ ( u , v ) - ∑ g ∈ X G Pr [ g ] d g ( u , v ) 40
+= ∑ u ∈ S ∑ v ∈ V \ S ∑ g ∈ X G Pr [ g ] d g ′ ( u , v ) - d g ( u , v ) 41
+= ∑ g ∈ X G Pr [ g ] ∑ u ∈ S ∑ v ∈ V \ S d g ′ ( u , v ) - d g ( u , v ) Due to the constraint (22) is satisfied, constraint (32) is satisfied. Due to d 0 ′ and d 0 is a linear combination of d g ′ and d g with the coefficients Pr [ g ] , they satisfy the constraints (33), (34), and (35) and due to the probabilities Pr [ g ] add up to one, d 0 , d 0 ′ ∈ [ 0 , 1 ] , i.e., they satisfy constraint (38). □
+Lemma 3 The number of constraints of ILPR is O ( n 3 )
+Proof The number of triangle inequality constraints in (34) and (35) is O ( n 3 ) . The number constraints in (23) and (33) is O ( n 2 ) . Thus, the number of constraints in ILPR is O ( n 3 ) . □
+STMB - IC algorithm In LT model, the function h ( · ) is monotone and submodular function, therefore TMB admits greedy algorithm with approximation ratio of ( 1 - 1 / e ) . Unfortunately, the function h ( · ) is neither submodular nor supermodular under IC model.
+Theorem 5 The function h ( · ) is neither submodular nor supermodular under IC model
+Proof We prove the theorem by counter example. We consider a graph G = ( V , E ) , with five nodes V = { a , b , c , d , e } and five directed edges E = { ( a , b ) , ( a , c ) , ( b , d ) , ( c , d ) , ( d , e ) } under IC model. For each edge e , we assign probability p ( e ) = 1 , and set misinformation source S = { a } . We have h ( ∅ ) = 0 , h ( { b } ) = 1 , h ( { b , c } ) = 4 , h ( { b , c , d } ) = 4 , and h ( { b , c } ) - h ( { b } ) > h ( { b } ) - h ( ∅ ) . Therefore, h ( · ) is not a submodular function. On the other hand, h ( { b , c , d } ) - h ( { b , c } ) < h ( { b , c } ) - h ( { b } ) . Therefore h ( · ) is not a supermodular function. □
+In this model, we propose STMB - IC algorithm for TMB on IC model with with some changes. First, we use merge algorithm for IC model in Zhang and Prakash (2015) to merge set source S = { s 1 , s 2 , … , s k } into a single node I . In this case, the new probabilities p ( I , v ) , ∀ v ∈ N out ( S ) : 42
+p ( I , v ) = 1 - ∏ s ∈ N in ( v ) ∩ S ( 1 - p ( s , v ) ) We then remove S from G to obtain new instance G ′ (called merged graph). Base on Remark 6.1 in Zhang and Prakash (2015), the instances of TMB before and after using merge algorithm are also equivalence. Next, we generate η sample graphs from G ′ by live-edge model. For each sample graph g , we build a tree root at I by DFS algorithm. The process of constructing a tree root at I from G under IC model is illustrated in Fig. 2 and summarized in Algorithm 3. After getting set L contains η trees by Algorithm 3, we apply Algorithm 2 to find result for TMB problem under IC model. The procedure is summarized in Algorithm 4.
+Complexity Generating set η tree with algorithm 3 takes O ( η ( m + n ) ) . So, total time to run algorithm 4 in IC model is O ( η ( m + q n ) ) . Fig. 2 [Images not available. See PDF.]
+An example of generating a tree root at I from G under IC model
+[Images not available. See PDF.]
+[Images not available. See PDF.]
+
+Experiments To see the efficiency and effectiveness of STMB - LT and STMB - IC algorithms for TMB prblem, in this section we present the results of our algorithms on real-networks.
+Experiment setup Algorithms comparison We compare our proposed algorithms with the other algorithms. The following is a list of algorithms we evaluate in our experiments.
+- STMB - LT , STMB - IC : Our proposed algorithms. In LT model, we call our algorithm is STMB - LT 500 , STMB - LT 1000 with the number of live-edge graphs are η = 500 and η = 1000 , respectively. If STMB - LT 500 and STMB - LT 1000 have same solution quality result, we commonly call is STMB - LT . In large graphs we don’t run STMB - LT 1000 algorithm. Similar for STMB - IC .
+
+- DAVA (Zhang and Prakash 2015): The current state-of-the-art algorithm for Data-Aware Vaccination problems in Zhang and Prakash (2015), that finds the set k nodes in V - S to distribute vaccine to minimize σ G ( S ) under IC model. Because DAVA is only usable on IC model, we compare it with STMB - IC .
+
+- Greedy : The Greedy algorithm in Sect. 5.1 with the number of Monte-Carlo simulations is 1,000.
+
+- Degree : The heuristic based on the notion of degree centrality. We setup degree of a node equal sum of in-degree and out-degree that node. We sort all nodes base on degree and we then use binary search algorithm to find A until mets condition h ( A ) ≥ γ .
+
+- PageRank —compute a ranking of the nodes in the graph G based on the structure of the incoming links (Page et al. 1998). We implement the power method with a damping factor of 0.85. We setup this algorithm similar to Degree algorithm.
+
+
+Datasets For experimental purposes, we choose multiple real datasets from snap.stanford.edu1 domain. Some basic statistics about these networks are given in Table 2. Table 2. Statistics of datasets
+Dataset
+Num. of nodes
+Num. of edges
+Avg. degree
+
+Bitcoin-OTC
+5.8K
+35.5K
+12.0
+
+OregonAS
+6.4K
+12.5K
+3.8
+
+Gnutella
+10.8K
+39.9K
+7.3
+
+NetHEPT
+15.5K
+32.2K
+4.2
+
+Brightkite
+58.2K
+428.1K
+14.7
+
+Stanford
+281.9K
+2.3M
+16.4
+
+
+
+- Bitcoin-OTS (Kumar et al. 2016): The Bitcoin-OST is who-trusts-whom network of people who trade using Bitcoin on a platform called Bitcoin OTC.
+
+- OregonAS (Leskovec et al. 2005): The data collected from University of Oregon Route Views Project—Online data and reports. It is a network graph connect Autonomous Systems (AS) together.
+
+- Gnutella (Leskovec et al. 2005; Ripeanu et al. 2002): A snapshots of the Gnutella peer-to-peer file sharing network from August 2002. Nodes represent hosts in the Gnutella network topology and edges represent connections between the Gnutella hosts.
+
+- NetHEPT (Kempe et al. 2003; Chen et al. 2010b): An academic collaboration network extracted from “High Energy Physics - Theory” section of the e-print arXiv2 in the time period from 1991 to 2003. Each node in the network represents an author, and each edge connecting two nodes indicates that the two authors have co-authored a paper.
+
+- Brightkite (Cho et al. 2011): It is a friendship network was collected by Eunjoon Cho et al. based on the public check-in data between April 2008 and October 2010 on service provider Brighttkite.
+
+- Stanford (Leskovec et al. 2009): This is the Stanford CS hyperlink network from 2002. Nodes represent pages from Stanford University (https://www.stanford.edu) and directed edges represent hyperlinks between them.
+
+
+Parameter settings To work with the IC and LT models, we follow settings in Kempe et al. (2003), Zhang and Prakash (2015) and Zhang et al. (2016c).
+- LT -UW: Linear Threshold model with uniform arc weights, that is, each in-coming arc of v has weight 1 | N in ( v ) | . This means each arc has equal contribution in activating v and the total weight of all incoming arcs is 1.
+
+- IC -UP[0.1]: In the Independent Cascade model, we assigned a uniform probability of p = 0.1 to each edge of the graph.
+
+- IC -WC: This is another case of the Independent Cascade model that called “weighted cascade” in which each edge from node u to v is assigned probability 1 | N in ( v ) | of activating v .
+
+
+Fig. 3 [Images not available. See PDF.]
+Comparison of solution quality of algorithms for TMB problem in LT model (lower is better)
+Fig. 4 [Images not available. See PDF.]
+Comparison of running time of algorithms for TMB problem in LT model
+Table 3 The running time (s) of algorithms in case γ is maximum
+Dataset
+γ
+STMB - LT 500
+STMB - LT 1000
+Greedy
+Degree
+PageRank
+
+OregonAS
+100
+22.15
+46.98
+4517.39
+13.55
+11 . 50
+
+NetHEPT
+550
+39 . 30
+81.35
+–
+224.94
+253.23
+
+Brightkite
+500
+1546.69
+2790.63
+–
+326 . 25
+348.83
+
+Stanford
+1000
+18,346 . 47
+#
+–
+33,573.49
+23,621.73
+
+Bold values are the best results in each test case
+–Running time more 500k(s)   # We don’t experiment
+
+For the misinformation source, we randomly choose | S | between 100 and 1000 nodes in node set depending on the size of graphs.
+Measurements We measure the performance of each algorithm in two aspects: Solution quality and Running time. To compute the influence spread of a set, we run 10.000 Monte Carlo simulations of the diffusion process and take the average value.
+All the experiments are carried on a Ubuntu 14.04 machine have 2xIntel ® Xeon ® CPU E5-2697 v4 @ 2.30 GHz with 8 × 16  GB DIMM ECC DDR4 @ 2400 MHz main memory. The code is written in Python 2.7 using the NetworkX 3 library.
+Experiment results for TMB problem LT model Under LT model we compare our algorithm with Greedy , Degree and PageRank algorithms. In this model, we cannot use directly two baseline algorithms Degree and PageRank . Figure 3 shows the performance of the algorithms. Because Greedy algorithm runs very slow, we don’t show plots of them in Brightkite and Stanford networks. As depicted in those figures, the number of selected nodes returned by the our algorithm is always the smallest among all the methods considered. Across all four datasets, we observe that STMB - LT 500 and STMB - LT 1000 provide the same the number of selected nodes. The results of Degree and PageRank algorithms are not good because two algorithms don’t examine the misinformation source S . Fig. 5 [Images not available. See PDF.]
+Comparison of solution quality of algorithms for TMB problem in IC model (lower is better)
+Fig. 6 [Images not available. See PDF.]
+Comparison of Running time of algorithms for TMB problem in IC model
+Fig. 7 [Images not available. See PDF.]
+Comparison solution quality of algorithms for DAV problem under IC model (higher is better)
+Fig. 8 [Images not available. See PDF.]
+Comparison running time of algorithms for DAV problem under IC model
+
+On average, the solution returned by STMB - LT is 97% better than that by Degree, 98% better than that by PageRank and very closely with Greedy method. That’s the reason we see the clear difference between line of STMB - LT algorithm, line of Degree algorithm and line of PageRank algorithm. Figure 4 shows the results of running time of STMB - LT 500 , STMB - LT 1000 , Degree and PageRank . We can see that STMB - LT 500 ’s running time is 45–55% faster than STMB - LT 1000 algorithm in OregonAS, NetHEPT and Bringtkite Datasets. Table 3 shows the running time of algorithms: STMB - LT 500 , STMB - LT 1000 , Greedy , Degree , PageRank in the case of largest γ . Both Degree and PageRank algorithms do not run fast and can not provide solution with quality guarantee. On the Stanford dataset, the largest one with 281.9K nodes and 2.3M edges, our STMB - LT 500 algorithm requires 18.3K(s) to find the results, is 45% faster than the Degree algorithm and is 22% faster than the PageRank algorithm. Beside, Greedy algorithm can not finish within 500k(s) on NetHEPT, Brightkite and Stanford datasets.
+IC model In the IC model, we compare our method with DAVA and Degree algorithms. Sine the DAVA algorithm’s result is k nodes and TMB problem asks to minimize the number of selected nodes, DAVA algorithm cannot be applied directly. For the purpose of comparison to our method, we first conduct DAVA algorithm with k = γ then we performing a binary search in the interval [ 1 , γ ] until finding the A set have minimum size satisfy h ( A ) ≥ γ .
+The Fig. 5 shows the performance of the algorithms in IC -WC model and IC -UP[0.1] model. We obtain the following observations from these results, STMB - IC 500 gives the same results as STMB - IC 1000 for all networks and STMB - IC give the best solution quality. In five test cases, our algorithm always return A set having minimum size comparing to DAVA algorithm and Degree algorithm. DAVA algorithm is not good in Brightkite and Stanford[0.1] datasets. Degree algorithm don’t have good result in most cases. According to our calculations, average, the algorithm STMB - IC 500 is 67.3% better than DAVA, and 82.3% better than Degree in five test cases.
+We compare the running time of algorithms on IC -WC and IC -UP[0.1] models. The results are presented in Fig. 6. We see STMB - IC 500 have better running time than each of three algorithms remaining. Average, it improves twice times better than STMB - IC 1000 algorithm and up to 15.7 times better than DAVA algorithm. The running time of STMB - IC 500 saves 71.2%, 87.8% and 60.5% running times of Degree in NetHEPT (IC-WC), Brightkite(IC-WC) and Stanford (IC-UP[0.1]), respectively. However, it is 19.1% higher than Degree in OregonAS (IC-WC) and 42.3% higher than Degree in Stanford (IC-WC). This indicates that the benefit of our method improvement may depend on the actual graph structure.
+Experiment results for DAV problem In this part, we modify our STMB - IC algorithm to work on DAV problem (Zhang and Prakash 2015) and compare the performance of STMB - IC algorithm with three algorithms: DAVA , PageRank and Degree. DAV problem aims to find a set A of k nodes from V - S to distribute vaccine to maximizing | V | - σ S ( G \ A ) . As we can see, in Algorithm 2, if u max . c u r = i n t e r a t i o n ( l i n e 13 ) then | A | increases by one so to find set A of k nodes, the algorithm is terminated when i n t e r a t i o n = k . The results are shown in Fig. 7. There is no surprise that STMB - IC always has best result when performing on both IC -WC model and IC -UP[0.1] model. DAVA performs well in Gnutella and Stanford datasets but it is not very well in Brightkite and Stanford (IC-UP[0.1]) datasets. In Fig. 8, we plot the running time of algorithms when k increases from 20 to 200. With small k , STMB - IC 500 does not run faster DAVA method, but when k is in the interval [100, 200], STMB - IC 500 is faster than DAVA . When number of nodes which we need to find to distribute vaccine increases, the running time of STMB - IC 500 increases very slowly but the running time of DAVA is rapidly growing. It demonstrates the scalability of STMB - IC algorithm. On average, the total running time of STMB - IC 500 algorithm improves 1.3 times compare to DAVA algorithm.
+Conclusions In this paper, we studied the TMB problem, which aims at finding smallest set nodes to remove from a social network so that the influence reduction greater than threshold γ . We have some proofs on complexity side of the problem. Specifically, the TMB is NP-hard under IC model and is #P-Hard under LT model. Moreover, we have proposed efficient algorithms, namely STMB - IC and STMB - LT to solve TMB problem under two models IC and LT . Experiments were conducted on real-life network datasets showing the effectiveness and scalability of our algorithms that outperform the state-of-the-art methods.
+Footnotes 1 https://snap.stanford.edu/data/index.html.
+2 http://www.arXiv.org.
+3 Instructions for use https://networkx.github.io/.
+Publisher's Note Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References Allcott H, Gentzkow M (2016) Social media and fake news in the 2016 election. Stanford Web https://web.stanford.edu/~gentzkow/research/fakenews.pdf. Accessed 21 July 2019
+Asahiro, Y; Hassin, R; Iwama, K. Complexity of finding dense subgraphs. Discrete Appl Math ; 2002; 121 , 1–3 pp. 15-26.1906583 [DOI: https://dx.doi.org/10.1016/S0166-218X(01)00243-8] 1002.68108
+Budak C, Agrawal D, El Abbadi A (2011) Limiting the spread of misinformation in social networks. In: Proceedings of the 20th international conference on world wide web, WWW 2011, Hyderabad, India, March 28–April 1, 2011, pp 665–674. https://doi.org/10.1145/1963405.1963499
+Chen W, Wang C, Wang Y (2010a) Scalable influence maximization for prevalent viral marketing in large-scale social networks. In: Proceedings of the 16th ACM SIGKDD international conference on knowledge discovery and data mining, Washington, DC, USA, July 25–28, 2010, pp 1029–1038. https://doi.org/10.1145/1835804.1835934
+Chen W, Yuan Y, Zhang L (2010b) Scalable influence maximization in social networks under the linear threshold model. In: ICDM 2010, The 10th IEEE international conference on data mining, Sydney, Australia, 14–17 December 2010, pp 88–97. https://doi.org/10.1109/ICDM.2010.118
+Cho E, Myers SA, Leskovec J (2011) Friendship and mobility: user movement in location-based social networks. In: Proceedings of the 17th ACM SIGKDD international conference on knowledge discovery and data mining, San Diego, CA, USA, August 21–24, 2011, pp 1082–1090. https://doi.org/10.1145/2020408.2020579
+Domm P (2013) False rumor of explosion at white house causes stocks to briefly plunge; AP confirms its Twitter feed was hacked CNBC. CNBC http://www.cnbc.com/id/100646197. Accessed 21 July 2019
+Farajtabar M, Yang J, Ye X, Xu H, Trivedi R, Khalil EB, Li S, Song L, Zha H (2017) Fake news mitigation via point process based intervention. In: Proceedings of the 34th international conference on machine learning, ICML 2017, Sydney, NSW, Australia, 6–11 August 2017, pp 1097–1106. http://proceedings.mlr.press/v70/farajtabar17a.html
+Goyal, A; Bonchi, F; Lakshmanan, LVS; Venkatasubramanian, S. On minimizing budget and time in influence propagation over social networks. Soc Netw Anal Min ; 2013; 3 , 2 pp. 179-192. [DOI: https://dx.doi.org/10.1007/s13278-012-0062-z]
+He X, Song G, Chen W, Jiang Q (2012) Influence blocking maximization in social networks under the competitive linear threshold model. In: Proceedings of the Twelfth SIAM international conference on data mining, Anaheim, California, USA, April 26–28, 2012, pp 463–474. https://doi.org/10.1137/1.9781611972825.40
+Kempe D, Kleinberg JM, Tardos É (2003) Maximizing the spread of influence through a social network. In: Proceedings of the ninth ACM SIGKDD international conference on knowledge discovery and data mining, Washington, DC, USA, August 24–27, 2003, pp 137–146. https://doi.org/10.1145/956750.956769
+Khalil EB, Dilkina BN, Song L (2014) Scalable diffusion-aware optimization of network topology. In: The 20th ACM SIGKDD international conference on knowledge discovery and data mining, KDD ’14, New York, NY, USA, August 24–27, 2014, pp 1226–1235. https://doi.org/10.1145/2623330.2623704
+Kumar S, Spezzano F, Subrahmanian VS, Faloutsos C (2016) Edge weight prediction in weighted signed networks. In: IEEE 16th international conference on data mining, ICDM 2016, December 12–15, 2016, Barcelona, Spain, pp 221–230. https://doi.org/10.1109/ICDM.2016.0033
+Leskovec J, Kleinberg JM, Faloutsos C (2005) Graphs over time: densification laws, shrinking diameters and possible explanations. In: Proceedings of the eleventh ACM SIGKDD international conference on knowledge discovery and data mining, Chicago, Illinois, USA, August 21–24, 2005, pp 177–187. https://doi.org/10.1145/1081870.1081893
+Leskovec J, Krause A, Guestrin C, Faloutsos C, VanBriesen JM, Glance NS (2007) Cost-effective outbreak detection in networks. In: Proceedings of the 13th ACM SIGKDD international conference on knowledge discovery and data mining, San Jose, California, USA, August 12–15, 2007, pp 420–429. https://doi.org/10.1145/1281192.1281239
+Leskovec, J; Lang, KJ; Dasgupta, A; Mahoney, MW. Community structure in large networks: natural cluster sizes and the absence of large well-defined clusters. Internet Math ; 2009; 6 , 1 pp. 29-123.2736090 [DOI: https://dx.doi.org/10.1080/15427951.2009.10129177] 1205.91144
+Nguyen, HT; Cano, A; Tam, V; Dinh, TN. Blocking self-avoiding walks stops cyber-epidemics: a scalable GPU-based approach. IEEE Trans Knowl Data Eng ; 2019; [DOI: https://dx.doi.org/10.1109/TKDE.2019.2904969]
+Nguyen, NP; Yan, G; Thai, MT. Analysis of misinformation containment in online social networks. Comput Netw ; 2013; 57 , 10 pp. 2133-2146. [DOI: https://dx.doi.org/10.1016/j.comnet.2013.04.002]
+Page L, Brin S, Motwani R, Winograd T (1998) The pagerank citation ranking: bringing order to the web. Technical Report, Stanford Digital Library Technologies Project
+Pham CV, Dinh HM, Nguyen HD, Dang HT, Hoang HX (2017) Limiting the spread of epidemics within time constraint on online social networks. In: Proceedings of the eighth international symposium on information and communication technology, Nha Trang City, Viet Nam, December 7–8, 2017, pp 262–269. https://doi.org/10.1145/3155133.3155157
+Pham, CV; Thai, MT; Duong, HV; Bui, BQ; Hoang, HX. Maximizing misinformation restriction within time and budget constraints. J Comb Optim ; 2018; 35 , 4 pp. 1202-1240.3780160 [DOI: https://dx.doi.org/10.1007/s10878-018-0252-3] 1400.90264
+Prakash, B. Aditya; Tong, Hanghang; Valler, Nicholas; Faloutsos, Michalis; Faloutsos, Christos. Virus Propagation on Time-Varying Networks: Theory and Immunization Algorithms. Machine Learning and Knowledge Discovery in Databases ; 2010; Berlin, Heidelberg, Springer Berlin Heidelberg: pp. 99-114. [DOI: https://dx.doi.org/10.1007/978-3-642-15939-8_7]
+Ripeanu M, Foster IT, Iamnitchi A (2002) Mapping the gnutella network: properties of large-scale peer-to-peer systems and implications for system design. CoRR arXiv:cs.DC/0209028
+Song C, Hsu W, Lee M (2015) Node immunization over infectious period. In: Proceedings of the 24th ACM international conference on information and knowledge management, CIKM 2015, Melbourne, VIC, Australia, October 19–23, 2015, pp 831–840. https://doi.org/10.1145/2806416.2806522
+Song C, Hsu W, Lee M (2017) Temporal influence blocking: minimizing the effect of misinformation in social networks. In: 33rd IEEE international conference on data engineering, ICDE 2017, San Diego, CA, USA, April 19–22, 2017, pp 847–858. https://doi.org/10.1109/ICDE.2017.134
+Tong, G; Wu, W; Du, D. Distributed rumor blocking with multiple positive cascades. IEEE Trans Comput Soc Syst ; 2018; 5 , 2 pp. 468-480. [DOI: https://dx.doi.org/10.1109/TCSS.2018.2818661]
+Tong GA, Wu W, Guo L, Li D, Liu C, Liu B, Du D (2017) An efficient randomized algorithm for rumor blocking in online social networks. In: 2017 IEEE conference on computer communications, INFOCOM 2017, Atlanta, GA, USA, May 1–4, 2017, pp 1–9. https://doi.org/10.1109/INFOCOM.2017.8056957
+Tong GA, Du D, Wu W (2018b) On misinformation containment in online social networks. In: Advances in neural information processing systems 31: annual conference on neural information processing systems 2018, NeurIPS 2018, 3–8 December 2018, Montréal, Canada., pp 339–349. http://papers.nips.cc/paper/7317-on-misinformation-containment-in-online-social-networks
+Tong H, Prakash BA, Tsourakakis CE, Eliassi-Rad T, Faloutsos C, Chau DH (2010) On the vulnerability of large graphs. In: ICDM 2010, The 10th IEEE international conference on data mining, Sydney, Australia, 14–17 December 2010, pp 1091–1096. https://doi.org/10.1109/ICDM.2010.54
+Valiant, LG. The complexity of enumeration and reliability problems. SIAM J Comput ; 1979; 8 , 3 pp. 410-421.539258 [DOI: https://dx.doi.org/10.1137/0208032] 0419.68082
+Zhang, Y; Prakash, BA. Data-aware vaccine allocation over large networks. TKDD ; 2015; 10 , 2 pp. 20:1-20:32. [DOI: https://dx.doi.org/10.1145/2803176]
+Zhang, H; Alim, MA; Li, X; Thai, MT; Nguyen, HT. Misinformation in online social networks: detect them all with a limited budget. ACM Trans Inf Syst ; 2016; 34 , 3 pp. 18:1-18:24. [DOI: https://dx.doi.org/10.1145/2885494]
+Zhang, Y; Adiga, A; Saha, S; Vullikanti, A; Prakash, BA. Near-optimal algorithms for controlling propagation at group scale on networks. IEEE Trans Knowl Data Eng ; 2016; 28 , 12 pp. 3339-3352. [DOI: https://dx.doi.org/10.1109/TKDE.2016.2605088]
+Zhang, H; Nguyen, DT; Zhang, H; Thai, MT. Least cost influence maximization across multiple social networks. IEEE/ACM Trans Netw (TON) ; 2016; 24 , 2 pp. 929-939. [DOI: https://dx.doi.org/10.1109/TNET.2015.2394793]
+Zheng J, Pan L (2018) Least cost rumor community blocking optimization in social networks. In: 2018 third international conference on security of smart cities, industrial control system and communications (SSIC), pp 1–5. https://doi.org/10.1109/SSIC.2018.8556739
+Zhu, W; Yang, W; Xuan, S; Man, D; Wang, W; Du, X; Guizani, M. Location-based seeds selection for influence blocking maximization in social networks. IEEE Access ; 2019; 7 , pp. 27272-27287. [DOI: https://dx.doi.org/10.1109/ACCESS.2019.2900708]

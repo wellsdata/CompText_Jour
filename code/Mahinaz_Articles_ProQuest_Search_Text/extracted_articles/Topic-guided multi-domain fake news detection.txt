@@ -1,0 +1,724 @@
+Introduction
+In the information age we live in, news plays an extremely pivotal role. As a crucial medium for obtaining information, news brings us the latest global events in unique ways, keeping us abreast of advancements across diverse fields, from political shifts and economic trends to scientific breakthroughs, all within the sphere of news. Social media, as the primary channel for disseminating these news items, interconnects global dynamics, offering us the chance to stay informed on happenings worldwide.
+However, the rapid spread through social media also provides fake news with a vast platform for dissemination. In a large-scale study spanning four European countries [1], researchers discovered that the massive circulation of fake news during the COVID-19 pandemic amplified societal polarization, exacerbating misunderstandings across ideological lines, and profoundly impacting social and public decision-making. Therefore, detecting and preventing fake news is critically important.
+Currently, although many research teams are dedicated to developing automated fake news detection technologies, these methods are often confined to specific domains, such as politics or healthcare. Yet, in real life, news coverage is incredibly broad, spanning all fields and exhibiting significant variations in terminology, language style, and themes [2]. To illustrate these distinctions, we plotted word clouds for nine domains based on word frequency in Fig. 1. For instance, in the education domain, words like “student,” “teacher,” and “child” appear frequently, while in the healthcare domain, terms like “COVID-19” and “health” are more common. These differences stem from the distinct professional backgrounds and knowledge systems within each domain [3, 4]. Consequently, a fake news detection model that performs well in one domain may not perform as well in another. Therefore, designing a fake news detection model that can adapt to and understand cross-domain disparity is a primary goal of our research. [See PDF for image]
+Fig. 1 Word cloud map of the nine domain
+
+
+Adding to the complexity, a news item often does not belong solely to one domain [2, 5]. As shown in Fig. 2, a United Nations report on extreme weather conditions may be relevant to disaster, science, social and financial. Clearly, a news article often encompasses various components, intersecting multiple domains. However, existing fake news detection methods usually assign a single domain label to a news item, failing to capture its multidimensional nature. This limitation poses new challenges for fake news detection: how to reconcile the diversity of news topics with the singularity of labels. This is another significant research issue warranting further exploration. [See PDF for image]
+Fig. 2 This image depicts a news release from the United Nations, encompassing information from multiple domains
+
+
+To address these research issues, we propose a Topic-guided Multi-domain Fake News Detection Framework (TG-MFEND). To tackle the challenges of cross-domain disparity, our model initially constructs three specialized networks—SemNet, StyNet, and TopicNet—each focusing on the semantic, stylistic, and thematic aspects of news, respectively. These networks serve as the foundation of a multi-channel system, where each channel captures distinct patterns in the news. To effectively integrate these diverse views and generate richer combinations, we designed a module named the Adaptive Multi-View Fusion Module. Given that perspectives vary across domains (for example, the stylistic view from the science domain may differ significantly from that of the financial domain), we introduced a Domain Transition Handler module. This module uses domain information as input and adaptively integrates cross-view representations of news across domains, enabling a more flexible domain transition.
+In exploring the reconciliation of topic multiplicity with label singularity, we observed that a single topic, such as COVID-19, often extends beyond healthcare and may also be linked to the political sphere. Therefore, we strive to delve deeply into news topics, seeking potential connections between different domains, to provide a more comprehensive representation of the domains that a news snippet encompasses. Inspired by topic modeling, we designed a Topic Domain Embedder with a dual-layer attention mechanism, which captures topic-word distributions and document-topic distributions respectively. Specifically, the first layer includes multiple attention heads, each focusing on key words in a topic. The second layer uses an attention mechanism to compute the document-topic matrix, assessing the similarity between the news snippet and each topic. This similarity reflects the domain information contained in the news, which the model then uses to aggregate vector representations of multiple topics, thus enriching the news’s domain information. This enriched domain information guides the Domain Transition Handler to aggregate cross-view representations. The major contributions of this paper are as follows:
+- We propose a novel topic-based multi-domain fake news detection framework, TG-MFEND. To address the challenges of cross-domain disparity, TG-MFEND models news content from multiple perspectives. By learning the weights of each perspective, TG-MFEND adaptively aggregates these multi-view representations, effectively minimizing interference from irrelevant views.
+
+- We designed the Topic Domain Embedder module, which leverages a dual-layer attention mechanism to extract the latent domain information within news, effectively addressing the challenge of reconciling the multiplicity of news topics with the singularity of labels.
+
+- We conducted extensive experiments on different datasets, and the results demonstrate that our approach is effective compared to state-of-the-art fake news detection models on multi-domain datasets.
+
+
+
+Related works
+Fake news detection
+Fake news detection primarily bifurcates into two main strategies: Content-based and User information-based methods. Content-based approaches delve into the news text itself, utilizing linguistic patterns and textual features to determine authenticity. In contrast, User information-based techniques focus on the behaviors and profiles of users interacting with the news, assessing credibility based on user characteristics and propagation patterns.
+Content-based methods In the realm of fake news detection, many studies have predominantly focused on content-based approaches. For instance, [6] introduced a method that learns hierarchical discourse structures to detect fake news. [7] proposed a graph-based approach combined with summarization techniques for effective fake news detection. [8] employed Recurrent Neural Networks (RNN) for rumor detection by capturing content semantics and propagation structures. [9] presented a method for detecting rumors on Twitter by leveraging information campaigns with adversarial learning. [10] introduced a novel approach for fake news detection by “amplifying and observing” news environment awareness. [11] explored techniques inspired by fact-checkers, focusing on analyzing and generating fact-checking language. [12] introduced the LOSIRD model, which integrates subjective information, like social media comments, with objective facts from sources like Wikipedia to enhance interpretability in rumor detection [13] proposed a multiscale transformer model tailored for mixed-language contexts, aiming to capture deeper semantic representations in multilingual environments. [14] introduced a technique named SemSeq4FD, which enhances the text representation for fake news detection by integrating global semantic relationships with local sequences. [15] investigated rumor detection by extracting semantic information through deep visual perception-based Recurrent Neural Networks. [16] considers social media posts as a data stream and incorporates reinforcement learning to detect rumors. [17] highlights that content-based detection methods often consider multiple aspects, such as the false information within fake news and its writing style. [18] proposed an innovative approach to improve future fake news detection by mitigating entity biases.
+User information-based methods User information-based methods in fake news detection leverage behavioral data and social interactions to improve detection accuracy. [19] developed UPFD, integrating user preferences from historical posts with propagation structures using graph neural networks. [20] proposed a multi-task model that incorporates user credibility, enhancing detection through attention mechanisms. [21] introduced Bi-GCN, a bi-directional graph convolutional network capturing both top-down and bottom-up patterns in rumor spread. [22] created a participant-level model that considers user influence, susceptibility, and temporal factors for fine-grained rumor detection. [23] applied recurrent and convolutional networks to classify propagation paths, enabling early detection through initial user interactions. [24] developed a mixed graph neural network for vehicular social networks, combining convolutional and recurrent networks to improve detection across dynamic user networks. [25] proposed MVAN, which combines text semantic attention and propagation structure attention to analyze social media interactions and detect fake news. [26] introduced the Global–Local Attention Network (GLAN), which uses a heterogeneous graph to jointly encode local semantic and global structural information.
+The User information-based approach is highly effective but has some significant limitations: (1) Privacy Concerns: Analyzing user behavior and social network connections must take into account the legal and ethical issues that may arise due to privacy concerns. (2) Data Availability Issues: Information obtained through the propagation path suffers from severe data gaps and noise. In contrast, content-based methods do not face these limitations. However, content-based research often remains confined to specific domains and performs poorly on multi-domain data. In this paper, we will explore a more effective multi-domain fake news detection approach that overcomes these challenges.
+Multi-domain learning
+Recent research has increasingly emphasized the significance of multi-domain learning, which seeks to leverage insights from diverse domains to enhance model robustness [2]. Notably, studies such as [3, 5, 27, 28] have effectively harnessed knowledge spanning multiple domains to improve model performance. However, it has been well-documented that simultaneously modeling knowledge across various domains can present considerable challenges [3].
+It’s important to highlight that, while some methods primarily focus on modeling domain representations, [29] and [30] have employed a hard-sharing mechanism to acquire a universal representation applicable across all domains. Nonetheless, existing research has revealed that mastering universal knowledge with this hard-sharing mechanism remains a challenging endeavour [31]. In contrast, [32, 33] have introduced a model that leverages a soft-sharing mechanism. This model obtains domain representations for news articles through a network of expert modules and subsequently integrates the content features of the news using these domain representations. However, it’s worth noting that a news snippet may not always possess a single-domain label, as a single news snippet can encompass content from multiple domains. [34] addresses this issue by integrating pre-set domain information through pre-trained modules to generate domain representations. While this approach partially captures cross-domain characteristics, it relies on fixed domain presets, limiting its flexibility when encountering news items that blend multiple, nuanced domains. In contrast, our method generate domain representations by leveraging the Topic Domain Embedder with a dual-layer attention mechanism, allowing the model to dynamically capture topic distributions and adaptively compute document-topic relations. This flexible design enables our model to better accommodate the complexity of domain information in news content.
+In this paper, we introduce TG-MFEND, a model that, as discussed later in this paper, effectively addresses the challenge posed by the diversity of news topics and the singularity of labels. TG-MFEND not only overcomes these challenges but also outperforms all previous models.
+Methodology
+In this section, we provide a detailed description of our proposed Topic-Guided Multi-Domain Fake News Detection Framework (TG-MFEND), the overall structure of which is illustrated in Fig. 3. We begin by defining multi-domain fake news detection. Subsequently, we delve into the components of TG-MFEND: Cross-view Fusion extracts multi-view representations and adaptively fuses cross-view interactions. The Topic Domain Embedder addresses the issue of the conflict between the diversity of news topics and the singularity of labels, thereby enriching domain information. With this enriched domain information as input, the Domain Transition Handler models domain differences and provides useful cross-view representations to the predictor. [See PDF for image]
+Fig. 3 Overall framework of topic-guided multi-domain fake news detection framework
+
+
+Problem statement
+Let S be a news snippet on social media, S = P j j = 1 n , where n represents the number of news snippets. and each news snippet P j consists of T tokens (words). We utilize BERT-wwm [35, 36], a model that has been robustly optimized for pre-training BERT [37], to encode the tokens present in the news content as P j = t j 1 , ⋯ , t j T . Inspired by [38], we extract topic features from the news snippet. The topic features are denoted as C j = c j 1 , ⋯ , c j E . Similarly, we extract style features based on [39], and the writing style features of the news snippet are denoted as S j = s j 1 , ⋯ , s j S . style features are numerical features. Every snippet of news comes with a verified label y ∈ { 0 , 1 } , where a value of 1 signifies that the news snippet is fake, while a value of 0 indicates that it is real. Our objective is to develop a model proficient in identifying false information across various domains.
+Cross-view fusion
+According to [34], detecting fake news can greatly benefit from considering multiple perspectives. Therefore, the initial step involves deriving representations of news from a variety of viewpoints. In particular, we utilize three deep extraction mechanisms to obtain representations of news from the semantic, topical, and stylistic perspectives, respectively.
+Semantic Network (SemNet) Its goal is to derive representations from the semantic view using the textual content of news articles. In this paper, we utilize TextCNN [40] as SemNet, taking encoded embeddings t j 1 , ⋯ , t j T as input. This can be expressed as follows: 1
+w j sem = SemNet t j 1 , ⋯ , t j T
+Topic Network (TopicNet) This part focuses on modeling the topical view with the textual content of news articles. we utilize Multilayer Perceptron(MLP) as TopicNet, taking encoded embeddings C = c j 1 , ⋯ , c j E as input. This can be expressed as follows: 2
+w j topic = TopicNet c j 1 , ⋯ , c j E
+Style Network (StyNet) It focuses on the stylistic perspective, utilizing writing style features s j 1 , ⋯ , s j S . A Multilayer Perceptron (MLP) is used as StyNet to derive style representations, denoted as w s ty . This process can be expressed as follows: 3
+w j sty = StyNet s j 1 , ⋯ , s j S
+Drawing inspiration from multi-channel CNN [41, 42], it’s advantageous to derive multiple representations for each view using distinct, learned multi-channel networks: SemNet, TopicNet, and StyNet. These multi-channel extractors enable the model to concurrently focus on information from different representation subspaces, and different representations may concentrate on diverse patterns [43]. Consequently, we can acquire three sets of representations, each corresponding to semantic, topical, and stylistic views, respectively. These are denoted as { w i sem } i = 1 k sem , { w i topic } i = 1 k topic , and { w i sty } i = 1 k sty , where k sem , k topic , and k sty represent the channel count of SemNet, TopicNet, and StyNet, respectively.
+Adaptive multi-view fusion module Multi-view Fusion Module can capture the associations between different views and generate more diverse combinations of views. An intuitive method is to enumerate all possible combinations of views, but this will lead to extremely high computational complexity and significant overhead. Moreover, this method treats all views as equally important, and this indiscriminate combination of views could introduce irrelevant view combinations, thereby reducing model performance. To address these issues, we propose a module called Adaptive Multi-view Fusion Module, which is used to automatically learn cross-view representations, and it can be formulated as follows: 4
+x = exp ∑ i = 1 k sem a i sem ln w i sem + ∑ j = 1 k topic a j topic ln w j topic + ∑ q = 1 k sty a q sty ln w q sty where, a sem , a topic , and a sty each represents the importance of the semantic, topic, and stylistic perspectives, respectively, and they are learnable parameters. x represents the representation of multi-view fusion. In addition, multi-view fusion can be expressed as the product operation of various views, therefore, Eq. 4 can be reformulated as follows: 5
+x = ∏ i = 1 k sem w i sem a i sem ⊙ ∏ j = 1 k topic w j topic a j topic ⊙ ∏ q = 1 k sty w q sty a q sty where ⊙ denotes the element-wise product operation, and ∏ represents the continuous element-wise product. The Adaptive Multi-view Fusion can extract representations of cross-view interactions. However, a single multi-view representation may not be well-suited for all domains. For instance, the political domain might primarily rely on semantic and stylistic views, while the financial domain depends on topic and stylistic views. Therefore, it is necessary to extract various multi-view representations. To model different multi-view representations in different domains, we propose an Adaptive Multi-view Fusion with H heads, each of which adaptively learns a type of multi-view representation. The H cross-view representations are denoted as { x i } i = 1 H .
+It is important to note that each ‘head’ in the Adaptive Multi-view Fusion Module does not correspond directly to a specific topic. Instead, these multiple heads collectively capture various patterns across views, enabling the model to adapt to different thematic and stylistic features within the data. Thus, the value of H does not need to match the number of topics but rather provides flexibility in capturing a range of cross-view interactions.
+Topic domain embedder
+The Topic Domain Embedder module utilizes text tokens as input because they retain the original semantic content of the news, which is crucial for capturing nuanced, domain-specific information. Using BERT-wwm encoding, these tokens yield rich contextual features, enabling the dual-layer attention mechanism to effectively capture topic-word and document-topic distributions unique to each domain. This design enhances the adaptability of the generated domain embeddings, supporting precise cross-domain feature representation and improving the model’s performance in multi-domain fake news detection. Topic Domain Embedder utilizes a two-tier attention mechanism to generate domain embeddings. In the first tier, the module uses an attention mechanism to identify and focus on key features in the input data that are relevant to a specific domain. In the second tier, the module uses another attention mechanism to determine the importance of these key features and generates enriched domain embeddings based on their importance.
+Multi-head attention layer We employ a multi-head attention mechanism that allows the model to focus on different positions in the document from different representation subspaces through multiple attention heads. This mechanism is similar to the idea in topic models, where each topic pays attention to certain specific words in the document. In our model, each ‘head’ can be considered as a ‘topic’ that focuses on certain specific parts of the document. We first compute the weight distribution g k of the head vector hk through a single-layer feed-forward network, which can be seen as determining the importance of each word in the document: 6
+g i k = v k tanh W k t i + b k then, we obtain the normalized word weight distribution α k in the document through the softmax function: 7
+α i k = e g i k ∑ j N e g j k finally, the head vector h k is obtained by taking the weighted sum of the word embeddings, given by: 8
+h k = ∑ i N α i k t i where v k ∈ R D k , W k ∈ R E × D k , and b k ∈ R D k are learnable parameters. D k represents the projected dimension for each head in the middle, while E stands for the dimension of word embedding, and the dimension of h k is the same as t i .
+Additive attention layer Now, we obtain the topic embeddings for K different topics. Then, we use an Additive Attention Layer to calculate document-topic distribution, thereby obtaining the similarity β k between the document and each topic: 9
+u k = c tanh W H h k + b H 10
+β k = e u k ∑ i K e u i
+Finally, based on this similarity, we take a weighted sum of the topic embeddings to obtain the final domain embedding d : 11
+d = ∑ i K β k h k where c ∈ R D k , W H ∈ R E × D k , and b H ∈ R D h are learnable parameters. and the dimension of d is the same as h k .
+Domain transition handler
+Due to the existence of domain discrepancies, the multi-view representations extracted by different Adaptive View Fusion Modules may vary. Therefore, we propose a Domain Transition Handler to model this domain discrepancy. The Domain Transition Handler takes the domain representation d from the Topic Domain Embedder as input to guide the final fusion of the representation vectors. Specifically, the process of the final vector fusion is formulated as follows: 12
+γ = softmax f d 13
+r = ∑ i = 1 H γ i x i where f ( · ) is a feed-forward network and γ ∈ R H is the weight vector that signifies the significance of various multi-view representations. H is the number of multi-view representations. It’s worth noting that the weight vector γ can provides insights into the decision-making process for a specific news snippet, indicating which multi-view interactions it relies on.
+Predictor
+After obtaining the fused feature representation r , we input it into a multilayer perceptron. By applying a sigmoid function, we can obtain the probability of whether this news snippet is fake news: 14
+y ^ = Sigmoid MLP r .
+The model produces a binary prediction vector y ^ , where y i represents the actual label of the news. In dealing with binary classification tasks, researchers typically use one-hot encoding to encode the labels, setting the probability of the target category to 1 and the probability of the non-target category to 0. 15
+y i = 1 , i = target 0 , i ≠ target
+The cross-entropy loss function is utilized to reduce the discrepancy between the predicted value y ^ and the actual label y i . 16
+L = - ∑ i = 1 N y i l o g y ^ + 1 - y i log 1 - y ^
+Experiment
+In this section, we conducted experiments to validate the effectiveness of TG-MFEND. We aim to answer the following research questions:
+RQ1: Does our proposed model, TG-MFEND, outperform previous baseline models?
+RQ2: What are the effects of different components in TG-MFEND?
+RQ3: How sensitive is TG-MFEND to hyperparameters?
+Datasets and evaluation settings
+Datasets
+Fake news detection models predominantly rely on the specificity of their data environment. That is to say, while these methods generally perform well on their respective trained datasets, their application to other domains can prove challenging due to “domain difference”. In the current study, we aim to evaluate the effectiveness of our model using two datasets: the Chinese multi-domain dataset Weibo21, and the English multi-domain dataset En-dataset. Weibo21 encompasses multiple domains in Chinese social media, while En-dataset combines data from Gossipcop, Politifact, and COVID domains in English. Descriptions of both datasets are provided below:
+Weibo21 The dataset was developed by Team [33] and spans nine domains (science, military, education, disaster, politics, health, finance, entertainment, and society). This multi-domain Chinese dataset comprises data collected from Sina Weibo from 2014 to 2021. It encompasses 4488 snippets of fake news and 4640 real news snippets, collectively referred to as Data-single. Moreover, we have randomly amalgamated the datasets from these nine domains into a comprehensive dataset, named Data-total. Please refer to Table 1 for detailed statistics. Table 1. Data statistics of data-single and data-total
+Domain
+Science
+Military
+Edu
+Disasters
+Politics
+Health
+Finance
+Enter
+Society
+Total
+
+#Real
+143
+121
+243
+185
+306
+485
+959
+1000
+1198
+4640
+
+#Fake
+93
+222
+248
+591
+546
+515
+362
+440
+1471
+4488
+
+All
+236
+343
+491
+776
+852
+1000
+1321
+1440
+2669
+9128
+
+
+En-dataset is an English multi-domain fake news detection dataset designed to evaluate the generalizability of the model across different languages and cultural contexts. This dataset combines news from the FakeNewsNet and COVID datasets, covering three domains: Gossipcop, Politifact, and COVID. En-dataset contains a total of 28,764 news articles, with 22,001 labeled as real and 6,763 labeled as fake. Detailed statistics are provided in Table 2. Table 2. Data statistics of En-dataset
+Domain
+Gossipcop
+Politifact
+COVID
+Total
+
+#Real
+16,804
+447
+4750
+22,001
+
+#Fake
+5067
+379
+1317
+6763
+
+All
+21,871
+826
+6067
+28,764
+
+
+To capture multi-view information, we have expanded the dataset by adding topic and style features. All style features are listed in Table 3. The process of extracting style features follows the work of [39]. In this paper, we adopt the method of [38] to extract topic features. Table 3. Style features
+Feature
+Description
+
+Readability
+How easy it is to read the news. It considers factors like sentence length, word length, and the use of complex professional terms
+
+Logic
+The logical flow of the news. It looks at how well sentences connect and the use of conjunctions to link ideas
+
+Credibility
+The trustworthiness of the news. It takes into account the use of specific details like numbers, official speeches, and references to time and place
+
+Formality
+The level of formality in the news. It considers the types of words used, such as nouns, adjectives, and verbs, and the structure of sentences
+
+Interactivity
+The level of engagement the news encourages. It looks at the use of questions and pronouns that directly address the reader
+
+Interestingness
+How engaging or exciting the news is. It considers the use of rhetorical devices, exclamations, idioms, and images
+
+Sensation
+The emotional impact of the news. It looks at the overall sentiment of the news and the use of words that express strong emotions
+
+Integrity
+The completeness of the news. It checks whether the news includes key components like a headline, image, video, tags, and links
+
+
+Baselines
+In this section, we conduct a comparative analysis using state-of-the-art baseline models. We categorize all experiments into three groups. The first group consists of single-domain baseline methods, where models are trained separately for each domain. These models include BiGRU, TextCNN, and BERT-wwm. The second group comprises mixed-domain baseline models, which merge all domains into a single unified domain. Models using this approach include BiGRU, TextCNN, BERT-wwm, and StyleLSTM. The third group encompasses well-designed multi-domain baseline methods. including EANN, MMoE, MoSE, EDDFN, MDFEND, M 3 FEND and EMT. We will provide detailed introductions of the models mentioned above in the following:
+- BiGRU [8] is a type of recurrent neural network that is capable of learning long-term dependencies in sequence data. It uses two GRUs, one processing the data from left to right (forward states), and another one from right to left (backward states). The outputs of both GRUs are usually concatenated, which allows the model to capture both past (backward) and future (forward) information.
+
+- TextCNN [40] uses convolutional neural networks for text classification tasks. It applies convolutional filters on the input sentences which are treated as 2-D images with one single channel, allowing the model to capture local dependencies in the text data.
+
+- BERT-wwm [36] is a variant of BERT optimized for Chinese language tasks. It masks entire words rather than individual characters during pre-training, enhancing its contextual understanding for character-based languages like Chinese.
+
+- RoBERTa [35] is an improved version of the BERT model, trained on larger datasets with optimized methods to enhance performance. It performs well in tasks like text classification and sentiment analysis, capturing contextual information more accurately. RoBERTa is a popular benchmark model in natural language processing.
+
+- StyleLSTM [44] is a variant of the Long Short-Term Memory (LSTM) model, a type of recurrent neural network that is capable of learning long-term dependencies in sequence data. The StyleLSTM model is designed to capture the stylistic properties of text, which can be useful for tasks like fake news detection.
+
+- EANN [45] is a model that uses adversarial training techniques to improve the robustness of the model. The model is designed to detect fake news by considering both the content of the news and the events described in the news.
+
+- MMoE [29] is a model that employs an ensemble of expert submodules and a gating network to combine the representation of the bottom experts to learn the task relationship while consuming less computation.
+
+- MoSE is a contemporary multi-domain model, it innovatively substitutes the experts in MMoE with LSTM.
+
+- EDDFN [46] is specifically designed for analyzing financial news. The model uses a distillation process to capture the emotion distribution in financial news articles, which can be useful for predicting stock market movements.
+
+- MDFEND [33] is a specialized model designed for multi-domain fake news detection. MDFEND utilizes a domain gate to aggregate multiple representations extracted by a mixture of experts. The experiments show that MDFEND significantly improves the performance of multi-domain fake news detection.
+
+- M 3 FEND [34] is a model with a memory mechanism that enriches the domain information in news. It uses a domain adapter to facilitate feature interaction across different views.
+
+- EMT [47] improves fake news detection by leveraging entities to learn flexible representations that generalize across domains. This method enables EMT to adapt effectively to new and unseen domains, achieving robust performance in multi-domain settings.
+
+
+
+Experimental setting
+All datasets are randomly partitioned into training, validation, and test sets at a ratio of 6:2:2 while maintaining the domain distribution within each set. We refrain from any dataset-specific tuning, except early stopping on the validation sets. To mitigate the randomness of the experiments, we record the average results over ten runs. All experiments are conducted on an Intel i7 2.60 GHz processor and an RTX 3060 GPU with 16 GB of memory. All codes are implemented in Python 3.8. The detailed parameters of the model are listed in Table 4, and all baseline models adhere to the parameter settings in their original papers. In line with most existing work [18, 21, 48], we report accuracy (ACC), area under the ROC curve (AUC), and F1-score metrics to evaluate model performance. Table 4. The details of the parameters
+Parameter
+Value
+
+Batch size
+64
+
+Max epochs
+10
+
+Drop out
+0.2
+
+Max length
+170
+
+Learning rate
+0.0001
+
+Embedding size
+768
+
+k sty (number of channels for StyNet)
+4
+
+k topic (number of channels for TopicNet)
+4
+
+k sem (number of channels for SemNet)
+7
+
+H (number of fusion heads in the multi-view fusion module)
+50
+
+k (number of attention heads in the multi-head attention layer)
+90
+
+
+Performance comparison (RQ1)
+We conduct experiments on the Webo21 dataset and En-dataset to evaluate the performance of TG-MFEDN and the baseline methods introduced in Sect. 4.1.2. Results for the Weibo21 and En-dataset are displayed in Tables 5 and 6, respectively. Bold and underlined results indicate the best and second best, respectively. Additionally, we provide a visual representation of the F1 score, ACC, and AUC values from the experiments, which can be seen in Figs. 4 and 5. We can draw the following conclusions: - The experimental results demonstrate that TG-MFEND outperforms all baseline models on both datasets in terms of F1 score, ACC, and AUC. On Weibo21, TG-MFEND achieves a significant improvement compared to the highest-performing baseline, M3FEND. This highlights TG-MFEND’s strong adaptability and effectiveness in handling complex, multi-domain Chinese data. Although the improvements on En-dataset are relatively modest, TG-MFEND still delivers competitive F1, accuracy, and AUC values, underscoring its robustness and versatility across different linguistic and cultural contexts.
+
+- Overall, mixed-domain methods generally outperform single-domain approaches. This suggests that it is crucial to incorporate samples from various domains during training. At the same time, we noticed that the use of mixed-domain methods led to significant improvements in some domains, such as Science, while the enhancements in other domains were less satisfactory, or even declined, such as Politics and Finance. This suggests that merely combining data can create domain conflict, as the model may apply a uniform perspective across distinct news domains.
+
+- We then discovered that multi-domain methods outperform mixed-domain methods, underscoring the importance of well-designed multi-domain models. The reason could be that well-designed models learn shared knowledge from all domains, which can alleviate domain conflict issues across different domains to a certain extent.
+
+- We have noted that MDFEND, M3FEND and EMT surpass EANN, MMoE, MoSE, and EDDFN in the majority of tasks. EANN learns a shared network directly through adversarial training. MMoE and MoSE employ a shared base and multiple independent heads for different domains. EDDFN acquires both domain-specific and domain-shared subnetworks. We discovered that all these methods utilize a hard-sharing mechanism to learn shared knowledge from all domains. However, existing studies [3, 31] have found it challenging to learn common knowledge from a multitude of domains through a hard-sharing structure. In contrast to these methods, TG-MFEND, MDFEND, M3FEND and EMT employ a soft-sharing mechanism to model domain features, aggregating beneficial shared knowledge for fake news detection. The experimental results validate the effectiveness of this soft-sharing mechanism.
+
+- While the MDFEND, M3FEND and EMT methods model latent domain information, we found that their performance improvements in certain domains, such as Politics, are not substantial. Their performance in the Science domain is even inferior to some standard multi-domain models. The reason is that MFEND only extracts semantic information from the news, M3FEND models domain information solely based on the similarity between news snippets and other domains, and EMT’s reliance on external entity knowledge may unintentionally introduce noise, impacting the model’s accuracy. Their exploration of domain information is not deep enough. Our proposed TG-MFEND method, by modeling news topics, incorporates other domain information from the news and achieves significant improvements in areas where these three models fall short.
+
+Table 5. Experimental results (F1) on the data-single dataset
+Methods
+Science
+Military
+Edu
+Disasters
+Politics
+Health
+Finance
+Ent
+Society
+
+Single
+BiGRU
+0.5175
+0.3365
+0.7416
+0.7293
+0.8588
+0.8373
+0.8137
+0.7992
+0.7918
+
+TextCNN
+0.4074
+0.3365
+0.8059
+0.4388
+0.8482
+0.8819
+0.8215
+0.7973
+0.8615
+
+Bert-wwm
+0.5079
+0.8834
+0.8380
+0.8736
+0.8282
+0.8949
+0.8530
+0.8832
+0.8532
+
+Mix
+BiGRU
+0.7269
+0.7795
+0.8138
+0.7935
+0.8188
+0.8868
+0.8291
+0.8629
+0.8485
+
+TextCNN
+0.7254
+0.8724
+0.8362
+0.8222
+0.8356
+0.8768
+0.8638
+0.8456
+0.8540
+
+Bert-wwm
+0.7566
+0.9417
+0.8380
+0.8632
+0.8304
+0.9300
+0.8677
+0.8908
+0.8748
+
+StyleLSTM
+0.7729
+0.9187
+0.8341
+0.8532
+0.8487
+0.9084
+0.8802
+0.8846
+0.8552
+
+Multi
+EANN
+0.8225
+0.9274
+0.8624
+0.8666
+0.8705
+0.9150
+0.8710
+0.8957
+0.8877
+
+MMoE
+0.8755
+0.9112
+0.8706
+0.8770
+0.8620
+0.9364
+0.8567
+0.8886
+0.8750
+
+MoSE
+0.8502
+0.8858
+0.8815
+0.8672
+0.8808
+0.9179
+0.8672
+0.8913
+0.8729
+
+EDDFN
+0.8186
+0.9137
+0.8676
+0.8786
+0.8478
+0.9379
+0.8636
+0.8832
+0.8689
+
+MDFEND
+0.8301
+0.9389
+0.8917
+0.9003
+0.8865
+0.9400
+0.8951
+0.9066
+0.8980
+
+M3FEND
+0.8292
+0.9506
+0.8998
+0.8896
+0.8825
+0.9460
+0.9009
+0.9315
+0.9089
+
+EMT
+0.8982
+0.9576
+0.8986
+0.8800
+0.8920
+0.9241
+0.8769
+0.9216
+0.8989
+
+TG-MFEND(our)
+0.8648
+0.9710
+0.8990
+0.9079
+0.8921
+0.9550
+0.9230
+0.9273
+0.9226
+
+Improved
+–
+1.34%
+–
+0.76%
+0.01%
+0.90%
+2.21%
+–
+1.37%
+
+Bold and underlined results indicate the best and second best
+Table 6. Experimental results(F1) on the En-dataset
+Methods
+Gossip
+Polit
+COVID
+
+Single
+BiGRU
+0.7666
+0.7722
+0.8885
+
+TextCNN
+0.7786
+0.8011
+0.9040
+
+RoBerTa
+0.7810
+0.8583
+0.9288
+
+Mix
+BiGRU
+0.7479
+0.7339
+0.7448
+
+TextCNN
+0.7519
+0.7040
+0.8322
+
+RoBerTa
+0.7823
+0.7967
+0.7014
+
+StyleLSTM
+0.8007
+0.7937
+0.9252
+
+Multi
+EANN
+0.7937
+0.7558
+0.8836
+
+MMoE
+0.8022
+0.8477
+0.7379
+
+MoSE
+0.7981
+0.8576
+0.9326
+
+EDDFN
+0.8067
+0.8505
+0.9306
+
+MDFEND
+0.8080
+0.8473
+0.9331
+
+M3FEND
+0.8237
+0.8478
+0.9392
+
+EMT
+0.8145
+0.8910
+0.9404
+
+TG-MFEND(our)
+0.8242
+0.8979
+0.9321
+
+Improved
+0.05%
+0.69%
+–
+
+Bold and underlined results indicate the best and second best
+[See PDF for image]
+Fig. 4 Experimental results on the data-total dataset
+
+[See PDF for image]
+Fig. 5 Experimental results on the En-dataset
+
+
+Ablation study (RQ2)
+In this section, we scrutinize the efficacy of various components of our proposed TG-MFEND and conduct ablation studies by altering or eliminating pertinent variables. We delineate the variants of TG-MFEND as follows:
+- ‘w/o TopicNet’ signifies the removal of our proposed TopicNet from TG-MFEND.
+
+- ‘w/o StyNet’ signifies the removal of our proposed StyNet from TG-MFEND.
+
+- ‘w/o SemNet’ signifies the removal of our proposed SemNet from TG-MFEND.
+
+
+
+It is not difficult to see that the topic extraction method we proposed is very necessary and even more important than the style extraction method. The reason is that news snippets are typically objective and impartial, and the writing style is usually more rigorous, with relatively small differences between different fields. Furthermore, to investigate the roles of the other parts in TG-MFEND, we experimented with two variants of TG-MFEND.
+- ‘w/o Topic Domain Embedder’ denotes the removal of the Topic Domain Embedder from TG-MFEND. In this configuration, we generated the domain embedding by averaging the text embeddings, allowing us to observe the model’s performance without the specialized domain adaptation typically provided by the Topic Domain Embedder.
+
+- ‘w/o Domain Transition Handler’ indicates the absence of the Domain Transition Handler, with a simple averaging operation replacing this process (Table 7).
+
+
+Table 7. Results of ablation study on the Data-total dataset
+Method
+Accuracy
+Precision
+Recall
+F1
+
+w/o TopicNet
+0.9153
+0.9151
+0.9153
+0.9152
+
+w/o StyNet
+0.9262
+0.9261
+0.9263
+0.9261
+
+w/o SemNet
+0.8612
+0.8638
+0.8600
+0.8605
+
+w/o Topic domain embedder
+0.9109
+0.9114
+0.9104
+0.9107
+
+w/o Domain transition handler
+0.9224
+0.9223
+0.9227
+0.9223
+
+TG-MFEND
+0.9306
+0.9306
+0.9304
+0.9305
+
+Bold results indicate the best
+
+Results indicate that removing either the Topic Domain Embedder or Domain Transition Handler reduces performance, underscoring the importance of extracting document domain information and adaptively selecting cross-view features. At the same time, it is observed that the results of ‘w/o Topic Domain Embedder’ are worse than ‘w/o Domain Transition Handler’, suggesting that modeling the domain information of the document is more effective than adaptively selecting cross-view information.
+Analysis of hyperparameter sensitivity (RQ3)
+This section analyzes the sensitivity of TG-MFEND to primary parameters, including the number of channels and heads, as well as the attention layer count in the Topic Domain Embedder, to assess their impact on model performance.
+General hyperparameter sensitivity analysis
+We tested the sensitivity of several hyperparameters on the Weibo21 dataset, including the number of channels k sem for SemNet, the number of channels k topic for TopicNet, the number of channels k sty for StyNet, the number of heads H in the Multi-view Fusion Module and the number of attention heads in the Multi-Head Attention Layer k .
+As can be seen from Fig. 6, TG-MFEND achieves satisfactory results with k sem (7), k topic (4), k sty (4), H (50), and k (90). Even under the worst conditions shown in Fig. 6a–e, TG-MFEND achieves an F1 score of 0.9225, outperforming the best baseline, M3FEND, which scored 0.9216 on the Weibo21 dataset. This demonstrates that our model is insensitive to the settings of the hyperparameters k sem , k topic , k sty , H , and k . [See PDF for image]
+Fig. 6 Performance (F1) of M3FEND with various hyperparameters
+
+
+In our experiments, we examined how the number of attention heads k in the Multi-Head Attention Layer impacts the experimental results, as shown in Fig. 6e. We observed that the best performance is achieved when the number of attention heads is 90. This suggests that the 9 preset labels are far from sufficient to describe the actual domain information of news snippets.
+Topic domain embedder attention layers analysis
+To further investigate the design rationale of the Topic Domain Embedder, we conducted experiments to analyze how the number of multi-head attention layers within this module impacts model performance. Specifically, we varied the number of multi-head attention layers and observed changes in model metrics, such as accuracy and F1-score, to understand the relationship between attention depth and model effectiveness.
+In these experiments, we configured the Topic Domain Embedder with N layers of multi-head attention, where N ranges from 1 to 4. Each configuration was evaluated on the Weibo21 dataset under the same experimental conditions as described earlier.
+As shown in Table 8, a single multi-head attention layer is already effective in capturing the main topic-domain relationships in this task. Adding additional layers may introduce redundant information and even amplify noise, which could negatively impact the model’s generalization ability. Table 8. Effect of multi-head attention layer count in topic domain embedder on model performance
+Multi-head attention layer count
+Accuracy
+Precision
+Recall
+F1
+
+1
+0.9306
+0.9306
+0.9304
+0.9305
+
+2
+0.9270
+0.9272
+0.9272
+0.9270
+
+3
+0.9182
+0.9182
+0.9182
+0.9182
+
+4
+0.9148
+0.9148
+0.9148
+0.9148
+
+Bold results indicate the best
+
+Conclusion
+In this paper, we proposed a topic-guided fake news detection model, TG-MFEND, which addresses two challenges in fake news detection: cross-domain disparity, and reconciling the multiplicity of news topics with the singularity of labels. Through empirical validation, we demonstrate that: (1) TG-MFEND effectively enriches the domain information of news, and (2) TG-MFEND improves the F1 score by 0.89% over the optimal baseline, illustrating the effectiveness and superiority of TG-MFEND compared to other methods.
+In future work, we will further explore domain variations in multi-domain fake news detection, focusing on more effective perspective combinations for different domains, and investigate methods to enrich domain labels effectively to enhance model performance.
+Author contributions
+LW conceived and designed the study. LW and YH performed the experiments and analyzed the data. LW wrote the initial draft of the manuscript. YH provided critical revisions. Both authors approved the final version of the manuscript for submission.
+Funding
+No funds, grants, or other support was received.
+Data availability
+The data that support the findings of this study are available from the publicly accessible website (https://github.com/kennqiang/MDFEND-Weibo21) and (https://github.com/ICTMCG/M3FEND).
+Declarations
+Conflict of interest
+The authors declare no competing interests.
+fei wu
+Publisher's Note
+Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References
+1. Zhang, Y., Liu, S., Wang, Y., Fan, X.: Detecting Chinese fake news on Twitter during the COVID-19 pandemic (2023). http://arxiv.org/abs/2304.03454
+2. Pan, SJ; Yang, Q. A survey on transfer learning. IEEE Trans. Knowl. Data Eng. ; 2010; 22 , pp. 1345-1359. [DOI: https://dx.doi.org/10.1109/TKDE.2009.191]
+3. Zhu, Y., Zhuang, F., Wang, D.: Aligning domain-specific distribution and classifier for cross-domain classification from multiple sources. In: Proceedings of the AAAI Conference on Artificial Intelligence. pp. 5989–5996. AAAI Press (2019). https://doi.org/10.1609/aaai.v33i01.33015989
+4. Peng, X., Bai, Q., Xia, X., Huang, Z., Saenko, K., Wang, B.: Moment matching for multi-source domain adaptation. In: Proceedings of the IEEE/CVF international conference on computer vision. pp. 1406–1415. IEEE, Seoul, Korea (South) (2019). https://doi.org/10.1109/ICCV.2019.00149
+5. Zhuang, F; Qi, Z; Duan, K; Xi, D; Zhu, Y; Zhu, H; Xiong, H; He, Q. A comprehensive survey on transfer learning. Proc. IEEE ; 2020; 109 , pp. 43-76. [DOI: https://dx.doi.org/10.1109/JPROC.2020.3004555]
+6. Karimi, H., Tang, J.: Learning hierarchical discourse-level structure for fake news detection. In: Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies. pp. 3432–3442. Association for Computational Linguistics, Minneapolis, Minnesota (2019). https://doi.org/10.18653/v1/N19-1347.
+7. Kim, G; Ko, Y. Effective fake news detection using graph and summarization techniques. Pattern Recognit. Lett. ; 2021; 151 , pp. 135-139. [DOI: https://dx.doi.org/10.1016/j.patrec.2021.07.020]
+8. Ma, J., Gao, W., Mitra, P., Kwon, S., Jansen, B.J., Wong, K.-F., Cha, M.: Detecting rumors from microblogs with recurrent neural networks. In: Proceedings of the 25th International Joint Conference on Artificial Intelligence. pp. 3818–3824. AAAI Press, New York, USA (2016)
+9. Ma, J., Gao, W., Wong, K.-F.: Detect rumors on twitter by promoting information campaigns with generative adversarial learning. In: The World Wide Web Conference. pp. 3049–3055. ACM, San Francisco CA USA (2019). https://doi.org/10.1145/3308558.3313741
+10. Sheng, Q., Cao, J., Zhang, X., Li, R., Wang, D., Zhu, Y.: Zoom out and observe: news environment perception for fake news detection. In: Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics. pp. 4543–4556. Association for Computational Linguistics, Dublin, Ireland (2022). https://doi.org/10.18653/v1/2022.acl-long.311
+11. Vo, N., Lee, K.: Learning from fact-checkers: analysis and generation of fact-checking language. In: Proceedings of the 42nd International ACM SIGIR Conference on Research and Development in Information Retrieval. pp. 335–344. ACM, Paris France (2019). https://doi.org/10.1145/3331184.3331248
+12. Li, J., Ni, S., Kao, H.-Y.: Meet the truth: leverage objective facts and subjective views for interpretable rumor detection. In: Findings of the Association for Computational Linguistics: ACL-IJCNLP 2021. pp. 705–715. Association for Computational Linguistics (2021). https://doi.org/10.18653/v1/2021.findings-acl.63
+13. Guo, Z; Zhang, Q; Ding, F; Zhu, X; Yu, K. A novel fake news detection model for context of mixed languages through multiscale transformer. IEEE Trans. Comput. Soc. Syst. ; 2024; 11 , pp. 5079-5089. [DOI: https://dx.doi.org/10.1109/TCSS.2023.3298480]
+14. Wang, Y; Wang, L; Yang, Y; Lian, T. SemSeq4FD: integrating global semantic relationship and local sequential order to enhance text representation for fake news detection. Expert Syst. Appl. ; 2021; 166 , [DOI: https://dx.doi.org/10.1016/j.eswa.2020.114090] 114090.
+15. Xing, F., Guo, C.: Mining semantic information in rumor detection via a deep visual perception based recurrent neural networks. In: 2019 IEEE International Congress on Big Data (BigData Congress). pp. 17–23. IEEE, Milan, Italy (2019). https://doi.org/10.1109/BigDataCongress.2019.00016
+16. Zhou, K., Shu, C., Li, B., Lau, J.H.: Early rumour detection. In: Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies. pp. 1614–1623. Association for Computational Linguistics, Minneapolis, Minnesota (2019). https://doi.org/10.18653/v1/N19-1163
+17. Zhou, X; Zafarani, R. A survey of fake news: fundamental theories, detection methods, and opportunities. ACM Comput. Surv. ; 2021; 53 , pp. 1-40. [DOI: https://dx.doi.org/10.1145/3395046]
+18. Zhu, Y., Sheng, Q., Cao, J., Li, S., Wang, D., Zhuang, F.: Generalizing to the future: mitigating entity bias in fake news detection. In: Proceedings of the 45th International ACM SIGIR Conference on Research and Development in Information Retrieval. pp. 2120–2125. ACM, Madrid Spain (2022). https://doi.org/10.1145/3477495.3531816
+19. Dou, Y., Shu, K., Xia, C., Yu, P.S., Sun, L.: User preference-aware fake news detection. In: Proceedings of the 44th International ACM SIGIR Conference on Research and Development in Information Retrieval. pp. 2051–2055. ACM, Virtual Event Canada (2021). https://doi.org/10.1145/3404835.3462990
+20. Li, Q., Zhang, Q., Si, L.: Rumor detection by exploiting user credibility information, attention and multi-task learning. In: Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics. pp. 1173–1179. Association for Computational Linguistics, Florence, Italy (2019). https://doi.org/10.18653/v1/P19-1113
+21. Bian, T., Xiao, X., Xu, T., Zhao, P., Huang, W., Rong, Y., Huang, J.: Rumor detection on social media with bi-directional graph convolutional networks. In: Proceedings of the AAAI Conference on Artificial Intelligence. pp. 549–556. AAAI Press (2020). https://doi.org/10.1609/aaai.v34i01.5393
+22. Chen, X; Zhou, F; Zhang, F; Bonsangue, M. Catch me if you can: a participant-level rumor detection framework via fine-grained user representation learning. Inf. Process. Manag. ; 2021; 58 , [DOI: https://dx.doi.org/10.1016/j.ipm.2021.102678] 102678.
+23. Liu, Y., Wu, Y.-F.: Early detection of fake news on social media through propagation path classification with recurrent and convolutional networks. In: Proceedings of the AAAI Conference on Artificial Intelligence. pp. 354–361. AAAI Press (2018). https://doi.org/10.1609/aaai.v32i1.11268
+24. Guo, Z; Yu, K; Jolfaei, A; Li, G. Mixed graph neural network-based fake news detection for sustainable vehicular social networks. IEEE Trans. Intell. Transp. Syst. ; 2022; 24 , pp. 15486-15498. [DOI: https://dx.doi.org/10.1109/TITS.2022.3185013]
+25. Ni, S; Li, J; Kao, H-Y. MVAN: multi-view attention networks for fake news detection on social media. IEEE Access. ; 2021; 9 , pp. 106907-106917. [DOI: https://dx.doi.org/10.1109/ACCESS.2021.3100245]
+26. Yuan, C., Ma, Q., Zhou, W., Han, J., Hu, S.: Jointly embedding the local and global relations of heterogeneous graph for rumor detection. In: 2019 IEEE International Conference on Data Mining (ICDM). pp. 796–805. IEEE, Beijing, China (2019). https://doi.org/10.1109/ICDM.2019.00090
+27. Pérez-Rosas, V., Kleinberg, B., Lefevre, A., Mihalcea, R.: Automatic detection of fake news. In: Proceedings of the 27th International Conference on Computational Linguistics. pp. 3391–3401. Association for Computational Linguistics, Santa Fe, New Mexico, USA (2017)
+28. Ganin, Y; Ustinova, E; Ajakan, H; Germain, P; Larochelle, H; Laviolette, F; Marchand, M; Lempitsky, V. Domain-adversarial training of neural networks. Domain Adapt. Comput. Vis. Appl. ; 2016; 17 , pp. 1-35.3504619 [DOI: https://dx.doi.org/10.1007/978-3-319-58347-1_10]
+29. Ma, J., Zhao, Z., Yi, X., Chen, J., Hong, L., Chi, E.H.: Modeling task relationships in multi-task learning with multi-gate mixture-of-experts. In: Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining. pp. 1930–1939. ACM, London United Kingdom (2018). https://doi.org/10.1145/3219819.3220007
+30. Qin, Z., Cheng, Y., Zhao, Z., Chen, Z., Metzler, D., Qin, J.: Multitask mixture of sequential experts for user activity streams. In: Proceedings of the 26th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining. pp. 3083–3091. ACM, Virtual Event CA USA (2020). https://doi.org/10.1145/3394486.3403359
+31. Tang, H., Liu, J., Zhao, M., Gong, X.: Progressive layered extraction (PLE): a novel multi-task learning (MTL) model for personalized recommendations. In: Fourteenth ACM Conference on Recommender Systems. pp. 269–278. ACM, Virtual Event Brazil (2020). https://doi.org/10.1145/3383313.3412236
+32. Liang, C; Zhang, Y; Li, X; Zhang, J; Yu, Y. FuDFEND: fuzzy-domain for multi-domain fake news detection. Nat. Lang. Process. Chin. Comput. ; 2022; 13552 , pp. 45-57. [DOI: https://dx.doi.org/10.1007/978-3-031-17189-5_4]
+33. Nan, Q., Cao, J., Zhu, Y., Wang, Y., Li, J.: MDFEND: multi-domain fake news detection. In: Proceedings of the 30th ACM International Conference on Information & Knowledge Management. pp. 3343–3347. ACM, Virtual Event Queensland Australia (2021). https://doi.org/10.1145/3459637.3482139
+34. Zhu, Y; Sheng, Q; Cao, J; Nan, Q; Shu, K; Wu, M; Wang, J; Zhuang, F. Memory-guided multi-view multi-domain fake news detection. IEEE Trans. Knowl. Data Eng. ; 2022; 35 , pp. 1-14. [DOI: https://dx.doi.org/10.1109/TKDE.2022.3185151]
+35. Liu, Y., Ott, M., Goyal, N., Du, J., Joshi, M., Chen, D., Levy, O., Lewis, M., Zettlemoyer, L., Stoyanov, V.: RoBERTa: a robustly optimized BERT pretraining approach (2019). http://arxiv.org/abs/1907.11692.
+36. Cui, Y; Che, W; Liu, T; Qin, B; Yang, Z. Pre-training with whole word masking for Chinese BERT. IEEEACM Trans. Audio Speech Lang. Process. ; 2021; 29 , pp. 3504-3514. [DOI: https://dx.doi.org/10.1109/TASLP.2021.3124365]
+37. Devlin, J., Chang, M.-W., Lee, K., Toutanova, K.: BERT: Pre-training of deep bidirectional transformers for language understanding. In: Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies. pp. 4171–4186. Association for Computational Linguistics (2019). https://doi.org/10.18653/v1/N19-1423
+38. Grootendorst, M.: BERTopic: neural topic modeling with a class-based TF-IDF procedure (2022). http://arxiv.org/abs/2203.05794.
+39. Yang, Y., Cao, J., Lu, M., Li, J., Lin, C.-W.: How to write high-quality news on social network? Predicting news quality by mining writing style (2021). http://arxiv.org/abs/1902.00750.
+40. Kim, Y.: Convolutional neural networks for sentence classification. In: Proceedings of the 2014 Conference on Empirical Methods in Natural Language Processing (EMNLP). pp. 1746–1751. Association for Computational Linguistics, Doha, Qatar (2014). https://doi.org/10.3115/v1/D14-1181
+41. He, K., Zhang, X., Ren, S., Sun, J.: Deep residual learning for image recognition. In: 2016 IEEE Conference on Computer Vision and Pattern Recognition (CVPR). pp. 770–778. IEEE, Las Vegas, NV, USA (2016). https://doi.org/10.1109/CVPR.2016.90
+42. Huang, G., Liu, Z., Van Der Maaten, L., Weinberger, K.Q.: Densely connected convolutional networks. In: 2017 IEEE Conference on Computer Vision and Pattern Recognition (CVPR). pp. 2261–2269. IEEE, Honolulu, HI (2017). https://doi.org/10.1109/CVPR.2017.243
+43. Tao, C., Wu, W., Xu, C., Hu, W., Zhao, D., Yan, R.: Multi-representation fusion network for multi-turn response selection in retrieval-based Chatbots. In: Proceedings of the Twelfth ACM International Conference on Web Search and Data Mining. pp. 267–275. ACM, Melbourne VIC Australia (2019). https://doi.org/10.1145/3289600.3290985
+44. Przybyla, P.: Capturing the style of fake news. In: Proceedings of the AAAI Conference on Artificial Intelligence. pp. 490–497. AAAI Press (2020). https://doi.org/10.1609/aaai.v34i01.5386
+45. Wang, Y., Ma, F., Jin, Z., Yuan, Y., Xun, G., Jha, K., Su, L., Gao, J.: EANN: event adversarial neural networks for multi-modal fake news detection. In: Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining. pp. 849–857. ACM, London United Kingdom (2018). https://doi.org/10.1145/3219819.3219903
+46. Silva, A., Luo, L., Karunasekera, S., Leckie, C.: Embracing domain differences in fake news: cross-domain fake news detection using multi-modal data. In: Proceedings of the AAAI Conference on Artificial Intelligence. pp. 557–565. AAAI Press (2021). https://doi.org/10.1609/aaai.v35i1.16134
+47. Bazmi, P. Entity-centric multi-domain transformer for improving generalization in fake news detection. Inf. Process. Manag. ; 2024; 6 , [DOI: https://dx.doi.org/10.1016/j.ipm.2024.103807] 103807.
+48. Yang, Y; Wang, Y; Wang, L; Meng, J. PostCom2DR: utilizing information from post and comments to detect rumors. Expert Syst. Appl. ; 2022; 189 , [DOI: https://dx.doi.org/10.1016/j.eswa.2021.116071] 116071.

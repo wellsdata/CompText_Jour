@@ -1,0 +1,295 @@
+Introduction
+Amidst the alarming spread of false information, accelerated by the advent of various social media platforms and the increasing number of individuals relying on them to obtain news information, the challenge of the spread of fake news has become particularly salient. In response, a plethora of scholarly endeavors is currently focused on developing different strategies to detect and mitigate the dissemination of misinformation within news articles. fake news detection (FND), which encompasses the methodologies to identify such misinformation, predominantly leverages statistical and word-based characteristics[1, 8, 9, 10, 11–12]. For instance, Rashkin et al. [15] utilize adverbs and their respective classifications to discern fraudulent information inside textual content. In contrast, Nakashole et al. [13] train conventional models by employing both the textual content and its corresponding source as input features. More recently, Gupta et al. [6] have acknowledged the significance of incorporating other modalities while placing greater emphasis on the use of context-aware approaches. Today, the efficacy of exclusively textual-based techniques has diminished due to three distinct factors.
+The predominant determinant persists as the limited duration of contemporary news platforms. In a recent study conducted by Shim et al. [21], it was found that Twitter continues to be a prominent platform for the dissemination of false information despite the limitation of 150 characters. The optimization of artificial intelligence algorithms to evaluate the precision of tweets can pose some obstacles. Furthermore, the proliferation of deliberate and purposeful dissemination of false information has resulted in a convergence of writing styles between fraudulent news items and authentic news sources. The diminished distance between the two entities also amplifies the intricacy of the undertaking. Ultimately, the proliferation of interactive information, such as Graphics Interchange Formats (GIFs), videos, and photographs, has led to significant dissemination of fake news through alternative channels. According to [21], the reliance on text alone as a means of communication has made it increasingly challenging to discern information accurately without the use of supplementary modalities.
+In recent times, there has been a growing interest in multimodal approaches to fake news detection for many reasons. In their study, Shim et al. [21] utilized the inclusion of hyperlinks within tweets and articles as an independent modality to enhance the contextual understanding of their classifier. Additionally, they demonstrated enhanced efficacy in comparison to traditional text-only approaches. Moreover, Singhal et al. [24] have documented a significant performance improvement when including photographs as a modality for fake news detection activities. Nevertheless, none of the aforementioned studies have endeavored to construct a comparison analysis across pre-trained image models, particularly in terms of the relationship between the number of training parameters and their performance. This analysis is crucial for determining the most suitable model for fake news detection tasks.
+Moreover, the majority of studies have mostly focused on investigating the use of the widely used BERT text model for the purpose of analyzing lexical aspects. In addition, there is a limited body of literature that has delved into the use of ensemble models specifically for the text content [16]. Previous studies have demonstrated that the combination of text models through ensembling can result in enhanced performance [3, 29]. While a few recent studies have begun exploring approaches to decrease the processing speed of fake news detection (False Negative Detection) systems, the majority of the existing literature has not prioritized this aspect. Metrics like the total amount of time spent training haven’t been reported on very often in these studies [3].
+Taking inspiration from the aforementioned context, the current study introduces an innovative architecture for the detection of multimodal fake news. This design utilizes a stacked ensemble approach and incorporates feature-level fusion. Moreover, the study shows a combination of two deep learning models, namely SBERT and DeBERT, to extract textual features. The decision-level fusion of the ensemble is achieved through the application of equal weightage averaging. Ultimately, the fusion of image and text modalities occurs at the decision level through the process of equal weightage averaging. This study presents a new approach to extracting Fine-grained fake news detection (fake news detection) that incorporates both picture and text modalities, with the objective of enhancing the efficiency of the task.
+The paper’s noteworthy contributions can be succinctly summarised as follows: A successful presentation and testing of a deep learning-based ensemble multimodal architecture for fake news detection has been conducted. A comparative analysis is conducted on two datasets to determine the optimal pre-trained picture model that balances accuracy and efficiency. In this study, the combination of two foundation text models, namely DeBERT and SBERT, is used. In general, the work presented demonstrates a higher level of speed compared to recent contemporaries while also obtaining superior performance.
+Related work
+In an effort to address the aforementioned concern, several novel multimodal frameworks have been presented with the objective of effectively integrating multimodal information through interactive means. Singhal et al. [24] developed a novel multimodal framework called SpotFake with the primary objective of identifying and recognizing instances of fake news. The proposed approach utilizes BERT to acquire textual characteristics while employing a pre-trained VGG-19 model built on the ImageNet dataset to extract image features. Within this framework, the authors exclusively examine textual and visual aspects to ascertain the authenticity of news. The framework’s ability to detect bogus news is enhanced by the exclusion of other subtasks, thereby ensuring optimal performance. However, this approach exclusively employs a fusion of BERT and VGG models without addressing the incorporation of inter-modality features. In addition, Zhou et al. [34] introduced the Similarity-Aware fake news detection approach, which aims to directly leverage picture features and incorporate multimodal information from an alternative standpoint. The SAFE framework utilizes an image description model to convert the image into a textual representation. This textual representation is then combined with the news content to train a text-based classifier. Throughout this procedure, the authors held the belief that the SAFE method effectively integrates the interdependencies among the derived features across different modalities, hence enhancing overall performance. Nevertheless, this approach solely concentrates on the correlation between textual content and accompanying visuals inside a given news article, disregarding any potential connections between input news articles. Zhang et al. [32] developed a multimodal model called BTIC, which is based on BERT and incorporates contrasting learning. The proposed framework utilizes a contrastive learning strategy to capture the representations of textual and visual information derived from inaccurate news items pertaining to a certain subject. The BTIC framework incorporates the use of picture patches, as facilitated by the visual transformer, to produce image characteristics. This approach aims to comprehensively capture the interplay between text and visuals. Nevertheless, the efficacy of employing image patches in the detection of fake news remains untested, and the superiority of this approach has yet to be substantiated. In addition, it should be noted that none of the aforementioned solutions effectively address the issue of limited data size. In recent times, there has been a surge in the examination of leveraging visual elements and textual context, as evidenced by the focus of this study. In their study, Yang et al. [30] employed a methodology to uncover concealed patterns within the textual and visual components of fabricated news. This involved the extraction of latent characteristics through the utilization of several convolutional layers. The study’s design put both explicit and hidden data into a single feature space, and it was trained using both text and images at the same time. A precision rate of 92.20% was attained when evaluating a dataset specifically centered on pre-trained news. In contrast, Wang et al. [27] introduced a comprehensive framework of adversarial neural networks. This framework aims to extract event-invariant features, which may be utilized to enhance the identification of fabricated news pertaining to recently emerged events. The research comprises a multimodal feature extractor that combines language and visual data. Furthermore, the utilization of a counterfeit news detection system is implemented in order to obtain distinguishable representations. Moreover, the utilization of an event discriminator is employed to exclude elements that are peculiar to a certain event while retaining the common features that are shared across multiple events. Prior research has provided evidence of the capabilities of frameworks that employ attention-based cross-modal frameworks. The aforementioned frameworks have demonstrated favorable results through two approaches: improving the feature representations of two distinct modalities [25], or resolving the misclassification problem caused by the disparity between these features [2]. Driven by the aforementioned observations, this study presents an innovative multimodal architecture based on stacked ensembles that enhance the efficiency of fake news identification. To improve performance in the realm of visual modality, a study was conducted on 18 models using unimodal analysis techniques, with a focus on minimizing processing time. The ensemble for text analysis is constructed by carefully selecting pre-trained word embedding models, with the objective of minimizing the number of parameters without compromising accuracy. Feature-level fusion is a technique employed to integrate many modalities and layered text models.
+Problem formulations
+Consider a news post on a social media platform that comprises both textual content and visual elements. Let S be the collection of relevant articles of X. The majority of prior research has conceptualized the task of identifying fake news as a binary classification problem. This approach is motivated by the understanding that false news involves the deliberate manipulation of information by publishers, resulting in a distortion bias. Distortion bias in media bias theory has commonly been conceptualized and studied as a binary classification problem, as indicated by prior research [4]. The assigned label of ”1” indicates that the information is deemed to be false, whereas a label of ”0” signifies that the information is considered to be true.
+Fake news detection: The objective of fake news detection is to determine the authenticity of a news story based on its text and images, classifying it as either a genuine or false news piece. 1
+M : P ↦ { 0 , 1 } , for example, 2
+M ( P ) = 1 ; if P is a piece of fake news 0 ; otherwise where M do we want to put forward our prediction model.
+Proposed framework
+This section outlines the approach employed in the present study. The present section commences by presenting the framework, illustrated in Fig. 1. In Section Pre-processing of text and images, the pre-processing procedures employed on both visual and textual features are presented. The approach employed for analyzing the unimodal model in the image modality is elucidated in Subsection Text embedding models: DeBERT and SBERT. Additionally, the analysis outcomes are encompassed, signifying the ultimate model employed for photos. In Section Text embedding models: DeBERT and SBERT, the text embedding models utilized in this study are introduced, specifically DeBERT and SBERT. The process of combining text models and integrating text and image modalities at the decision level is elaborated upon in Subsection Feature fusion. Subsequently, in Subsection Ensemble approach, the measures employed for assessing the effectiveness of the method are presented [See PDF for image]
+Fig. 1 Overview of our proposed model
+
+
+Pre-processing of text and images
+The text pre-processing was minimized to accommodate the limited character count of the incoming data. The photos underwent a series of preparation procedures, such as the elimination of videos. GIFs and. Consistent with existing studies [24], both datasets underwent a thorough examination, where GIFs and videos were excluded as the sole form of supporting evidence. The decision was made in order to minimize the necessary processing power and to standardize the training technique. The resizing of images was performed by input image dimensionality of (224, 254, 3) for the pre-trained model offered by Keras. Consequently, The dimensions of all photos from both datasets were reduced and then stored. Following the resizing process, all photos underwent normalization to ensure consistency and standardization. Additionally, noise was introduced to the photographs. The application of Min-Max normalization was utilized to normalize the inter-cubic distances of all photos. To address the limited number of distinct images in the datasets, an approach proposed in the study by Granik et al. [5] involved artificially introducing Gaussian Noise to all images. This technique aimed to enhance the training process and mitigate the risk of overfitting. The equation for the probability density function (PDF) of a Gaussian random variable (X) is provided in Equation (Eq.). 3
+p g ( z | h ) = h 1 σ 2 π e - ( z - h - μ ) 2 2 σ 2 As mentioned earlier, the text underwent a modest preprocessing operation. We remove URLs and. Both databases, namely the Twitter MediaEval dataset, consist of a significant volume of tweets. In general, these occurrences demonstrate a significant presence of superfluous textual components, such as unified resource locators (URLs), hyperlinks and electronic mail addresses. After the execution of these preprocessing operation, the data was later entered into the recommended framework in order to do inference. For the Weibo dataset, we used Google Translate to translate the language from Chinese to English.
+Text embedding models: DeBERT and SBERT
+In order to utilize textual data effectively, word vector representations were generated by the application of DeBERT [18] and SBERT [26]. DeBERTa introduces advancements to the BERT and RoBERTa models through the utilization of two innovative techniques. Firstly, it employs a disentangled attention mechanism, wherein each word is represented by two vectors that encode its content and position. The attention weights between words are then computed using disentangled matrices based on their content and relative positions. Secondly, DeBERTa replaces the output softmax layer with an enhanced mask decoder, which enhances the model’s ability to predict masked tokens during pre-training.
+Multimodal information encoding
+To begin, we provide concrete examples of the text encoding procedure. To accomplish this goal of feature extraction from the texts, we make use of DeBERT and SBERT, a widely used and pre-trained language representation model. With this model, we can directly extract features from the news text. The use of a pre-trained DeBERT and SBERT model has the beneficial effect of retaining the trainable parameters while just requiring the insertion of an output layer for text encoding. The input to the text encoder consists of a word sequence that has a fixed length and is expressed as such W = w 1 , w 2 , . . . , w n where n represents the total length of the word sequence. The word sequence, denoted as w, is subsequently inputted into pre-trained SBERT and DeBERT models, resulting in its encoding. Furthermore, it will undergo the process of encoding e w = e 1 w , e 2 w , . . . , e n w where the symbol w represents the dimension of the word embedding. Subsequently, the process of image encoding is presented in the following manner. The utilization of a pre-trained ResNet is employed to extract the image’s features. The ResNet model is a type of residual network that incorporates skip links within the network architecture. This facilitates the direct transmission of the original input information to the subsequent levels. Therefore, it is possible to extract both shallow and deep characteristics from an image concurrently, thereby enabling a thorough extraction of image features. Among the extant models, ResNet-50 has a reduced parameter count and possesses a high degree of generalizability. Additionally, the ResNet-50 model demonstrates the capacity to conserve computational resources and expedite training duration. Given the aforementioned benefits, the utilization of the widely acknowledged pre-trained ResNet-50 model is employed in this context. To begin with, it is necessary to resample each image as various news articles may have images of varying dimensions. Next, the input image is encoded into a vector e i ∈ R i using the pre-trained ResNet-50 model. To enhance the extraction of more efficient features from an image, e i it is initially transformed from its original dimension i to a higher dimension i ′ using two fully connected layers. Subsequently, a Transformer layer is employed to extract the interaction information derived from the image’s structural characteristics. The visual representation is ultimately depicted as: 4
+e ∼ ′ = T W 2 W 1 e ∼ + b 1 + b 2 The function of the Transformer layer is represented by the symbol ”T”. The learnable parameters trained in the second completely connected layer are denoted as ”W2” and ”b2”, whereas the parameters being trained in the first fully connected layer are denoted as ”W1” and ”b1”. e i denotes the original vector of the image, whereas the term e i refers to the final vector of the image.
+Feature fusion
+As part of a knowledge fusion procedure, we join the embeddings of text and images, which can be written as: e = e w ⊕ e ∼ ′ ( e ∈ R ) , where signifies the sum of the lengths of the text encoding, picture encoded and two distinctive symbols ( [CLS] and [SEP]), ⊕ is a symbol used to join strings together. Then, the unified embedding is trained with the help of multi-headed self-attention. The completed illustration is presented as: 5
+head i = S W i Q e T W i K e d W i V e T 6
+x = Concat ( head 1 , ⋯ , head R ) where S represents the function of Softmax, Concat() represents the ordered join operation of different vectors and represents the final representation of the multimodal feature;, W i K , W i K , W i V denote the trainable matrices of parameters; R indicates the number of attention heads in the bullish self-attention mechanism; and x indicates the number of attention heads. We apply the common practice of fusing features via ordered connections to improve our model’s overall performance. It’s better suited to intricate joint training afterward because it doesn’t introduce as much noise.
+Ensemble approach
+In this approach, the final classification outcome, namely ”real” or ”fake,” is derived by utilizing the model prediction vectors produced from inference on the news titles for several models. The primary rationale for employing an ensemble of diverse fine-tuned pre-trained language models is to leverage the knowledge acquired by each model from the specific dataset on which it was trained. In the context of the FakeNewsNet dataset, an additional prediction vector is derived by applying SBERT and DeBERT to the news body. This vector is then attached to the current feature set. All the features utilized in this study were derived solely from the unprocessed textual data. In order to mitigate the limits of an individual model, the utilization of an ensemble method might prove advantageous, particularly when applied to a group of models that exhibit similar levels of performance. Two approaches, namely soft voting and hard voting, have been explored in our experiments, as depicted in figure 1.
+Soft voting
+In this methodology, the determination of a ”soft probability score” for each class is achieved through the computation of the average prediction probabilities from multiple models pertaining to that particular class. The class with the highest average probability value is chosen as the ultimate prediction class. The probability associated with the occurrence of a ”real” class. 7
+p r ( x ) = ∑ i = 1 n P i r ( x ) n 8
+p f ( x ) = ∑ i = 1 n P i f ( x ) n where” P r ( x ) and P f ( x ) represent the ”real” and ”fake” probabilities assigned by the i-th model, respectively. The variable ”n” represents the overall number of algorithms.
+Hard voting
+The method takes the average of all the models’ predictions for a given news item and uses it as its final classification. That is to say, the class that receives the most votes becomes the ultimate prediction class. 9
+V r ( x ) = ∑ i = 1 n I ( P i r ( x ) > P i f ( x ) ) 10
+V f ( x ) = ∑ i = 1 n I ( P i r ( x ) < P i f ( x ) )
+Experiments and analysis
+Dataset descriptions
+The Twitter MediaEval Dataset was compiled as a component of the ’2015 Verifying Multimedia Use Challenge’ organized by MediaEval [17]. The objective of the exercise was to determine if the audio-visual elements accompanying a tweet accurately depict the reality as claimed by the tweet. The dataset consists of a total of 17,000 distinct tweets and their corresponding photos, which were gathered in relation to various globally recognized events or news articles. The dataset is partitioned into two distinct subsets: the development set, consisting of 9000 tweets containing false news and 6000 tweets containing true news; and the test set, comprising 9000 tweets with fake news and 6000 tweets with genuine news, totaling 2000 tweets. The tweets have been through a process of verification and classification, wherein they have been systematically examined and categorized as either ’genuine’ or ’false’ based on a thorough cross-referencing of web sources, including articles and blogs. An authentic Twitter is characterized by the presence of an accompanying image that faithfully represents the event mentioned in the tweet. Conversely, a counterfeit tweet is characterized by the inclusion of photos that are not relevant to the event described in the tweet. In the present investigation, data points containing just unimodal information were omitted from the dataset. Furthermore, the analysis removed data points that contained movies and GIFs.
+The second dataset used in this study is the Weibo dataset [7]. The Weibo NER dataset encompasses messages containing false rumors collected from the social network, Sina Weibo, over the period from May 2012 to January 2016. The dataset in question comprises a variety of multimedia content, including photos and Graphics Interchange Format (GIF) files. It is worth noting that all posts within this dataset have undergone verification via Weibo’s official rumor debunking mechanism. While Weibo adheres to the microblogging framework pioneered by Twitter, it is important to note that there exist notable divergences between these two platforms [7]. Initially, it should be noted that many linguistic features commonly examined in English tweets, like repetition of letters, case sensitivity and elongation of words, are not applicable to the Chinese language employed on the Weibo platform. Furthermore, there is a distinction in the categories of microblogs that are retweeted on different platforms, such as Twitter. The datasets utilized in this study exhibit a diverse range, hence enhancing the evaluation of the resilience of the suggested framework.
+Evaluation metrics
+The method under consideration is assessed using two datasets, as previously stated. The evaluation of the suggested method is conducted using different metrics such as precision, recall, and F1 score in order to maintain consistency with existing approaches. The calculation and presentation of the overall forecast accuracy are also included. The mathematical formulation of these metrics is represented by the formulas below. It is important to acknowledge that not every pertinent literature incorporates all of the aforementioned measures. As a result of this constraint, scholars have conducted comparisons between works that employ a minimum of two out of the four metrics specified. 11
+Accuracy h = h ( T P h + h T N ) T P h + h F P h + h T N h + h F N 12
+P h = h T P i T P h + h F P i 13
+R h = h T P i T P h + h F N i 14
+F 1 h = h ( 2 P R ) P h + h R The variables TP and TN represent the number of instances classified correctly as positive and negative, respectively. Similarly, the variables FP and FN represent the number of instances classified incorrectly as positive and negative, respectively. The abbreviations P, R, and F1 represent the metrics Precision, Recall, and F1 Score, respectively. The symbol ”i” is used to denote the ith class.
+Results
+The effectiveness of the proposed framework was evaluated using the datasets provided in Section Problem formulations. The implementation of all neural networks utilized the TensorFlow framework, while the pre-trained models for images and text were obtained from Keras accordingly. It is important to acknowledge that the Keras Learning Rate Optimizer was employed to do hyperparameter tuning for the learning rate of the neural networks. Both networks were trained using the Adam optimizer and the categorical cross-entropy loss function. The tests were conducted using Google Collaboratory (GPU) using a Tesla T4 GPU with a memory capacity of 16 GB and 32 GB of RAM. In the assessment process, four measures were employed, as previously indicated. Tables 1 and 2 display the results derived from the two datasets and provide a comparison with previous pertinent studies. Table 1. Comparison with the state-of-the-art methods on the Twitter Dataset
+Model
+Accuracy (%)
+Fake Class (%)
+Real Class (%)
+
+Precision
+Recall
+F1
+Precision
+Recall
+F1
+
+SpotFake [24]
+77.80
+75.10
+90.00
+82.00
+83.20
+60.06
+70.10
+
+Cultural Algo [19]
+79.80
+79.10
+83.30
+76.00
+79.10
+83.30
+76.00
+
+Roberta Model [22]
+85.30
+82.10
+94.30
+82.70
+91.30
+74.50
+82.00
+
+SCTI Model [31]
+75.80
+80.80
+73.00
+77.10
+70.50
+78.90
+74.10
+
+SCATE Model [28]
+79.60
+83.90
+80.50
+82.20
+75.00
+79.00
+76.90
+
+VERITE [14]
+84.72
+84.12
+79.20
+80.05
+76.10
+78.00
+77.60
+
+Ours
+87.40
+76.10
+97.20
+85.15
+97.10
+77.30
+84.70
+
+Table 2. Comparison with the state-of-the-art methods on the Weibo Dataset
+Model
+Accuracy (%)
+Fake Class (%)
+Real Class (%)
+
+Precision
+Recall
+F1
+Precision
+Recall
+F1
+
+Roberta Model [22]
+81.20
+85.10
+78.40
+81.60
+74.40
+82.60
+78.20
+
+BDANN [33]
+85.10
+86.90
+87.0
+85.20
+85.00
+86.60
+84.90
+
+SCTI Model [31]
+83.40
+86.30
+78.0
+82.40
+81.50
+89.20
+83.70
+
+VERITE [14]
+84.72
+85.42
+80.10
+81.17
+77.02
+79.40
+78.30
+
+Ours
+88.34
+89.12
+84.10
+84.56
+88.67
+89.23
+83.76
+
+
+Zhang et al. [33] employed an encoder module that incorporated a Bidirectional Long Short-Term Memory (Bi-LSTM) network for encoding textual input alongside a VGG-19 architecture for processing images. By subjecting the data to training with a decoder, an accuracy rate of 74.50% was achieved. The study’s findings, however, demonstrated a deficiency in terms of memory across different class categories, as seen in Table 1. The suggested methodology demonstrates superior performance compared to MVAE, with an improvement of 11.30%. Furthermore, it also enhances the memory and F1 scores for each individual class.
+Singhal et al. [24] employed a multimodal framework consisting of VGG-19 (SpotFake) and pre-trained BERT with decision-level fusion to attain an accuracy of 77.80%. The architectural design also implemented a reduction in the representation of both text and images to a mere 32 dimensions, with the aim of enhancing processing speed. In contrast, the framework suggested in this study employs a higher-dimensional representation for both text and images while simultaneously decreasing the parameter count through the utilization of smaller models. In conjunction with the ensemble methodology, it enables a notable improvement of 8% in comparison to the SpotFake system.
+Shahi et al. [20] employed a cultural genetic algorithm as an alternative to deep learning methodologies, resulting in an accuracy rate of 79.8%. However, this performance is outperformed by SEMI-fake news detection, which achieves a higher accuracy rate of 6%. The authors employed a hybrid approach by integrating RoBERTa and EfficientNetB0 models in order to enhance accuracy and minimize computational time [23]. The researchers documented a notable accuracy rate of 85.30%, accompanied by commendable F1 scores. This observation suggests that the model exhibits strong performance in handling the inherent imbalance within the fake news detection dataset. Although the proposed model exhibits a marginal enhancement of 0.5% com, it demonstrates a notable reduction in computing demands, as evidenced by the data presented in Table 2. In contrast to previous studies, the SCTI model incorporates a semantic relation between textual and visual models, employing an encoder-based design to combine these models. Nevertheless, the architectural design employs a VGG framework for processing images, but it did not use of pre-trained word embeddings for the textual component. Therefore, the model given in this study demonstrates superior performance compared to the model across all evaluation metrics. In their seminal work, the authors introduced the SCATE model, as a novel approach to using cross-attention for the purpose of fake news detection. This is the first instance of employing cross-attention in this context. In contrast to the approach suggested in the study, the authors employ feature-level fusion of modalities instead of decision-level fusion, as proposed in previous publications. Furthermore, the proposed model demonstrates an 8% increase in accuracy compared to the reported accuracy, which can be attributed to the higher performance of RasNet50.
+In the examination of the Weibo dataset, the proposed methodology is compared with different previous research that share similarities, as outlined in Table 1. The authors’ development of the EANN architecture yielded a performance of 82.70% on the Weibo dataset while employing the event-invariant version. Additionally, the event variant version achieved a score of 79.50%. Upon doing a comparison between the two entities, it is evident that the proposed work exhibits a score of 86.83%, signifying a noteworthy enhancement of 4.13%. The MVAE model exhibited similar performance to the model devised by Wang et al. (2018), with a maximum reported accuracy of 82.40%. Once again, a statistically significant improvement of 4.43% was seen in contrast to the performance of SEMI-fake news detection. Zhang et al. [33] proposed a model called BDANN, which incorporates a multimodal feature extractor, a domain classifier, and a fake news detector. The incorporation of ensemble methods in this research leads to the proposed model outperforming BDANN and achieving higher levels of classification accuracy in all categories. The objective of the fake news detection-SCTI model is to effectively capture the semantic correlations present in multimodal materials. In order to accomplish this objective, the model integrates visual representations derived from VGG-19 and employs a multimodal variational autoencoder. The framework proposed in this study exhibits a significant improvement over the previously indicated method while achieving this result with fewer training parameters than VGG-19. Singh and Sharma (2021) attained superior performance metrics on the Twitter MediaEval dataset in their prior investigation. Nevertheless, their performance on the Weibo dataset exhibited a relatively lower level of proficiency. This phenomenon was attributed to two fundamental explanations. Initially, it was observed that the Weibo dataset had a notably greater occurrence of images with human faces when compared to the Twitter MediaEval dataset.
+The translation of the Chinese dataset is not highly precise due to its inherent complexity. Furthermore, it is worth noting that the posts within the Weibo dataset had a greater length in comparison to the comparatively shorter tweets seen on Twitter. Our approach demonstrates enhanced performance compared to the works of Singh and Sharma (2021), with a notable improvement of 5.63
+Ablation study
+A number of ablation experiments were conducted in this section. Because only one module was changed each time, these trials closely followed the idea of controlling variables, allowing for an independent evaluation of each module’s influence on total performance. Three experiments-one with a single-modal image, one with a single-modal text, and one with a multimodal combination of image and text-were created to confirm the effects of various modal data on the detection of fake news. The trial that used just single-modal image data had the lowest accuracy, precision, and F1-score, according to the experimental results shown in Tables 3 and 4. The model that used single-modal text data, on the other hand, had comparatively greater accuracy, precision, and F1-score. This suggests that when assessing the veracity of news, textual information is more important than visual information. With a maximum accuracy of 88.34, the multimodal combination of text and image data produced results that were roughly 8 and 9 higher than single model. Table 3. Ablation study of different modals on the weibo dataset
+Modal
+Accuracy
+Precision
+Recall
+F1-score
+
+Text
+83
+79.64
+77.70
+78.37
+
+Image
+79.56
+68.76
+89.21
+72.56
+
+Text and Image
+88.34
+86.40
+85.40
+85.90
+
+Table 4. Ablation study of different modals on the twitter dataset
+Modal
+Accuracy
+Precision
+Recall
+F1-score
+
+Text
+82.4
+78.90
+77.10
+77.83
+
+Image
+78.64
+67.96
+88.56
+72.04
+
+Text and Image
+87.40
+85.30
+84.32
+84.19
+
+
+Conclusion and future work
+The study effectively introduced a very effective multimodal system for the detection of fake news. This framework leverages DeBERT and SBERT models to extract contextual information from textual data, while RasNet50 is employed to analyse the accompanying images. Moreover, it revealed the viability of integrating textual embeddings and feature-level fusion across modalities. The proposed framework effectively reduces the processing requirements for the task and lessens the overall time required for decision-making, while yet maintaining a high level of accuracy. The assessment of the proposed approach was carried out by evaluating its performance using measures such as accuracy, precision, recall, and F1 score. The study was conducted using two commonly public datasets. The pipeline that was suggested achieved an accuracy of 87.40% on the Twitter dataset and 88.34% on the Weibo dataset. The findings of this study underscore the efficacy of employing a multimodal strategy and employing basic deep neural networks (DNNs) in conjunction with tailored processing models for each modality, as opposed to relying on traditional classifiers, adversarial networks, or computationally intensive DNN models like long short-term memory (LSTM) and recurrent neural networks (RNNs).
+While the framework presented in this study demonstrates superior performance compared to previous research, a logical next step would be to integrate user metadata into the proposed pipeline. This integration would enhance the ability to differentiate between genuine and false information, as well as identify accounts that are more likely to engage in the spread of misinformation. The task at hand has proven to be challenging as a result of the scarcity of datasets that encompass the necessary resources for extracting all pertinent features. One potentially fruitful avenue of research involves the development of an extensive and expansive benchmark dataset for false news. This dataset would encompass a wide range of linguistic and visual characteristics, as well as include accompanying user profiles and metadata. Moreover, it would be worthwhile to explore the utilisation of part-of-speech tagging and topic modelling principles. Textual semantics are taken into consideration and can be utilised for the purpose of acquiring the underlying stance from various themes. This, in turn, assists in the extraction of features and the refinement of classification models. Finally, it is worth noting that the integration of NLP techniques with information retrieval and reinforcement learning has been explored in existing research, which predominantly emphasises supervised learning methodologies. The extent to which semi-supervised, unsupervised, and hybrid techniques have been sufficiently evaluated in terms of their accuracy remains insufficient.
+Author contributions
+Rami initialized the project and managed the study. Rami collected the data and performed formal analysis. Sumbal analyzed the data. Rami wrote the initial manuscript. All authors contributed to the editing of the paper.
+Funding
+No Funding.
+Data availability
+All datasets are open-source, and the sources are cited.
+Declarations
+Ethics approval and consent to participate
+No ethical issue involved.
+Competing interests
+No Competing interests.
+Publisher's Note
+Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References
+1. Ahmad, I; Yousaf, M; Yousaf, S; Ahmad, MO. Fake news detection using machine learning ensemble methods. Complexity ; 2020; 2020 , pp. 1-11.
+2. Chen, Y; Li, D; Zhang, P; Sui, J; Lv, Q; Tun, L; Shang, L. Cross-modal ambiguity learning for multimodal fake news detection. Proc ACM Web Conf ; 2022; 2022 , pp. 2897-2905.
+3. Fayaz, M; Khan, A; Rahman, JU; Alharbi, A; Uddin, MI; Alouffi, B. Ensemble machine learning model for classification of spam product reviews. Complexity ; 2020; 2020 , pp. 1-10.
+4. Gentzkow, M; Shapiro, JM; Stone, DF. Media bias in the marketplace: theory ; 2015; Amsterdam, Elsevier:
+5. Granik M, Mesyura V. Fake news detection using naive bayes classifier. In 2017 IEEE first Ukraine conference on electrical and computer engineering (UKRCON) (2017), IEEE.900–903.
+6. Gupta H, Jamal MS, Madisetty S, Desarkar MS. A framework for real-time spam detection in twitter. In 2018 10th international conference on communication systems & networks (COMSNETS) (2018), IEEE. 380–383.
+7. Jin Z, Cao J, Guo H, Zhang Y, Luo J. Multimodal fusion with recurrent neural networks for rumor detection on microblogs. In Proceedings of the 25th ACM international conference on Multimedia (2017) .795–816.
+8. Mohawesh, R; Al-Hawawreh, M; Maqsood, S; Alqudah, O. Factitious or fact? learning textual representations for fake online review detection. Cluster Comput ; 2023; 27 , 3 pp. 3307-22.
+9. Mohawesh, R; Liu, X; Arini, HM; Wu, Y; Yin, H. Semantic graph based topic modelling framework for multilingual fake news detection. AI Open ; 2023; 4 , pp. 33-41.
+10. Mohawesh R, Xu S, Springer M, Al-Hawawreh M, Maqsood S. Fake or genuine? contextualised text representation for fake review detection. arXiv preprint arXiv:2112.14343 (2021).
+11. Mohawesh, R; Xu, S; Springer, M; Jararweh, Y; Al-Hawawreh, M; Maqsood, S. An explainable ensemble of multi-view deep learning model for fake review detection. J King Saud Univ-Comput Inf Sci ; 2023; 35 , 8 101644.
+12. Nakamura K, Levy S, Wang WY. r/fakeddit: A new multimodal benchmark dataset for fine-grained fake news detection. arXiv preprint arXiv:1911.03854 (2019).
+13. Nakashole N, Mitchell T. Language-aware truth assessment of fact candidates. In Proceedings of the 52nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) (2014), pp. 1009–1019.
+14. Papadopoulos, S-I; Koutlis, C; Papadopoulos, S; Petrantonakis, PC. Verite: a robust benchmark for multimodal misinformation detection accounting for unimodal bias. Int J Multi Inf Retri ; 2024; 13 , 1 4.
+15. Rashkin H, Choi E, Jang JY, Volkova S, Choi Y. Truth of varying shades: Analyzing language in fake news and political fact-checking. In Proceedings of the 2017 conference on empirical methods in natural language processing (2017).2931–2937.
+16. Reddy GT, Bhattacharya S, Ramakrishnan SS, Chowdhary CL, Hakak S, Kaluri R, Reddy MPK. An ensemble based machine learning model for diabetic retinopathy classification. In 2020 international conference on emerging trends in information technology and engineering (ic-ETITE) (2020), IEEE.1–6.
+17. Schwarz S, Theóphilo A, Rocha A. Emet: Embeddings from multilingual-encoder transformer for fake news detection. In ICASSP 2020-2020 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) (2020), IEEE. 2777–2781.
+18. Sergio, GC; Lee, M. Stacked debert: all attention in incomplete data for text classification. Neural Networks ; 2021; 136 , pp. 87-96.
+19. Shah P, Kobti Z. Multimodal fake news detection using a cultural algorithm with situational and normative knowledge. In 2020 IEEE congress on evolutionary computation (CEC) (2020), IEEE. 1–7.
+20. Shahi GK, Nandini D. Fakecovid–a multilingual cross-domain fact check news dataset for covid-19. arXiv preprint arXiv:2006.11343 (2020).
+21. Shim, J-S; Lee, Y; Ahn, H. A link2vec-based fake news detection model using web search results. Expert Syst Appl ; 2021; 184 , 115491.
+22. Singh, B; Sharma, DK. Predicting image credibility in fake news over social media using multi-modal approach. Neural Comput Appl ; 2022; 34 , 24 pp. 21503-21517.
+23. Singh, P; Srivastava, R; Rana, K; Kumar, V. Semi-fnd: Stacked ensemble based multimodal inferencing framework for faster fake news detection. Expert Syst Appl ; 2023; 215 , 119302.
+24. Singhal S, Shah RR, Chakraborty T, Kumaraguru P, Satoh S. Spotfake: A multi-modal framework for fake news detection. In 2019 IEEE fifth international conference on multimedia big data (BigMM) (2019), IEEE. 39–47.
+25. Song, C; Ning, N; Zhang, Y; Wu, B. A multimodal fake news detection model based on crossmodal attention residual and multichannel convolutional neural networks. Inf Proc Manage ; 2021; 58 , 1 102437.
+26. Wang, B; Kuo, C-CJ. Sbert-wk: a sentence embedding method by dissecting Bert-based word models. IEEE/ACM Trans Audio, Speech Lang Proc ; 2020; 28 , pp. 2146-2157.
+27. Wang Y, Ma F, Jin Z, Yuan Y., Xun G, Jha K, Su L, Gao J. Eann: Event adversarial neural networks for multi-modal fake news detection. In Proceedings of the 24th ACM SIGKDD international conference on knowledge discovery & data mining (2018). 849–857.
+28. Wu, Y; Zhan, P; Zhang, Y; Wang, L; Xu, Z. Multimodal fusion with co-attention networks for fake news detection. Find Assoc Comput Ling: ACL-IJCNLP ; 2021; 2021 , pp. 2560-2569.
+29. Xu Y, Qiu X, Zhou L, Huang X. Improving bert fine-tuning via self-ensemble and self-distillation. arXiv preprint arXiv:2002.10345 (2020).
+30. Yang Y, Zheng L, Zhang J, Cui Q, Li Z, Yu PS. Ti-cnn: Convolutional neural networks for fake news detection. arXiv preprint arXiv:1806.00749 (2018).
+31. Zeng, J; Zhang, Y; Ma, X. Fake news detection for epidemic emergencies via deep correlations between text and images. Sustain Cities Soc ; 2021; 66 , 102652.
+32. Zhang J, Dong B, Philip SY. Fakedetector: Effective fake news detection with deep diffusive neural network. In 2020 IEEE 36th international conference on data engineering (ICDE) (2020), IEEE. 1826–1829.
+33. Zhang T, Wang D, Chen H, Zeng Z, Guo W, Miao C, Cui L. Bdann: Bert-based domain adaptation neural network for multi-modal fake news detection. In 2020 international joint conference on neural networks (IJCNN) (2020), IEEE. 1–8.
+34. Zhou, X; Wu, J; Zafarani, R. Similarity-aware multi-modal fake news detection ; 2020; Cham, Springer:

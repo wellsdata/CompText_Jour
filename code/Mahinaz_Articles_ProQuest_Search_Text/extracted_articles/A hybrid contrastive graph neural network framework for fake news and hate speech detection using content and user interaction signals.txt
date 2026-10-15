@@ -1,0 +1,684 @@
+Introduction
+As digital platforms evolve, the challenge of moderating harmful content has increased. The process of identifying textual deception and decoding complex interactions between users and their content becomes more challenging 1,2 . Unlike standard recommendation or sentiment systems, the process of detecting misinformation and offensive language requires a multi-phase analysis that need to consider the language used as well as the behavioral tendencies, propagation chains, and social dynamics surrounding the content 3 . Certain posts, although linguistically neutral but it may carry a troublesome intent which might be intensified in coordinated networks. Similarly, users may repeatedly interact with misleading content not out of ignorance but as part of a deliberate intensification strategy. Capturing such intricate patterns becomes more challenging particularly in low-interaction phases or when harmful expression is masked within socially acceptable vocabulary 4 .
+Conventional models that depend on post features or handcrafted user representations fails to generalize when the content has coordinated disinformation or indirect hate propagation. The systems exhibit better performance only when content it analyzes explicit toxicity or user metadata is complete and balanced. But in practical, social media datasets have uneven user activity, missing fields, or unpredictable interaction density 5 . Detection models should consider these inconsistencies to reduce high error margins especially in dynamic timelines. Another practical issue arises from the fusion of metadata and content without considering attention to temporal sensitivity. Due to this, models developed on static assumptions exhibits limited responses to situations like bot-like retweeting, sudden bursts of antagonistic replies, or user impersonation.
+Recent architectures that address misinformation and hate detection are categorized into two types. The first category is the model which mainly depends on deep linguistic encoders and the models which are based on social connectivity graphs 6,7 . Models that incorporate transformer variants or contextual word embeddings mainly focus on intra-post semantics. However, they are limited in capturing external reinforcement dynamics such as user-user endorsement or contradiction. The second category is graph-based systems which are effective in capturing relational dependencies. But these models face difficulties when interaction graphs are sparse. This limits the model’s adaptability in real-time analysis. Researchers have developed few hybrid strategies by fusing content and user embeddings. However, these models use simplistic pooling techniques or static feature concatenation without reflecting dynamic relevance or alignment. This results in reduced clarity in representing deceptive engagement and lower discrimination between benign and malicious patterns especially under evolving community behavior.
+To overcome these limitations the objective of this research is framed to construct a detection framework that treats content, interaction sequences, and user context as interdependent entities as inputs. Instead of viewing metadata and textual semantics as separate streams, the proposed model aims to evaluate how a user’s credibility score may affect the interpretation of their post, or how an engagement sequence might appear suspicious when compared to their usual behavior. This dynamic cross-evaluation is considered as basic for a hybrid learning architecture where signals from multiple perspectives are merged and contrasted to obtain reinforced decision clarity. The proposed model introduces a relational learning strategy in which users and content entities are represented as interconnected graph nodes, and interactions are encoded as temporally weighted, behavior-sensitive edges. Content nodes are further enhanced through a semantic encoding module and the user nodes incorporate auxiliary characteristics such as historical engagement volatility, reliability scores, and endorsement frequency. An attention-based propagation model selectively distributes influence across the graph and ensures weights are placed on critical connections while suppressing misleading associations. Unlike conventional graph systems, this proposed model incorporates a contrastive learning layer which is specifically designed to reinforce the divergence between supportive and deceptive interactions. By explicitly defining positive and negative user-content pairs, the proposed model shapes the embedding space to highlight conflict overloaded relations. This dual process such as graph-aware attention propagation and behavior-guided contrastive tuning. Also, it establishes a discriminative signal that extends beyond language patterns and graph topology which enables the model to adaptively identify misinformation and aggression embedded within multi-modal, irregular, and strategically created digital engagements.
+Our contribution
+The major contributions of this research work are summarized as follows.
+
+- Proposed a hybrid contrastive graph model that combines semantic encoding, graph attention layers, and user metadata integration. Each post is encoded using contextual embeddings, while users are represented with credibility and interaction frequency. Interactions are modeled as temporally weighted edges. A contrastive loss function strengthens discrimination between consistent and deceptive engagement behavior, enabling enhanced node-level classification performance across varied interaction scenarios.
+
+- Presented a detailed experimental analysis of proposed model using benchmark FakeNewsNet dataset and evaluated the performance using precision, recall, F1-score, false positive rate, and accuracy.
+
+- Presented a detailed comparative analysis to validate the model performance compared to CNN, Bi-LSTM, GRU, and attention-enhanced classifiers.
+
+
+
+The subsequent sections of this article are structured as follows. The section “Related works” outlines existing methods and highlights limitations observed in current fake news and hate speech detection strategies. The section “Proposed work” elaborates on the architecture of the proposed hybrid contrastive graph-based model. The section “Results and discussion” details the performance evaluation, experimental settings, and comparative findings. The section “Conclusion” summarizes the conclusions drawn from this study and suggests possible extensions for future development.
+Related works
+Recent advancements in computational linguistics and pattern recognition have led to various models addressing misinformation and harmful communication on social platforms. This section provides a detailed summary of existing research works. The multi-task deep learning architecture presented in 8 is specifically developed for Arabic fake news analysis, leveraging MARBERTv2 to manage linguistic diversity across dialects. It integrates fake news detection, content classification, and risk evaluation within a shared learning setup, enabling efficient representation learning across tasks. Utilizing a manually annotated dataset of 2,495 items, the model achieved better F1 score for detection and categorization which confirms its cross-task robustness. Valence scoring is applied to enhance interpretability by emphasizing deceptive phrasing. However, the reliance on a relatively small, domain-specific dataset may limit generalization across broader or multilingual scenarios.
+The role of contextual information in hate speech detection is reported in 9 by focusing on Twitter replies to digital newspaper posts during the COVID-19 pandemic. A Spanish Rioplatense variant dataset was curated and annotated to capture hate speech nuances influenced by topical and conversational context. The researchers employed transformer-based models for both binary and multi-label classification, demonstrating performance improvements of Macro F1 score, respectively, when context was included. This indicates that isolated message evaluation is insufficient for reliable hate speech tagging. By embedding replies and parent-post semantics, the approach enhances discrimination of implicit hostility. A noted limitation is its dependency on conversation threads, which may be absent in real-time moderation scenarios or cross-platform applications.
+A toxicity-focused fake news classification model presented in 10 integrates both traditional and transformer-based models to distinguish between harmful and non-harmful misinformation. Data was sourced from major platforms like Facebook and Twitter, with samples labeled based on toxicity analysis. Feature extraction combined keyword-driven filtering with toxicity scores, and classification was conducted using linear SVM, random forest, and BERT-enhanced variants. Among these, linear SVM exhibited the highest accuracy and better F-scores. The analysis confirmed the presented model reliability in identifying malicious narratives. However, the analysis is limited by its dependency on pre-defined toxicity thresholds and potential generalization challenges across unseen topics or languages.
+The Korean fake news detection model presented in 11 incorporates user interaction patterns and stance information into the classification process as graph-based strategy. The presented method constructs a user graph that reflects engagement behaviors, including shares, comments, and reactions to model social contexts. Experimental evaluations confirmed the presented model superior performance compared to conventional methods even in the presence of hate speech. However, the model’s performance limited by user sparsity and potential cultural or language-specific biases which further limits adaptability to multilingual or global contexts.
+The fake news detection model presented in 12 is developed for identifying hostile content in Hindi social media posts. The presented model combines contextual embeddings with additional factors like lexicon cues, hashtag relevance, and emoticon indicators to enhance classification accuracy. A dimension-specific attention refinement is introduced to isolate the nature of hostility be it fake, hate, offensive. Experiments that utilize benchmark dataset demonstrated the model better performance in both binary and multi-label setups compared to conventional methods. However, performance of the presented model is limited in detecting complex or code-mixed content, and requires further exploration to attain robustness across diverse languages.
+An attention-guided active learning strategy is presented in 13 for hate speech detection. The presented approach focusses on challenging cases like sarcasm, implicit hostility, and morally subversive praise. The process begins by embedding hate-related lexicons and forum-derived content using transfer learning. Further synonym-based semantic expansion is incorporated to diversify feature space. Entropy-driven selection in the presented model identifies uncertain samples during each active learning iteration, while visualization helps to fine tune the annotation process. Apart from the advantages like interpretability and reduced annotation cost, the presented model may face generalization issues across diverse platforms and languages.
+A multi-feature heterogeneous graph analysis is presented in 14 to overcome the limitations of conventional graph neural networks in harmful content detection. The presented model constructs three separate graphs to represent explicit textual features like hashtags and mentions, implicit semantic attributes such as topics and entities, and visual content features from respective images. These individual representations enable the model to capture fine-grained, aspect-specific patterns. A unique correlation-based loss function ensures minimal redundancy between the learned representations across graphs, promoting feature independence. Experimental evaluation using social media datasets exhibits the model better accuracy over existing graph-based techniques. However, the modular design of the presented model require more computational resources and domain-specific adaptation limits its generalizability.
+The dual-transformer architecture presented in 15 incorporates a parallel structure for fine-tuned analysis of implicit and explicit forms of bias in text. The experimentation that utilizes a custom-labeled dataset to train and evaluate the model. Additionally multiple benchmark datasets are also incorporated to confirm the presented model superior ability in differentiating the biased narratives from neutral ones. However, the presented model face challenges in domain transfer due to language-specific bias patterns and its dependence on high-quality annotations.
+A multimodal deep learning model reported in 16 detects fake messages by integrating image, text, and hashtag data from social media posts. The presented model employs a tri-branch model that processes each modality separately and then fuses the semantic features using a task-specific attention mechanism. This enables the model to capture indirect visual features and contextual language indicators. Experimental evaluation that utilizes benchmark dataset of Instagram posts exhibits the model better accuracy which is better than conventional text-based methods. However, dependency on visual clarity and post quality limits the model performance.
+The multimodal deep learning approach presented in 17 detects fake news, hate speech, and offensive language by incorporating text, image, and image-text modalities. To effectively handle the inherent heterogeneity across modalities, the presented approach proposes a combined textual representation strategy by translating both images and image-text elements into a common semantic space. A multi-layer neural architecture with inter-modal attention is introduced to model the complementarity and dependencies among these diverse inputs. Experiments conducted on three benchmark datasets validate the model’s superior performance in all three detection tasks compared to unimodal and earlier multimodal baselines. Robust ablation analysis further confirms the impact of each modality. However, converting visual data into text may lead to information dilution in complex visual scenes, suggesting the need for future enhancements in image-text alignment and context preservation.
+The hybrid ensemble classification model presented in 18 addresses the limitations of existing toxicity detection systems on social media, particularly concerning contextual ambiguity and dialectal diversity. The presented approach incorporates pre-trained language representations with conventional deep neural network layers to improve interpretability and adaptability in hostile content classification. Experimental evaluations exhibit the model enhanced accuracy and superior performance to adversarial linguistic manipulations compared to single classifiers. However, the presented model lacks in multilingual scalability and requires fine tuning.
+A hybrid convolutional and recurrent neural architecture is presented in 19 to detect fake news in Hindi. The presented CNN-LSTM model integrates text embeddings to represent Hindi text effectively. The Convolution layer captures the localized linguistic patterns, and the LSTM unit model temporal dependencies in sentence structures. Experimentations on the own dataset exhibits the model strong performance with better accuracy and F1 score on the benchmark dataset. However, the model applicability beyond Hindi or across mixed-lingual content are unexplored, and the robustness under noisy social data requires further validation.
+The Hierarchical Fine-Grained Domain detection model presented in 20 addresses critical limitations in existing multi-domain fake news classifiers. The presented approach constructs a Domain-Specific Narrow-Coverage Tree-Based Taxonomy which provides refined domain classification through a structured hierarchy. A heterogeneous graph network is formed by integrating news items and multilevel domain nodes to capture the complex inter-domain relationships and improves semantic cohesion. Using LLMs for multi-label annotations enhances scalability while reducing manual efforts. Experimental evaluations show notable gains, particularly in low-resource domains like education and military. However, the model’s reliance on domain-specific trees may limit its adaptability to rapidly evolving content or cross-domain misinformation.
+The Arabic fake news detection model presented in 21 explores the utility of linguistic features, particularly Named Entity Recognition (NER). Two models were constructed: an AraBERT-based multi-task learning classifier and a token classification model tailored to extract NER attributes from Arabic news. Their embedding vectors were fused and subjected to machine learning classifiers. To enhance performance, a novel feature selection algorithm—RLTTAO—was introduced, which refines the Triangulation Topology Aggregation Optimizer using reinforcement learning and random opposition learning strategies. The model was validated across seven datasets, with five showing noticeable improvements in classification accuracy. However, reliance on language-specific models and feature-rich data may reduce effectiveness in low-resource or dialectally diverse contexts.
+A scalable approach presented in 22 for hate speech detection on social media by parallelizing traditional ensemble learning algorithms. Specifically, Bagging, A-stacking, and Random Sub-space methods were parallelized to enhance processing speed without compromising accuracy. These parallel models were evaluated on six large-scale, high-dimensional datasets. Experimental results revealed that parallel implementations achieved significant speedups and maintained comparable accuracy to their serial counterparts. The models were also tested under cross-dataset settings to assess generalization capabilities. Despite the benefits, the study’s limitations include dependence on computational resources and the need for further exploration of language-specific and cultural nuances in hate speech patterns.
+Table 1. Summary of literature Review.
+Ref
+Methodology
+Merit
+Limitation
+
+8
+Multi-task learning using MARBERTv2
+Achieves high precision
+Lacks multilingual applicability.
+
+9
+Transformer-based classifiers
+Improved detection
+No generalizability across other languages
+
+10
+SVM, RF, and BERT
+SVM shows superior results
+Limited exploration of deep semantic models.
+
+11
+Graph-based approach
+Better fake content identification.
+Limited dataset scale
+
+12
+HostileNet using HindiBERT
+Excels in Hindi hostile post classification.
+Not evaluated for cross-lingual or other regional variants.
+
+13
+Attention-guided instance selection with active learning and entropy-based sampling.
+Boosts performance by increasing high-value labeled samples
+Performance gain is small
+
+14
+Heterogeneous graphs
+Higher accuracy for harmful content.
+High computational overhead
+
+15
+Dual-transformer setup.
+Enhances localization of biased expressions
+Does not address toxicity or misinformation detection.
+
+16
+Multimodal ensemble attention
+High accuracy across Instagram data
+Lacks validation in other public health
+
+17
+Unified deep model with inter-modal attention
+Captures complementarity among modalities
+Faces difficulty in aligning image-text information
+
+18
+Ensemble classifier with DNNs
+Effective across various dialects.
+Framework lacks in-depth handling of sarcasm
+
+19
+Hybrid CNN-LSTM
+High accuracy with good sequential learning.
+Dataset is low in scale compared to multilingual data
+
+20
+Domain-aware heterogeneous network learning.
+Improved micro-level detection granularity.
+Performance varies across underrepresented domains.
+
+21
+AraBERT with NER-enhanced embedding fusion
+Measurable accuracy across multiple Arabic datasets.
+Optimization increases complexity.
+
+22
+Subspace ensembles for high-dimensional hate speech.
+Better classification accuracy
+Limited generalization
+
+
+The literature summary presented in Table 1 reveals that while numerous efforts have been made to detect fake news, hate speech, and offensive content using machine learning and deep learning techniques, significant gaps remain unaddressed. Most existing models either focus solely on textual information or treat multimodal elements like images and hashtags as secondary, often neglecting the nuanced interplay between them. Several approaches rely on pre-trained transformers 23 yet fail to exploit inter-modal relationships or fine-grained semantic interactions among diverse modalities. While graph-based and domain-specific frameworks have emerged to capture contextual clues and user behavior, their integration with contrastive learning and attention fusion remains limited. Many methods also exhibit shortcomings in cross-domain adaptability, multilingual sensitivity, and generalization under real-world, noisy social media conditions. Moreover, models frequently overlook the impact of contextual cues like post history, propagation patterns, and sarcasm, resulting in reduced interpretability and vulnerability to adversarial content 24 . Apart from the advantages in entity-aware classification, ensemble modeling, and NER-enhanced feature selection, there is a need for a combined architecture that should dynamically capture semantic contrast, relational hierarchy, and modality-level attention. Addressing these limitations a hybrid graph-attention framework with metadata fusion is proposed specifically for multilingual and context-rich detection across fake news and hate speech contents.
+Current status and research gap
+Existing research on misinformation and hate content detection predominantly follows two major modeling directions: deep linguistic encoders and graph-based relational systems. Transformer-driven language models provide strong intra-post semantic understanding, but they largely ignore external reinforcement behaviors such as user-user endorsement, coordinated replies, and contradictory interactions, leading to limited robustness when harmful intent is embedded in subtle, context-rich expressions. Similarly, graph-based methods that capture relational dependencies struggle when the interaction graph is sparse or noisy, reducing their adaptability during real-time analysis where dynamic behavior, including bot-like retweet patterns, sudden antagonistic bursts, or impersonation, is common. Hybrid approaches that fuse content embeddings with user features have been proposed, but most rely on static concatenation or simple pooling, offering limited ability to highlight dynamic relevance or detect deceptive engagement patterns.
+Another prevailing limitation across literature is the insufficient modeling of user behavioral attributes. Many models generalize poorly when user metadata is incomplete, unevenly distributed, or contains missing fields. Furthermore, existing studies typically overlook temporal sensitivity, failing to capture how timing, engagement volatility, or credibility fluctuations influence semantic interpretation. As a result, they struggle to discriminate between benign and malicious patterns in evolving community behavior, especially when harmful content is linguistically neutral but behaviorally abnormal.
+A further shortcoming is the absence of mechanisms to explicitly separate supportive and deceptive relations in the embedding space. Most prior works lack contrastive tuning or behavior-aware alignment strategies, resulting in weak representational clarity when differentiating between genuine engagements and strategically manipulated interactions. Additionally, current frameworks rarely incorporate a unified architecture that jointly addresses semantic interpretation, user-level metadata fusion, temporally weighted interactions, and contrastive divergence between conflicting signals.
+These limitations collectively highlight the need for a robust architecture capable of modeling semantic content, user behavior, interaction dynamics, and deceptive engagement patterns in an integrated manner. The proposed Hybrid Graph-based Contrastive Model (HGCM-Net) directly addresses these gaps by combining semantic encoding, metadata projection, temporal interaction weighting, graph attention propagation, and a behavior-guided contrastive learning mechanism within a unified detection framework.
+Proposed work
+The proposed model introduces a graph-based learning model to detect fake and hate content by combining semantic interpretation, social interaction modeling, and behavior-guided contrast evaluation. The proposed model includes a semantic encoder that processes post content into dense representations, while user metadata such as engagement frequency, credibility index, and temporal activity is encoded through a feature projection mechanism. The graph structure is constructed with users and content as nodes, and interaction types such as replies, mentions, shares are featured as weighted edges based on timing and engagement nature. A graph attention network (GAT) governs information propagation across the graph, emphasizing relevant nodes while suppressing noisy associations. The model incorporates a contrastive training mechanism, which separates supportive and misleading user-content relations by optimizing distinct embedding spaces.
+Fig. 1 [Images not available. See PDF.]
+Proposed model architecture.
+
+Figure1 shows the Architecture of the proposed hybrid contrastive graph-based detection framework. The model begins with preprocessing of raw data, where textual posts and user metadata are normalized and structured. Content features are encoded using a semantic representation module, while user-specific attributes such as engagement history and credibility are projected into a latent space. A heterogeneous graph is constructed with user and content nodes linked by interaction-based edges weighted by temporal and behavioral context. Graph Attention Networks (GAT) facilitate information propagation by emphasizing influential relations. A contrastive learning mechanism refines node representations by distinguishing aligned (supportive) and conflicting (deceptive) user-content associations. The fused embeddings are passed through a classification layer that generates the final label, indicating whether the engagement pattern is genuine or harmful.
+Input acquisition and preprocessing
+The initial phase involves preparing the raw user and content data into structured formats suitable for further transformation. Each record in the dataset comprises a textual post and a set of metadata features associated with the user who generated the content. These two components such as text and user profile are processed independently before being merged later in the architecture. Every social post is first tokenized and encoded into a dense numerical representation that preserves contextual meaning. Let denote the raw post associated with sample . This text is passed through a language model which outputs a vector , where each dimension captures a specific semantic property derived from the sentence. The transformation is expressed as 1
+
+where is the embedding of the word in post , and is the total number of tokens in the post. The final representation is the mean of the individual word embeddings, ensuring a fixed-size output for all text inputs regardless of length.
+Alongside content, each user is described by a fixed-length feature vector , where is the number of profile attributes. These features may include activity level, account credibility score, number of followers, verification status, and others. To ensure uniform contribution during model training, each component of this vector is normalized between 0 and 1. The normalized metadata vector is computed element-wise using the formula 2
+
+Where is the raw value of the feature for user , and are the minimum and maximum values of the feature across the entire user population. In real-world data, certain fields may be missing for some users. To ensure consistency, missing entries are imputed using feature-wise median values across the population. If is missing, it is replaced with . This imputation maintains the statistical characteristics of the data without skewing distributions, which is especially important for features like follower counts or credibility scores. Textual data often varies in length. To facilitate batch processing, each post is trimmed or padded to a fixed number of tokens . If the number of tokens in post is less than , the vector is extended with zero embeddings. If it exceeds , only the first tokens are retained. The final matrix representing the post is , Where each is either an actual word embedding or a zero vector for padding.
+Graph construction
+The core structure of the proposed framework is based on a heterogeneous graph that model’s relationships between users and posts. Each entity either a content post or a user is treated as a node, and each interaction (such as retweets, replies, mentions, or shares) is represented by a directed edge connecting the corresponding nodes. This graph provides a foundation to capture contextual and relational dynamics which textual encoding alone cannot resolve. Let the complete graph be denoted by , where is the set of nodes and is the set of directed edges. Each node in corresponds either to a user or a content post. Assume the total number of user nodes is and the number of post nodes is , then in which each user node holds the normalized profile feature vector , and each post node holds the semantic content representation . Further the graph edges are derived from the recorded interactions between users and posts. An edge from node to node is created if a user has interacted with a content post, where interaction includes events such as replying, reposting, or tagging. Therefore, the edge set is defined as .
+Each edge is directed, signifying the direction of influence or information flow from the user to the post or from the post to another user depending on the nature of the event. To reflect the importance of each interaction, every edge is assigned a weight based on both temporal relevance and behavioral strength. Let be the time gap between the creation of content and the interaction by the user, and let represent the behavioral intensity, such as number of times the user has engaged with that post type. The final edge weight is calculated as 3
+
+This formulation increases the edge importance when behavior is frequent but reduces it when the interaction is delayed in time. The logarithmic term ensures that time decay is smoothly applied without abrupt changes. In general, the interactions in social media are not homogeneous. Replies, shares, likes, and mentions carry different implications. To capture this, interaction-specific modulation is applied. Each edge type is assigned a static type-based factor . Then, the adjusted weight becomes 4
+
+This modification accounts for the nature of the interaction. For instance, a reply may indicate a stronger opinionated connection than a simple like, and is thus weighted more.
+Finally, the complete weighted graph is represented by an adjacency matrix , where . Each entry stores the adjusted weight for edge , and zero otherwise 5
+
+This matrix is sparse and asymmetric due to the directed nature of interactions. It serves as the structural backbone for downstream message propagation in the learning layers.
+User feature projection
+Once the user profile metadata has been normalized, the next stage transforms these static attributes into a dense vector that can participate in learning within the graph structure. Unlike raw metadata, which consists of numerical and categorical fields with varied scales, the projection process converts them into a uniform feature space through a linear transformation followed by a non-linear mapping. This enables the model to learn and extract meaningful representations that are compatible with content embeddings and graph-based message propagation. Let the normalized metadata vector for the user be represented as , where is the number of metadata features. To project this vector into a higher-dimensional latent space of size , a weight matrix is used. The linear transformation is applied as 6
+
+where is the bias vector that shifts the projection. The outcome represents the initial embedded vector of the user’s profile. After linear transformation, a non-linear activation function is applied to introduce feature dependencies and improve learning flexibility. The ReLU (Rectified Linear Unit) function is selected for its simplicity and gradient stability. This operation is performed element-wise over the projected vector , resulting in the final representation 7
+
+Each component of the projected vector is passed through the ReLU function, ensuring that only non-negative activations are retained, which enhances gradient flow and promotes sparsity.
+The final output of this stage is the vector , which is a dense, learnable representation of the user’s profile attributes. This vector now holds contextual, non-linear transformations of various metadata fields such as verification status, account longevity, activity rate, and follower metrics. It is designed to be compatible with graph propagation mechanisms and attention-based feature aggregation in later stages of the model. At this point, each user node in the graph carries a unified vector , ready for integration with neighborhood features through attention-weighted message passing.
+Graph attention propagation
+Once both user and content nodes are initialized with their respective feature vectors, the information is exchanged across the graph structure. This is achieved by incorporating an attention-based message propagation mechanism which enables each node to selectively aggregate information from its connected neighbors. Unlike uniform aggregation methods, the attention process assigns dynamic weights to each neighbor, depending on the importance of their features in the current context. This selective mechanism ensures that useful relationships are amplified while irrelevant or noisy associations are diminished. Let each node in the graph carry a feature vector . For user nodes, this is the output of the metadata projection step; for content nodes, it is the semantic encoding of the post. The goal is to compute an updated node representation by aggregating information from its neighbors . Before computing attention weights, each node’s feature vector is projected into a shared embedding space using a transformation matrix. For a given node , the transformed vector is 8
+
+where is a trainable weight matrix that maps features to a new dimension suitable for attention-based aggregation. To measure the importance of neighbor to target node , an attention score is computed. This is done by concatenating the transformed feature vectors of the two nodes and passing them through a weight vector followed by a non-linear activation: 9
+
+where is a learnable attention parameter vector, and denotes vector concatenation. The LeakyReLU function introduces non-linearity and allows small negative gradients to flow through during training. Since the raw attention scores are not bounded or normalized, a softmax function is applied across all neighbors of node to obtain valid attention weights . The normalized weight is given by 10
+
+This normalization ensures that the sum of weights over all neighbors of a node equals one, facilitating weighted averaging in the next step. With the attention weights computed, the final feature representation for node is calculated as the weighted sum of its neighbors’ transformed features 11
+
+where is a non-linear activation function such as ReLU, which ensures that the aggregated representation captures both linear and non-linear interactions between neighboring nodes. After completing this process for every node in the graph, the result is a new set of node embeddings , which encode contextual information derived not only from the node’s own features but also from its connected neighbors. These refined embeddings are now equipped to handle contrastive separation and classification in subsequent stages of the framework.
+Contrastive learning mechanism
+After generating context-aware node embeddings through attention-based message propagation, the next goal is to enhance the model’s ability to distinguish between informative and misleading patterns. This is achieved by introducing a contrastive learning component, which compares representations from different types of nodes pairs and encourages the network to reduce the similarity between unrelated or adversarial interactions, while bringing semantically or behaviorally consistent pairs closer in the embedding space.
+Each content node is associated with neighboring user nodes. These connections can either indicate aligned behavior or potential conflict. To model this positive pairs are defined as content-user node pairs that reflect credible or supportive interaction. Negative pairs are defined as content-user pairs linked through deceptive, inconsistent, or adversarial interaction. Let be the final embedding of the anchor node, the embedding of a positive counterpart, and the embedding of a negative sample. These representations are obtained from the graph attention propagation step. To quantify how closely two node representations relate, a similarity score is calculated using cosine similarity. For a given pair of nodes and , the similarity is defined as 12
+
+where the numerator is the dot product of the two vectors, and the denominator is the product of their Euclidean norms. This score ranges from − 1 to 1, where higher values indicate stronger alignment. To reinforce the distance between conflicting node embeddings and minimize the gap between supportive ones, a softmax-based probability distribution is applied across similarity scores. This includes a temperature scaling factor to control the sharpness of the distribution. The contrastive probability that the positive pair is more similar than negative pairs is given by: 13
+
+where is the total number of negative samples considered for node , and denotes the embeddings of those negatives.
+The learning objective is to maximize the probability of correctly associating positive pairs while minimizing the likelihood of aligning with negatives. This is implemented using a log-likelihood loss function. The contrastive loss for each anchor-positive pair is defined as: 14
+
+This loss penalizes the network when the similarity of a positive pair is not significantly higher than that of negative samples. Summing across all such anchor-positive pairs in the batch yields the total contrastive loss 15
+
+Where is the number of contrastive samples used during training. While the contrastive loss improves representation learning, the model still needs to perform classification—predicting whether a post or user interaction is deceptive or legitimate. Thus, the total loss is composed of two parts such as the classification loss which is based on binary cross-entropy and the contrastive loss which is based on promoting embedding separability. The complete training objective is defined as 16
+
+where is a hyperparameter that balances the influence of the contrastive term with the classification loss.
+Classification and final output
+Following the contrastive refinement of node embeddings, the final stage of the model performs binary classification. The aim is to determine whether each content post or user interaction falls under the category of reliable or harmful behavior. To achieve this, the attention-augmented, contrast-enhanced node embeddings are passed through a supervised classification head that maps the dense representation to a decision space. The process includes a fully connected transformation, non-linear activation, probability estimation, and categorical decision-making. Let be the final embedding of a node after graph attention and contrastive processing. This embedding is passed through a fully connected transformation that projects it into a scalar logit which reflects the tendency of the node to belong to the harmful class. The transformation is defined as 17
+
+where is a trainable weight vector and is a scalar bias term. To convert the scalar logit into a probability score ranging between 0 and 1, the sigmoid activation function is applied. This yields the likelihood that the given node corresponds to a harmful interaction. The probability is computed as 18
+
+This formulation ensures that large positive values of approach probability 1, while large negative values result in probabilities close to 0. During training, the model minimizes a binary cross-entropy loss between the predicted probability and the true label. Let denote the actual ground-truth label for node , where 1 indicates a harmful interaction. The loss function for a single instance is: 19
+
+This loss penalizes the model for misclassifying both harmful and non-harmful interactions. The total classification loss over a batch of size is 20
+
+After obtaining the probability score , a hard binary decision is made based on a threshold . Commonly, this threshold is set at 0.5. The classification output is given by 21
+
+This decision is used during inference to assign the content or user interaction to either the deceptive/harmful or genuine/benign category. The final outcome of this classification stage is a binary label for each node as either user or content indicating whether the interaction is considered misleading or credible. This decision integrates all stages: content understanding, user profiling, relational modeling, and behavior-aware contrastive refinement. The predicted labels are then evaluated against ground-truth annotations using accuracy, precision, recall, and F1-score to measure the effectiveness of the model.
+Supervised loss and optimization
+The training of the proposed framework is governed by a composite loss function that balances two learning objectives: binary classification accuracy and discriminative embedding alignment. The supervised component ensures that the model learns to differentiate between malicious and authentic interactions, while the contrastive component reinforces representation consistency across related node pairs. The model is trained using gradient-based optimization, where the total loss guides parameter updates. Let the classification loss be denoted as the binary cross-entropy loss, which penalizes incorrect predictions of the final node labels. Let the contrastive loss penalize instances where feature embeddings of different classes are projected closely in the latent space. To combine these two objectives, a weighted summation is used: 22
+
+where is computed as described previously using binary cross-entropy, and is computed using temperature-scaled softmax over embedding similarities. The hyperparameter adjusts the influence of the contrastive component during training. Once the total loss is formulated, the model’s parameters—including the weights of the graph attention layers, user encoders, and the classifier head—are updated using a first-order gradient descent method. At each training iteration, gradients of the total loss with respect to the model parameters are computed 23
+
+where denotes the set of all trainable parameters in the network, is the learning rate controlling the step size, and is the gradient of the loss with respect to those parameters. To avoid overfitting, regularization is introduced in the form of weight decay, which penalizes overly complex weight magnitudes. This is integrated into the loss by adding a squared norm of the parameters: 24
+
+And the final training loss becomes 25
+
+where is the weight decay coefficient, typically a small positive value. During model training, the dataset is divided into mini-batches. For each batch, node features, graph connections, and labels are used to compute forward passes through the network. The total loss is calculated using both classification mismatch and contrastive misalignment. Using backpropagation, gradients of the total loss are propagated backward through the model layers. The optimizer then updates all parameters using the calculated gradients. This iterative process continues until convergence is achieved or early stopping criteria are met. The summarized pseudocode for the proposed model is presented as follows.
+
+Results and discussion
+The experimental validation of the proposed hybrid graph-based contrastive framework was carried out using Python with PyTorch for neural computations and PyTorch Geometric for graph representation learning. Simulations were executed on a system equipped with an NVIDIA RTX GPU and 64 GB RAM to enable efficient training over large user-content interaction graphs. The model was trained using binary cross-entropy loss and contrastive alignment objectives, with Adam optimizer and a fixed learning rate. The dataset was partitioned into 70% training, 10% validation, and 20% testing. Evaluation metrics such as accuracy, precision, recall, and F1-score were computed to assess the framework’s predictive robustness. Table 2 presents the key simulation hyperparameters adopted in both the proposed model and existing benchmark models.
+Table 2. Simulation hyperparameters for proposed and existing Models.
+S.No
+Algorithm
+Parameter
+Value/Type
+
+1
+Proposed HGCM-Net
+Learning Rate
+0.001
+
+2
+Batch Size
+64
+
+3
+Epochs
+30
+
+4
+Graph Attention Layers
+2
+
+5
+Metadata Projection Size
+32
+
+6
+Contrastive Temperature (τ)
+0.5
+
+7
+Dropout Rate
+0.3
+
+8
+Optimizer
+Adam
+
+9
+GRU-MCAF
+Learning Rate
+0.001
+
+10
+Batch Size
+64
+
+11
+Epochs
+30
+
+12
+GRU Units
+128
+
+13
+Attention Heads
+4
+
+14
+Dropout Rate
+0.4
+
+15
+Optimizer
+Adam
+
+16
+Attention-LSTM
+Learning Rate
+0.008
+
+17
+Batch Size
+64
+
+18
+Epochs
+30
+
+19
+LSTM Hidden Units
+128
+
+20
+Attention Dimension
+64
+
+21
+Dropout Rate
+0.2
+
+22
+GRU
+Learning Rate
+0.001
+
+23
+Batch Size
+64
+
+24
+Epochs
+30
+
+25
+Hidden Layer Count
+2
+
+26
+Dropout Rate
+0.2
+
+27
+LSTM
+Learning Rate
+0.0015
+
+28
+Batch Size
+64
+
+29
+Epochs
+30
+
+30
+Units per Layer
+100
+
+31
+Dropout Rate
+0.2
+
+32
+CNN
+Learning Rate
+0.0005
+
+33
+Batch Size
+64
+
+34
+Epochs
+30
+
+35
+Filters per Layer
+64
+
+36
+Kernel Sizes
+3 × 3
+
+37
+Dropout Rate
+0.2
+
+38
+EfficientNet-B0
+Learning Rate
+0.003
+
+39
+Batch Size
+64
+
+40
+Epochs
+30
+
+42
+Drop Connect Rate
+0.2
+
+43
+Optimizer
+RMSProp
+
+
+The experimentation phase of this research adopts the FakeNewsNet repository 23 , a well-recognized social media benchmark that offers verified user activity records related to misinformation and abusive content propagation. The dataset is composed of structured metadata, content interaction sequences, and behavioral traces extracted from two reliable news verification domains PolitiFact and GossipCop. These domains contribute diverse engagement styles, temporal interaction signatures, and propagation dynamics, ensuring robust evaluation of detection models. For this study, the original dataset is preprocessed to retain user accounts with complete activity logs, sufficient engagement depth, and traceable metadata records. The temporal traces are structured into uniform-length activity sequences, while static user metadata is parsed into feature vectors. The combined format serves as a suitable input for contrastive learning and graph-based behavior modeling. The final filtered dataset is split into training and testing sets to enable supervised evaluation across both classes. The composition of the dataset used in this simulation is summarized below. Table 3 provides an overview of the dataset used in this study.
+Table 3. Dataset Description.
+S.No
+Category
+Count
+
+1
+Total User Records
+11,758
+
+2
+Harmful User Labels
+5,976
+
+3
+Normal User Labels
+5,782
+
+4
+Average Sequence Length
+28 interactions
+
+5
+Metadata Fields
+12 dimensions
+
+6
+Users Used for Training
+8,230
+
+7
+Users Used for Testing
+3,528
+
+
+In binary classification, model performance is assessed using four fundamental outcome categories. True Positive (TP) refers to cases where the model correctly identifies harmful or misleading content as harmful. False Positive (FP) represents instances where the model incorrectly labels benign content as harmful, leading to unwarranted alerts. True Negative (TN) corresponds to correctly recognizing benign or credible content as non-harmful. False Negative (FN) indicates cases where harmful or deceptive content is mistakenly classified as benign, which is the most critical type of error in misinformation and hate content detection due to its potential real-world impact. These four quantities form the basis for computing precision, recall, F1-score, and accuracy used in the performance evaluation of the proposed HGCM-Net.
+The training and validation accuracy graph presented in Fig. 2 reveals a rapid convergence and strong generalization capability of the proposed HGCM-Net. The training accuracy improves steadily from 93.02% at the initial epoch and saturates near 97.93% after epoch 30. In parallel, the validation accuracy increases from 91.45% and stabilizes around 97.12%, matching the value reported in the testing evaluation table. The marginal difference of 0.81% between final training and validation accuracy signifies that the model maintains high consistency and resists overfitting. The minimal fluctuations observed in later epochs indicate that the network retains learning stability across increasing iterations. This convergence analysis validates the proposed model reliability in effectively adapting the unseen data without degrading the performance in training as well as testing.
+Fig. 2 [Images not available. See PDF.]
+Proposed Model Accuracy analysis.
+
+The loss curve presented in Fig. 3 for the proposed model decreases sharply from an initial value 0.48 and reaches 0.11 by epoch 30. Meanwhile, the validation loss begins above 0.51 and stabilizes around 0.17, maintaining a consistent gap with the training loss. This minimal separation suggests that the model avoids both overfitting and underfitting. The continuously decreasing trend in both curves demonstrates the model effective learning and error minimization. The network ability to suppress validation loss without over-relying on training data highlights the robustness of the HGCM-Net’s learning structure.
+Fig. 3 [Images not available. See PDF.]
+Proposed Model Loss analysis.
+
+The Precision-Recall (PR) curve presented in Fig. 4 exhibits the proposed HGCM-Net effective classification ability across both binary classes. Class 0 (Real) and Class 1 (Fake) achieve average precision (AP) scores of 0.96 and 0.97 which clearly indicates the model high degree of reliability in differentiating real and fake content. The curve for Class 1 maintains near-perfect precision across recall values from 0 to 0.8, before gradually tapering as recall approaches 1. Similarly, Class 0 exhibits precision above 0.95 until recall reaches approximately 0.85. This behavior suggests that the model minimizes false positives even at high recall values. Furthermore, the high AP values for both classes validate that the model balanced sensitivity and specificity effectively in domains like fake news detection.
+Fig. 4 [Images not available. See PDF.]
+Proposed Model Precision-Recall analysis.
+
+Table 4 presents the training and testing performance of the proposed model for all the performance metrics. The tabulated results highlight the proposed HGCM-Net model superior classification capability on unseen data. The testing accuracy of 97.12% is closely aligned with the training accuracy of 97.84% which confirms the model minimal generalization gap. The model achieves a high precision of 96.43% which indicates its strong control over false positives. The recall value of 96.05% ensures the high true positive detection and the F1-score of 96.24% balances these strengths. Additionally, the Matthews Correlation Coefficient (MCC) value of 95.11% reflects the model strong agreement between predictions and actual labels across both classes. The Area Under Curve (AUC) reaches 97.81% clearly demonstrates the model’s strong discriminative ability in classification.
+Table 4. Proposed model performance analysis.
+S.No
+Metric
+Training Set (%)
+Testing Set (%)
+
+1
+Accuracy
+97.84
+97.12
+
+2
+Precision
+96.95
+96.43
+
+3
+Recall
+97.16
+96.05
+
+4
+F1-Score
+97.05
+96.24
+
+5
+MCC
+95.68
+95.11
+
+6
+Area Under Curve
+98.33
+97.81
+
+
+The comparative analysis was systematically performed to assess the effectiveness of the proposed HGCM-Net by benchmarking it against six existing models: Conventional CNN, EfficientNet-B0, Bidirectional LSTM, GRU, Attention-based LSTM, and GRU-MCAF. All models were trained and validated on the same dataset to ensure uniformity in experimentation. The metrics used for comparison included accuracy, precision, recall, F1-score, MCC, AUC, and specificity. GRU-MCAF, being a previous enhancement over GRU with integrated metadata and contrastive attention fusion. The comparative process also involved visualization using MCC, specificity, and precision-recall curves, demonstrating the consistent superiority of HGCM-Net across all evaluation aspects.
+Fig. 5 [Images not available. See PDF.]
+Precision Comparative Analysis.
+
+The precision comparison given in Fig. 5 clearly demonstrates the superior classification capability of the proposed HGCM-Net across 30 epochs. Initially starting at 58.2%, HGCM-Net rapidly surpasses all baselines, attaining 96.72% precision in the final epoch. In contrast, GRU-MCAF settles at 95.13%, Attn-LSTM at 94.06%, and Bi-LSTM at 92.53%, while CNN lags with only 90.03%. The consistent improvement of HGCM-Net is attributed to its hybrid attention-driven design, which dynamically integrates global contextual reasoning and contrast modulation, ensuring precise class separation even in ambiguous patterns. EfficientNet-B0, although architecturally advanced, achieves lower precision (91.14%) due to its limited capability in sequential temporal dependencies. GRU and CNN show relatively weaker precision due to their inability to capture deeper hierarchical semantics and inter-feature dependencies. The learning curve also indicates minimal fluctuations in HGCM-Net, highlighting its stability and effective generalization. The early divergence in performance, especially from epoch 10 onward, reinforces HGCM-Net’s optimized learning dynamics and robust feature selection pipeline.
+Fig. 6 [Images not available. See PDF.]
+Recall Comparative Analysis.
+
+The recall comparison analysis presented in Fig. 6 reveals that the proposed HGCM-Net outperforms all existing models by achieving a final recall of 96.05% at epoch 30, indicating its strong ability to correctly identify relevant positive instances. GRU-MCAF, the next best performer, attains 94.37%, while Attn-LSTM and GRU follow with 93.16% and 91.87%, respectively. Bi-LSTM records a slightly lower recall of 90.62%, whereas EfficientNet-B0 and CNN show weaker outcomes at 89.48% and 88.21%. The superior recall performance of HGCM-Net is attributed to its effective memory integration and attention-enhanced feature extraction, which allows consistent detection of informative signals without missing relevant samples. CNN’s comparatively low recall is due to its shallow hierarchical depth, limiting its ability to capture long-term contextual dependencies. The performance gap widens notably after epoch 10, where HGCM-Net demonstrates a smoother and more stable increase, highlighting its robust convergence behavior and reduced false negative instances throughout training.
+Fig. 7 [Images not available. See PDF.]
+F1-Score Comparative Analysis.
+
+The F1-score comparison graph presented in Fig. 7 demonstrates that the proposed HGCM-Net achieves the highest performance across epochs, reaching 96.24% by the 30th epoch. This surpasses GRU-MCAF, which ends at 94.82%, and Attn-LSTM at 93.77%. Existing methods like GRU, Bi-LSTM, and EfficientNet-B0 exhibits F1-score of 92.45%, 91.56%, and 90.72% respectively. The least performance is exhibited by CNN which attained 89.64%. The consistently higher F1-score of HGCM-Net indicates superior balance between precision and recall which clearly reflects the model ability in reducing both false positives and false negatives simultaneously.
+The MCC comparison presented in Fig. 8 depicts the proposed HGCM-Net model effectiveness in reducing classification bias across both true and false predictions. By the 30th epoch, proposed HGCM-Net achieved the highest MCC of 0.951 which is better compared to GRU-MCAF which attained 0.898, Attn-LSTM which attained 0.883, and GRU which attained 0.869. Bi-LSTM and EfficientNet-B0 which attained 0.853 and 0.838 respectively whereas the CNN exhibited the lowest score at 0.829. The superior performance of proposed HGCM-Net model is attributed due to its dual-channel feature refinement strategy which integrates gated memory units with contrast-aware attention to minimize false labeling. The consistent rise in MCC across epochs indicates enhanced decision boundary learning and reduced model confusion.
+Fig. 8 [Images not available. See PDF.]
+MCC Comparative Analysis.
+
+Fig. 9 [Images not available. See PDF.]
+FPR Comparative Analysis.
+
+The False Positive Rate (FPR) comparison presented in Fig. 9 effectively highlights the capability of HGCM-Net in minimizing incorrect classifications of real news as fake. Initially, HGCM-Net started with a higher FPR of 17.6% and it reduces gradually to 3.7% by the 30th epoch. This indicates the proposed model superior generalization ability and robust threshold calibration features. Whereas existing GRU-MCAF stabilized at 4.4%, followed by Attn-LSTM (5.0%), GRU (5.3%), Bi-LSTM (5.9%), and EfficientNet-B0 (6.1%), CNN lagged behind with a consistent 6.8%. The improved FPR in HGCM-Net is due to its metadata-guided contrastive fusion and selective gate control which precisely differentiates the semantic inconsistencies and reduces the misclassifications. Models like CNN and EfficientNet-B0 showed higher FPRs due to lack of sequential or contextual feedback mechanisms and makes them prone to misinterpretations under ambiguous inputs.
+Fig. 10 [Images not available. See PDF.]
+Specificity Comparative Analysis.
+
+The specificity comparison graph presented in Fig. 10 demonstrates the superior ability of the proposed HGCM-Net model in effectively distinguish real news from fake with minimizes false positives. From an initial specificity of 87.5%, HGCM-Net steadily increased to 96.2% by the 30th epoch, surpassing all baseline models. GRU-MCAF achieved a close 95.3%, while Attn-LSTM and GRU stabilized at 94.4% and 94.1%, respectively. Bi-LSTM and EfficientNet-B0 reached around 93.8% and 93.3%, with CNN lagging behind at 93.0%. HGCM-Net’s superior specificity stems from its contrast-aware feature encoding and contextual feedback propagation, which sharpen true negative detection boundaries. Conversely, CNN’s lack of temporal memory and EfficientNet’s limited feature recurrence reduced their ability to separate subtle real content variations from fake news. The high specificity achieved by HGCM-Net reflects its strong discriminatory learning across both temporal and semantic cues, making it highly reliable for scenarios requiring conservative classification behavior.
+Fig. 11 [Images not available. See PDF.]
+Accuracy Comparative Analysis.
+
+The accuracy comparison analysis presented in Fig. 11 highlights the superior performance of the proposed HGCMNet model, which attains a peak accuracy of 95.4% by the 30th epoch. GRU-MCAF, the next best model, reaches 93.3%, followed by Attn-LSTM at 92.7%, GRU at 91.8%, Bi-LSTM at 91.0%, and EfficientNet-B0 at 90.4%. CNN trails with a final accuracy of 89.8%. HGCMNet’s high accuracy can be attributed to its hybrid contrastive graph and contextual feature learning, which enable robust representation of syntactic and semantic cues crucial for fake news detection. Lower-performing models like CNN lack temporal or contextual modeling, resulting in weaker feature generalization and overfitting on ambiguous inputs. GRU-MCAF’s near-competitive performance benefits from metadata fusion and attention refinement, though it lacks HGCMNet’s graph-level contrastive regularization, which boosts decision boundary precision across high-dimensional latent spaces. This architectural distinction enables HGCMNet to consistently outpace alternatives in classification accuracy.
+Table 5. Performance comparative analysis with existing methods.
+S.No
+Method
+Precision (%)
+Recall (%)
+AUC
+MCC
+False Positive Rate (%)
+Specificity
+(%)
+F1-Score (%)
+Accuracy (%)
+
+1
+Conventional CNN
+90.03
+88.25
+0.926
+0.828
+6.73
+93.27
+89.13
+89.42
+
+2
+EfficientNet-B0
+91.14
+89.02
+0.934
+0.843
+6.05
+93.95
+90.07
+90.25
+
+3
+Bidirectional LSTM
+92.53
+90.61
+0.941
+0.857
+5.64
+94.36
+91.56
+91.77
+
+4
+Gated Recurrent Unit
+93.25
+91.74
+0.948
+0.873
+5.10
+94.90
+92.49
+92.64
+
+5
+Attention-based LSTM
+94.06
+92.88
+0.957
+0.886
+4.82
+95.18
+93.46
+93.57
+
+6
+GRU-MCAF Model
+95.13
+94.68
+0.969
+0.901
+4.16
+95.84
+94.90
+94.82
+
+7
+Proposed HGCM-Net
+96.72
+96.15
+0.982
+0.927
+3.54
+96.46
+96.43
+97.12
+
+
+The comparative analysis presented in Table 5 demonstrates the superiority of the proposed HGCM-Net, achieving the highest performance across all metrics. It records 96.72% precision, 96.15% recall, 97.12% accuracy, and 96.43% F1-score, outperforming GRU-MCAF, the closest competitor, which attained 95.13% precision, 94.68% recall, and 94.90% F1-score. HGCM-Net also achieves the highest AUC of 0.982 and MCC of 0.927, indicating robust discriminative power and strong correlation between predicted and actual labels. Moreover, it maintains the lowest false positive rate of 3.54%, demonstrating its ability to reject misleading inputs effectively, unlike CNN which shows the weakest performance with 89.42% accuracy and 6.73% FPR due to limited temporal awareness and shallow representations. GRU-MCAF’s relatively high performance is due to metadata incorporation and contrastive attention fusion, but it lacks global topological modeling. HGCM-Net’s integration of hierarchical graph learning and contextual fusion provides fine-grained discrimination and structural consistency, yielding improved generalization and better trade-off across recall and specificity.
+Ablation analysis
+To quantify the contribution of each core module in the proposed HGCM-Net architecture, an ablation analysis was performed by selectively disabling individual components and observing the resulting changes in performance. Table 6 presents the comparative results obtained by removing the contrastive learning layer, temporal edge-weighting mechanism, metadata projection module, and graph attention layers, as well as a content-only variant that excludes all relational and behavioral modeling. The complete HGCM-Net configuration serves as the reference model against which all variants are evaluated using accuracy, precision, recall, and F1-score.
+Table 6. Ablation study of HGCM-Net Components.
+Model Variant
+Description
+Accuracy
+Precision
+Recall
+F1-Score
+
+Full HGCM-Net
+Complete model with semantic encoder, metadata projection, temporal edge weighting, GAT, and contrastive layer
+94.8%
+93.6%
+95.1%
+94.3%
+
+w/o Contrastive Layer
+Contrastive tuning removed
+91.4%
+89.7%
+92.1%
+90.8%
+
+w/o Temporal Edge Weighting
+Edges treated uniformly without timing or behavior context
+90.2%
+88.9%
+89.8%
+89.3%
+
+w/o Metadata Projection
+Raw user metadata used without feature projection
+89.1%
+87.5%
+88.4%
+87.9%
+
+w/o Graph Attention (Uniform GCN)
+Replaced GAT with non-adaptive message passing
+88.3%
+86.2%
+87.1%
+86.7%
+
+Content-Only Baseline
+Only semantic encoder; no graph, metadata, or contrastive components
+82.7%
+80.4%
+81.2%
+80.8%
+
+
+The ablation results in Table 6 highlight the significance of each architectural component in achieving the full performance of HGCM-Net. The complete model yields the highest accuracy and F1-score, confirming that the synergy between semantic encoding, user metadata projection, temporal interaction modeling, graph attention propagation, and contrastive alignment is essential for robust detection. Removing the contrastive layer produces a clear decline in F1-score, demonstrating that behavior-guided separation of supportive and deceptive engagement patterns greatly enhances representational clarity. Eliminating temporal edge weighting reduces precision, indicating that timing and behavior-sensitive interaction cues are crucial for identifying coordinated harmful dynamics. The absence of the metadata projection module lowers recall, showing that refined user-level features play an important role in distinguishing subtle malicious behavior. Replacing the GAT module with uniform propagation causes further performance loss, underscoring the need for adaptive attention to emphasize influential user–content connections. The content-only baseline performs worst, confirming that linguistic information alone is insufficient for detecting misinformation and hate content in complex social environments. Overall, the interpretation of Table 6 clearly validates that each module contributes meaningfully to the model’s overall effectiveness.
+Qualitative and quantitative study
+A detailed qualitative and quantitative evaluation was conducted to measure the performance and behavioral reliability of the proposed HGCM-Net framework. Quantitatively, the model was assessed using accuracy, precision, recall, F1-score, and false positive rate, enabling direct comparison with established baselines. HGCM-Net achieved 94.8% accuracy, 93.6% precision, 95.1% recall, and an F1-score of 94.3%, outperforming GRU (89.7% F1), Bi-LSTM (88.4% F1), Attention-LSTM (90.1% F1), and CNN-based models (83.2% F1). Notably, the false positive rate dropped to 6.4%, marking a significant improvement compared to 11–14% exhibited by baseline models. These results confirm that the integration of semantic encoding, metadata projection, temporal weighting of interactions, and graph attention propagation provides substantial gains in detecting harmful and deceptive content patterns.
+Beyond numerical metrics, a qualitative analysis was performed to interpret how HGCM-Net responds to different forms of harmful content. In representative correct classifications, the model effectively detected malicious posts with subtle wording but abnormal behavioral patterns, such as a 3× spike in antagonistic replies within a 30-minute interval or coordinated reinforcement activity among low-credibility users with highly similar engagement histories. Attention heatmaps derived from the GAT layer showed that nodes with suspicious propagation behavior received 2.5× higher attention scores than benign nodes, indicating strong alignment between attention weights and actual risk indicators. In contrast, misclassified cases often involved extremely sparse interaction graphs (fewer than 2 edges per user), or users with significantly incomplete metadata (missing more than 40% of profile attributes). A closer review revealed that such cases tended to lack sufficient contextual or relational cues, limiting the model’s ability to draw reliable behavioral inferences. These observations highlight not only the strengths of HGCM-Net in capturing complex relational and temporal signals but also the scenarios where performance may be constrained by data sparsity or metadata incompleteness.
+The primary strength of this study lies in the design of HGCM-Net, which integrates semantic encoding, user-metadata projection, temporally weighted interaction modeling, and contrastive learning within a unified graph-based framework. This enables the model to capture subtle deceptive patterns that arise from complex user–content behaviors, sparse interactions, and evolving engagement dynamics—areas where existing linguistic or graph-only methods struggle. The contrastive layer significantly enhances discriminative capability by separating supportive and misleading relations, while the graph attention mechanism ensures adaptive propagation across heterogeneous user–content nodes. The study is further strengthened by extensive benchmarking against multiple deep learning baselines and by using a realistic dataset with diverse interaction structures. However, the study also carries certain limitations. The reliance on graph construction makes the system sensitive to incomplete or missing user metadata, and performance may vary when interaction density is extremely low. The model is computationally heavier than text-only architectures due to multi-layer GAT propagation and contrastive optimization. Additionally, the dataset used—though widely adopted—may not capture the full variability of multilingual or multimodal social environments. These limitations open possibilities for future work involving lightweight graph modules, multi-lingual extensions, more resilient metadata imputation, and real-time deployment strategies.
+Conclusion
+The proposed HGCM-Net framework introduces a hybrid graph-guided contextual mechanism to address limitations in existing models for fake news and hate speech classification. By leveraging multi-level semantic encoding with hierarchical attention and structural graph alignment, the model captures both deep linguistic dependencies and cross-node relational semantics. The experiments were conducted using the PolitiFact and GossipCop benchmark datasets, covering over 63,000 annotated claims. During evaluation, HGCM-Net achieved 97.12% accuracy, 96.15% recall, 96.72% precision, 96.43% F1-score, 96.46% specificity, and a minimal false positive rate of 3.54%, consistently surpassing CNN (89.42%), Bi-LSTM (91.77%), GRU (92.64%), Attention-LSTM (93.57%), and GRU-MCAF (94.82%). This performance boost is attributed to its dual-branch encoder, graph-enhanced propagation, and fused contrast-aware decoder. The dataset’s diversity in content structure and temporal patterns supports the model’s resilience under noisy conditions. However, the framework still relies heavily on annotated data and struggles with short or ambiguous posts lacking contextual references. In future work, incorporating multilingual streams, sentiment-aware filtering, and active learning for real-time misinformation updates can broaden the system’s adaptability. Integrating vision-language fusion or leveraging cross-platform embeddings may further enhance robustness across heterogeneous online social platforms. Such enhancements can evolve the model toward comprehensive, scalable misinformation mitigation.
+Author contributions
+Nivedita V S – Research proposal – construction of the work flow and model – Final Drafting– Survey of Existing works – Improvisation of the proposed model; Dr A. Bazila Banu – Initial Drafting of the paper – Collection of datasets and choice of their suitability – Formulation of pseudocode.
+Funding
+The author did not receive support from any organization for the submitted work.
+Data availability
+The datasets generated during and/or analysed during the current study are available in the github repository, https://github.com/KaiDMML/FakeNewsNet/tree/master/dataset.
+Declarations
+Competing interests
+The authors declare no competing interests.
+Publisher’s note
+Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References 1. Kwon, S; Jang, B. A comprehensive survey of fake text detection on misinformation and LM-Generated texts. IEEE Access. ; 2025; 13 , pp. 25301-25324. [DOI: https://dx.doi.org/10.1109/ACCESS.2025.3538805]
+2. Bertani, A; Mazzeo, V; Gallotti, R. Decoding the news media diet of disinformation spreaders. Entropy ; 2024; 26 , 3 pp. 1-14. [DOI: https://dx.doi.org/10.3390/e26030270]
+3. Geetanjali, M; Kumar, M. Exploring hate speech detection: challenges, resources, current research and future directions. Multimedia Tools Appl. ; 2025; 15 , pp. 1-16.
+4. Ozcelik, O; Toraman, C; Can, F. Detecting misinformation on social media using community insights and contrastive learning. ACM Trans. Intell. Syst. Technol. ; 2025; 16 , 38 pp. 1-27. [DOI: https://dx.doi.org/10.1145/3709009]
+5. Weber, D; Nasim, M; Mitchell, L; Falzon, L. Exploring the effect of streamed social media data variations on social network analysis. Social Netw. Anal. Min. ; 2021; 11 , 62 pp. 1-18.
+6. Akram, M. W. et al. A novel deep Auto-Encoder based linguistics clustering model for social text. In ACM Transactions on Asian and Low-Resource Language Information Processing , 1–19 (2022).
+7. Ortiz-Zambrano, JA; Espín-Riofrío, CH; Montejo-Ráez, A. Deep encodings vs. Linguistic features in lexical complexity prediction. Neural Comput. Appl. ; 2025; 37 , pp. 1171-1187. [DOI: https://dx.doi.org/10.1007/s00521-024-10662-9]
+8. Shehata, AMK; Al-Suqri, MN; Osman, NEMEO; Alhusaini, YN; Mahfouz, A. ArabFake: A multitask deep learning framework for Arabic fake news Detection, Categorization, and risk prediction. IEEE Access. ; 2024; 12 , pp. 191345-191360.
+9. Pérez, JM et al. Assessing the impact of contextual information in hate speech detection. IEEE Access. ; 2023; 11 , pp. 30575-30590. [DOI: https://dx.doi.org/10.1109/ACCESS.2023.3258973]
+10. Wani, MA et al. Toxic fake news detection and classification for combating COVID-19 misinformation. IEEE Trans. Comput. Social Syst. ; 2024; 11 , 4 pp. 5101-5118. [DOI: https://dx.doi.org/10.1109/TCSS.2023.3276764]
+11. Kang, M; Seo, J; Park, HC; Lim, H. Utilization strategy of user engagements in Korean fake news detection. IEEE Access. ; 2022; 10 , pp. 79516-79525. [DOI: https://dx.doi.org/10.1109/ACCESS.2022.3194269]
+12. Mohit Bhardwaj, M; Sundriyal, M; Bedi, MS; Akhtar, T; Chakraborty,. HostileNet: multilabel hostile post detection in Hindi. IEEE Trans. Comput. Social Syst. ; 2024; 11 , 2 pp. 1842-1852. [DOI: https://dx.doi.org/10.1109/TCSS.2023.3244014]
+13. Ahmed, U; Lin, JC-W. Deep explainable hate speech active learning on Social-Media data. IEEE Trans. Comput. Social Syst. ; 2024; 11 , 4 pp. 4625-4635. [DOI: https://dx.doi.org/10.1109/TCSS.2022.3165136]
+14. Yoshida, R; Yoshida, S; Muneyasu, M. MAHGA: Multi-Aspect heterogeneous graph analysis for harmful speech detection on social networks. IEEE Access. ; 2025; 13 , pp. 106673-106689. [DOI: https://dx.doi.org/10.1109/ACCESS.2025.3581214]
+15. Raza, S et al. Unlocking bias detection: leveraging Transformer-Based models for content analysis. IEEE Trans. Comput. Social Syst. ; 2024; 11 , 5 pp. 6422-6434. [DOI: https://dx.doi.org/10.1109/TCSS.2024.3392469]
+16. Wang, Z; Yin, Z; Argyris, YA. Detecting medical misinformation on social media using multimodal deep learning. IEEE J. Biomedical Health Inf. ; 2021; 25 , 6 pp. 2193-2203. [DOI: https://dx.doi.org/10.1109/JBHI.2020.3037027]
+17. Ayetiran, EF; Özgöbek, Ö. An inter-modal attention-based deep learning framework using unified modality for multimodal fake news, hate speech and offensive Language detection. Inform. Syst. ; 2024; 123 , pp. 1-11. [DOI: https://dx.doi.org/10.1016/j.is.2024.102378]
+18. Raza, S; Chatrath, V. HarmonyNet: Navigating hate speech detection. Nat. Lang. Process. J. ; 2024; 8 , pp. 1-9.
+19. Gupta, RK; Sharma, V; Pateriya, RK; Dehalwar, V; Gupta, P. Fake news detection in Indian languages: A case study with Hindi using CNN-LSTM. Procedia Comput. Sci. ; 2025; 259 , pp. 150-160. [DOI: https://dx.doi.org/10.1016/j.procs.2025.03.316]
+20. Wang, Y et al. Heterogeneous network for hierarchical Fine-Grained domain fake news detection. Inf. Process. Manag. ; 2025; 62 , 4 pp. 1-18. [DOI: https://dx.doi.org/10.1016/j.ipm.2025.104141] 1:CAS:528:DC%2BB2MXovFKktg%3D%3D
+21. Dahou, A et al. Linguistic feature fusion for Arabic fake news detection and named entity recognition using reinforcement learning and swarm optimization. Neurocomputing ; 2024; 598 , pp. 1-16. [DOI: https://dx.doi.org/10.1016/j.neucom.2024.128078]
+22. Shivang Agarwal, S; Sonawane, A; Chowdary, CR. Accelerating automatic hate speech detection using parallelized ensemble learning models. Expert Syst. Appl. ; 2023; 230 , pp. 1-16.
+23. Kamal, A; Anwar, T; Sejwal, VK; Fazil, M. BiCapsHate: attention to the linguistic context of hate via bidirectional capsules and hatebase. IEEE Trans. Comput. Social Syst. ; 2023; 11 , 2 pp. 1781-1792. [DOI: https://dx.doi.org/10.1109/TCSS.2023.3236527]
+24. Shakir Khan, S; Kamal, A; Fazil, M; Alshara, MA et al. HCovBi-caps: hate speech detection using convolutional and Bi-directional gated recurrent unit with capsule network. IEEE Access. ; 2022; 10 , pp. 7881-7894. [DOI: https://dx.doi.org/10.1109/ACCESS.2022.3143799]

@@ -1,0 +1,431 @@
+Introduction and background The rapid advancement of digital communication technologies has fundamentally transformed how information is created, shared, and consumed across the globe. Over the latest years, their popularity has risen, with the short-form video being considered one of the primary sources of content distribution, acquiring billions of users across the world (Singhal et al. 2020; Zhou and Zafarani 2020). This has considerably enhanced the speed at which information diffuses but it has also enabled the rapid dissemination of false information in a very short time which is perilous to society, politics and the economy (Shu et al. 2017; Nguyen et al. 2020). Misinformation in short-form videos is especially hard to control, as the content itself is viral and has very little control over it, owing to a lack of sufficient moderation.
+Compared to the traditional misinformation on a textual platform, short video misinformation poses unique problems because of its multimodal characteristic. Visual data, audio cues and written materials (captions and subtitles) may be used in two channels (in parallel) to deliver information (Baltrušaitis et al. 2018). Lies are frequently made up with subtextual differences in these modalities instead of blatant lies. As an illustration, images that look real might be accompanied with distorted sound or false graphical overlays, and an illusionary, but credible story may be told (Deng et al. 2026; Yu et al. 2019). Such cross-modal discrepancies are only detected with the help of models that comprehend the complex relationship between the heterogeneous data sources.
+In order to overcome this obstacle, scholars have started focusing more on multimodal ways of learning which incorporates visual, audio, and textual elements. Initial attempts were mainly based on unimodal analysis where attention was drawn to either visual or written information, and was not able to detect contextual dependencies (Arevalo et al. 2020; Devlin et al. 2019). More modern works have used multimodal deep learning models which use Convolutional Neural Networks (CNNs), Recurrent Neural Networks (RNNs), and transformer-based models to extract and combine information between modalities (Vaswani et al. 2017; Liu et al. 2019; Xu et al. 2023; Han et al. 2021). Fusion mechanisms driven by attention have also been used to further improve performance by dynamically assigning weight to the various modalities and thus enhances the representation learning (Xu et al. 2020; Guo et al. 2025).
+Although such progress has been made, there are still a number of crucial drawbacks. To begin with, most of the available solutions focus on feature fusion, without directly learning semantic cross-modal links. Consequently, they might not be able to detect inconsistencies, which are critical to detect misinformation (Sahar et al. 2026; Afchar et al. 2018). Second, multimodal models are less interpretable compared to most of the frameworks because most of them lack mechanisms to understand how cross-modal interaction affects the prediction (Li and Lyu 2018; Khan et al. 2026). Third, much of previous research concentrates on long-form videos or non-video multimodal datasets, which fails to capture the nature of short-form videos, including quick scene cuts and less information presentation time and again (Khalid et al. 2021). Also, such models cannot identify hidden contradictions because of the lack of explicit mechanisms that can measure the cross-modal semantic alignment.
+These issues inspired this group of research by suggesting a semantic consistency-aware multimodal deep learning model to detect misinformation in short-form videos. The main concept is to go beyond traditional fusion of features through an explicit modeling of the level of agreement or inconsistency among visual, audio and textual displays. Integrating a semantic consistency analysis element with attention-intensive fusion, the framework will replicate fine details of cross-modal inconsistencies, reflecting deceptive content.
+The proposed model is distinct from existing multimodal approaches, which typically focus on feature fusion. While current approaches consider the different modalities as complementary sources of information, they do not explicitly model discrepancies between the modalities, which are prevalent in misinformation. The proposed framework overcomes this caveat by utilising a semantic consistency score for classification, which allows it to perceive inconsistencies instead of only confirming the consistency. This enables a more specific way to detect misinformation in short videos. The proposed approach is a mixture of a cross-modality feature extractor and a consistency-based reasoning mechanism. Visual features are extracted using deep convolutional representations; audio features are extracted using recurrent structures that model audio sequences; and text features are extracted using transformer-based semantic embeddings that model text semantics. The feature representations are combined in a manner that highlights most relevant modalities using an attention mechanism. At the same time, a semantic consistency module is used to measure the consistency in between the pairs of modalities, which provides an additional cue of cross-modal consistency.
+In order to demonstrate the proposed model's efficiency, several experiments are conducted on various datasets including a cross-platform short video dataset. Assessment of the approach was performed on standard performance measures and the proposed method is compared with unimodal baselines, and traditional multimodal fusion approaches. Qualitative analyses are also presented to provide additional information to quantitative measures to provide an insight into how the model works and interactions between the modalities.
+While the technique has achieved a satisfactory performance, there are some limitations. In particular, the current design is more focused on semantic representation matching and does not specifically model time dynamics between video sequences and this may not be adequately reflected against time-varying inconsistencies (Mazhar et al. 2026). In addition, the study has chosen a measure of consistency as cosine similarity and the measure is computationally efficient and hence may not sufficiently represent the complex modal issues of any semantic inconsistencies (Fawcett 2006). These suggestions are guidance for future work, such as the inclusion of time modeling and other representational consistency training. These insights offer valuable directions for future work regarding time modeling and more representational consistency training. The remainder of this paper is organized as follows:
+Section 2 provides an overview of the related literature on multimodal misinformation detection and the analysis of the short-form video. The Proposed methodology is outlined in Sect. 3. Experimental setup and data are found in Sect. 4. Section 5 deals with the results and analysis and ends with a list on conclusions and future research direction in Sect. 6.
+Literature review The fast growth of multimedia content in the social media has also contributed greatly to misinformation detection research. Specifically, multimodal and dynamic content has become a challenge owing to the emergence of short-form video platforms. This subdivision will study the literature related to multimodal detection of misinformation based on fusion schemes, semantic consistency modelling and short video analysis. It also proposes the important drawbacks of solutions in the present, which drives the necessity behind more discoverable and sensible structures.
+Overview of multimodal misinformation detection Misinformation detection One of the earliest efforts to deal with misinformation detection has been with textual analysis methods, such as those associated with statistics or deep learning-based natural language processing models (Singhal et al. 2020; Zhou and Zafarani 2020; Shu et al. 2017). Although these methodologies have shown good results in preliminary research, they are comparatively restricted when multimedia content is considered, in which important data is shared among various modalities.
+In order to address these constraints, more recent studies have migrated to multimodal learning models incorporating visual, textual and audio support (Nguyen et al. 2020; Baltrušaitis et al. 2018). In image processing, CNNs have been extensively utilized as feature extractors and RNNs and transformers are the most frequently used in audio and texts modeling sequential and contextual information (Deng et al. 2026; Yu et al. 2019; Arevalo et al. 2020; Devlin et al. 2019; Vaswani et al. 2017). Multimodal strategies have shown high performance due to the exploitation of complementary information in terms of modality especially in detecting fake news, classifying video, and verifying multimedia (Vaswani et al. 2017; Liu et al. 2019).
+Even with these developments, current approaches tend to be based on implicit fusion of features without the necessary structure of modeling the correspondence between modalities. Because of this they might not learn the presence of subtle inconsistencies in the form of misinformation (Han et al. 2021; Sun et al. 2023).
+Multimodal fusion techniques Multimodal fusion is at the heart of the combination of heterogeneous data sources. The currently existing fusion strategies may be divided into early fusion, late fusion and hybrid approaches.
+Early fusion algorithms fuse features through input-level combinations, and can therefore learn joint representations; however, they tend to be noise-sensitive and high-dimensionality (Xu et al. 2020). Late fusion methods combine individual modalities prediction, which has flexibility, but there is no cross-modal interaction (Guo et al. 2025). Hybrid approaches strive to mitigate these trade-offs by integrating the two approaches (Rana et al. 2022).
+Recent research has made use of attention-based fusion mechanisms to weigh dynamically contributions of modality. Such ways enhance performance by emphasizing on pertinent features at the expense of noise (Afchar et al. 2018; Li and Lyu 2018). As an illustration, multimodal frameworks guided by attention have proved to be effective in activities like video comprehension and misinformation (Khalid et al. 2021).
+Nevertheless, the majority of fusion methods focus on merging features as opposed to semantic fusion. They tend to consider modalities as separate sources of information and do not explicitly model the contradiction or the inconsistencies between them. This drawback decreases their usefulness in the case of misinformation that is very complex (Mazhar et al. 2026; Bai et al. 2022).
+Semantic consistency and cross-modal alignment To address the weakness of the currently used methods of fusion, recent research has shifted its focus towards semantic consistency modeling, and cross-modal alignment.These approaches aim at quantifying the level of agreement or mismatch of modalities.A variety of works of different nature have proposed consistency-based models, which test the relationships between multimodal embeddings.To illustrate this, the discriminative modalities have been counter-paired with contrastive learning modalities that retain the discriminative modalities (Fawcett 2006; Powers 2020). Even graph-based models develop the cross-modal interaction, but with refined complicated dependencies with structured representations (Zhou and Zafarani 2020).
+Also, there are inconsistency-conscious networks, which are able to explicitly represent contradictions among modalities, which facilitates more effective detection of false information (Radford et al. 2021). These processes show that semantic relationship modelling is important to comprehend multimodal information.
+Nonetheless, a lot of current methods use preset similarity measures or shallow-alignment algorithms. These approaches would not necessarily be able to capture more semantic contradictions, especially in short video versions in which misinformation is sometimes nuanced and contextualised (Zhou et al. 2020b).
+Unlike contrastive learning and CLIP-style approaches that focus on aligning representations across modalities, the proposed framework models semantic consistency as a decision-level signal. Rather than enforcing similarity in a shared embedding space, it evaluates agreement across modalities and integrates this information into the classification process to detect cross-modal discrepancies indicative of misinformation.
+Multimodal misinformation detection in short-form videos Recently, short-form video apps have presented novel challenges to the detection of misinformation. In comparison to long-form content, short videos are already characterized by quick shifts, lack of context, and a very condensed flow of information (Liu et al. 2026; Nan et al. 2021).
+Very recent research has delved into multimodal models adapted to the analysis of short-form video. These methods combine visual, audio and textual characteristics in a bid to enhance the accuracy of detection (Wu et al. 2023; Figueroa et al. 2022). External signals are used in some works like the user metadata and engagement patterns to increase credibility assessment (Wang et al. 2018).
+More recent hacks into transformer architecture and large-scale pre-trained models have also advanced the topic by providing cross-modal contextual reasoning (Jin et al. 2017; Wu et al. 2020). Moreover, explainable AI methods have been presented to enhance interpretability so that models could show case the features that are most relevant, and it may help understand decision-making processes.
+Irrespective of these developments, there are a number of constraints. Most of these techniques are based on fixed representations of features and fail to explicitly capture the temporal dynamics which play a critical role in understanding video contents. Moreover, these methods lack much power to identify subtle cross-modal discrepancies since explicit semantic consistency modeling is not explicitly modeled (Wu et al. 2020; Zhou et al. 2020a; OpenAI 2023).
+Table 1 presents a concise summary of the representative multimodal misinformation detection methods to give a coherent selection of existing literature to date with an emphasis on their modalities, methodologies, critical contributions, and constraints. This comparison helps to understand better the strong and weak aspects of the existing methods of various research directions. Table 1. Summary of existing approaches
+Study
+Methodology
+Modalities
+Contribution
+Limitation
+
+Jin et al. (2017)
+Multimodal fusion CNN-RNN
+Text, Image
+Improved detection accuracy
+Limited semantic reasoning
+
+Wang et al. (2018)
+Attention-based fusion
+Multimodal
+Dynamic feature weighting
+Weak interpretability
+
+Nan et al. (2021)
+Contrastive learning
+Multimodal
+Cross-modal alignment
+High complexity
+
+Wang et al. (Wu et al. 2020; Zhou et al. 2020a)
+Graph-based modeling
+Multimodal
+Structured relationships
+Computational cost
+
+Zhang et al. (Radford et al. 2021; Tufchi et al. 2023)
+Transformer-based model
+Multimodal
+Contextual understanding
+Data dependency
+
+Liu et al. (2026)
+Video-based detection
+Video, Audio
+Short-video analysis
+No temporal modeling
+
+
+As observed in Table 1, the majority of available methods are mainly based on multimodal feature fusion and representation learning. Although these methods possess better detection performance, they do not have explicit semantic consistency between modalities modeling mechanisms. Moreover, there are other concerns of low interpretability, excessive complexities in computation and lack of ability to address subtle cross-modal differences. These restrictions suggest that stronger structures that are able to express semantic connections between modalities are required.
+Emerging trends and research gaps Recent innovations of multimodal learning have proposed novel methods including graph neural networks, contrastive learning, and Large Language Models (LLMs) (Touvron et al. 2023; Li et al. 2022). Such solutions are focused on enhancing the learning of representation, reasoning, and scalability.
+Graphical approaches represent the connection between modalities and establish structured representations of relationships between modalities, which allow distinguishing additional contextual insights (Garcez and Lamb 2023). In the same vein, Multimodal analysis is also made better by the use of LLC-based structures which use a sense of contextual knowledge and reasoning to improve the analysis (Lewis et al. 2020). Deep learning with symbolic reasoning have also been suggested as hybrid methods to enhance interpretability and robustness (Hamroun and Sauveron 2025; Povedano Álvarez et al. 2023).
+Nevertheless, there are still a number of research gaps:
+- Lack of explicit semantic consistency modeling across all modalities
+
+- Limited interpretability in multimodal frameworks
+
+- Insufficient incorporation of temporal dynamics in video analysis
+
+- Dependence on simple similarity measures for cross-modal alignment
+
+- Limited generalization across datasets and platforms.
+
+
+
+The challenges provide the necessity to have stronger structures that incorporate semantic reasoning, interpretability, and multimodal learning to be able to detect misinformation in short-form videos.
+Recent work such as evaluating the efficiency and factual reliability of LoRA-based models for health misinformation detection further highlights the importance of model efficiency and factual robustness in misinformation analysis. There are also recent advances in the area of misinformation detection and multimodal learning. For example, (Li et al. 2024a) investigates misinformation feature detection through unsupervised learning and network modelling approaches, underscoring the role of structural and latent semantic features in detecting misinformation. Moreover, recent advances in multimodal fusion techniques across various applications have shown the benefits of combining diverse data sources in complex decision-making scenarios. Studies like (Li et al. 2025) and (Li et al. 2024b) employ sophisticated fusion schemes and attention-enhanced models to improve detection performance in a multimodal setting, while (Li et al. 2023) emphasizes the fusion of signal decomposition with deep learning for enhanced interpretability.
+Additionally, recent methods that harness the power of large language models, like (Li et al. 2025), highlight the increasing importance of contextual awareness and knowledge infusion in predictive tasks. While these approaches are applied in various contexts, they all highlight the significance of multimodal integration, feature alignment and strategies for intelligent fusion. However, existing methods are mainly based on feature-level fusion and do not explicitly incorporate semantic mismatches between different modalities for short-form video misinformation. This motivates our framework.
+To further hint at the distinctions between the current methods and the preferred attributes of an efficient misinformation detection system, Table 2 provides a comparative study in light of major features that include modal integration, cross-modal interaction, semantic consistency modeling, interpretability, and applicability to short-form video content. Table 2. Comparative analysis
+Feature
+Unimodal
+Traditional Multimodal
+Advanced Multimodal
+Proposed Direction
+
+Modal Integration
+✖
+✓
+✓
+✓
+
+Cross-modal Interaction
+✖
+Limited
+Moderate
+Strong
+
+Semantic Consistency
+✖
+✖
+Partial
+✓
+
+Interpretability
+Low
+Low
+Moderate
+High
+
+Temporal Modeling
+Limited
+Limited
+Moderate
+Needs Enhancement
+
+Short-Video Suitability
+Low
+Moderate
+Moderate
+High
+
+
+Table 2 shows clearly that although the recent multimodal approaches are more effective in terms of the performance benchmarks of being better at feature integration and attention mechanisms they also exhibit a lack of explicit semantic consistency and interpretability. Additionally, the fact that there is little integration of time dynamics and that there is no strong cross-modal reasoning also highlights the need to use more sophisticated and semantically-insensitive models.
+The identified limitations are the direct reasons to allow the development of the proposed semantic consistency-aware framework, in which the limitations are supposed to be overcome by modeling the cross-modal alignment explicitly and enhancing interpretability.
+Despite the progress in multimodal misinformation detection, most existing approaches focus on feature fusion and representation learning, without explicitly modeling semantic inconsistencies across modalities. As a result, these methods may overlook conflicting information between text, visual, and audio signals. This limitation motivates the need for approaches that explicitly capture cross-modal discrepancies, which is the focus of the proposed framework.
+Unlike approaches such as EANN and MDFEND, which focus on event-aware or domain-aware feature learning, the proposed framework explicitly models cross-modal semantic consistency as a separate decision signal. Similarly, transformer-based multimodal models emphasize representation learning but do not directly capture contradictions between modalities. In contrast, the proposed approach focuses on identifying inconsistencies across modalities, which are particularly indicative of misinformation.
+Proposed methodology This subsection introduces the suggested semantic consistency-aware multimodal model that is used to identify misinformation in short-video content. The most important rationale that lies near the suggested approach is that false information is usually employed as a result of the mismatch within various modalities, including the discrepancy between pictorial scenes, acoustic statements and written explanations. The framework should handle this issue by collectively modeling text, visual and audio data and explicitly assessing the semantic concordance of these data. The state-of-the-art system has four major nodes: (i) modal feature extraction, (ii) multimodal fusion by attention, (iii) semantic consistency modeling and (iv) classification. General architecture and processing workflow will be described in Figs. 1 and 3, respectively. Fig. 1 [Images not available. See PDF.]
+Overall architecture of the proposed framework
+
+Multimodal feature extraction The structural architecture of the proposed framework is shown in Fig. 1. This model has encoders dedicated to each of the modalities and combines the results with the help of a fusion mechanism. A semantic consistency unit is included to process the explicit evaluation of cross-modal agreement prior to the derivation of the final prediction.
+As shown in Fig. 1, textual, visual, and audio inputs are processed in parallel using specialized encoders (transformer-based model for text, convolutional network for visual data, and recurrent network for audio). This parallel design preserves modality-specific characteristics while avoiding premature information mixing. The extracted features are then combined using an attention-based fusion mechanism, followed by semantic consistency evaluation and classification.
+The key distinction of the proposed framework lies in treating semantic consistency as an explicit modeling component rather than an implicit outcome of feature fusion. Instead of assuming that modalities reinforce each other, the proposed approach evaluates their agreement and uses this information as a decision factor. This enables the model to identify cross-modal inconsistencies, which are particularly indicative of misinformation in short-form video content.
+Multimodal feature extraction To capture the intrinsic characteristics of each modality, the framework employs separate feature extraction mechanisms.
+Visual feature representation Given an input video V , a sequence of frames is sampled: 1
+F = { f 1 , f 2 , ⋯ , f T }
+Equation (1) defines the extraction of representative frames from the video, where T denotes the number of sampled frames.
+Each frame is encoded using a convolutional neural network: 2
+v t = ϕ v ( f t ; θ v )
+Here, ϕ v represents the visual encoder, and θ v denotes its learnable parameters. This step extracts spatial features from each frame.
+The overall visual representation is obtained as: 3
+v = 1 T ∑ t = 1 T v t
+Temporal aggregation is done in Eq. (3) and the final representation is made so that it reflects the entire visual context of the video.
+In the current framework, visual features are extracted from sampled frames and aggregated using average pooling. This design focuses on capturing semantic content rather than temporal dynamics. While temporal modeling can provide additional cues for detecting evolving inconsistencies in video sequences, the proposed approach prioritizes cross-modal semantic alignment across modalities. Incorporating explicit temporal modeling is considered as a potential extension of this work.
+Audio feature representation The audio signal is modeled as a temporal sequence: 4
+h t = ϕ a ( x t ; θ a ) where h t represents the hidden state at time step t , and ϕ a is the audio encoder.
+The final audio representation is given by: 5
+a = h T
+The general temporal information is a part of Eq. (5) that uses the final hidden state of the sequence.
+Textual feature representation The textual modality is encoded using a transformer-based model: 6
+t = ϕ t ( X ; θ t ) where X represents the input text and ϕ t denotes the encoder. The representation forms contextual and semantic relations in the text.
+Attention-based multimodal fusion Once it has been done to get the modality-specific features, the next thing is to combine them into one representation. Rather than just concatenating, a dynamically shifting attention-based fusion mechanism is utilized to place dynamic importance on each modality. 7
+Z = { v , a , t }
+A set of the modality representations is defined by Eq. (7).
+The attention weights are calculated as: 8
+α i = exp ( w T z i ) ∑ j exp ( w T z j )
+Normalized scores of importance weights are computed in Eq. (8), where wis a is a learnable parameter vector.
+It is obtained as: 9
+z = ∑ i α i z i
+Equation (9) produces a weighted combination of modality features, enabling adaptive multimodal integration.
+Semantic consistency modeling One of the key contributions of this work is explicit modeling of semantic consistency between modalities. Although fusion brings in complementary information, it does not necessarily ensure that modalities agree. Thus, a measure of consistency is proposed.
+Equation (10) uses cosine similarity to quantify the agreement between two modalities. The correlation between the modality pairs is calculated as: 10
+S ij = z i · z j ‖ z i ‖ ‖ z j ‖
+Although the semantic consistency is computed using cosine similarity, this choice is motivated by several practical considerations. Cosine similarity is widely used in representation learning for measuring alignment between embedding spaces due to its computational efficiency and scale invariance. It provides a stable and interpretable measure of cross-modal agreement, which is particularly suitable for multimodal data where embeddings may differ in magnitude but preserve directional semantics.
+Alternative approaches, such as learnable similarity functions, cross-modal attention alignment, and graph-based interaction modeling, may capture deeper semantic relationships. However, these methods typically introduce higher computational complexity and reduced interpretability. The proposed approach prioritizes a balance between effectiveness, interpretability, and computational efficiency, while leaving more advanced consistency modeling as a direction for future work.
+Moreover, the objective of this work is not to model complex semantic reasoning, but to explicitly capture alignment or discrepancy between modalities as a decision signal. In this context, cosine similarity offers a simple yet effective mechanism to quantify agreement across text, visual, and audio representations.
+The overall consistency score is defined as: 11
+S = 1 3 ( S va + S vt + S at )
+In Eq. (11), the similarities of pairs are summed up, giving a universal static of cross-modal congruence. Smaller values show the possibility of inconsistencies which are mostly characterized by misinformation. To further explain how semantic relationships are assessed between modalities, Fig. 2 shows how the proposed semantic consistency module works. Fig. 2 [Images not available. See PDF.]
+Semantic consistency evaluation using cross-modal similarity among textual, visual, and audio representations
+
+Figure 2 shows that to determine cross-modes alignment between textual, visual, and audio representations, the pairwise similarities are calculated. The resultant consistency value indicates the difference between agreement between modalities, which is lower consistency i.e. possible misinformation as a result of semantic incompatibilities.
+Semantic consistency evaluation mechanism within the proposed multimodal mechanism. The textual ( t ), visual ( v ), and audio ( a ) representatio ns are compared using pairwise cosine similarity to compute cross-modal alignment scores. These similarities are aggregated into a unified semantic consistency score S , which reflects the degree of agreement among modalities. Increased consistency signifies coherent multimodal content (probably true) whereas reduced consistency signifies semantic divergence indicating that there may be misinformation.
+Computational workflow The structural architecture was shown in Fig. 1, but Fig. 3 depicts the workflow of the operational components of the framework. Fig. 3 [Images not available. See PDF.]
+Computational workflow of the proposed framework
+
+Figure 3 demonstrates the process workflow of the suggested semantic consistency based multimodal framework.
+As Fig. 3 demonstrates, the steps include input acquisition and preprocessing, extracting features and encoding them as the modality extractor, and encoding features after that. The coded attributes are merged together and semantic consistency is measured and then the final classification is made. Figure 3, in contrast to Fig. 1 oriented on system structure, emphasizes the flow of data sequentially, thus complementing the proposed framework. It is important to remember that Fig. 1 shows the structural architecture, and Fig. 2 underlines the semantic consistency mechanism, Fig. 3 demonstrates the entire computational workflow of the proposed framework.
+Classification The final prediction is computed as: 12
+y ^ = σ W Z + b where Z  =  [z || S_c] denotes the concatenation of the fused multimodal representation and the semantic consistency score. W and b are learnable parameters, and σ represents the sigmoid activation function. This formulation enables the model to incorporate both feature-level information and cross-modal semantic alignment into the final prediction.
+Algorithmic description To summarize the overall procedure, the steps of the proposed framework are presented in Algorithm 1.
+Algorithm 1 : Semantic consistency-aware multimodal detection [Images not available. See PDF.]
+
+The algorithm provides a structured overview of the framework and aligns with the workflow shown in Fig. 3. It highlights the role of semantic consistency in enhancing detection robustness.
+Summary The proposed method combines a modality-specific feature extraction, attention-type fusion, and semantic consistency modeling in one framework. The approach is better at detecting and interpreting relationships between modalities simply because it explicitly relates modalities by exploiting cross-modal associations. The following paragraph explains the experimental set-up that was employed to determine the efficacy of the proposed procedure.
+Experimental setup In this section, an experimental design to test the given semantic consistency-aware multimodal framework is presented. The analysis is oriented on the results of the model to identify whether it is effective in the context of identifying misinformation in short-form video in the real settings. In order to guarantee an objective and complete analysis, several sets of data, common methods of preprocessing, clearly defined measure of evaluation, and baseline comparisons are taken into account.
+Datasets Experiments are conducted on two multimodal benchmark datasets consisting of short-form videos annotated for misinformation detection. These datasets include textual, visual, and audio modalities, making them suitable for evaluating cross-modal semantic consistency.
+The SocialVidMix dataset consists of approximately N short-form videos collected from publicly available social media platforms, such as YouTube Shorts, TikTok, and Instagram Reels etc. The dataset contains both authentic and misleading content, annotated through a combination of manual verification and cross-referencing with established fact-checking sources. Multimodal data includes (i) text from captions and subtitles, (ii) video frames, and (iii) audio represented as features.
+The balance of the classes is about 50 percent real and 50 percent misinformation. Preprocessing of data involves sampling of video frames to get visual information, extraction of spectrograms to get audio information and normalization of all textual data to get normal textual data.The dataset is divided into training, validation, and testing sets with the ratio of 80:10:10 to guarantee fair evaluation. The dataset is aimed to represent real-life multimodal misinformation situations, when inconsistencies might occur across modalities. Table 3 summarises the main features of the datasets that were used in this study. Table 3. Summary of datasets used in the experiments
+Dataset
+Samples
+Modalities
+Classes
+Source
+
+CAVD
+ ~ 5000
+Text, Audio, Visual
+Real/Fake
+Benchmark Dataset
+
+SocialVidMix
+ ~ 5000
+Text, Audio, Visual
+Real/Fake
+Social Media Data
+
+
+CAVD dataset is composed of curated video samples that aim to detect contextual inconsistencies with the differences in modalities. It has a combination of synchronized audio, visual frames, and textual description, which allows complex assessment of multimodal interactions. SocialVidMix data, in turn, consists of user-made material that is gathered in social media (Shu et al. 2017; Shu et al. 2020; Jin et al. 2017). It resembles real-life situations when misinformation may happen in various and chaotic conditions. The fact that this dataset is included means that it is possible to evaluate the capability of the model to generalize.
+Data preprocessing A variety of preprocessing steps are used to make all modalities consistent and enhance the performance of the models.
+- For the visual modality, frames are uniformly sampled from each video and resized to a fixed resolution. Normalization is applied to stabilize training and reduce variance across samples.
+
+- For the audio modality, raw audio signals are converted into time–frequency representations (e.g., spectrograms), enabling the model to capture temporal patterns effectively, and
+
+- For the textual modality , input text is tokenized and encoded using a transformer-compatible tokenizer. Special tokens and padding are applied to maintain uniform input length.
+
+
+
+These image processing stage operations are sequentially dependent on the processing pipeline illustrated in Fig. 3, which uses modality extraction and encoding followed by fusion.
+Implementation details A deep learning framework implemented with PyTorch is used to apply the proposed framework. A dedicated encoder is used to process each modality, and an attention-based fusion process is completed, with a semantic consistency module. The important training parameters are summarized in Table 4 to guarantee reproducibility. Table 4 Training configuration and hyperparameters
+Parameter
+Value
+
+Framework
+PyTorch
+
+Optimizer
+Adam
+
+Learning Rate
+1 × 10 - 4
+
+Batch Size
+32
+
+Epochs
+50
+
+Loss Function
+Binary Cross-Entropy
+
+
+The model is trained using the Adam optimizer due to its efficiency in handling large-scale deep learning problems. A moderate learning rate is selected to balance convergence speed and stability. Binary cross-entropy is used as the loss function, as the task is formulated as a binary classification problem (real vs. fake).
+Evaluation metrics To evaluate the performance of the proposed framework, the following standard classification metrics are employed:
+- Accuracy A c c u r a c y = T P + T N T P + T N + F P + F N
+
+
+
+Accuracy measures the overall correctness of the model across all predictions.
+- Precision P r e c i s i o n = TP T P + F P
+
+
+
+Precision evaluates the proportion of correctly predicted positive instances, which is important in minimizing false positives.
+- Recall R e c a l l = TP T P + F N
+
+
+
+Recall reflects the model’s ability to correctly identify actual positive samples, which is crucial in misinformation detection.
+- F1-Score F 1 = 2 × ( P r e c i s i o n × R e c a l l ) P r e c i s i o n + R e c a l l
+
+
+
+The F1-score provides a balanced measure by combining precision and recall.
+Baseline models While the current study compares the proposed framework with standard baselines, including unimodal models and early/late fusion techniques, more advanced multimodal approaches such as transformer-based and cross-modal learning models (e.g., EANN (Wang et al. 2018), MDFEND (Nan et al. 2021), and CLIP-based frameworks (Radford et al. 2021) have been explored in recent literature. Due to differences in dataset characteristics, implementation complexity, and the lack of consistent benchmarking settings, direct comparison with these methods is not included. However, the proposed framework is conceptually aligned with these approaches in modeling cross-modal relationships, while uniquely emphasizing semantic consistency as a decision-level signal.
+Given differences in dataset availability and implementation details, these complex models are not considered in this study and left for future work. However, the proposed framework shares the same goal as these studies in capturing multimodal interactions, especially through explicit semantic consistency, which is a driving motivation of the proposed framework. To evaluate the proposed method, comparisons are made with a number of baseline models that represent varying degrees of modality use:
+- Text-only model: Uses transformer-based encoding for textual input
+
+- Visual-only model: Uses convolutional features from video frames
+
+- Audio-only model: Uses sequential modeling of audio signals
+
+- Early fusion model: Combines features at the input level
+
+- Late fusion model: Combines predictions from individual modalities
+
+
+
+These baselines provide a clear understanding of the contribution of multimodal fusion and semantic consistency modeling.
+Experimental protocol The data is split into 80–10-10 with 80 serving as a training set, 10 as a validation set, and 10 as a test set. The training set is used to train the model and the hyperparameter tuning is performed on the validation set. The test set records final performance to have unbiased performance. To enhance reliability, experiments are repeated several times and mean results are provided. Although mean results are reported, future work will include statistical analysis with standard deviation to further strengthen reliability.
+Reproducibility The experimental setup is well defined in order to ensure reproducibility including the preprocessing of the datasets, the model configuration, and the evaluation protocols.All the models are trained and tested under identical conditions to be able to give a fair comparison.The reporting of performance is done based on standard evaluation metrics, which allows them to be compared with the existing studies.The experimental design outlined in this section offers an all-encompassing framework to test the proposed approach in consistent and controlled conditions.Multimodal datasets, standardized preprocessing methods, and clearly defined evaluation measures are used to guarantee a fair and reliable evaluation.In the following section, the experimental results and its effectiveness are discussed in reference to the proposed semantic consistency-aware framework.
+Results and discussion In this section the proposed semantic consistency-aware multimodal framework is evaluated, on a comprehensive basis. It is analyzed in terms of the overall performance, the role of multimodal fusion, the role of semantic consistency modeling, and an analysis of the classification behavior. The quantitative and visual analysis has been done, to make it clear and interpretable.
+Overall performance comparison The proposed model is compared with the baseline approaches based on conventional evaluation metrics. Table 5 summarizes the results. Table 5. Performance comparison with baseline models
+Model
+Accuracy
+Precision
+Recall
+F1-Score
+
+Text-only (BERT)
+0.82
+0.81
+0.80
+0.80
+
+Visual-only (CNN)
+0.78
+0.77
+0.76
+0.76
+
+Audio-only (LSTM)
+0.75
+0.74
+0.73
+0.73
+
+Early Fusion
+0.84
+0.83
+0.82
+0.82
+
+Late Fusion
+0.86
+0.85
+0.84
+0.84
+
+Proposed Model
+0.91
+0.90
+0.89
+0.89
+
+
+Table 5 demonstrated that the proposed model has been performing better than all the baseline methods in all the metrics. The superior performance of multi-modal over unimodal methods supports the role of using multiple modalities, and the advantages over standard fusion methods demonstrate the role of bringing semantic consistency to the learning process.
+Visual performance comparison To provide a clearer comparison, the performance of different models is illustrated in Fig. 4. Fig. 4 [Images not available. See PDF.]
+Performance comparison of baseline and proposed models across evaluation metrics
+
+Figure 4 graphically validates the results in Table 5. The trainability of the proposed model demonstrates a steady increase in all metrics, with the greatest improvement in accuracy and F1-score, and balanced performance between the precision and recall. This advancement is evident in all the metrics of evaluation, signaling strength of the suggested framework.
+Effect of semantic consistency modeling In an attempt to measure the effect of semantic consistency modeling in both qualitative and quantitative terms, we examine its contribution in the proposed multimodal framework. In contrast to the traditional fusion-based techniques which mainly obtain features across the various modalities, the suggested method explicitly compares textual, visual, and audio information.
+The findings related in Table 6 show clearly that the use of semantic consistency modeling increases measurably with respect to all evaluation metrics such as accuracy, precision, recall, and F1-score. Specifically, it can be seen that the model can be significantly more effective with the consistency component on, which means that it effectively addresses cross-modal relationships. Conversely, the deletion of this component leads to poor performance, which is the reason why it is very important in the detection process. Table 6. Ablation study on semantic consistency module
+Model Variant
+Accuracy
+F1-Score
+
+Without Consistency Module
+0.86
+0.85
+
+With Consistency Module (Proposed)
+0.91
+0.89
+
+
+To further analyze the contribution of individual components, the ablation study examines the impact of multimodal integration and semantic consistency modeling. The results demonstrate that removing the semantic consistency component leads to a noticeable decline in performance, confirming its role in capturing cross-modal discrepancies. Additionally, experiments with different modality combinations indicate that the integration of all three modalities (text, visual, and audio) yields the best performance, while partial modality configurations result in reduced accuracy. This highlights the importance of multimodal representation for misinformation detection.
+Although the current study focuses on a single consistency formulation, alternative approaches such as learnable similarity functions and attention-based alignment may provide additional improvements. Furthermore, robustness to missing modalities and cross-dataset generalization are important aspects that will be explored in future work.
+Functionally, semantic consistency modelling results in better detection of minor discrepancies that can be typical of misinformation in the model. Mismatched or misleading mixtures of modalities that are often found in short-form videos include overblown text assertions and disconnecting or doctored visual content. The proposed method with its explicit measurements of the extent of agreement involving modalities is successful in detecting such inconsistencies.
+Crucially, this aspect also increases model interpretability. For instance, when the text describing the video goes against the video, the computed consistency scores drop significantly and this influences the categorisation decision of being classified as misinformation. Conversely, if there is a high agreement between the modalities, then the consistency scores are high and we can be confident about the classification as to the truthfulness of the content. The behavior follows a principled approach of how multimodal interaction effect can be applied to the final prediction.Therefore, modelling multimodal semantic consistency not only improves prediction accuracy but also a principled and interpretable reasoning process to determine multimodal consistency, which is especially applied to the real world such as in misinformation detection.
+These findings imply that the semantic consistency modelling provides additional discriminative capability on the conventional feature fusion techniques.More importantly, even a simple consistency model can represent multimodal inconsistencies, which is in line with the practical and understandable design.
+Confusion matrix analysis To further analyze classification behavior, a confusion matrix is presented in Fig. 5. Fig. 5 [Images not available. See PDF.]
+Confusion matrix of the proposed model showing classification performance across real and fake video samples
+
+The confusion matrix in Fig. 5 is indicative of the propensity of the proposed model to the measured performance considering the characteristics of actual results. The model has very high precise predictions on real and fake classes and a small amount of misclassifications, which means that there is high discrimination ability.
+ROC curve analysis To further evaluate model reliability, the Receiver Operating Characteristic (ROC) curve is shown in Fig. 6. Fig. 6 [Images not available. See PDF.]
+ROC curve of the proposed model demonstrating strong discriminative capability with high area under the curve (AUC ≈ 0.92)
+
+The ROC curve presented in Fig. 6 demonstrates the strong discriminative capability of the proposed model. The curve remains close to the top-left corner, indicating a high true positive rate with a low false positive rate. The area under the curve (AUC) is close to 0.92, which confirms the robustness and reliability of the proposed framework.
+Discussion The experimental findings verify that the offered framework significantly exploits the multimodal information in detecting misinformation. Textual, visual, and audio functionalities that are integrated in the model allow the model to concentrate on complementary information whereas the semantic consistency module optimizes robustness in terms of cross-modal discrepancies. Also, it is noticed that unimodal models can work reasonably well, but cannot explain inconsistencies between modalities. Traditional methods of fusion enhance performance, though they do not provide the capability of explicitly testing semantic alignment. The agenda of the proposed solution is to deal with this weakness by integrating a special consistency mechanism.
+Nevertheless, there are some restrictions. When one or more modalities are absent or damaged they may reduce the performance of the performance. Furthermore, even very subtle misinformation that can be cross-modally consistent, can be difficult to detect. Its findings also suggest that along with improving performance, semantic consistency modeling also leads to better interpretation of multimodal interaction.
+In that way, the offered semantic consistency-sensitive multimodal machine can have higher performance than the baseline approaches. The results highlight the importance of multimodal integration and demonstrate the effectiveness of semantic consistency modeling. The quantitative performance and the visual analysis are combined, which proves the strength and validity of the approach suggested.
+It is important to note that the proposed framework does not explicitly model temporal dependencies within video sequences. Therefore, its performance primarily reflects the ability to capture cross-modal semantic alignment rather than temporal inconsistencies.
+Conclusion and future work This study has introduced a semantic consistency-aware multimodal deep learning approach for short-form video misinformation. The proposed framework differs from traditional multimodal approaches that tend to focus on feature fusion, by explicitly modeling and incorporating cross-modal semantic consistency into the classification task. This allows the model to identify inconsistencies between textual, visual and audio representations, which are likely to be misleading.
+The results show that considering semantic consistency enhances the ability to detect misinformation over unimodal and multimodal baselines. The ablation study also verifies that the consistency term provides valuable discriminative information, even if implemented in a simple manner. These results suggest that leveraging semantic consistency as a decision signal is promising for multimodal misinformation detection. While encouraging, our results have limitations. First, the proposed approach considers only the semantic alignment between representations, but does not explicitly account for temporal contexts in video sequences. Since temporal inconsistencies can also be used to detect misinformation, this is an area worth exploring. Second, the semantic consistency is based on cosine similarity, which, while simple and intuitive, might not be sufficient to model complex cross-modal inconsistencies.
+Third, we will explore additional extensions to the proposed framework by leveraging temporal modeling methods, like recurrent networks and video transformers, in order to better detect inconsistencies. In addition, richer approaches of consistency modeling such as learnable similarity measures and graph interactions will be investigated. We will also perform further experiments on a range of datasets and study the robustness of the model under various missing or noisy modalities to enhance its generalisation and robustness.
+In summary, this research underscores the need for explicitly considering semantic interactions across modalities, and lays the groundwork for building more reliable and interpretable multimodal misinformation detectors.
+Aknowledgment The authors would like to thank the Deanship of Scientific Research at Shaqra University for supporting this work. The authors would like to acknowledge Prince Sultan University and EIAS Lab for their valuable support. This work was further supported by the University of Sharjah, United Arab Emirates; International Islamic University Islamabad, Pakistan; King Saud University; and Shaqra University, Saudi Arabia. Additionally, this research was funded by the Ongoing Research Funding Program (ORF-2025-1439), King Saud University.
+Author contribution All authors contributed equally.
+Data availability The datasets used in this work include publicly accessible and benchmark datasets, CAVD and SocialVidMix. These are available from the sources mentioned in the manuscript. For licensing and platform compatibility reasons, the raw multimedia data cannot be directly shared. But the processed data, experimental settings and code used in this work are available from the corresponding author upon reasonable request for reproducibility.
+Declarations Competing interests The authors declare no competing interests.
+Publisher's Note Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References Afchar D et al (2018) Mesonet: a compact facial video forgery detection network. In: 2018 IEEE international workshop on information forensics and security (WIFS). IEEE
+Arevalo, J et al. Gated multimodal networks. Neural Comput Appl ; 2020; 32 , 14 pp. 10209-10228. [DOI: https://dx.doi.org/10.1007/s00521-019-04559-1]
+Bai Z et al (2022) Cyber mobility mirror: Deep learning-based real-time 3d object perception and reconstruction using roadside lidar. arXiv preprint arXiv:2202.13505. 2
+Baltrušaitis, T; Ahuja, C; Morency, L-P. Multimodal machine learning: a survey and taxonomy. IEEE Trans Pattern Anal Mach Intell ; 2018; 41 , 2 pp. 423-443. [DOI: https://dx.doi.org/10.1109/TPAMI.2018.2798607]
+Deng X et al (2026) Denoising-enhanced multimodal detection network for fake news video detection. IEEE Trans Circ Syst Video Technol
+Devlin J et al (2019) Bert: Pre-training of deep bidirectional transformers for language understanding. In: Proceedings of the 2019 conference of the North American chapter of the association for computational linguistics: human language technologies, volume 1 (long and short papers)
+Fawcett, T. An introduction to ROC analysis. Pattern Recogn Lett ; 2006; 27 , 8 pp. 861-874.2297626 [DOI: https://dx.doi.org/10.1016/j.patrec.2005.10.010]
+Figueroa Barraza JE (2022) Frameworks for interpretability of deep learning-based prognostics and health management. Universidade de São Paulo
+Garcez, AdA; Lamb, LC. Neurosymbolic ai: the 3 rd wave. Artif Intell Rev ; 2023; 56 , 11 pp. 12387-12406. [DOI: https://dx.doi.org/10.1007/s10462-023-10448-w]
+Guo, Y et al. CAMFND: cross-modal adaptive-aware learning for multimodal fake news detection. Pattern Recogn Lett ; 2025; 195 , pp. 1-7. [DOI: https://dx.doi.org/10.1016/j.patrec.2025.02.035]
+Hamroun, M; Sauveron, D. A hybrid deep learning and knowledge graph approach for intelligent image indexing and retrieval. Appl Sci ; 2025; 15 , 19 [DOI: https://dx.doi.org/10.3390/app151910591] 10591.
+Han W, Chen H, Poria S (2021) Improving multimodal fusion with hierarchical mutual information maximization for multimodal sentiment analysis. In: Proceedings of the 2021 conference on empirical methods in natural language processing
+Jin Z et al (2017) Multimodal fusion with recurrent neural networks for rumor detection on microblogs. In: Proceedings of the 25th ACM international conference on multimedia
+Khalid H et al (2021) FakeAVCeleb: A novel audio-video multimodal deepfake dataset. arXiv preprint arXiv:2108.05080
+Khan, A; S, NC; Gangodkar, D. Advanced deep learning frameworks for cross‐modal information retrieval: a comprehensive review of techniques, challenges, and future directions. Wiley Interdiscip Rev Data Min Knowl Discov ; 2026; 16 , 1 [DOI: https://dx.doi.org/10.1002/widm.70055] e70055.
+Lewis, P et al. Retrieval-augmented generation for knowledge-intensive NLP tasks. Adv Neural Inf Process Syst ; 2020; 33 , pp. 9459-9474.
+Li, Y et al. Misinformation features detection in Weibo: unsupervised learning, latent Dirichlet allocation, and network structure. IEEE Access ; 2024; 12 , pp. 166977-166987. [DOI: https://dx.doi.org/10.1109/ACCESS.2024.3494015]
+Li, X et al. A novel hybrid YOLO approach for precise paper defect detection with a dual-layer template and an attention mechanism. IEEE Sens J ; 2024; 24 , 7 pp. 11651-11669. [DOI: https://dx.doi.org/10.1109/JSEN.2024.3356356]
+Li, X et al. TCM-DS: a large language model for intelligent traditional Chinese medicine edible herbal formulas recommendations. Chin Med ; 2025; 20 , 1 191.2028659 [DOI: https://dx.doi.org/10.1186/s13020-025-01249-0]
+Li Y, Lyu S (2018) Exposing deepfake videos by detecting face warping artifacts. arXiv preprint arXiv:1811.00656
+Li J et al (2022) Blip: Bootstrapping language-image pre-training for unified vision-language understanding and generation. in International conference on machine learning. PMLR
+Li X et al (2023) Enhancing the interpretation of spirometry: joint utilization of n-order adaptive fourier decomposition and deep learning techniques. IEEE Trans Instrum Meas
+Li X et al (2025) ASFM-AFD: Multi-modal fusion of AFD-optimized LiDAR and camera data for paper defect detection. IEEE Trans Instrum Meas
+Liu, F et al. Enhancing fake news video detection with self-driven question–answer from LMMs. Inf Process Manag ; 2026; 63 , 2 [DOI: https://dx.doi.org/10.1016/j.ipm.2025.104432] 104432.
+Liu Y et al (2019) Roberta: A robustly optimized bert pretraining approach. arXiv preprint arXiv:1907.11692
+Mazhar, AA et al. AI-powered detection of cyberbullying in short-form video content: a hybrid deep learning framework. PLoS ONE ; 2026; 21 , 2 [DOI: https://dx.doi.org/10.1371/journal.pone.0338799] e0338799.
+Nan Q et al (2021) MDFEND: Multi-domain fake news detection. In: Proceedings of the 30th ACM international conference on information & knowledge management
+Nguyen V-H et al (2020) Fang: Leveraging social context for fake news detection using graph representation. In: Proceedings of the 29th ACM international conference on information & knowledge management
+OpenAI R (2023) Gpt-4 technical report. arxiv 2303.08774. View in Article 2(5):1
+Povedano Álvarez, D et al. Learning strategies for sensitive content detection. Electronics ; 2023; 12 , 11 2496. [DOI: https://dx.doi.org/10.3390/electronics12112496]
+Powers DM (2020) Evaluation: from precision, recall and F-measure to ROC, informedness, markedness and correlation. arXiv preprint arXiv:2010.16061
+Radford A et al (2021) Learning transferable visual models from natural language supervision. in International conference on machine learning. PmLR
+Rana, MS et al. Deepfake detection: a systematic literature review. IEEE Access ; 2022; 10 , pp. 25494-25513. [DOI: https://dx.doi.org/10.1109/ACCESS.2022.3154404]
+Sahar NM et al (2026) Advances in deepfake detection: leveraging InceptionResNetV2 for reliable video authentication. 1: 90–105
+Shu, K et al. Fake news detection on social media: a data mining perspective. ACM SIGKDD Explor Newsl ; 2017; 19 , 1 pp. 22-36. [DOI: https://dx.doi.org/10.1145/3137597.3137600]
+Shu, K et al. Fakenewsnet: a data repository with news content, social context, and spatiotemporal information for studying fake news on social media. Big Data ; 2020; 8 , 3 pp. 171-188. [DOI: https://dx.doi.org/10.1089/big.2020.0062]
+Singhal S et al (2020) Spotfake+: A multimodal framework for fake news detection via transfer learning (student abstract). In: Proceedings of the AAAI conference on artificial intelligence
+Sun, L et al. Efficient multimodal transformer with dual-level feature restoration for robust multimodal sentiment analysis. IEEE Trans Affect Comput ; 2023; 15 , 1 pp. 309-325. [DOI: https://dx.doi.org/10.1109/TAFFC.2023.3274829]
+Touvron H et al (2023) Llama 2: Open foundation and fine-tuned chat models. arXiv preprint arXiv:2307.09288
+Tufchi, S; Yadav, A; Ahmed, T. A comprehensive survey of multimodal fake news detection techniques: advances, challenges, and opportunities. Int J Multimed Inf Retr ; 2023; 12 , 2 28. [DOI: https://dx.doi.org/10.1007/s13735-023-00296-3]
+Vaswani A et al (2017) Attention is all you need. Adv Neural Inform Process Syst 30
+Wang Y et al (2018) Eann: Event adversarial neural networks for multi-modal fake news detection. In: Proceedings of the 24th acm sigkdd international conference on knowledge discovery & data mining
+Wu, Z et al. A comprehensive survey on graph neural networks. IEEE Trans Neural Netw Learn Syst ; 2020; 32 , 1 pp. 4-24.4205495 [DOI: https://dx.doi.org/10.1109/TNNLS.2020.2978386]
+Wu, J et al. Adversarial contrastive learning for evidence-aware fake news detection with graph neural networks. IEEE Trans Knowl Data Eng ; 2023; 36 , 11 pp. 5591-5604. [DOI: https://dx.doi.org/10.1109/TKDE.2023.3341640]
+Xu, X et al. Cross-modal attention with semantic consistence for image–text matching. IEEE Trans Neural Netw Learn Syst ; 2020; 31 , 12 pp. 5412-5425. [DOI: https://dx.doi.org/10.1109/TNNLS.2020.2967597]
+Xu, P; Zhu, X; Clifton, DA. Multimodal learning with transformers: a survey. IEEE Trans Pattern Anal Mach Intell ; 2023; 45 , 10 pp. 12113-12132. [DOI: https://dx.doi.org/10.1109/TPAMI.2023.3275156]
+Yu Z et al (2019) Deep modular co-attention networks for visual question answering. In: Proceedings of the IEEE/CVF conference on computer vision and pattern recognition
+Zhou, X; Zafarani, R. A survey of fake news: fundamental theories, detection methods, and opportunities. ACM Comput Surveys (CSUR) ; 2020; 53 , 5 pp. 1-40. [DOI: https://dx.doi.org/10.1145/3395046]
+Zhou, J et al. Graph neural networks: a review of methods and applications. AI Open ; 2020; 1 , pp. 57-81. [DOI: https://dx.doi.org/10.1016/j.aiopen.2021.01.001]
+Zhou Y et al (2020b) Recommending themes for ad creative design via visual-linguistic representations. In: Proceedings of the web conference

@@ -1,0 +1,847 @@
+Introduction Over the past decade, the rapid growth of online platforms and social media networks has transformed how information is produced and disseminated. However, this transformation has also intensified the spread of misleading and false information, commonly referred to as fake news. Such misinformation poses significant risks to public trust, political stability, and public health awareness, particularly in low-resource linguistic communities such as the Arabic-speaking world 1 . Unlike English, Arabic presents distinctive linguistic and morphological challenges, including diglossia, rich inflectional morphology, and diverse regional dialects, all of which complicate automatic text analysis and deception detection. Despite increasing global attention to fake news detection, Arabic remains underrepresented in both dataset availability and model development 2 .
+Early research in Arabic fake news detection relied primarily on traditional machine learning (ML) algorithms such as support vector machines (SVM) and random forests (RF), using surface-level textual features including TF–IDF representations and sentiment-based indicators 3 . While these approaches achieved moderate success, they were limited in their ability to capture contextual and semantic dependencies across sentences. The emergence of deep learning (DL) and transformer-based architectures such as BERT 4 and its Arabic adaptations, including AraBERT 5 , MARBERT 6 , GigaBERT 7 , has substantially improved text representation by encoding bidirectional semantic relationships. Nevertheless, most Arabic fake news detection models combine these contextual embeddings with convolutional neural networks (CNNs) to reduce dimensionality and extract local patterns 1 . Although CNNs are effective for local feature extraction, they are less suited for modeling long-range dependencies and narrative flow, both of which are critical for distinguishing factual reporting from deceptive or manipulative writing 2 .
+To address these limitations, this study proposes an enhanced hybrid architecture, Arabic BERT with layer-wise BiLSTM and attention (AraBLA). The model integrates Arabic pretrained transformer encoders with a bidirectional long short-term memory (BiLSTM) layer 8 and a multi-head evidence aggregation mechanism 9 . The BiLSTM component captures sequential dependencies across token embeddings, preserving the temporal and syntactic structure of Arabic text. In parallel, the multi-head aggregation module enables the model to attend to multiple semantic aspects of the input simultaneously, including emotional tone, factual density, and stance. This multi-perspective representation allows the classifier to reason over diverse linguistic cues rather than relying on a single pooled representation, as is common in conventional attention mechanisms or CNN-based pooling schemes.
+The proposed AraBLA architecture is designed to address key shortcomings of CNN-based Arabic fake news detection models by improving semantic coherence modeling, enhancing generalization across dialects, and maintaining computational efficiency. The model is evaluated on four benchmark Arabic datasets, namely Arabic News Stance (ANS) 10 , AraNews 11 , Arabic Fake News Dataset (AFND) 12 , and Covid19Fakes 13 , enabling fair and comprehensive comparison with existing baselines. This study contributes a novel AraBERT-BiLSTM multi-head hybrid model that leverages both contextual and sequential representations, offering a more linguistically grounded and robust approach to Arabic fake news detection.
+Unlike conventional hybrid architectures that apply recurrent or convolutional layers only to the final transformer output, the proposed AraBLA framework explicitly exploits the hierarchical structure of AraBERT by utilizing representations from all twelve transformer layers. Each layer is independently refined using a dedicated BiLSTM module, enabling the model to capture sequential and stylistic patterns at multiple levels of linguistic abstraction. The refined representations are then integrated through a cross-layer multi-head attention mechanism that models interactions between layers and allows the system to dynamically aggregate complementary semantic information. This hierarchical modeling strategy allows AraBLA to move beyond the standard transformer–recurrent pipeline and instead perform structured reasoning across transformer representations.
+Related work Research on fake news detection has expanded rapidly across multiple languages, particularly in English, where large datasets and computational resources have enabled the development of sophisticated deep learning models. Early work focused on machine learning classifiers using handcrafted features derived from textual content, user metadata, and propagation patterns. With the emergence of deep learning, transformer-based architectures have become dominant in misinformation detection tasks. For example, FakeBERT proposed by Kaliyar et al. 14 integrates BERT representations with additional neural components to improve contextual understanding of social media posts. More recently, hybrid and ensemble architectures have been explored to improve robustness and generalization. Brinda et al. 15 introduced EnsembleNet, a deep ensemble framework combining GANBERT and BiLSTM models to leverage both generative and sequential representations for fake news detection. Comprehensive surveys such as that by Ansar and Goswami 16 highlight the evolution of fake news detection methods, covering approaches ranging from traditional machine learning to advanced transformer-based architectures and multimodal systems.
+Despite these advances, research on fake news detection in low-resource languages remains comparatively limited. Arabic, in particular, presents additional challenges due to its rich morphology, dialectal variation, and limited annotated resources. Consequently, recent studies have begun adapting transformer-based language models such as AraBERT 17 , MARBERT 6 , and GigaBERT 7 for Arabic misinformation detection tasks. These works represent important steps toward addressing misinformation in Arabic digital media, but many approaches rely primarily on the final transformer layer and do not fully exploit the hierarchical representations produced by deep transformer encoders. The proposed AraBLA model addresses this limitation by integrating layer-wise sequential modeling and cross-layer attention mechanisms to better utilize the hierarchical structure of AraBERT representations.
+Research on Arabic fake news detection has expanded significantly in recent years, driven by the rapid growth of Arabic social media platforms and the scarcity of high-quality linguistic resources. Early work relied primarily on classical machine learning methods applied to small, manually collected datasets. For example, Bahri 2 evaluated models such as decision trees, SVM, and naïve Bayes on the AFND, showing that tree-based classifiers performed best but remained constrained by feature sparsity and domain variation. Similar findings were reported by Khalil et al. 18 , who used content-based and metadata features to classify Arabic news articles and achieved moderate performance with traditional ML pipelines.
+As larger datasets became available, researchers began to explore deep learning architectures. The introduction of the Arabic Fake News Dataset by Albtoush et al. 3 provided more than 600,000 news articles, enabling the training of high-capacity models. Multiple studies used AFND to evaluate CNN, LSTM, and hybrid architectures. Othman et al. 1 , for instance, proposed several deep learning configurations, including Capsule Networks and CNN-BiLSTM models, reporting accuracies in the 78 to 88 percent range. Their results demonstrated that deep contextual learning could outperform classical approaches, although challenges related to long-range semantics and imbalanced class distributions persisted.
+Hybrid neural models incorporating recurrent layers and attention mechanisms subsequently gained traction. Othman et al. 1 explored BiLSTM and CNN variants, while Merzah et al. introduced a self-attention-enhanced dual-BiGRU model that achieved 91.92 percent accuracy on AFND by combining FastText embeddings with a dual recurrent architecture. Related work by Turki et al. 19 proposed hybrid contextual features that merge linguistic cues with neural encoders, further highlighting the importance of capturing sequential information in Arabic text. Other studies, such as Wotaifi and Dhannoon 20 , integrated attention mechanisms with pretrained transformers to improve feature extraction from long news articles.
+Transformer-based Arabic language models have become central to recent advances in this field. ARBERT, MARBERT 6 , and GigaBERT 7 have significantly improved performance across downstream tasks such as text classification, question answering, and stance detection. Several studies adapted these models for fake news detection. Latynt 10 applied transformer models to stance prediction, while Moatez et al. 11 investigated transformer-based approaches for detecting machine-generated Arabic news. More recently, Aljohani 21 examined data-balancing strategies such as SMOTEENN across multiple ML and DL models, showing that improved sampling techniques can enhance performance on imbalanced fake news datasets.
+In addition to fake news detection studies, several works have explored Arabic text classification using pretrained transformer models. For example, Alruily et al. 22 investigated the use of AraBERT for automated classification of Arabic long tweets, demonstrating the effectiveness of transfer learning for handling long and complex Arabic textual content. Their results highlight the capability of AraBERT-based architectures for Arabic text understanding tasks. Although their work focuses on general text classification rather than misinformation detection, it provides important methodological insights for applying pretrained Arabic language models to downstream classification problems.
+A parallel line of research explored multitask and convolution-augmented transformer architectures. The ArabFake framework 23 combined pretrained transformers with multiple prediction heads for detection, categorization, and risk scoring. Other approaches applied one-dimensional and two-dimensional CNNs on top of transformer layers. Khalil et al. 18 and Wotaifi et al. 20 demonstrated that processing individual transformer layers through CNN filters can enhance local feature extraction. While these methods achieved competitive results on datasets such as ArCOV-19 and AraNews, they relied primarily on shallow post-transformer refinement.
+Across existing studies, reported performance varies depending on the dataset, model architecture, and task formulation. Classical ML methods typically achieve accuracies between 60 and 80 percent, while CNN- and BiLSTM-based models often reach 75 to 88 percent. Transformer-based and hybrid multi-attention systems, such as dual-BiGRU with attention 24 , report accuracies exceeding 90 percent on AFND. Despite these gains, several limitations remain. Most models rely exclusively on the final transformer layer, do not explicitly exploit cross-layer representations, and often lack mechanisms to address class imbalance or capture long-range stylistic and discourse-level cues in Arabic news writing.
+In contrast to prior work, the proposed AraBLA model integrates layer-wise BiLSTM refinement, cross-layer multi-head attention, and learned importance pooling, enabling the use of all twelve AraBERT layers as structured inputs rather than isolated features. This design addresses key gaps in the literature by combining sequential modeling with hierarchical transformer representations, a capability does not present in earlier CNN- or GRU-based hybrid models. As demonstrated in the experimental results, this approach yields consistent performance improvements across diverse datasets, including AFND, ANS, AraNews, and Covid19Fakes.
+Dataset This study uses four publicly available Arabic fake news datasets that differ in size, source diversity, construction methodology, and annotation strategy. Collectively, these datasets cover long-form news articles, machine-generated disinformation, and social media misinformation, enabling a robust evaluation across heterogeneous textual domains.
+Arabic news stance (ANS) dataset The ANS dataset is a stance-based fake news resource compiled from multiple Arabic news outlets, including BBC Arabic and CNN Arabic. It consists of short news claims paired with corresponding news articles, along with annotated labels indicating whether the article agrees with, disagrees with, or is unrelated to the claim 10 . Although conceptually valuable for stance detection tasks, ANS is relatively small compared with other Arabic datasets and exhibits limited topical diversity. Its constrained size and multi-label structure pose learning challenges for deep models, yet it remains an important benchmark for evaluating classification robustness on short, high-variance text sequences.
+AraNews dataset The AraNews dataset is a large corpus of machine-generated Arabic disinformation combined with real news reports scraped from newspapers across 15 Arab countries. The raw dataset contains 486,961 samples, but it includes empty entries, extremely short texts, uncharacteristically long articles, and noisy content such as irrelevant numerical strings or malformed text 11 . This dataset is particularly valuable for fake news classification because it pairs authentic editorial writing with automatically generated fabricated articles, enabling models to learn stylistic and semantic distinctions between genuine journalism and synthetic misinformation.
+Arabic fake news dataset (AFND) The AFND is one of the largest publicly available Arabic fake news resources. It consists of 606,912 Modern Standard Arabic (MSA) news articles collected from 134 public news websites across 19 Arab countries. Each source is manually labeled as credible, not credible, or undecided based on fact-checking evidence from the Misbar platform. Articles originating from undecided sources are excluded, and the remaining data are mapped to binary classes, real articles from credible sources and fake articles from non-credible sources. AFND spans diverse news domains, writing styles, and regional variations, providing a realistic large-scale benchmark for evaluating deep learning architectures for Arabic fake news detection 12 . Its scale, source diversity, and inherent class imbalance make it a challenging yet representative dataset.
+Covid19Fakes dataset The Covid19Fakes dataset is an automatically annotated Arabic and English Twitter corpus created during the COVID-19 pandemic to capture pandemic-related misinformation. The original release contains approximately 22,000 tweets; each associated with machine-generated labels. Due to tweet deletions and inaccessible user accounts, only a subset of the original data remains retrievable.
+After filtering, a balanced subset of 7,000 fake and 7,000 real tweets was constructed, restricted to posts containing between 9 and 32 words to ensure sufficient textual content 13 . The dataset reflects short, informal, and linguistically diverse Arabic text typical of social media misinformation, making it well suited for evaluating models on noisy, real-world user-generated content (Table 1). Table 1. Description of datasets used.
+Dataset
+Size and Domain
+Labeling
+Number of Samples
+Fake News
+Real News
+Link
+
+ANS
+Claim–article pairs from major Arabic news outlets
+Agree/disagree/unrelated
+4,546
+1,474
+3,072
+https://github.com/latynt/ans
+
+AraNews
+Large corpus of authentic and machine-generated Arabic news articles
+Fake/real
+14,000
+7,000
+7,000
+https://github.com/UBC-NLP/wanlp2020_arabic_fake_news_detection
+
+AFND
+606 K + articles from 134 Arabic news websites
+Credible/not credible
+232,369
+207,310
+167,233
+https://www.kaggle.com/datasets/murtadhayaseen/arabic-fake-news-dataset-afnd
+
+Covid19Fakes
+Tweets related to COVID-19 misinformation
+Fake/real
+14,000
+7,000
+7,000
+https://www.kaggle.com/datasets/arashnic/covid19-fake-news
+
+
+Data preprocessing and filtering procedures To ensure consistency and data quality across all datasets, several preprocessing and filtering steps were applied prior to training. First, all texts were normalized using standard Arabic preprocessing procedures, including the removal of diacritics, normalization of different forms of alif and yaa characters, and elimination of elongation (tatweel). Non-Arabic characters, excessive punctuation, and malformed symbols were removed when present.
+For the AraNews dataset 11 ., the original release contained empty entries, extremely short texts, and noisy samples consisting primarily of numerical strings or incomplete sentences. We excluded entries containing fewer than five words and removed documents exceeding the maximum token length after tokenization (256 tokens). Duplicate samples were also identified and removed to prevent data leakage.
+In the AFND dataset 12 , articles originating from “undecided” sources were excluded, consistent with prior studies. The remaining articles were mapped to binary labels (real vs. fake). Extremely short articles lacking meaningful textual content were removed to avoid biasing the classifier.
+For the Covid19Fakes dataset 13 , due to tweet deletions and account inaccessibility, only retrievable tweets were retained. To ensure sufficient linguistic context, tweets containing fewer than nine words were excluded. A balanced subset of 7,000 fake and 7,000 real tweets was constructed to mitigate class imbalance effects.
+We first retained only tweets that remained retrievable and then applied length-based filtering to exclude very short posts (fewer than 9 words) to ensure sufficient linguistic content. After filtering, the dataset was split into training (80%), validation (10%), and test (10%) subsets using stratified sampling to preserve label proportions. To avoid any potential data leakage, any class balancing (when applied) was performed only on the training split, while validation and test sets were left unchanged. This ensures that the reported results reflect true generalization performance on unseen data.
+The ANS dataset was used in its original annotated form, with claim–article pairs preserved. Standard tokenization and padding were applied without altering label distributions. All datasets were split into training (80%), validation (10%), and test (10%) sets using stratified sampling to preserve class proportions. The validation set was used during training to monitor model performance and guide hyperparameter tuning. Early stopping was applied based on validation loss with a patience of five epochs, meaning that training was terminated if the validation loss did not improve for five consecutive epochs. This strategy aims to prevent overfitting and ensures that the final model corresponds to the best validation performance observed during training.
+Proposed methodology This section presents the proposed hybrid architecture for Arabic fake news detection, which integrates AraBERT hierarchical representations with layer-wise sequence modeling and cross-layer attention, as illustrated in Fig. 1. The model is designed to exploit the full depth of AraBERT’s twelve hidden layers and to enrich them through BiLSTM refinement, dynamic interlayer reasoning, and learned importance pooling. Fig. 1 [Images not available. See PDF.]
+Architecture of the proposed Arabic BERT with layer-wise BiLSTM and attention (AraBLA) model. The model combines AraBERT’s twelve hidden layers with layer-wise BiLSTM refinement, cross-layer multi-head attention, and learned importance pooling. Each AraBERT layer produces a 768-dimensional representation that is processed through a dedicated BiLSTM module.
+
+The proposed architecture constructs a deep, multi-stage representation pipeline that integrates hierarchical transformer outputs from AraBERT with recurrent sequence modeling, cross-layer attention, and adaptive pooling. An input news document is first encoded using the AraBERT transformer encoder, which produces twelve contextual hidden layers. Each hidden layer captures distinct linguistic information, forming a set of representations 1
+where denotes the sequence length. Unlike standard BERT-based classifiers that rely primarily on the final transformer layer, the proposed architecture preserves all twelve layers to fully exploit AraBERT’s hierarchical encoding, ranging from early layers that capture morphological and syntactic cues to deeper layers that encode semantics and long-range contextual information.
+To enrich these representations, each layer is processed independently through a dedicated BiLSTM network. This design introduces sequential inductive bias into each transformer layer, enabling the model to capture stylistic structure, narrative flow, and temporal dependencies that may not be fully modeled by self-attention alone. Each BiLSTM transforms the 768-dimensional token embeddings into 128-dimensional contextual vectors: 2
+
+To obtain a fixed-length representation for each transformed layer, mean pooling is applied across the token dimension: 3
+
+Stacking the twelve pooled vectors yields 4
+which serves as a compact representation of all AraBERT layers after BiLSTM refinement.
+To model interactions among layers, the architecture applies cross-layer multi-head attention, treating the twelve refined layers as tokens within an attention mechanism operating along the layer dimension. This enables the model to learn interdependencies such as complementary information across layers, reinforcement between representations, and redundancy that should be down-weighted. Queries, keys, and values are obtained through learned linear projections: 5
+
+To model interactions among layers, the architecture applies cross-layer multi-head attention , treating the twelve refined layers as tokens within an attention mechanism operating along the layer dimension. This enables the model to learn interdependencies such as complementary information across layers, reinforcement between representations, and redundancy that should be down-weighted. Queries, keys, and values are obtained through learned linear projections: 6
+
+These tensors are divided into eight attention heads, each with dimensionality : 7
+
+For each head, scaled dot-product attention is computed as: 8
+
+The outputs of all heads are concatenated and linearly projected: 9
+
+Residual connections and layer normalization are applied to stabilize learning: 10
+
+Each layer representation is then refined using a position-wise feed-forward network with GELU activation, followed by a second residual connection and normalization step: 11
+
+The resulting tensor contains enriched representations for all layers after modeling interlayer dependencies. 12
+
+To derive a single document-level representation, the model applies learned importance pooling, which assigns adaptive weights to the twelve layers based on content rather than fixed heuristics: 13
+
+The final representation is computed as a weighted sum: 14
+
+This mechanism allows the model to determine, for each document, which AraBERT layers contribute most strongly to fake news classification.
+Finally, the document representation r is passed to a classification head: 15
+which outputs a probability between 0 and 1. Given the class imbalance typical of fake news datasets, the model is trained using focal loss to emphasize difficult examples: 16
+
+This loss function improves robustness by preventing the training process from being dominated by easily classified majority-class samples.
+This model introduces several improvements to Arabic fake news detection. First, it enhances all twelve AraBERT layers by processing each through a BiLSTM, enabling more effective modeling of textual flow, stylistic patterns, and sequential structure. The architecture then applies cross-layer multi-head attention to capture interactions among layers and to identify those that carry the most informative signals. Layer representations are combined through learned importance pooling, which assigns adaptive, data-driven weights rather than relying on uniform averaging. By integrating transformer representations with BiLSTM-based sequence modeling and cross-layer attention, the model produces richer and more discriminative features than standard transformer-based approaches. Finally, the use of focal loss improves robustness to class imbalance, increasing reliability in real-world fake news classification tasks.
+Experimental design All experiments were conducted using the pretrained AraBERTv2 model as the primary encoder. Input texts were tokenized and padded to a maximum sequence length of 256 tokens. The full stack of twelve transformer layers was utilized, with each layer passed through a BiLSTM containing 64 hidden units per direction, resulting in 128-dimensional outputs. A dropout rate of 0.2 was applied throughout the model to mitigate overfitting. The cross-layer multi-head attention module employed eight attention heads operating over the twelve BiLSTM-refined layer representations. Training was performed with a batch size of 16 and gradient accumulation over two steps, yielding an effective batch size of 32. Optimization used AdamW with a learning rate of 2 × 10 −5 for up to 10 epochs, together with early stopping configured with a patience of five epochs. To address class imbalance, focal loss was applied with α = 0.75 and γ = 2.0. The full encoder was fine-tuned, with differential learning rates enabled so that newly added layers were updated more aggressively than the pretrained transformer layers. The configuration flag FINE_TUNE_MARBERT = True was used to activate encoder fine-tuning within the training framework. The complete experimental setup is summarized in Table 2. Table 2. Experimental design and hyperparameter settings.
+Category
+Parameter
+Value/setting
+
+Model setup
+Pretrained model
+aubmindlab/bert-base-arabertv2
+
+Max sequence length
+256 tokens
+
+Number of transformer layers
+12
+
+Number of attention heads
+8
+
+BiLSTM hidden size
+64 (per direction)
+
+BiLSTM output size
+128
+
+Dropout rate
+0.2
+
+Training configuration
+Batch size
+16
+
+Effective batch size
+32 (via accumulation)
+
+Gradient accumulation steps
+2
+
+Learning rate
+2 × 10⁻ 5
+
+Optimizer
+AdamW
+
+Number of epochs
+10
+
+Early stopping patience
+5 epochs
+
+Focal loss
+Alpha (α)
+0.75
+
+Gamma (γ)
+2
+
+Fine-tuning strategy
+Fine-tune MARBERT/AraBERT
+Enabled
+
+Differential learning rates
+Enabled
+
+
+Result and discussion The performance of the proposed AraBLA model was evaluated on four benchmark datasets representing distinct forms of Arabic misinformation, namely the Arabic Fake News Dataset (AFND), the AraNews corpus, the Arabic News Stance (ANS), and the Covid19Fakes Twitter dataset. Together, these datasets span long-form news articles, machine-generated content, stance-annotated claims, and short social media posts, enabling a comprehensive evaluation of the model’s ability to generalize across heterogeneous text types. To ensure consistency with prior work, all models were evaluated using four standard classification metrics: accuracy, precision, recall, and F1-score. The results and discussion presented in this section integrate quantitative performance tables with training-progress visualizations to provide a detailed analysis of AraBLA’s behavior across all datasets.
+The evaluation metrics reported in this study include accuracy, precision, recall, and F1-score. Since the task is formulated as a binary classification problem (fake or real news), precision, recall, and F1-score are computed using the binary classification formulation, where the fake news class is treated as the positive class. This definition ensures consistent evaluation across all datasets.
+On the AFND, the proposed AraBLA model achieves the strongest performance among all reported state-of-the-art systems. As shown in Table 3, classical machine learning models such as logistic regression, decision tree, gradient boosting, and random forest obtain accuracies between 0.60 and 0.80, with F1-scores ranging from 0.66 to 0.84. More advanced neural approaches, including capsule networks, BiLSTM-attention, BiLSTM with SMOTEENN, and CNN-BiLSTM architectures, improve accuracy to the 0.78 to 0.87 range, with F1-scores reaching up to 0.87. Recent transformer-based models further advance performance, with WaraBERT-V1 achieving an accuracy of 0.8991 and the dual-BiGRU with attention model reporting 0.9192 accuracy and a 0.9266 F1-score, which represents the strongest published baseline on AFND. In comparison, AraBLA achieves an accuracy of 0.9509, a precision of 0.9601, a recall of 0.9497, and an F1-score of 0.9549. These results surpass the best prior model by 3.2 percentage points in accuracy and 2.8 percentage points in F1-score, with substantially larger margins over classical machine learning approaches. Table 3. Performance comparison between the proposed model and other state-of-the-art models on the AFND.
+Model
+Accuracy
+Precision
+Recall
+F1-Score
+
+LSTM 25
+0.85
+0.84
+0.95
+0.89
+
+RNN 25
+0.52
+0.51
+0.60
+0.55
+
+GAN 25
+0.84
+0.83
+0.94
+0.88
+
+Logistic regression 25
+0.60
+0.59
+0.73
+0.66
+
+Decision tree 25
+0.80
+0.78
+0.90
+0.84
+
+Gradient boosting 25
+0.71
+0.70
+0.76
+0.73
+
+Random forest 25
+0.80
+0.78
+0.90
+0.84
+
+Capsule network 12
+0.783
+–
+–
+–
+
+BiLSTM-attention 20
+0.8173
+–
+–
+–
+
+BiLSTM + SMOTEENN 21
+0.85
+0.85
+0.85
+0.85
+
+CNN-BiLSTM 18
+0.8749
+0.88
+0.8732
+0.87
+
+WaraBERT-V1 19
+0.8991
+–
+–
+–
+
+Dual-BiGRU + Attention 24
+0.9192
+0.9288
+0.9245
+0.9266
+
+Proposed model: AraBLA
+0.9509
+0.9601
+0.9497
+0.9549
+
+
+The results reported in Table 4, together with the corresponding training curves, further illustrate AraBLA’s learning behavior on AFND. Accuracy increases steadily from 0.9142 at epoch 1 to 0.9509 at epoch 9, while the F1-score improves from 0.9232 to 0.9549 over the same period. Precision remains consistently higher than recall, rising from 0.9312 to 0.9601, which indicates that the model becomes increasingly selective in predicting fake news and reduces false positives. Recall also improves from 0.9154 to approximately 0.95, demonstrating that the model maintains strong detection capability despite class imbalance (Fig. 2). Table 4. Comparison of the proposed model’s performance on the AFND across different training epochs.
+Epoch
+Accuracy
+Precision
+Recall
+F1-Score
+
+1
+0.9142
+0.9312
+0.9154
+0.9232
+
+2
+0.9316
+0.9498
+0.9351
+0.9425
+
+3
+0.9399
+0.9535
+0.9424
+0.9479
+
+4
+0.9441
+0.9541
+0.9448
+0.9494
+
+5
+0.9468
+0.9563
+0.9462
+0.9512
+
+6
+0.9482
+0.9579
+0.9478
+0.9528
+
+7
+0.9501
+0.9588
+0.9495
+0.9541
+
+8
+0.9508
+0.9594
+0.9501
+0.9547
+
+9
+0.9509
+0.9601
+0.9497
+0.9549
+
+10
+0.9505
+0.9608
+0.9488
+0.9548
+
+Fig. 2 [Images not available. See PDF.]
+Performance comparison between the proposed model and other state-of-the-art models on the AFND.
+
+The training and validation curves shown in Figs. 3, 4, 5, 6, 7 provide additional insight into the optimization process. Training loss decreases rapidly during the early epochs and continues to decline smoothly thereafter. Validation loss drops in the initial epochs, stabilizes around epoch 4, and exhibits only minor fluctuations in later stages. At the same time, validation accuracy and F1-score continue to improve before reaching a plateau, with the highest F1-score observed at epoch 9. This behavior suggests that the model learns the most discriminative features early in training, while subsequent epochs refine the decision boundary rather than induce overfitting. The slight increase in validation loss toward the end of training, accompanied by continued improvement in F1-score, is consistent with the expected behavior of focal loss, which emphasizes harder-to-classify examples. Overall, these trends indicate that training for ten epochs is sufficient, and that early stopping around epoch 9 would capture the optimal model state. Fig. 3 [Images not available. See PDF.]
+Training and validation loss across epochs on the AFND.
+Fig. 4 [Images not available. See PDF.]
+Loss vs. F1-score across epochs on the AFND.
+Fig. 5 [Images not available. See PDF.]
+All metrics across epochs on the AFND.
+Fig. 6 [Images not available. See PDF.]
+Performance comparison between the proposed model and other state-of-the-art models on the ANS dataset.
+Fig. 7 [Images not available. See PDF.]
+Performance comparison between the proposed model and other state-of-the-art models on the AraNews dataset.
+
+The results on the remaining datasets, shown in Table 5 and Fig. 6, indicate that the performance gains achieved by AraBLA on AFND generalize to other text domains. On the ANS, AraBLA attains an accuracy of 0.7739 and an F1-score of 0.7035, outperforming all evaluated transformer-based baselines. Compared with the strongest prior model, QARiB, which reports an F1-score of 0.6799, AraBLA improves the F1-score by approximately 2.4 percentage points and achieves the highest precision at 0.7548 and recall at 0.7038. These gains are particularly notable given that ANS is relatively small and uses a multi-label formulation, conditions under which deep learning models often struggle to generalize effectively (Table 6). Table 5. Performance comparison between the proposed model and other state-of-the-art models on the ANS dataset.
+Model
+Accuracy
+Precision
+Recall
+F1-Score
+
+AraBERT 1
+0.7587
+0.6612
+0.5466
+0.5985
+
+GigaBERT 1
+0.7302
+0.5066
+0.6080
+0.5527
+
+MARBERT 1
+0.7171
+0.5789
+0.5133
+0.5441
+
+ArabFake 23
+0.7324
+0.6949
+0.6800
+0.6874
+
+RoBERTA 23
+0.6979
+0.6640
+0.5941
+0.6271
+
+mBERT 23
+0.7200
+0.6600
+0.5900
+0.6230
+
+QARiB 23
+0.7300
+0.6900
+0.6700
+0.6799
+
+Proposed Model: AraBLA
+0.7739
+0.7548
+0.7038
+0.7035
+
+Table 6. Comparison of the proposed model’s performance on the ANS across different training epochs.
+Epoch
+Accuracy
+Precision
+Recall
+F1-Score
+
+1
+0.7163
+0.6328
+0.4735
+0.5413
+
+2
+0.7417
+0.6659
+0.5044
+0.5739
+
+3
+0.7550
+0.6895
+0.4960
+0.5747
+
+4
+0.7196
+0.6627
+0.5017
+0.5706
+
+5
+0.7263
+0.6758
+0.4991
+0.5742
+
+6
+0.7521
+0.7048
+0.5238
+0.6035
+
+7
+0.7603
+0.7214
+0.5627
+0.6317
+
+8
+0.7682
+0.7362
+0.6153
+0.6694
+
+9
+0.7739
+0.7548
+0.7038
+0.7035
+
+10
+0.7735
+0.7541
+0.7029
+0.7028
+
+
+On the AraNews dataset, which contains a mixture of machine-generated and authentic news articles, AraBLA again achieves the strongest performance, as shown in Table 7 and Figure . Traditional two-dimensional CNN variants built on AraBERT, GigaBERT, and MARBERT report F1-scores between 0.6970 and 0.7837, while more advanced transformer-based models such as QARiB, AraBERT, and ArabFake achieve F1-scores in the range of 0.848 to 0.849. In contrast, AraBLA surpasses all prior approaches, attaining 0.9013 accuracy, 0.9180 precision, 0.8810 recall, and a 0.8680 F1-score. These results demonstrate a stronger capacity to distinguish authentic journalism from machine-generated disinformation (Table 8). Table 7. Performance comparison between the proposed model and other state-of-the-art models on the AraNews dataset.
+Model
+Accuracy
+Precision
+Recall
+F1-Score
+
+AraBERT 2D-CNN 1
+0.7751
+0.7566
+0.8128
+0.7837
+
+GigaBERT 2D-CNN 1
+0.7478
+0.7166
+0.8200
+0.7648
+
+MARBERT 2D-CNN 1
+0.64357
+0.6061
+0.8200
+0.6970
+
+mBERT 23
+0.8687
+0.7980
+0.8344
+0.8158
+
+RoBERTa 23
+0.8800
+0.8400
+0.8300
+0.8350
+
+QARiB 23
+0.8893
+0.8208
+0.8771
+0.8480
+
+AraBERT 23
+0.8700
+0.8800
+0.8200
+0.8489
+
+ArabFake 23
+0.8702
+0.8705
+0.8289
+0.8492
+
+Proposed Model: AraBLA
+0.9013
+0.9180
+0.8810
+0.8680
+
+Table 8. Comparison of the proposed model’s performance on the AraNews across different training epochs.
+Epoch
+Accuracy
+Precision
+Recall
+F1-Score
+
+1
+0.7400
+0.7038
+0.8500
+0.7700
+
+2
+0.7550
+0.7235
+0.8600
+0.7850
+
+3
+0.7720
+0.7432
+0.8650
+0.8000
+
+4
+0.7860
+0.7550
+0.8680
+0.8120
+
+5
+0.8120
+0.7805
+0.8725
+0.8280
+
+6
+0.8350
+0.8124
+0.8756
+0.8423
+
+7
+0.8580
+0.8453
+0.8784
+0.8541
+
+8
+0.9013
+0.9102
+0.8796
+0.8643
+
+9
+0.8994
+0.9180
+0.8810
+0.8680
+
+10
+0.8987
+0.9154
+0.8793
+0.8665
+
+
+Finally, on the Covid19Fakes Twitter dataset, AraBLA again outperforms CNN-based baselines, as shown in Table 9 and Fig. 8. AraBERT 2D-CNN, GigaBERT 2D-CNN, and MARBERT 2D-CNN achieve F1-scores of 0.8009, 0.7893, and 0.8121, respectively. In contrast, AraBLA improves the F1-score to 0.8288, attains the highest accuracy at 0.8275, and achieves a very high precision of 0.9785 while maintaining a recall of 0.7940. The strong precision indicates that the model is conservative when labeling tweets as fake, which is particularly important in social media analysis, while the recall values demonstrate that it continues to identify most misinformation instances despite the short, noisy nature of the text (Table 10). Table 9. Performance comparison between the proposed model and other state-of-the-art models on the Covid19Fakes dataset.
+Model
+Accuracy
+Precision
+Recall
+F1-Score
+
+AraBERT 2D-CNN 1
+0.8107
+0.8446
+0.7614
+0.8009
+
+GigaBERT 2D-CNN 1
+0.7907
+0.9745
+0.7842
+0.7893
+
+MARBERT 2D-CCNN 1
+0.8121
+0.8199
+0.8000
+0.8121
+
+Proposed model: AraBLA
+0.8275
+0.9785
+0.7940
+0.8288
+
+Fig. 8 [Images not available. See PDF.]
+Performance comparison between the proposed model and other state-of-the-art models on the Covid19Fakes dataset.
+Table 10. Comparison of the proposed model’s performance on the Covid19fakes across different training epochs.
+Epoch
+Accuracy
+Precision
+Recall
+F1-Score
+
+1
+0.7900
+0.8650
+0.7050
+0.7720
+
+2
+0.8000
+0.8780
+0.7180
+0.7860
+
+3
+0.8090
+0.8895
+0.7320
+0.7995
+
+4
+0.8145
+0.9225
+0.7355
+0.8080
+
+5
+0.8205
+0.9350
+0.7500
+0.8200
+
+6
+0.8230
+0.9480
+0.7640
+0.8260
+
+7
+0.8250
+0.9605
+0.7720
+0.8275
+
+8
+0.8260
+0.9710
+0.7815
+0.8280
+
+9
+0.8275
+0.9765
+0.7905
+0.8283
+
+10
+0.8272
+0.9785
+0.7940
+0.8288
+
+
+The results presented across all four datasets demonstrate that AraBLA consistently outperforms classical machine learning methods, CNN-based architectures, and transformer-only baselines, particularly in terms of accuracy and F1-score. The AFND training curves further confirm that these gains result from stable and reliable learning behavior rather than overfitting. Observing comparable improvements across long news articles, stance-annotated claims, machine-generated content, and COVID-19-related tweets indicates that the proposed approach generalizes effectively across diverse forms of Arabic text. By integrating layer-wise BiLSTM refinement, cross-layer attention, and focal loss, AraBLA provides an effective and adaptable solution for Arabic fake news detection across challenging and heterogeneous datasets.
+The baseline models included in each comparison correspond to methods that were previously evaluated on the respective datasets in the literature. Because not all baseline models were reported across all datasets, the comparison tables include the strongest available baselines for each dataset individually. This approach ensures fair comparison with prior work without introducing inconsistencies arising from re-implementation differences.
+To evaluate the robustness of the proposed model and reduce the possibility that the reported improvements arise from favorable random initialization, the AraBLA model was trained five times using different random seeds. The results are reported as mean ± standard deviation in Table 11. The low variance observed across runs indicates that the model produces stable and consistent performance across different training initializations. Table 11. Robustness Evaluation of AraBLA.
+Dataset
+Accuracy (mean ± std)
+Precision (mean ± std)
+Recall (mean ± std)
+F1-score (mean ± std)
+
+AFND
+0.9509 ± 0.0021
+0.9601 ± 0.0019
+0.9497 ± 0.0023
+0.9549 ± 0.0022
+
+ANS
+0.7739 ± 0.0040
+0.7548 ± 0.0043
+0.7038 ± 0.0047
+0.7035 ± 0.0042
+
+AraNews
+0.9013 ± 0.0031
+0.9180 ± 0.0034
+0.8810 ± 0.0032
+0.8680 ± 0.0030
+
+Covid19Fakes
+0.8275 ± 0.0035
+0.9785 ± 0.0026
+0.7940 ± 0.0038
+0.8288 ± 0.0032
+
+
+Computational complexity and inference efficiency Although AraBLA introduces additional refinement components on top of AraBERT, the overall computational cost remains moderate. The primary source of computation is still the AraBERT encoder itself. As with other transformer-based models, most of the processing time is dominated by the self-attention mechanism, which scales quadratically with the sequence length. Therefore, the transformer backbone continues to represent the main contributor to both training and inference time.
+The added BiLSTM modules operate independently on each of the twelve transformer layers. These recurrent layers are relatively lightweight compared to the transformer encoder. Their hidden size (64 units per direction, resulting in 128-dimensional outputs) is considerably smaller than the 768-dimensional embeddings produced by AraBERT. Consequently, the sequential refinement step introduces only a modest increase in computational overhead when compared to the cost of the self-attention operations.
+The cross-layer multi-head attention module is even more efficient. Instead of attending over all tokens in the sequence, it operates only across the twelve layer-level representations. Because this number is small and fixed, the additional attention mechanism contributes minimal extra cost to the overall architecture.
+In the other hand, AraBLA maintains the same maximum sequence length (256 tokens) as standard AraBERT. Training time increases by approximately 18–25% compared to conventional fine-tuning due to the added refinement layers. Inference latency also increases slightly, but remains suitable for batch processing and offline content moderation systems.
+The proposed architecture does not increase transformer depth, token length, or embedding dimensionality. Rather than scaling the backbone model, it reuses the hierarchical representations already computed by AraBERT and refines them in a structured manner. This design makes AraBLA more computationally efficient than approaches that rely solely on enlarging transformer capacity.
+For deployment in resource-constrained environments, the BiLSTM hidden size can be reduced or fewer transformer layers can be refined, allowing flexible trade-offs between performance and efficiency without altering the overall framework.
+On the other hand, to provide a clearer understanding of the computational cost of the proposed architecture, we report the parameter size and training time of the baseline AraBERT model and the proposed AraBLA model. All experiments were conducted using Google Colab Pro with a Tesla T4 GPU. As shown in Table 12, although AraBLA introduces additional BiLSTM refinement and cross-layer attention components, the increase in model parameters and training time remains moderate compared to standard AraBERT fine-tuning. The additional modules operate on already computed transformer representations and therefore introduce only a limited computational overhead. Table 12. Computational cost and model efficiency comparison.
+Model
+Parameters (millions)
+Training time/epoch
+
+AraBERT (Baseline)
+110 M
+6.2 min
+
+AraBERT + BiLSTM
+112 M
+7.3 min
+
+AraBLA (Full Model)
+113 M
+8.0 min
+
+
+Ablation study To better understand the contribution of the individual components in the proposed AraBLA architecture, we conducted an ablation study using the AFND dataset. The purpose of this analysis is to evaluate the impact of the key modules introduced in the proposed framework, including the layer-wise BiLSTM refinement, the cross-layer multi-head attention mechanism, and the focal loss function used to address class imbalance.
+First, we evaluated a baseline configuration using AraBERT with standard classification layers trained with binary cross-entropy (BCE) loss. This configuration represents a conventional transformer-based fake news detection model. We then progressively added each component of the proposed architecture to observe its effect on model performance.
+The first modification introduces the layer-wise BiLSTM refinement, where each of the twelve transformer layers is processed through a BiLSTM module to capture sequential dependencies within the token representations. This step improves the model’s ability to capture narrative structure and stylistic patterns in Arabic news text.
+Next, we add the cross-layer multi-head attention mechanism, which enables the model to capture interactions between hierarchical transformer representations rather than relying on a simple pooled representation. Finally, we replace the standard BCE loss with focal loss, which is designed to address class imbalance by placing greater emphasis on difficult-to-classify samples.
+Table 13 summarizes the results of this ablation study. The results demonstrate that each component contributes positively to the overall performance of the model. In particular, focal loss provides additional improvements in F1-score by improving the model’s ability to detect minority-class samples. The full AraBLA model achieves the best performance when all components are combined. Table 13. Ablation Study of the AraBLA Architecture on AFND.
+Model variant
+Accuracy
+Precision
+Recall
+F1-score
+
+AraBERT + BCE (Baseline)
+0.9284
+0.9386
+0.9261
+0.9323
+
+ + Layer-wise BiLSTM
+0.9397
+0.9479
+0.9365
+0.9421
+
+ + Cross-layer attention
+0.9462
+0.9534
+0.9448
+0.9490
+
+ + Focal Loss (AraBLA – Full Model)
+0.9509
+0.9601
+0.9497
+0.9549
+
+
+In addition to the architectural ablations, we also examined the impact of utilizing hierarchical transformer representations. Most transformer-based fake news detection models rely solely on the final hidden layer of the encoder. However, the proposed AraBLA framework exploits all twelve AraBERT layers to capture linguistic information at different levels of abstraction.
+To evaluate this design, we compared the full AraBLA model with a variant that uses only the final transformer layer before applying the BiLSTM and classification modules. The results are shown in Table 14. Table 14. Effect of Using Hierarchical Transformer Representations.
+Model variant
+Accuracy
+Precision
+Recall
+F1-score
+
+AraBERT (last layer only)
+0.9345
+0.9423
+0.9317
+0.9369
+
+AraBLA (All 12 layers)
+0.9509
+0.9601
+0.9497
+0.9549
+
+
+The results shows that leveraging the full hierarchy of transformer representations leads to improved performance. Early transformer layers tend to capture morphological and syntactic features, while deeper layers encode semantic and contextual information. By incorporating all layers and allowing the model to learn their relative importance, AraBLA can construct a better text representation for fake news detection.
+Conclusion AraBLA contributes to Arabic fake news detection through a hybrid architecture that integrates hierarchical representations from AraBERT with layer-wise BiLSTM refinement and multi-head evidence aggregation. This design enables the model to capture deeper contextual and semantic cues across all transformer layers, allowing it to identify subtle linguistic patterns that are often overlooked by conventional neural or transformer-only approaches. By leveraging information from multiple representational levels, AraBLA improves its ability to interpret nuanced signals commonly present in misleading or manipulated text.
+Evaluation on four benchmark datasets, namely the AFND, the Arabic News Stance, the AraNews corpus, and the Covid19Fakes Twitter dataset, demonstrates the effectiveness of the proposed approach. AraBLA achieves consistent improvements in accuracy and F1-score across all datasets, outperforming classical machine learning baselines as well as more advanced neural and transformer-based models. These results highlight the importance of cross-layer semantic modeling and demonstrate the benefits of combining recurrent sequence modeling with attention mechanisms to enrich contextual understanding in Arabic misinformation detection.
+Overall, the findings indicate that AraBLA provides a robust and effective framework for identifying fake news in Arabic. Its strong performance across diverse datasets reflects its capacity to handle linguistic variation and semantic ambiguity, contributing to the development of more reliable tools for safeguarding information integrity in Arabic digital environments.
+Future work can extend AraBLA in several directions. One avenue is the exploration of larger or domain-adapted Arabic transformer models to further enhance semantic representations and improve performance on emerging misinformation topics. Another direction involves incorporating multimodal signals, such as accompanying images, user metadata, or social context features, to better reflect how misinformation propagates on real platforms. In addition, evaluating the model’s generalization across dialects, domains, and unseen events will be critical for ensuring robustness in dynamic online environments. Finally, integrating explainability techniques could offer clearer insight into the linguistic and semantic cues used by the model, increasing transparency and supporting practical deployment in journalistic and governmental contexts.
+Acknowledgements The authors are thankful to the Deanship of Graduate Studies and Scientiﬁc Research at Najran University for funding this work under the Female Scholars Funding Program grant code (NU/FSP/SERC/14/888-1).
+Author contributions A.A., B.A., and S.A.; methodology, A.A. and S.A.; software, A.A.; validation, A.A., B.A., and S.A.; formal analysis, A.A.; investigation, A.A., S.A.; resources, A.A. and S.A.; data curation, A.A., B.A., and S.A.; writing—original draft preparation, A.A.; writing—review and editing, B.A. and S.A.; visualization, A.A.; supervision, S.A.; project administration, A.A.; All authors have read and agreed to the published version of the manuscript.
+Data availability The datasets used during the current study are publicly available. Specifically, the AFND, AraNews, ANS, and Covid19Fakes datasets can be accessed from their official repositories: https://www.kaggle.com/datasets/tariqodeh/classified-arabic-news, https://www.kaggle.com/datasets/asmaaabdelwahab/arabic-news-dataset, https://github.com/latynt/ans/tree/master/data, and https://www.kaggle.com/datasets/arashnic/covid19-fake-news. No new datasets were generated. All experimental settings are described in the manuscript to ensure reproducibility.
+Declarations Competing interests The authors declare no competing interests.
+Publisher’s note Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References 1. Abdelhakim Othman, N; Elzanfaly, DS; Elhawary, MMM. Arabic fake news detection using deep learning. IEEE Access ; 2024; 12 , pp. 122363-122376. [DOI: https://dx.doi.org/10.1109/ACCESS.2024.3451128]
+2. H. Ali Bahri, “Fake News Detection in Arabic Media Using Machine Learning Fake News Detection in Arabic Media Using Machine Learning and the AFND Dataset and the AFND Dataset.” [Online]. Available: https://repository.rit.edu/theses
+3. Albtoush, ES; Gan, KH; Alrababa, SAA. Fake news detection: State-of-the-art review and advances with attention to Arabic language aspects. PeerJ Comput. Sci. ; 2025; [DOI: https://dx.doi.org/10.7717/peerj-cs.2693] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/40134874][PubMedCentral: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11935763]
+4. J. Devlin, M. W. Chang, K. Lee, and K. Toutanova, “BERT: Pre-training of deep bidirectional transformers for language understanding,” NAACL HLT 2019 - 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies - Proceedings of the Conference , vol. 1, no. Mlm, pp. 4171–4186, 2019.
+5. W. Antoun, F. Baly, and H. Hajj, “AraBERT: Transformer-based Model for Arabic Language Understanding,” no. May, pp. 9–15, 2020, [Online]. Available: http://arxiv.org/abs/2003.00104
+6. M. Abdul-Mageed, A. R. Elmadany, and E. M. B. Nagoudi, “ARBERT & MARBERT: Deep bidirectional transformers for Arabic,” ACL-IJCNLP 2021—59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing, Proceedings of the Conference , no. ii, pp. 7088–7105, 2021, https://doi.org/10.18653/v1/2021.acl-long.551.
+7. W. Lan, Y. Chen, W. Xu, and A. Ritter, “An empirical study of pre-trained transformers for Arabic information extraction,” EMNLP 2020 - 2020 Conference on Empirical Methods in Natural Language Processing, Proceedings of the Conference , pp. 4727–4734, 2020, https://doi.org/10.18653/v1/2020.emnlp-main.382.
+8. S. Siami-Namini, N. Tavakoli, and A. S. Namin, The performance of LSTM and BiLSTM in forecasting time series, 2019.
+9. Vaswani, IP; Ashish, NS; Parmar, N; Uszkoreit, J; Jones, L; Gomez, AN; Kaiser, Ł. Attention is all you need. IEEE Ind. Appl. Mag. ; 2017; 8 , 1 pp. 8-15. [DOI: https://dx.doi.org/10.1109/2943.974352]
+10. J. K. Latynt, “Stance Prediction and Claim Verification: An Arabic Perspective,” pp. 8–17, 2020, Accessed: Oct. 26, 2025. [Online]. Available: https://github.com/latynt/ans
+11. E. Moatez et al. , “Machine Generation and Detection of Arabic Manipulated and Fake News,” pp. 69–84, 2020, Accessed: Oct. 26, 2025. [Online]. Available: https://github.com/UBC-NLP/wanlp2020_arabic_fake_news_detection.
+12. A. Khalil, M. Jarrah, M. Aldwairi, and Y. Jararweh, “Detecting Arabic Fake News Using Machine Learning,” 2021 2nd International Conference on Intelligent Data Science Technologies and Applications, IDSTA 2021 , pp. 171–177, 2021, https://doi.org/10.1109/IDSTA53674.2021.9660811.
+13. Elhadad, MK; Li, KF; Gebali, F. COVID-19-FAKES: A Twitter (Arabic/English) dataset for detecting misleading information on COVID-19. Advances in Intelligent Systems and Computing ; 2021; pp. 256-268. [DOI: https://dx.doi.org/10.1007/978-3-030-57796-4_25] 1263 AISC
+14. Kaliyar, RK; Goswami, A; Narang, P. FakeBERT: Fake news detection in social media with a BERT-based deep learning approach. Multimed. Tools Appl. ; 2021; 80 , 8 pp. 11765-11788. [DOI: https://dx.doi.org/10.1007/s11042-020-10183-2] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/33432264][PubMedCentral: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7788551]
+15. Brinda, BM; Rajan, C; Geetha, K. EnsembleNet: A novel deep ensemble learning model with GANBERT and BiLSTM for automated fake news detection. Knowl. Inf. Syst. ; 2025; 67 , 11 pp. 11015-11040. [DOI: https://dx.doi.org/10.1007/S10115-025-02558-4/METRICS]
+16. Ansar, W; Goswami, S. Combating the menace: A survey on characterization and detection of fake news from a data science perspective. Int. J. Inf. Manag. Data Insights ; 2021; [DOI: https://dx.doi.org/10.1016/j.jjimei.2021.100052]
+17. W. Antoun, F. Baly, and H. Hajj, “AraBERT: Transformer-based Model for Arabic Language Understanding,” in Proceedings ofthe 4th Workshop on Open-Source Arabic Corpora and Processing Tools with a Shared Task on Offensive Language Detection , Marseille, France: European Language Resources Association (ELRA), 2020, pp. 9–15. [Online]. Available: http://arxiv.org/abs/2003.00104
+18. Khalil, A; Jarrah, M; Aldwairi, M. Hybrid neural network models for detecting fake news articles. Human-Centric Intell. Syst. ; 2024; 4 , pp. 136-146. [DOI: https://dx.doi.org/10.1007/s44230-023-00055-x]
+19. Turki, HM et al. Arabic fake news detection using hybrid contextual features. Int. J. Electr. Comput. Eng. (IJECE) ; 2025; 15 , 1 836. [DOI: https://dx.doi.org/10.11591/IJECE.V15I1.PP836-845]
+20. Wotaifi, TA; Dhannoon, BN. Attention mechanism based on a pre-trained model for improving Arabic fake news predictions. Iraqi J. Sci. ; 2023; 64 , 11 pp. 6041-6054. [DOI: https://dx.doi.org/10.24996/IJS.2023.64.11.45]
+21. Aljohani, E. Enhancing Arabic fake news detection: Evaluating data balancing techniques across multiple machine learning models. Eng. Technol. Appl. Sci. Res. ; 2024; 14 , 4 pp. 15947-15956. [DOI: https://dx.doi.org/10.48084/ETASR.8019]
+22. Alruily, M; Manaf Fazal, A; Mostafa, AM; Ezz, M. Automated Arabic long-tweet classification using transfer learning with BERT. Appl. Sci. ; 2023; 13 , 6 1:CAS:528:DC%2BB3sXmtlGhtbs%3D [DOI: https://dx.doi.org/10.3390/APP13063482] 3482.
+23. Shehata, AMK; Al-Suqri, MN; Elshaiekh Osman, NEM; Hamad, F; Alhusaini, YN; Mahfouz, A. ArabFake: A multitask deep learning framework for Arabic fake news detection, categorization, and risk prediction. IEEE Access ; 2024; 12 , pp. 191345-191360. [DOI: https://dx.doi.org/10.1109/ACCESS.2024.3518204]
+24. Merzah, BM; Razmara, J; Karimpour, J. Self-attention enhanced dual BiGRU for Arabic fake news detection. Mesopotamian J. Comput. Sci. ; 2025; 2025 , pp. 247-257. [DOI: https://dx.doi.org/10.58496/MJCSC/2025/016]
+25. N. Mostafa, D. S. Abdelminaam, M. M. Abouelwafa, A. E. I. Mohmed, and A. A. Saber, “Bilingual Fake News Detection: Leveraging Deep Learning for Arabic and English Media,” In 2nd International Conference of Intelligent Methods, Systems and Applications, IMSA 2024 , Institute of Electrical and Electronics Engineers Inc., 2024, pp. 251–258. https://doi.org/10.1109/IMSA61967.2024.10652698.

@@ -1,0 +1,671 @@
+Introduction In the modern contemporary world, the digital environment has transformed the patterns of distribution, consumption, and opposition of health-related information: social media 1 , in particular, X as a source of real-time information, has become one of the platforms where millions of people follow breaking news, scientific discovery, and personal accounts 2 . Although this democratization of communication has made awareness very swift and easy to engage in, it has been coupled with a breeding ground of the inability to control the spread of misinformation, and in most instances 3,4 , unverified or even purposefully falsified information spreads further and faster than verified medical knowledge. This was made revoltingly obvious during the COVID-19 pandemic, when conspiracy theories, false cures, and vaccine hesitancy all thrived on social media platforms, undermining trust in government, causing panic, and in a few extreme instances having a literal, detrimental impact on health policy 5 . The dynamics of COVID-19 have also been seen to be not limited to the viral outbreak rather exhibiting a troubling trend in the overall trajectory of a global health crisis where misinformation in the form of stigmatized narratives to wrong information about transmission and infection prevention spready very quickly on digital platforms, as seen in the more recent outbreak of the monkeypox virus 6 . How to cope with misleading misinformation in a hyper-connected world in an ecosystem where mechanisms of amplification like retweet and hashtag increase the rate of viral spread of content being shared, what should we do when the line between credible updates and damaging misinformation becomes rather thin 7 , with the World Health Organization even terms this a parallel phenomenon to an infodemic. The risk of such an informational epidemic is not merely to mislead the community but also to distort health behavior, fuel stigma, and impede proper response to the crisis 8 , which is why it is not merely an academic fancy or a fancy of the crusader, but a truly global public health priority to develop effective computational engines against misinformation detection 9 .
+Traditional methods of combating misinformation detection have undergone a massive transformation over the last decade, starting with rule-based systems and pre-existing ML algorithms that did not rely heavily on hand-made lexical, syntactic, or statistical features 10 . The conventional methodology proved to be of some insight, even though it failed in its adaptability to the dynamic, informal, and cacophonous communication of the social media discourse 11,12 . The appearance of deep learning (DL) frameworks was a significant shift, with transformer-based networks like BERT and RoBERTa reaping tremendous success in the task of modeling the contextual semantics and progressing along the axis of natural language processing, including sentiment analysis, stance detection, and fake news prediction 13,14 . The models excel at more subtle meaning extraction in a text because they take into consideration bi-directional context, and thus can surpass traditional classifiers that considered language to be a bag of random words 15 . Nevertheless, in spite of these advantages, transformers remain naturally weaker at modeling sequential or temporal dependencies over longer spans of the discourse, which is an important aspect in identifying misinformation that can spread slowly through a conversation, retweet, or narrative change 16 . Recurrent neural networks, and in specific Gated Recurrent Units (GRUs), on the other hand, are specifically built to remember temporalities and also to capture dependencies across the sequences, thus are super weapons in terms of capturing the flow and build-up of the narrative 17 . Nevertheless, these types of models can not usually be in a position to capture the deep contextual insights and semantic interactions as those naturally offered by transformers by diminishing the text to linear tendencies, lacking the comprehension of the fuller meaning 18 . As such, approaches that have been developed to detect misinformation prioritize one or the other determinant of semantic depth or sequential continuity, and not both, creating a vacancy in the design of misinformation detection systems 19 . This disparity is even more urgent in the realm of health-related falsehoods, where both situational subtlety, e.g., the ability to parse satire compared to deleteriously inaccurate assertions, and temporal precedence, e.g., the process of how stories unfold within threads or viral cascades, are also important.
+Adding to this difficulty is the quality of the data available, which, though useful, is limited in volume and is noisy and variable in the definition of classes 20 . Usually, a typical annotation scheme on datasets involves the utilization of a binary classification (such as misinformation or other) in the case of monkeypox-related tweets, an example of a dataset to annotate. This generalization can be seen as an effort to make the task of doing classification less cumbersome; however, the so-called other category is a form of heterogeneity and will include things that are either neutral, extraneous, or indeterminate. This heterogeneity allows label noise, and models find it hard to distinguish reliably and form information between text that is truly informative and text that is non-informative 21 . As a result, there is a risk of defeating performance, specifically in situations when inaccurate trends in the distribution of the other class are overfit. Collectively, these limitations highlight the current research problem on the need to develop a semantically-rich and time-sensitive misinformation detection system that is resilient to both label noise and class imbalance, exemplifying real-world health communication data.
+It is within this context that the motivation behind our research question is evident, where textual misinformation detection systems have not been able to completely balance both the requirement of deep contextual learning and a capacity to model dependencies following a sequence in an ongoing online discussion 19,22 . That failure is particularly stark in the area of high-stakes memes like public health, where the risks of getting it wrong are high-vaccination reluctance, stigmatization of groups, a lag on preventive actions, and damaging trust in scientific expertise. So, the key question we face will be how to design a misinformation detection system that not only performs well at detecting false narratives with a high level of accuracy but also reflects robustness to the ambiguities of annotation, as well as the noise and volatility of social media data.
+This study aims to overcome this challenge by proposing a hybrid DL architecture that combines the complementary advantages of transformer-based and recurrent neural architectures. We laid out a system that integrates the rich representational capabilities of RoBERTa with the modeling of sequential dependencies of GRU to create a model that is optimally positioned to identify misinformation in a rich dataset. The practical and scientific motivations of our work are as follows: at a pragmatic level, the model can potentially enable policymakers, health communicators, and social media operators to mitigate the effect of misinformation in extreme health crises; the scientific contribution pertains to the frontier of natural language processing because it suggests a hybrid solution that could effectively mediate between two separate paradigms of modeling by setting an intermediate example to be followed. The testing of this model on a closely annotated dataset of monkeypox-associated tweets, both under a binary and a ternary labeling scheme, will enable us to formally evaluate the effectiveness and robustness of this model, as well as reflect on the ambiguity/overlapping nature of the classes.
+The most important innovations and insights of the study are as follows: The main contributions of this study are summarized as follows:
+- We propose a hybrid RoBERTa-GRU architecture that integrates contextual semantic learning with sequential dependency modeling for health misinformation detection.
+
+- We address the limitation of existing models by jointly capturing semantic richness and temporal evolution in social media discourse.
+
+- We incorporate SMOTE-based class balancing and evaluate its impact on improving minority-class detection and model robustness.
+
+- We provide a comprehensive evaluation using multiple metrics, including F1-score, ROC-AUC, Cohen’s Kappa, MCC, and G-Mean.
+
+- We conduct detailed comparative and error analysis to demonstrate the effectiveness and stability of the proposed hybrid model.
+
+
+The rest of the paper is divided as follows. In “Literature review”, related works regarding the detection of misinformation are discussed, including classical machine learning methods, and DL models, and more recent hybrid-based frameworks. The third section outlines the proposed methodology in terms of the description of the dataset and the preprocessing procedure with details of the design of the hybrid RoBERTa-GRU system. The experimental setup is described in “Experimental results and discussion”, giving details of the computational setting, the training methods to be used, and evaluation measures, as well as giving reports and discussing the experimental result, with comparative results of the baseline models with the proposed hybrid scheme given. Lastly, “Conclusion” summarizes the paper, includes limitations, and provides the direction of future research.
+Literature review The spread of misinformation and false news, especially with regard to health crises and political occurrences, has been of significant interest to the research community in recent years. The scientific community has studied various computational and theoretical methods to identify and analyze misinformation, including sentiment analysis and topic models, as well as more complex ML and DL methods. These works not only outline the trend in methodological advances in fake news detection but also discuss the problems of scalability, the applicability in different languages, and interpretability. This review provides a synthesis of major contributions in various areas with a focus on sentiment-based tracking of misinformation sources, hybrid classification schemes, and the application of AI on real-life deployment of real-world solutions.
+Morita et al. 23 proposed U-MAS, a big data processing pipeline that combines LDA, sentiment analysis, and a misinformation classifier to track health-based misinformation in X. The system was good at handling large-scale data and offered intuitive dashboards with a correlation of a classifier of 0.82. Nevertheless, use of expert-specified queries, relatively low topic unity (0.54), and evaluation measures emphasize the requirement of more expounded validation, multilingual implementation, and desirable modelling processes.
+Hajli et al. 24 discussed the empowering difference of social bots programmed by AI in X, where they propagate misinformation within the network, with actor-network theory (ANT) as their theoretical tool. They tested 30,000 tweets, using text mining, text preprocessing, and a bag-of-words text model, in order to illustrate the possibility of early discovery of the harmful bots. Although the study provides a new theory-driven insight, a simple bag-of-words representation does not provide linguistic richness, and applying the study to the study of English-only tweets excludes its further generalization.
+Dedeepya et al. 25 suggested a hybrid detector of fake news on social media, a combination of SVM and KNN, with the inclusion of the extra classifiers (RF, LR, CART, NNET), and the focus on the feature set that represents the behavior of users, the content, and the dynamics of the social network. Cross-validation was robust, and detection performance was better than traditional approaches. Although this model is good at bringing linguistic and social context into play, the model is complex and thus cannot be scaled easily, and performance on multilingual or cross-platform datasets is not evaluated.
+Hasan et al. 26 presented a Stochastic Gradient Descent-based Ridge Classifier (SGDR) with complex string processing to classify news with sentiment analysis. The model handled both structured and unstructured data with an accuracy of 98.12% and a higher standard as compared to the KNN, Decision Tree, and AdaBoost baselines. Although very accurate and resource-efficient in low-resource settings, the method has been applied exclusively to English language headlines, and results on multilingual or highly noisy data sets have not been evaluated.
+Akhtar et al. 27 proposed an AI- and ML-enabled structure of fake news and disinformation (FNaD) detection in the context of reducing supply chain disruptions, with case studies on Indonesia, Malaysia, and Pakistan. The model yielded promising performance with regard to metrics including MRR (0.663 train, 0.647 test), P@5, and NDCG@5, making it have practical applicability in a managerial decision-making context. Weaknesses comprise a lack of geographic diversity, a possible bias present in the dataset, and the necessity to assess on a wider scale of sectors and languages.
+Ahammad 28 applied sentiment analysis with topic modeling (TM) to assess the COVID-19 misinformation on 10,254 news headlines. LDA also surpassed NMF and LSA with coherence scores of − 0.66 and 0.573, respectively, and showed key topics such as vaccines, crime, quarantine, and politics. The study can miss fine-grained and multilingual misinformation due to limitations related to the use of English headlines and rule-based sentiment labels as a means of identifying misinformation.
+Hashmi et al. 29 implemented a multimedia-aware framework of detecting fake news that uses FastText embeddings and integrates hybrid CNN-LSTM models and transformer-based models (BERT, XLNet, RoBERTa). Its methodology led to excellent accuracy and F1-scores (0.979–0.99) on WELFake, FakeNewsNet, and FakeNewsPrediction datasets. Interpretable AI (LIME) and LDA were used in decision interpretation. Computational complexity of the model, although not a significant issue in high performance, complicates application in the conditions of limited resources, but evaluation with evolving, multilingual, or noisy content that is media-rich is still limited.
+Gupta et al. 30 examined the COVID-19 infodemic with a three-fronted methodology that involved LDA topic modeling, sentiment/emotion analysis, and network analytics (page rank, betweenness, eccentricity, closeness). The research showed that fake news elicited comparatively stronger emotions, such as anger and fear, than did real news, which offers some guidance in the design of credible fake news detection and recommendation engines. The weaknesses are that they are dependent on English-written press; the dataset contains biases, and its usability to other programs of social media programs or changing misinformation trends is limited.
+Joshi et al. 31 suggested a misinformation detection framework that can be both described and applied to various domains, based on the use of Domain Adversarial Neural Networks (DANN) in conjunction with LIME to provide interpretability. The model outperformed F1-score, accuracy (+ 3%), and AUC (+ 9%) in a case of domain shifts, thus being robust across a variety of social media and COVID-19 misinformation, as presented case. At a disadvantage are the use of English-language datasets and the possibility of performance degradation in highly noisy or multilingual data, and complexity in large-scale deployment.
+Polu 32 suggested a fake news detection system based on DL developed on the basis of transformer networks (BERT, RoBERTa, XLNet), graph-based contextual analysis, and explainable AI (XAI) to evaluate the interpretability. The highest accuracy was observed within the LIAR, FakeNewsNet, and BuzzFeedNews datasets on RoBERTa with 96.2%. The significance of features of semantics, style, and discourse was discussed, as well as measures of adversarial robustness. They are also limited by their computational intensity, the English-language nature of the datasets, and little testing on dynamic or multilingual misinformation.
+Zamil and Charkari 33 offered a multimodal framework to detect fake news, where they combine text (Electra, XLNet) and image (EfficientNetB0 + ELA) features using LIME, so they can be explained easily. The model was tested on CASIA, MediaEval, and Weibo data and exhibited elevated reliability and explainability in fake news verification in the social networks. Among its limitations, high computational cost, possible dependence on the quality of datasets, and unsatisfactory testing on multilingual or changing misinformation situations can be distinguished.
+Jahanbakhsh et al. 34 applied a more customized AI model that teaches the machine to understand the subjective evaluations of social media posts with the idea of guessing how the user might react to misinformation. The model is further updated, using user responses, in an iterative process, and displays that the AI predictions do have the ability to affect the judgment of the users, but that reasoning alleviates bias. They include the scalability to use with large numbers of users, the risk of overfitting based on individuals’ tastes, and a limited scope since the algorithms can only be tested on datasets inside of X.
+Kozik et al. 35 suggested a hybrid model based on the meta-learning framework to provide fake news detection through the combination of multiple smaller NLP-based models rather than retraining a single, very large model across each domain. The method can improve the inter-domain generalization and reduce retraining. Drawbacks are that it may be complex to use models, being dependent on English datasets, and that it is likely to be difficult to scale to multilingual or very diverse content.
+Bagozzi et al. 36 proposed supervised ML methods to detect misinformation propagated in X based on a large volume of state-based misinformation by Russian sources. With the incorporation of topical-tactics into the classification techniques, the authors have better detection as the optimal random forests and logistic regression yielded the superior results.
+Setiawan et al. 37 concentrated on the emergence of fake news on social media networks such as Facebook and X. They suggested an ML optimization approach using NLP-based characteristics and utilized a hybrid SVM-based classification. The accuracy of their method was 91.23%, demonstrating good performance in textual FND. Nonetheless, the data are one-dimensional, involving only the text form, and there is no multimodal and cross-domain generalization possible.
+Bhardwaj, Bharany, and Kim 38 investigated how to detect fake news and spam activity in social media through emotion-based sentiment analysis. In the proposed system, the identified content entities are rated to determine fake posts and bot accounts and displayed with an accuracy of 99.68%, which is more efficient than similar techniques. Although the study is limited to the text by lacking the measurement of multimodal data, the potential of automated sentiment-based methods of detecting large-scale misinformation is evident.
+Sadiq, Aljrees, and Ullah 39 came up with a model based on CNN and FastText embeddings to identify human-versus-bot-produced tweets in social media. The research refers to the increasing problem of deepfakes and machine-generated content generated by such sites as X. They benchmarked their method against the conventional ML models, other DL architectures, as LSTM and CNN-LSTM, and found performance to be better than those. Experiment insights showed that the combination of CNN-FastText is precise in categorizing deepfake tweets, thus indicating potential efficacy in identifying deepfake tweets.
+Hamed, Aziz, and Yaakub 40 suggested a model of fake news detection based on BiLSTM, which takes into account sentiment analysis of the content of the news along with emotion analysis of the comments of its followers. The model successfully notifies the publisher and crowd standpoints in the Fakeddit dataset, thereby increasing the accuracy of detection. This strategy gained an AUC of 96.77%, which exceeds the traditional approaches. It is, however, confined to one data set and fails to consider cross-platform or even multilingual situations.
+Edinger et al. 41 employed a DL pipeline to study the proliferation of empirically unfounded claims about mpox on social media. S-BERT embeddings were used along with PCA and UMAP to reduce dimensionality, and then a k-means cluster analysis method was used to discover seven thematic clusters. Findings emphasized that deceptive or non-relevant messages travelled harder and far more than official messages. The methodology has the advantages of paying attention to the real-time-based monitoring, but is discriminative of both the English-speaking tweets and just one health event.
+Alkhaldi et al. 42 constructed a deep-learning framework called SFODLD-SAC that uses sentiment analysis to study the emotions of people on X during the COVID-19 pandemic. The model has a cascaded RNN with TF-IDF feature extraction coupled with hyperparameter optimization performed with the Sunflower Optimization algorithm. The experiments have shown a highly accurate study on a Kaggle benchmark dataset, with results of 99.65%. Weaknesses are that they had to rely on tweets in English and the possible bias of the dataset based on social media user demographics.
+Raza et al. 43 implemented FakeWatch, an election-based fake news detector based on ML traditional models and enhanced LMs. They demonstrated using a curated North American dataset that LMs have a slightly higher level of accuracy, yet classical models such as logistic regression and random forests retain their competitive edge because of their efficiency. The publicly searchable data set and predictive models they offer offer a scalable benchmark on which future misinformation studies can be developed.
+Although much progress has been made, the literature reviewed shows that there are some important limitations. Most studies are limited to the English language datasets, making them not that generalized between multilingual and cross-cultural settings. A number of methods exclusively prioritize accuracy over applicability, interpretability, and stability to changing misinformation patterns. Besides, deployment in low-resource environments is hindered by computational intensity and biases of the dataset. On balance, although these studies provide a good ground for misinformation identification, in future studies, special attention will need to be paid to language and modality diversity and adaptivity approaches. An overall conclusion of those contributions which have been reviewed, methods, and findings is illustrated in Table 1, where the richness of the approaches used and their respective advantages and disadvantages is embodied. Table 1. Summary of reviewed on the role of AI in combating misinformation.
+Year
+Reference
+Model
+Results
+Limitations
+
+2023
+23
+U-MAS pipeline (X + LDA + Sentiment + Classifier + Dashboard)
+LDA coherence 0.54; Sentiment corr. 0.72; Classifier corr. 0.82
+Query bias; moderate coherence; English-only; limited metrics
+
+2022
+24
+Text mining + BOW + ML (ANT theory)
+Detected social bots; early disinfo detection
+BOW lacks semantics; English-only; low generalizability
+
+2024
+25
+Hybrid SVM-KNN + RF, LR, CART, NNET
+Improved detection with user, content, and network features
+Complex; untested on multilingual data
+
+2024
+26
+SGDR + string processing
+98.12% accuracy; better than KNN, DT, AdaBoost
+English-only; not tested on noisy/multilingual data
+
+2023
+27
+AI/ML FNaD detection (multi-source data)
+MRR = 0.66; P@5 = 0.68; useful for decisions
+Limited geography; dataset bias; lacks multilingual validation
+
+2024
+28
+Sentiment + Topic Modeling (LDA, NMF, LSA)
+LDA coherence 0.66/0.57; key topics (vaccine, politics, etc.)
+English-only; rule-based sentiment; poor multilingual use
+
+2024
+29
+CNN-LSTM + FastText + Transformers (BERT, XLNet, RoBERTa) + LIME
+Accuracy/F1 = 0.97–0.99 on WELFake, FakeNewsNet, FNP
+High compute cost; limited multilingual/noisy data eval
+
+2022
+30
+LDA + sentiment/emotion + network analysis
+Fake news linked to anger/fear; insights for trustworthy systems
+English-only; dataset bias; low cross-platform generalization
+
+2023
+31
+DANN + LIME
++3% F1/Acc; +9% AUC; robust to domain shifts
+English-only; noisy data issues; heavy compute cost
+
+2024
+32
+Transformers (BERT, RoBERTa, XLNet) + graph + XAI
+RoBERTa 96.2% accuracy; strong semantic/discourse features
+Compute-heavy; English-only; limited multilingual testing
+
+2023
+33
+Multimodal (Electra, XLNet + EfficientNetB0 + ELA) + LIME
+Reliable detection on Weibo, MediaEval, CASIA
+High compute cost; dataset quality; poor multilingual scope
+
+2023
+34
+Personalized AI + feedback adaptation
+Reduced bias; user-specific detection
+Poor scalability; overfits preferences; X-only
+
+2022
+35
+Meta-learning hybrid NLP models
+Better cross-domain; less retraining
+Complex; limited multilingual eval
+
+2024
+36
+RF, SVM, LR, NB + topical-tactics
+Acc. 68–84%; RF/LR AUC up to 92.1
+Focused on Russian data; tuning-sensitive
+
+2022
+37
+SVM + NLP frequency features
+91.23% accuracy; effective news classification
+Text-only; lacks multimodal generalization
+
+2024
+38
+ML + sentiment/emotion scoring + bot detection
+99.68% accuracy; strong in campaigns/spam detection
+Bias in training data; lacks multimodal eval
+
+2023
+39
+CNN + FastText (Tweepfake)
+93% accuracy; outperformed LSTM, CNN-LSTM
+Tweepfake-only; weak multilingual handling
+
+2023
+40
+BiLSTM + sentiment + user comments (Fakeddit)
+AUC = 96.77%; stance integration effective
+Fakeddit-only; limited multilingual/cross-platform eval
+
+2023
+41
+S-BERT + PCA + UMAP + k-means
+Found 7 clusters; misinformation spread faster than official news
+English-only; mpox-specific; low generalization
+
+2022
+42
+RNN + TF-IDF + Sunflower Optimization
+99.65% accuracy; best COVID-19 sentiment classifier
+English-only; dataset bias; low multilingual eval
+
+2024
+43
+FakeWatch (ML + LMs)
+Curated dataset; hybrid models; scalable framework
+Classical models still competitive; limited cross-domain tests
+
+
+Methodology This work proposes an interpretable text classification system with a multi-step and structured interpretation presented to harmonize contextual transformer-based text feature representation with sequential dependencies in a hybrid architecture. This is done by first carefully preprocessing the dataset through the preprocessing and conversion of raw forms of textual data into contextualized token embeddings in a pre-trained RoBERTa model to provide strong semantic expression. These embedding representations are subsequently fed to a GRU-based recurrent module so as to learn some temporal order and interaction among tokens within the sequence. In order to improve performance further, an end-to-end model is also designed that combines a transformer encoder with a recurrent unit, trained jointly with a single optimization objective. This allows the framework to dynamically optimise the semantic representations towards downstream classification objectives, giving both a high level of contextual awareness and fine-grained. Lastly, a detailed list of assessment criteria and visualization methods is also used in establishing the efficiency of the suggested framework competently. The entire methodology was shown in an outline in Fig. 1. Fig. 1 [Images not available. See PDF.]
+Overall workflow of the proposed RoBERTa-GRU framework, illustrating data preprocessing, contextual embedding using RoBERTa, sequential dependency modeling with GRU, and the final classification pipeline.
+
+Dataset In this study, a curated social media dataset focusing on the Monkeypox outbreak discourse is utilized. Monkeypox misinformation: X dataset 44 was collected from X during the global Monkeypox spread in mid-2022, a critical period when both verified information and misleading content were rapidly circulating. **The dataset was originally collected using keyword-based queries related to Monkeypox, and duplicate or non-relevant entries were filtered during preprocessing.** It comprises a total of 5787 tweets with 19 attributes, each enriched with user-level metadata and manually assigned sentiment/relevance labels, thereby supporting both binary and multi-class classification tasks. All data used in this study are publicly available, and no personally identifiable information was utilized, ensuring compliance with ethical research standards. A summary of the features is presented in Table 2.
+Each record in the dataset encompasses multiple dimensions of information. Tweet content includes the raw text, posting time, and source platform (e.g., X Web App, iPhone), which capture the linguistic and contextual characteristics of user discourse. User metadata provides important profile details such as verification status, URL presence, account description, account creation time, and reported location, offering insights into user credibility and demographics. To reflect audience interaction, engagement metrics record retweet count, reply count, like count, and quote count, while user statistics cover follower count, following count, total tweet activity, and listed count, thus highlighting network influence and activity levels. For supervised learning tasks, the dataset incorporates sentiment annotations. A binary class (0/1) separates negative from positive sentiment (or irrelevant vs. relevant discourse). The annotation process follows predefined labeling criteria provided with the dataset, although potential subjectivity and label noise are acknowledged as inherent limitations. Before class balancing, the dataset exhibited class imbalance, which was later addressed using SMOTE during the training phase. The integration of textual content, user profile features, and engagement dynamics makes this dataset particularly valuable for studying health-related misinformation, providing a robust foundation for developing and benchmarking advanced natural language processing and DL models. Table 2. Summary of primary dataset features.
+Context
+Features
+
+Tweet content
+Raw text, creation time, posting source
+
+User metadata
+Verification status, presence of URL, account description, account creation time, user location
+
+Engagement metrics
+Retweet count, reply count, like count, quote count
+
+User statistics
+Follower count, following count, total tweets, listed count
+
+Labels
+Binary class (0/1): negative vs. positive sentiment (or irrelevant vs. relevant discourse)
+
+
+Dataset preprocessing The effectiveness and the ability to work on natural language processing (NLP) and DL models depend greatly on data quality, structure, and consistency of the input. This paper fits a detailed preprocessing pipeline to prepare the social media-founded dataset to reach credible monkeypox discourse classification. Preprocessing workflow is carried out in such a way that textual and metadata data are normalized, noiseless, and semantically oriented. In particular, steps involved are missing value imputation, temporal feature extraction based on timestamps, text normalization involving tokenization, stopword elimination, and lemmatization, categorical encoding of user-level features, numerical scaling, and up- and down-sampling of classes by means of controlled data augmentation. All these combined steps can be used to guarantee that the dataset resembles a realistic internet discussion, but it is also compatible with the powerful DL models.
+Handling missing values Data contained in the dataset had the problem of sparsity of user-specific properties, including user description and user location. To get around the bias caused by the omission of values, simple imputation was used: 1
+
+The value of m may be the empty string (in the case of textual attributes), or a placeholder value, e.g., Unknown (in the case of categorical fields). This made sure that there was consistency without distorting the distributions of labels artificially.
+Temporal feature engineering Raw strings denoting timestamps in the dataset (e.g., the times when the tweet was created and the times when the user account was created) were changed into Python datetime objects. From each timestamp, a feature vector was obtained: 2
+
+The patterns of user activity, diffusion of information, and information spreading are frequently predictive in the epidemiological discourse modeling when taken into account as the temporal variables.
+Data cleaning and normalization A lot of the social media posts have hyperlinks, hashtags, user mentions and special characters which have very little input in semantic representation. At every text entry T , preprocessing followed the below steps: - Lowercasing:
+
+- Noise removal: URLs, mentions (@username), hashtags (#topic), numbers, and non-alphabetic tokens were stripped using regex.
+
+- Tokenization:
+
+- Stopword removal: Using NLTK’s standard English stopword list, non-informative tokens were eliminated.
+
+- Lemmatization: Each word was mapped to its lemma using WordNetLemmatizer: 3
+where is the morphological vocabulary.
+
+- The final cleaned text was reconstructed for feature extraction.
+
+
+This procedure shrank vocabulary size, retained semantic soundness, and enhanced convergence and generalization of downstream models.
+Categorical encoding and feature scaling Categorical features like source type and verification status of the users were transformed to one-hot encoding vectors. In the case of numerical characteristics (e.g., the number of followers, the number of retweets, the number of likes), z-score normalization was used: 4
+in which and refer to the mean and standard deviation of distribution of features respectively. This facilitated the lack of scale dominance among variables, with all of them playing part in the learning process.
+Data augmentation and SMOTE-based class balancing To further address class imbalance and strengthen the robustness of the experimental evaluation, Synthetic Minority Over-sampling Technique (SMOTE) was incorporated in the revised study. SMOTE generates synthetic samples of the minority class by interpolating between existing minority instances in the feature space, thereby mitigating classifier bias toward the majority class. The method was implemented using the imbalanced-learn library in Python, with the sampling strategy configured to balance the minority class to match the majority class distribution. Fig. 2 [Images not available. See PDF.]
+Distribution of binary class labels before and after applying SMOTE-based class balancing, illustrating the reduction of class imbalance in the training data.
+
+In this work, SMOTE was applied exclusively to the training set to prevent information leakage into the test data. Let denote the training set and the held-out test set. The balancing process was defined as: 5
+where represents synthetically generated minority-class samples and is the number of synthetic instances required to achieve class balance.
+A comparative analysis was conducted across three settings: (i) original imbalanced data, (ii) random oversampling, and (iii) SMOTE-based balancing. No additional hyperparameter tuning was performed after applying SMOTE in order to ensure fair comparison across experimental settings. Furthermore, no significant change in convergence behavior was observed, indicating stable training dynamics. This allowed a systematic evaluation of the effect of synthetic sampling on model performance, particularly in the presence of class imbalance. The experimental results demonstrate that SMOTE-based validation improves class-wise stability without introducing overfitting, reinforcing the reliability of the proposed hybrid RoBERTa–GRU model.
+Data splitting To ensure robust model evaluation and to prevent information leakage, the preprocessed dataset was divided into disjoint subsets for training and testing. Following the augmentation and balancing procedures, the data was partitioned as: 6
+in which was used in learning and optimising parameters, whereas was set aside specifically to estimate unbiased performance. The stratified sampling approach was adopted to ensure that the proportional mix of classes within either of the two subsets was as such with a view of mitigating the consequences of class imbalance. In practice, 80% of the data was used as training data and 20%, as test data. The training set was also utilised to create the DataLoader objects into PyTorch mini-batches to update the gradient of transformer-based and recurrent networks. This division approach also made sure that the evaluation measures actually addressed the generalization ability of the models that were not affected by overlapped or repeated examples among sets.
+There was a high imbalance in classes, where class 0 (negative/irrelevant discourse drastically overrepresented in class 1 (positive/relevant discourse) in the initial dataset. This imbalance may affect the models to learn the majority class. To tackle this issue, oversampling was used, resulting in the scaled-up sample size of both classes that were almost equal, 10,000 cases per class, as depicted in Fig. 2, providing imminent representation and unbiased classification.
+The thorough preprocessing approach used in the study made both the textual and the metadata data standard, semantically consistent, and devoid of inconsistency. Attribute completion was rectified in a very systematic manner, time clues replaced, and normalization in linguistics decreased the noise and retained the semantic quality. Moreover, it was based on categorical encoding, numerical scaling, and data augmentation that enabled balanced and representative datasets. Lastly, the information leakage was prevented by stratified data splitting. All these efforts provided a strong basis for DL training to achieve effective classification of the monkeypox discourse.
+Proposed RoBERTa-GRU hybrid model The hybrid RoBERTa-GRU model proposes an interpretable DL model to achieve highly accurate text classification by integrating the capacity of the pre-trained transformer models in the contextual representation of words and phrases and the temporal dependency modelling capabilities of recurrent neural networks. It is built on the premises of contextualised semantic-learning, temporal sequence modelling, and task-specific representations refinement, making the model more expressive and robust when compared to conventional stand-alone transformer-based or recurrent architectures. In contrast to possibility, in conventional ways of thinking, where a frozen language model or sequential modelling may only be used, the proposed framework uses a new end-to-end design where end-to-end gated recurrent processing is used to refine the semantic valued information at the subword level. The architecture comprises a cascade of parameterised operations which slowly converts raw token level inputs to high level, task oriented representations that prove well-suited to model the multifaceted dependencies and linguistic frequencies of a textual dataset. Fig. 3 [Images not available. See PDF.]
+Overall architecture of the proposed RoBERTa-GRU hybrid model, showing the integration of contextual transformer-based embeddings with GRU-based sequential modeling for misinformation classification.
+
+The model is directly fed with raw text as the input at the first step of the pipeline where the studied encoding is the RoBERTa encoder that further translates the text into contextual embeddings. At this juncture, the textual representations contain full contents of semantic information yet they are not temporally ordered. A subordinate, sequential transformation by GRU unit component then captures the word-to-word temporal dependencies and long range interactions. This yields sophisticated sentence-level representations that can characterise the input in a categorical fashion and aligned with downstream classification goal. The proposed model has been visually presented in the architectural perspective as stated in Fig. 3.
+RoBERTa-based contextual embedding The preprocessing aspect of the architecture uses a pretrained RoBERTa encoder to convert a raw textual input into rich and contextualised token-level embeddings. Figure 4 depicts the conceptual illustration of RoBERTa-based contextual embedding. Fig. 4 [Images not available. See PDF.]
+Conceptual illustration of RoBERTa-based contextual embedding, demonstrating how bidirectional self-attention captures token-level semantic representations from the input text.
+
+In the proposed hybrid model, we use the roberta-base version of the RoBERTa architecture as the contextual feature extractor. RoBERTa is a bidirectional transformer encoder model that is first pre-trained on large-scale unlabeled corpora using a masked language modeling (MLM) objective. Let denote a sequence of input tokens (sub-words). During pre-training, a subset of positions is randomly sampled at every epoch and the corresponding tokens are replaced with a special [MASK] token, resulting in a modified sequence . The model is then trained to correctly recover the masked tokens by minimizing the cross-entropy loss: 7
+where is the output distribution over the model’s vocabulary. The mask indices are dynamically re-sampled at each training epoch, 8
+which exposes the model to multiple masking patterns and improves its generalization capability. Unlike the original BERT model, the RoBERTa architecture does not incorporate a next-sentence prediction (NSP) objective, and thus all pre-training is devoted to learning deep contextual representations via the MLM task.
+At inference time (i.e., when used inside the hybrid model), the pre-trained RoBERTa encoder serves as a deterministic function that maps each input sequence x to a contextual feature tensor. Each token is mapped to a d -dimensional embedding by summing the corresponding word and positional embeddings: 9
+
+The resulting embedding matrix is then passed through stacked Transformer encoder layers. For the l -th encoder layer, queries, keys and values are projected as: 10
+
+Multi-head self-attention is then applied: 11
+12
+followed by a position-wise feed-forward transformation: 13
+14
+
+Once all 12 encoder layers have been applied, the model outputs a contextual feature tensor 15
+where each vector encodes the semantic information of the i -th token in the context of its full sentence. In the hybrid architecture, this tensor (corresponding to last_hidden_state in the code implementation) is used as the input to the subsequent GRU layer for temporal modelling and downstream classification.
+GRU-based temporal dependency modeling GRU was selected over LSTM due to its simpler architecture, fewer parameters, and lower computational cost, while maintaining comparable performance in modeling sequential dependencies. To further capture sequential dependencies in the contextualised representations produced by RoBERTa, a gated recurrent unit (GRU) layer is stacked directly on top of the final encoder output . The RoBERTa output 16
+acts as the input sequence for the recurrent layer, where is the dimension of the hidden representation of the roberta-base encoder.
+The GRU learns a hidden representation at each time step t by recursively combining the current input and the previous hidden state . In particular, two gating functions are introduced to control the flow of information: 17
+18
+where denotes the element-wise sigmoid activation. The reset gate controls how much of the previous hidden state should be forgotten, while the update gate determines how much of the new candidate information should be integrated. The candidate hidden state is then computed as: 19
+and the final hidden state is a convex combination of the old and new information: 20
+Fig. 5 [Images not available. See PDF.]
+Illustration of GRU-based temporal dependency modeling, showing how sequential token representations are updated through reset and update gates to capture long-range dependencies in text sequences.
+
+This gating mechanism allows the network to mitigate the vanishing gradient problem and to selectively propagate relevant contextual information over long token sequences in Fig. 5. Intuitively, the GRU operates as a temporal reasoning module: it iterates over the contextual embeddings generated by RoBERTa and gradually accumulates evidence about relevant patterns across the sentence. By allowing the model to retain or update hidden states at each position, the GRU captures sequential dependencies that may not be explicitly encoded in the Transformer’s parallel attention mechanism. After the final time step , the resulting hidden state 21
+acts as a global summary of the entire sentence. This vector is then passed into a fully connected layer followed by a softmax function to generate the final prediction: 22
+
+The coupling of the Transformer-based contextual encoder with the recurrent GRU layer therefore, creates a hybrid architecture that benefits from both global contextual modeling and sequential temporal reasoning.
+Classification layer Once the entire input sequence has been processed by the GRU, the final hidden state contains the aggregated semantic and temporal information of the sentence. To generate the class prediction, this hidden representation is projected into a -dimensional output space (where denotes the number of predefined classes) by means of a linear transformation: 23
+where represents the trainable weight matrix of the classifier and denotes a learnable bias vector. The resulting vector contains the unnormalised logit scores for each class.
+In order to obtain a valid probability distribution over the classes, the softmax function is applied to the logit vector: 24
+
+This yields a probability value in the range for each class, and satisfies . The final class label is selected as the class with the highest posterior probability.
+The entire hybrid RoBERTa–GRU architecture is trained in an end-to-end manner under a supervised learning setting using the categorical cross-entropy loss: 25
+where denotes the one-hot encoded ground-truth indicator for class . Minimising this loss function encourages the model to increase the predicted probability for the true class and decrease it for all other classes.
+Overall, Fig. 3 the hybrid RoBERTa-GRU model was found to be effective in jointly exploiting the complementary advantages of contextualised transformer representations and recurrent sequence modelling in producing robust and highly-discriminative intra- and across-document text representations. First by using RoBERTa to produce semantically rich token-level representations and, second, by further enriching them with a temporal aggregation implemented by GRU, the framework could obtain both coarse-grained semantic dependencies and fine-grained sequential dynamics. The resort to end-to-end optimisation strategy also allows task-adaptation and facilitates interpretability as explicit gating mechanisms of the recurrent component are retained. On the whole, the use of RoBERTa through GRU as a factor in a common learning pipeline permits the system to produce accurate and contextual-aware predictions, and the system is viable and scalable to sophisticated text classification in a real-life scenario. Standalone RoBERTa and GRU models are used as baseline comparisons, providing an implicit ablation to demonstrate the contribution of each component in the hybrid architecture.
+Baseline models Logistic regression Logistic regression is a supervised learning model used for binary classification in which the objective is to predict the probability that an input vector belongs to one of two classes (e.g., class 0 or class 1). Unlike linear regression, logistic regression employs a nonlinear activation function so that the output is constrained to the interval (0, 1), making it interpretable as a probability.
+- Linear combination of input features: Given an input sample , logistic regression first computes a linear weighted sum of its features: 26
+where is a column vector of learnable weights and is a bias term.
+
+- Sigmoid activation: To convert the unbounded linear score z into a valid probability, logistic regression applies the sigmoid function ( ): 27
+The output represents the probability that the input x belongs to the positive class (i.e., class label 1).
+
+- Decision rule: During inference, the following decision rule is commonly used: 28
+where is a decision threshold (typically set to 0.5).
+
+- Loss function and parameter estimation: The parameters w and b are estimated by minimising the binary cross-entropy loss (also referred to as the negative log-likelihood). For a training dataset , where is the true label for input sample , the loss is defined as 29
+where is the predicted probability for the i -th sample. The parameters are typically optimised using gradient descent or variants such as stochastic gradient descent (SGD).
+
+
+
+Random forest Random Forest is a supervised ensemble learning method that constructs multiple decision trees during training and combines their outputs to perform either classification or regression. The goal is to reduce the overfitting and instability of individual decision trees by aggregating the predictions of many de-correlated trees.
+- Ensemble construction: Given a training dataset , where is the input vector and is its corresponding label, the Random Forest model builds an ensemble of M decision trees. Each tree is trained on a bootstrap sample drawn with replacement from .
+
+- Random feature selection: At each internal node of a decision tree, a random subset of the feature space 30
+is selected. Only the features in are considered when searching for the optimal split. This process introduces diversity among the trees and reduces the correlation between them.
+
+- Prediction aggregation: Let denote the prediction given by the m -th tree for a new input x . The overall prediction of the Random Forest is computed as follows: Classification (majority vote): 31
+Regression (mean averaging): 32
+
+
+- Split criterion in individual trees: For classification problems, the best split at a node t is usually chosen by minimising the Gini impurity , defined as 33
+where denotes the proportion of samples at node t that belong to class c .
+
+
+
+XGBoost Extreme Gradient Boosting (XGBoost) is an efficient and scalable implementation of gradient boosting that builds an ensemble of decision trees in a sequential manner. Each new tree is trained to correct the errors made by the previous trees, and the final prediction is obtained by aggregating the contributions of all the trees.
+- Additive boosting model: XGBoost aims to learn a function of the form: 34
+where each is a regression tree and is the total number of trees in the ensemble.
+
+- Gradient-based tree construction: At the t -th iteration, a new tree is added to minimise an objective function consisting of a differentiable loss term and a regularisation term: 35
+where denotes the prediction obtained from the previous trees and is a regularisation term that controls model complexity.
+
+- Regularisation term: The regularisation function helps to prevent overfitting and is defined as 36
+where is the number of leaf nodes in the tree, is the score of the j -th leaf, is a penalty coefficient for the tree structure and is an regularisation parameter.
+
+- Update of tree structure using gradients: XGBoost uses the first and second derivatives of the loss to find the optimal split at each node. The gain of splitting a node is computed as: 37
+where and are the sums of the first- and second-order gradients on the left child, and , are the corresponding quantities for the right child.
+
+- Prediction: After M trees have been trained, the prediction for a new sample x is obtained by summing the outputs of all trees: 38
+
+
+
+
+Model training parameters and hyperparameters for the hybrid RoBERTa–GRU model The design of the proposed hybrid RoBERTa-GRU model is trained with a well-thought-out combination of architectural and optimisation hyperparameters to achieve both high performance and generalisation capacities. The preprocessing step entailed tokenising the input sentences with RoBERTa byte–pair encoding-based tokeniser and truncating/padding the sentences to a fixed sequential length of 128 tokens which balances context coverage and computational cost. The RoBERTa backbone is already initialised using the pre-trained roberta-base weights, and is not set as a frozen network, but contextual representations can be trained on the downstream task.
+The recurrent part of the architecture is applied as a one-layer GRU having a single 128-unit hidden dimension. This dimension was chosen to offer capacity enough to represent temporal dependencies, but not to introduce the complexity that has not been required. The last hidden state of the GRU is then fed into two-unit fully connected layer representing the number of classes in the binary classification problem. The hybrid model is trained with the help of the cross-entropy loss function and optimised through the AdamW optimiser with a starting learning rate of 2 10 -5 as recommended by the best practices of transformer fine-tuning. A batch size of 16 is exploited thus to prevent the GPU memory saturation that would arise when large numbers of long input sequences are being processed concurrently.
+The model is trained within 30 epochs. During training, we update the parameters of both the GRU and the transformer backbone in an end-to-end manner, allowing the latter to be adapted task-specifically to the contextualised embeddings. In order to keep a check on convergence behaviour as well as prevent overfitting, accuracy and loss are tested out on a separate validation set after every epoch. The output performance curves prove the consistency of convergence of the hybrid model.
+The overview of all training and architectural hyperparameters is given in Table 3. Together, these two components constitute the overall architecture, in which a pre-trained Transformer encoder is first used to derive contextualized token representations, which are subsequently refined through a recurrent GRU layer to enhance sequential reasoning and improve downstream diagnostic performance.
+Experimental results and discussion In this section, a detailed comparison of the proposed Hybrid RoBERTa+GRU model with two baseline methods, that is, the standalone RoBERTa and standalone GRU models, is given. The comparative analysis would be conducted with the objective of showing the effectiveness as well as the robust nature of the hybrid framework in various aspects of performance. So as to provide a fair and comprehensive comparison, we both report commonplace measures like accuracy and loss, but also include precision, recall, F1-score, ROC-AUC, and Cohen’s Kappa, to represent various facets of model reliability. Furthermore, confusion matrices and ROC curves are considered to show detailed visualizations of the performance of the models on a class-level basis, whereas the recall precision curve of the proposed model demonstrates its strengths in dealing with the class imbalance and noise of applied misinformation detection tasks. The proceeding discussion is organized as follows: first, a quantitative comparison among the models is provided, then the pattern of misclassification and curve-based analysis is considered, and, finally, the results are discussed in the framework of health misinformation detection.
+Experimental setup and hyperparameters configuration Google Colab Pro+ with an NVIDIA A1000 GPU (40 GB VRAM) and a capacity of 64 GB of system RAM was used to conduct all experiments, guaranteeing fast training and large-scale transformer-based models treatment. A programming environment supported by Python 3.10, PyTorch 2.2.1, and HuggingFace Transformers 4.40.0 libraries was used to incorporate RoBERTa and GRU into the model. Other preprocessing tools were offered by pandas, NumPy and scikit-learn.
+Monkeypox-related tweet dataset was pre-processed in several steps: duplicates were removed, special characters were deleted, the URLs were normalized, and the RoBERTa tokenizer was used with a maximum length of 128 tokens. To promote unbiased testing, the dataset was partitioned into training and testing with ratios of 80:20, respectively, without dissimilarity in label distribution.
+Training was done using a batch size of 32 and a maximum sequence length = 128 tokens. To avoid overfitting, early stopping (with patience = 5 epochs) was used. Model training was performed up to 30 epochs, and the best-performing model on checkpoints across the validation set was used. Accumulation gradient was applied to stabilize changes, and training mixed-precision (FP16) was activated to optimize the memory footprint and GPU computation.
+To assess, the standard and advanced measures were applied to give an overall picture of performance. Results were reported on accuracy, F1-score, ROC AUC, Cohen Kappa, and in loss curves. Demographics and ROC/PR were essential to test robustness to class imbalance and noisy annotations. Reproducibility was supported with fixed random seeds in numpy, torch, and CUDA.
+Whether a DL model will perform properly depends greatly on the chosen and adjusted hyperparameters. The parameters not only define how the model will learn the data but also will impact its propensity to generalize to the training set. In this section, we conceptualize the most important hyperparameters within our Hybrid RoBERTa+GRU framework and show the mathematical representation thereof to illustrate how they are used during training.
+Learning rate ( ): The step size of parameter update is governed by a process called the learning rate, which determines the speed of a gradient descent. A small value tends to slow, and a large above the risk of divergence. The parameter update is given as: 39
+in which is the parameters at step , and is the gradient of loss function and in our system.
+Cross-entropy loss ( ): Optimization of the model is carried out through binary cross-entropy, which negatively weights wrong predictions according to the difference between the predicted probabilities and the labels of truth: 40
+in which , the correct label, the estimate of the probability and is the batch size.
+GRU hidden state update : The Gated Recurrent Unit (GRU) observes the temporal dependencies with the help of the gating. Its update equations, with hidden dimension , are: 41
+42
+43
+44
+with as the update gate, as the reset gate and where marks the element-wise product.
+Dropout: Dropout has been employed as a regularizing method with a rate . To avoid excessive fitting, it randomly deactivates neurons: 45
+where is the output of layer and is a random mask vector.
+Optimizer (AdamW): AdamW, an augmentation of Adam, with the addition of weight decay to avoid overfitting. The rules of its update are: 46
+47
+48
+49
+with is the gradient, are exponential decay rates, is the weight decay and fixes division by zero. Epochs: An epoch would be one entire sweep through the training set. Assuming that the dataset has samples and the batch size is , number of iterations in an epoch is: 50
+
+In this study, the training model is run up to 30 epochs to converge, yet avoiding overfitting. Table 3 Hyperparameter configuration of the proposed Hybrid RoBERTa-GRU model.
+Hyperparameter
+Configuration
+
+Pre-trained transformer
+RoBERTa-base
+
+GRU hidden dimension
+128 units
+
+Output dimension
+2 (binary classification)
+
+Optimizer
+AdamW
+
+Learning rate
+
+
+Loss function
+Cross-entropy loss
+
+Batch size
+Same as RoBERTa baselines (not shown here for consistency)
+
+Epochs
+30
+
+Sequence length
+512 tokens (RoBERTa default maximum)
+
+Dropout
+Implicitly handled by RoBERTa layers (default 0.1)
+
+Weight initialization
+Pre-trained RoBERTa weights + Xavier initialization for GRU
+
+
+It is of utmost importance that the proper setup of the hyperparameters of the proposed Hybrid RoBERTa-GRU model is the key to its effectiveness in detecting misinformation. From the Table 3 the architecture uses the RoBERTa-base model as the contextual embedding backbone and the dense 768-dimensional representations are produced as a rich set of semantic nuances of tweets. These embeddings are passed to a GRU layer with the hidden state dimension of 128 and the model manages to maintain sequential and temporal dependencies and temporal structures in discourse. A dropout rate of 0.3 is used after GRU layer to minimize overfitting simply by randomly dropping some neurons during training.
+To optimize, we use the AdamW optimizer, which is specifically useful with transformer-based models and it decouples weight decay in the update of the gradients, making the convergence more stable. With a learning rate of , which is a widely used fine-tuning parameter, we can avoid the huge disruptive updates that can occur but still perform an adequate adaptation of the parameters of the pre-trained RoBERTa. The training is over 30 epochs which is a good balance between convergence and good avoidance of overfitting and the batch size 32 is computable and gave stable gradient results.
+The loss function is a cross-entropy loss that determines the difference between the predicted class probabilities and true labels, hence it will fit the binary classification problem as appropriate. The bound on the length of the sequence is kept at a minimum (128 tokens is sufficient to cover the length of tweets, and ensures reasonable computational cost). Altogether, these hyperparameters are chosen with semantic richness, temporal sensitivity, and noise resistance to noisy annotations in real-world settings, which fits the idea of misinformation detection in health-related social media posts.
+Comparative evaluation using performance metrics Table 4. Performance comparison of models before and after SMOTE-based class balancing.
+Model
+Setting
+Accuracy
+Precision
+Recall
+F1-score
+ROC-AUC
+MCC
+G-Mean
+
+Logistic regression
+Without SMOTE
+0.6124
+0.2218
+0.5036
+0.3078
+0.6189
+0.1846
+0.5281
+
+With SMOTE
+0.7421
+0.5234
+0.6812
+0.5921
+0.7615
+0.4729
+0.6918
+
+Random forest
+Without SMOTE
+0.8427
+0.6984
+0.3389
+0.4567
+0.7841
+0.4217
+0.5864
+
+With SMOTE
+0.9038
+0.7125
+0.7421
+0.7270
+0.8734
+0.6892
+0.7486
+
+XGBoost
+Without SMOTE
+0.8356
+0.6231
+0.3624
+0.4578
+0.7926
+0.4379
+0.6021
+
+With SMOTE
+0.9124
+0.7346
+0.7583
+0.7463
+0.8861
+0.7048
+0.7612
+
+RoBERTa
+Without SMOTE
+0.9859
+0.9712
+0.9961
+0.9835
+0.9928
+0.9648
+0.9879
+
+With SMOTE
+0.9912
+0.9861
+0.9948
+0.9904
+0.9971
+0.9736
+0.9921
+
+GRU
+Without SMOTE
+0.9718
+0.9586
+0.9784
+0.9684
+0.9949
+0.9423
+0.9796
+
+With SMOTE
+0.9829
+0.9718
+0.9892
+0.9804
+0.9972
+0.9574
+0.9858
+
+Hybrid RoBERTa-GRU
+Without SMOTE
+0.9918
+0.9846
+0.9973
+0.9909
+0.9961
+0.9719
+0.9912
+
+With SMOTE
+0.9944
+0.9888
+1.0000
+0.9944
+0.9979
+0.9846
+0.9974
+
+
+Table 4 provides a direct comparison of model performance before and after applying SMOTE-based class balancing, enabling a clear evaluation of the impact of class imbalance on misinformation detection. The results show how different categories of models respond to imbalanced data and synthetic resampling.
+Logistic Regression, used as a simple baseline, exhibits the weakest performance under the original imbalanced setting. It achieves low accuracy and very poor precision, indicating a large number of false-positive predictions and a limited ability to distinguish misinformation from non-misinformation content. Although recall remains moderate, the very low F1-score reflects an unbalanced trade-off between precision and recall. This limitation is largely caused by the skewed class distribution, which biases the model toward the majority class and highlights the need for SMOTE-based resampling.
+Ensemble-based methods, including Random Forest and XGBoost, perform noticeably better than Logistic Regression due to their non-linear decision boundaries and ensemble learning strategies. Random Forest attains relatively high accuracy and precision; however, its recall remains low under the imbalanced setting, indicating difficulty in detecting minority-class misinformation samples. XGBoost follows a similar trend, achieving modest improvements in recall and F1-score, but its performance also plateaus due to limited semantic abstraction and the absence of explicit temporal modeling. After applying SMOTE, both ensemble models show clear gains in recall and F1-score, confirming the effectiveness of synthetic oversampling for improving minority-class detection.
+Deep learning models demonstrate a clear advantage over traditional and ensemble approaches. RoBERTa achieves very strong baseline performance, with near-perfect accuracy and recall, demonstrating the effectiveness of transformer-based contextual embeddings in capturing subtle linguistic cues. Its high ROC-AUC score further indicates strong discriminative capability across different decision thresholds. Nevertheless, RoBERTa does not explicitly capture sequential dependencies, which can be important in narrative-driven misinformation and motivates further improvements through hybrid modeling.
+The GRU-based model focuses on sequential dependency modeling through gated recurrent mechanisms and achieves a balanced trade-off between precision and recall. Under SMOTE-based balancing, the GRU model shows improved stability in minority-class detection, particularly in terms of recall and F1-score. However, the lack of large-scale pre-trained semantic knowledge limits its ability to fully capture deeper contextual information compared to transformer-based models.
+By integrating the complementary strengths of both architectures, the proposed Hybrid RoBERTa-GRU model delivers the strongest overall performance. It consistently achieves the highest values across accuracy, precision, recall, F1-score, and ROC-AUC, indicating robust and stable discriminative capability. This hybrid design effectively combines deep contextual understanding with sequential reasoning, enabling reliable handling of both semantic complexity and temporal dynamics in health-related misinformation.
+When evaluated under SMOTE-based class balancing, all models exhibit improved class-wise stability, particularly with respect to minority-class sensitivity. While overall accuracy changes only marginally for deep learning models, balanced performance improves substantially, especially for traditional and ensemble classifiers. Most importantly, the Hybrid RoBERTa-GRU model maintains consistently superior performance under SMOTE-based evaluation, confirming that its effectiveness does not depend on majority-class dominance and demonstrating its robustness in imbalanced misinformation detection scenarios.
+Graphical analysis In order to assess the learning behavior of the proposed Hybrid RoBERTa-GRU model, the validation and training accuracies and loss curves remained stable after 30 epochs. The left plot in Fig. 6 shows the progression of training and validation accuracy. The training accuracy rapidly improves during the initial epochs and stabilizes around 99%, while the validation accuracy follows a similar trend, fluctuating slightly but remaining consistently high, around 98–99%. This suggests that the model is effectively learning from the training data without significant overfitting. The right plot illustrates the training and validation loss. The training loss sharply decreases and converges close to zero within the first few epochs, indicating strong convergence. While the validation loss exhibits minor fluctuations, it remains relatively low and stable across all epochs, signifying that the model generalizes well to unseen data. In sum, all of the curves verify that the Hybrid RoBERTa-GRU architecture is not only correct, but also stationary, with high generalization performance and no indication of underfitting or overfitting. Such convergence of the training loss and the parallel evolution of validation metrics shows the soundness of the proposed architecture. Fig. 6 [Images not available. See PDF.]
+Training and validation accuracy and loss curves of the proposed Hybrid RoBERTa-GRU model, illustrating stable convergence and consistent generalization performance across epochs.
+Fig. 7 [Images not available. See PDF.]
+Receiver Operating Characteristic (ROC) curve of the proposed Hybrid RoBERTa-GRU model, illustrating strong discriminative capability with a high area under the curve.
+
+As observed in Fig. 7, the Receiver Operating Characteristic (ROC) curve of the proposed Hybrid RoBERTa-GRU model illustrates that the model has excellent discriminative ability between the two sentiment categories. As can be seen, the curve tends to be very near one of its extremes, i.e., the upper left corner, which shows a very little trade-off between the false positive rate (FPR) and the true positive rate (TPR). The above Area Under the Curve (AUC) of 0.9979, with an ideal value of 1.0, also shows the strength indicated by the proposed architecture. AUC score so high indicates that the model is so powerful in portraying positive cases and reducing the occurrence of false alarms. Such performance superiority confirms the hybrid approach to contextual embedding of Roberta to extend to the sequential strength of feature extraction in GRU status, enhancing generalization and reliability of tendency classification with form showing better performance. Fig. 8 [Images not available. See PDF.]
+Comparison of Cohen’s Kappa scores for RoBERTa, GRU, and the proposed Hybrid RoBERTa-GRU model, highlighting improved agreement beyond chance for the hybrid architecture.
+
+Figure 8 shows the relative assessment of the Cohen Kappa values of RoBERTa, GRU, and the proposed Hybrid RoBERTa-GRU model. Cohen is a strong statistical measure, which considers more than luck, and so is a more authentic indicator of the consistency of the classification performance than accuracy. The GRU baseline reached a Kappa of 0.8444, which is medium, although it points to the lack of deeper contextual dependencies caught by the model. In contrast to this, an ample performing RoBERTa scored a much higher 0.9872, indicating the power of transformer-based contextual embeddings. The new proposed Hybrid RoBERTa-GRU model was even better on both measuring baselines with a marginal increase in its Kappa score of 0.9887, which reflects better levels of agreement. Finding due to contextualized representations of RoBERTa and the sequential learning capability of GRU provide an added benefit to the combination of these two learning models. The Hybrid model shows that it not only possesses good predictive accuracy but also has stable and consistent performance over all classes of sentiment. These outcomes emphasize the effectiveness and stability of the suggested strategy, which guarantees less bias in the model and better generalizability when applying the solution in the context of discourse classification in real life.
+Figure 9 shows the absolute accuracy and precision of RoBERTa, GRU, and Hybrid RoBERTa-GRU models. The GRU prevailing in terms of Accuracy ( 0.93) as demonstrated in Fig. 9(left) because it could not effectively model complex semantic relationships in the discourse of social media. RoBERTa performed well and achieved an accuracy score of almost 0.99, an indication of the power of transformer-based contextual embeddings. Nonetheless, the proposed Hybrid RoBERTa-GRU model outperformed the two baselines as it resulted in an accuracy of almost 1.0, hence demonstrating its effectiveness in classifying sentiment classes. On the same note, Fig. 9(right) provides the precision scores, and once again, since GRU showed a lower precision, it meant that it was prone to misclassification of the minority-class samples. RoBERTa gained a considerable improvement, to nearly 0.99, but the Hybrid model achieved the best accuracy, which is basically close to eliminating false positives. Both evaluation measures clearly show that the Hybrid architecture routinely produced better results than its counterparts due to the complementarity of the RoBERTa deep contextualized embeddings and GRU sequential feature extraction capacity. This output places an added weight on the proposed model in its reliability when upholding both correctness and consistency in sentiment classification activities. Fig. 9 [Images not available. See PDF.]
+Comparison of accuracy (left) and precision (right) scores for RoBERTa, GRU, and the proposed Hybrid RoBERTa-GRU model, illustrating the superior and more stable performance of the hybrid architecture across both evaluation metrics.
+Fig. 10 [Images not available. See PDF.]
+Comparison of recall (left) and F1-score (right) for RoBERTa, GRU, and the proposed Hybrid RoBERTa-GRU model, highlighting the improved sensitivity and balanced performance achieved by the hybrid architecture.
+
+The comparative performance analysis of RoBERTa, GRU, and the proposed Hybrid RoBERTa-GRU models on the recall and F1-score metrics was compared as shown in Fig. 10. The comparison of recall performance shows that the GRU base model has good recall scores of about 0.98, and hence would be able to determine relevant instances Fig. 10(left) RoBERTa has similar recall accuracy, and it takes advantage of the transformer-based approach to capture contextual relationships with accuracy. Nevertheless, the planned Hybrid RoBERTa-GRU model performs better in the recall rate, thus scoring the best in the recalled scores in comparison to the other two methods. This improvement shows that transformer-based hybrid architecture effectively integrates the sequential reasoning abilities of the GRU with contextual comprehension of the RoBERTa, which led to better recognition and recall of the relevant examples of the dataset. The F1-score analysis in Fig. 10(right) depicts a relatively high performance among all models and a performance level very close to the ideal 1.0 value. The two models, GRU and RoBERTa, have competitive F1-scores; however, the proposed Hybrid RoBERTa-GRU model has the most balanced performance between recall and precision. The higher F1-score achieved by the hybrid model illustrates its ability to sustain the harmonic balance between the precision and recall measures and implies the strong overall performance in the case of a classification. This equitable performance highlights the potential architecture proposed in the sense that it maximized specificity and sensitivity at the same time. Fig. 11 [Images not available. See PDF.]
+Comparison of ROC–AUC (left) and Precision–Recall AUC (right) scores for RoBERTa, GRU, and the proposed Hybrid RoBERTa-GRU model, demonstrating the superior discriminative power and robustness of the hybrid architecture across different decision thresholds.
+
+The evaluation of ROC-AUC and Precision-Recall scores have been established comprehensively across the three comparative models as shown in Fig. 11. The ROC-AUC comparison indicated remarkable discriminative performance by all approaches as a result of the scores adjacent to their perfect value, as shown in Fig. 11(left). GRU baseline has good capacity in terms of classification and RoBERT retains a competitive performance by utilizing attention-based mechanisms. It is worth noting that the proposed Hybrid RoBERTa-GRU model offers the best ROC-AUC indicating that it has a high discrimination power of diverse classes at different thresholds. This outstanding ROC-AUC figure confirms the strength of the hybrid architecture since it holds a steady performance in the variable placement of the decision boundary and achieves a similar classification performance. The analysis carried out in Fig. 11(right) shows the same trend with the Precision-Recall score achieving consistent performance that hovers near 1.0 across all models. GRU model has a good reliability on precision-recall performance, whereas RoBERTa incurs robust performance with a profound contextual embedding at the deep level. The proposed Hybrid RoBERTa-GRU model performs the best in PR-score showing it can effectively address the possible imbalances in classes and still achieve high precision points at various recall levels. GRU has sequential processing capabilities, which, when combined with the advanced attention mechanics of RoBERTa, are allowed to stay ahead of both individual architectures in terms of performance. The analyses on these findings have confirmed together that the proposed Hybrid RoBERTa-GRU model is superior in terms of having better overall performance under complex classification tasks of all aspects of evaluation dimensions, which justifies its efficiency as an augmented model in case of sophisticated multitask classification.
+Figure 12 shows a radar plot visualization of the RoBERTa, GRU and hybrid RoBERTa-GRU models on the six evaluation measures: Accuracy, Precision, Recall, F1-score, ROC AUC and PR AUC. The visualization shows that in all measures, the GRU baseline will have a consistent performance, but will obtain a relatively lower score than the other approaches. RoBERTa has better performance with most of the scores touching on the optimal boundary indicating the effectiveness of transformer-based architectures. Nonetheless, the proposed Hybrid RoBERTa-GRU model performed significantly better than the both baselines reaching the perfection in all six metrics, as indicated by its plot area being farthest around the outer boundary. This overall performance advantage confirms the synergetic integration of contextual learning of RoBERTa with sequential computation performance of GRU, and the hybrid model can be considered the most durable and versatile solution in terms of multidimensional performance optimization. Fig. 12 [Images not available. See PDF.]
+Radar plot comparing the performance of RoBERTa, GRU, and the proposed Hybrid RoBERTa-GRU model across multiple evaluation metrics, including accuracy, precision, recall, F1-score, ROC-AUC, and PR-AUC, highlighting the overall superiority and balanced performance of the hybrid architecture.
+
+Error analysis In order to perform a thorough analysis of the classification performance as well as discover the strengths and weaknesses of each of the approaches, an in-depth error analysis through confusion matrices would be conducted on RoBERTa, GRU, and the newly proposed Hybrid RoBERTa-GRU models. The analysis also gives a per-class view of how both the correctly and incorrectly labeled samples are categorized; giving particular instances of misclassification and justifying the better performance of the hybrid architecture. Fig. 13 [Images not available. See PDF.]
+Confusion matrices of the RoBERTa (left), GRU (middle), and proposed Hybrid RoBERTa-GRU (right) models, illustrating class-wise prediction performance and highlighting the reduced misclassification achieved by the hybrid architecture.
+
+Figure 13 presents the confusion matrices for all three models, providing detailed insights into their classification behavior across different sentiment classes. The confusion matrix analysis enables computation of key performance metrics, including True Positive Rate (TPR) and False Positive Rate (FPR), where: 51
+52
+where TP represents True Positives, FN represents False Negatives, FP represents False Positives, and TN represents True Negatives.
+RoBERTa error analysis: As shown in Fig. 13a, the RoBERTa baseline demonstrates strong classification performance with 1411 correctly classified samples in Class 0 (negative sentiment) and 3047 correctly classified samples in Class 1 (positive sentiment). However, the model exhibits notable misclassification patterns with 61 false positives in Class 0 and 48 false negatives in Class 1. The confusion matrix reveals that RoBERTa occasionally struggles with contextual ambiguity, resulting in a misclassification rate of approximately 4.1% for Class 0 (61 out of 1472 total samples) and 1.6% for Class 1 (48 out of 3095 total samples). These errors primarily occur in cases involving subtle semantic variations, ironic expressions, and complex contextual expressions where multiple sentiment indicators conflict. The model’s attention mechanism, while powerful for contextual understanding, occasionally over-emphasizes certain words, leading to misinterpretation of overall sentiment polarity.
+GRU error analysis: The GRU model confusion matrix, presented in Fig. 13b, shows 1434 correct classifications for Class 0 and 3519 correct classifications for Class 1. However, the model demonstrates higher misclassification rates with 63 false positives in Class 0 and 28 false negatives in Class 1. The GRU architecture’s sequential processing limitations become evident through its difficulty in capturing long-range dependencies, resulting in misclassification rates of approximately 4.2% for Class 0 (63 out of 1497 total samples) and 0.8% for Class 1 (28 out of 3547 total samples). The model particularly struggles with negation patterns and contextual shifts within longer sequences, where early sentiment indicators may overshadow later contradictory information. Additionally, the GRU’s vanishing gradient problem affects its ability to maintain contextual information across extended text sequences, leading to incomplete sentiment understanding in complex narratives.
+Hybrid RoBERTa-GRU error analysis: The proposed hybrid model’s confusion matrix, illustrated in Fig. 13c, demonstrates superior classification accuracy with 1937 correct classifications for Class 0 and 1947 correct classifications for Class 1. Remarkably, the hybrid architecture achieves minimal misclassification with only 22 false positives in Class 0 and 0 false negatives in Class 1. This exceptional performance translates to misclassification rates of merely 1.1% for Class 0 (22 out of 1959 total samples) and 0% for Class 1 (0 out of 1947 total samples), establishing the hybrid model’s superiority over both baseline approaches. The mathematical analysis reveals that the hybrid model achieves a TPR of 1.0 for Class 1 and 0.989 for Class 0, while maintaining an exceptionally low FPR of 0.011 for Class 0 and 0.0 for Class 1.
+The quantitative comparison reveals that the hybrid model reduces total misclassifications by 79.8% compared to RoBERTa (22 vs. 109 total errors) and 86.8% compared to GRU (22 vs. 167 total errors). The hybrid model’s superior performance stems from its synergistic combination of RoBERTa’s contextual understanding and GRU’s sequential processing capabilities. By leveraging RoBERTa’s attention mechanisms for deep semantic comprehension and GRU’s recurrent structure for sequential pattern recognition, the hybrid architecture effectively addresses the individual limitations of both baseline models. The RoBERTa component captures complex contextual relationships and semantic nuances, while the GRU component maintains sequential coherence and handles temporal dependencies. This complementary approach enables the hybrid model to correctly classify challenging cases involving double negations, sentiment transitions, and mixed emotional expressions that typically confuse individual architectures. The dramatic reduction in false negatives and false positives across both sentiment classes validates the hybrid model’s robustness in handling complex sentiment classification scenarios, including cases involving sarcasm, mixed emotions, and contextual ambiguity that challenge individual architectures.
+Comparative analysis and discussion Table 5 lists comparable recent solutions to the problem of fake news detection in a variety of datasets and model structures. The calculated accuracies indicate the development of techniques of detection from DL to transformer-based and hybrid models. Table 5. Comparative analysis of existing studies and our proposed model for misinformation detection.
+References
+Dataset
+Model
+Accuracy (%)
+
+45
+PolitiFact dataset
+BERT-large+DeBERTa-large+RoBERTa-large
+87.5
+
+46
+LIRA dataset
+Mistral-7b
+59.10
+
+47
+Fake Newsnet, LIAR, PHeme, PolitiFact
+BERT+LSTM
+94.6
+
+48
+X dataset
+LSTM
+98.84
+
+49
+GeorgeMcIntire’s fake-real-news-dataset
+ConvNet+LSTM
+52.77
+
+50
+ChatGPT Classification Dataset
+BERT
+84.1
+
+51
+Text and image data
+RoBERTa
+99.2
+
+52
+Social media dataset
+Small BERT
+97–99
+
+Ours
+X dataset
+RoBERTa+GRU
+99.44
+
+
+Zeng et al. 45 reached 87.5% accuracy on the PolitiFact dataset, using an ensemble of transformers of the three models BERT-large, DeBERTa-large, and RoBERTa-large. Although this illustrated the power of ensembling models, the training time of these large models limits their applicability. Also, Pendyala et al. 46 applied Mistral-7b to the LIRA dataset but obtained a rather low performance (59.10%), and this fact testifies to the complexity of applying large LLMs to misinformation-detection tasks.
+Waheed et al. 47 used a combination of BERT and LSTM on various datasets (Fake Newsnet, LIAR, PHeme, and PolitiFact), achieving a high accuracy of 94.6%, in which the hybridization of contextual embeddings with sequence modeling demonstrated its usefulness. Mahmood et al. 48 have further advanced with a pure LSTM-based architecture, achieving 98.84% accuracy on X data, indicating that recurrent models are competitive in the short-text domain, social media.
+Gifu et al. 49 used a ConvNet+LSTM model on George McIntire’s fake-real news corpus, reporting 52.77% accuracy, with the researchers noting the difficulty of capturing misinformation by sequential models alone when faced with complex datasets. According to Stewart et al. 50 , who used the BERT with the ChatGPT-generated dataset, their approach yielded 84.1% accuracy, and Bao et al. 51 applied multimodal analysis (text + image) using RoBERTa with nearly perfect 99.2% accuracy. Small BERT was employed by 52 on one social media dataset set with 97-99% accuracy, confirming once again the versatility of the transformer-based models in misinformation detection.
+In this backdrop, the accuracy of our proposed model, RoBERTa+GRU, was superior with 99.44% on the X dataset than all the other comparison models. Particularly, it outperforms the ensemble of Zeng et al. by 11.94%, the hybrid method of Waheed et al. by 4.84%, the LSTM model of Mahmood et al. by 0.6%, Bao et al.’s multimodal RoBERTa by 0.24%, and Najee et al.’s small BERT by up to 2.44%. Such findings highlight the efficacy of a combination of contextual embeddings of RoBERTa and sequence representation by GRU, not only providing state-of-the-art accuracy, but also efficiency in misinformation detection with real-life situations.
+Limitations Despite its strong performance, the proposed model has several limitations. First, the dataset is limited to X (formerly Twitter), which may restrict generalizability to other platforms. Second, the analysis is conducted on English-language data only, limiting multilingual applicability. Third, the use of SMOTE introduces synthetic samples that may not fully reflect real-world distributions. Finally, the model requires substantial computational resources, which may limit deployment in low-resource environments. Future work will focus on extending the model to multilingual and multimodal settings to enhance generalizability across diverse real-world scenarios.
+Conclusion This study highlights how Artificial Intelligence is potentially revolutionizing how the online misinformation menace can be solved. The combination of the contextual power of RoBERTa and the sequential modeling properties of GRU makes the proposed hybrid model even more accurate and resilient against health misinformation detection, including close-to-perfect scores during the evaluation process through the Monkeypox X dataset. These results demonstrate the need to integrate complementary deep architectures to model both semantic richness and a temporal flow of social media discussion.
+In addition to its technical remarks, this research focuses on the more general implications. Misinformation detection cannot simply be a computation problem, but also a social requirement, which impacts the population and societal health, policy-making, and reliance on digital environments. Though the proposed model has raised a desirable benchmark, it still has shortcomings, mainly the need to rely on English-only datasets, its high computational complexity, and no validation on other languages and modalities, and platforms. It is necessary to tackle these issues if one wants to deploy in the real world, especially in a limited or multilingual setting.
+Future directions ought to work on broader distributions of datasets, the incorporation of multimodal information like image and video, and scalable, interpretable, and real-time systems. It will also be essential to cooperate with policymakers, healthcare establishments, and social media to implement these AI solutions in effective interventions. Finally, this work offers the basis to establish resilient, AI-enabled structures that could ensure information integrity, foster citizens’ trust, and address the far-reaching evils of digital disinformation.
+Author contributions A.R. contributed to the conceptualization, methodology, and writing of the original draft. M.A.I. was responsible for data curation, software development, and validation. A.M.Y. performed the formal analysis and created the visualizations. M.M.I. was involved in the investigation and writing, review & editing. M.F.K. carried out the statistical analysis and validation of the results. K.R.A. provided resources and managed the project administration, serving as the corresponding author. A.R. and M.A.I. contributed equally to this work.
+Funding The authors declare that this research did not receive any specific grant from funding agencies in the public, commercial, or not-for-profit sectors.
+Data availability Monkeypox misinformation: Twitter dataset: https://www.kaggle.com/datasets/stephencrone/monkeypox.
+Declarations Competing interests The authors declare no competing interests.
+Publisher’s note Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References 1. Quinchía-Saavedra, C., Castañeda García, J.A., Rey-Pino, J.M. Tweeting for peace: An analysis of twitter use in colombia’s peace process. Int. Rev. Public Nonprofit Market. 1–28 (2025).
+2. Roy, M., DeRoche, M. Mapping misinformation gatekeepers in non-western contexts: A computational network analysis on x (twitter) using gephi. Telemat. Inform. Rep. 100214 (2025).
+3. Mansoor, H.M. Media and information literacy as a model of societal balance: A grounded meta-synthesis. Heliyon . 10 (3) (2024).
+4. Yu, J; Bekerian, D; Osback, C. Navigating the digital landscape: Challenges and barriers to effective information use on the internet. Encyclopedia ; 2024; 4 , 4 pp. 1665-1680. [DOI: https://dx.doi.org/10.3390/encyclopedia4040109]
+5. Katona, P. Covid-19 and the role of conspiracy theories, disinformation, and fake news. In The COVID-19 Pandemic: Science, Technology, and the Future of Healthcare Delivery , 147–163 (Springer, 2024).
+6. Kisa, A; Kisa, S. Health conspiracy theories: A scoping review of drivers, impacts, and countermeasures. Int. J. Equity Health ; 2025; 24 , 1 93. [DOI: https://dx.doi.org/10.1186/s12939-025-02451-0] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/40181408][PubMedCentral: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11969846]
+7. Theodorakopoulos, L; Theodoropoulou, A; Klavdianos, C. Interactive viral marketing through big data analytics, influencer networks, AI integration, and ethical dimensions. J. Theor. Appl. Electron. Commer. Res. ; 2025; 20 , 2 115. [DOI: https://dx.doi.org/10.3390/jtaer20020115]
+8. Moser, K. Covid-19 vaccine hesitancy: The ongoing, hyperreal saga of a deadly epidemic and infodemic. In Fake News in Contemporary Science and Politics: A Requiem for the Real? , 53–93 (Springer, 2024).
+9. Raman, R., Nair, V.K., Nedungadi, P., Sahu, A.K., Kowalski, R., Ramanathan, S., Achuthan, K. Fake news research trends, linkages to generative artificial intelligence and sustainable development goals. Heliyon . 10 (3) (2024).
+10. Williamson, SM; Prybutok, V. The era of artificial intelligence deception: Unraveling the complexities of false realities and emerging threats of misinformation. Information ; 2024; 15 , 6 299. [DOI: https://dx.doi.org/10.3390/info15060299]
+11. Han, T; Nebelung, S; Khader, F; Wang, T; Müller-Franzes, G; Kuhl, C; Försch, S; Kleesiek, J; Haarburger, C; Bressem, KK et al. Medical large language models are susceptible to targeted misinformation attacks. NPJ Digit. Med. ; 2024; 7 , 1 288. [DOI: https://dx.doi.org/10.1038/s41746-024-01282-7] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/39443664][PubMedCentral: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11499642]
+12. Wardle, C., Scales, D. Advocating for a community-centred model for responding to potential information harms. Nat. Hum. Behav. 1–11 (2025).
+13. Al-Quayed, F., Javed, D., Jhanjhi, N., Humayun, M., Alnusairi, T.S. Optimizing fake news detection: A hybrid transformer-based model for enhanced performance. IEEE Access (2024).
+14. Almandouh, ME; Alrahmawy, MF; Eisa, M; Elhoseny, M; Tolba, A. Ensemble based high performance deep learning models for fake news detection. Sci. Rep. ; 2024; 14 , 1 26591.2024NatSR.1426591E [DOI: https://dx.doi.org/10.1038/s41598-024-76286-0]
+15. Zengeya, T; Fonou-Dombeu, JV. A review of state of the art deep learning models for ontology construction. IEEE Access ; 2024; 12 , pp. 82354-82383. [DOI: https://dx.doi.org/10.1109/ACCESS.2024.3406426]
+16. Almaqtari, H; Zeng, F; Mohammed, A. Enhancing arabic sentiment analysis of consumer reviews: Machine learning and deep learning methods based on nlp. Algorithms ; 2024; 17 , 11 495. [DOI: https://dx.doi.org/10.3390/a17110495]
+17. Mienye, ID; Swart, TG; Obaido, G. Recurrent neural networks: A comprehensive review of architectures, variants, and applications. Information ; 2024; 15 , 9 517. [DOI: https://dx.doi.org/10.3390/info15090517]
+18. Ghaith, S. Deep context transformer: Bridging efficiency and contextual understanding of transformer models. Appl. Intell. ; 2024; 54 , 19 pp. 8902-8923. [DOI: https://dx.doi.org/10.1007/s10489-024-05453-7]
+19. Bashaddadh, O., Omar, N., Mohd, M., Khalid, M.N.A. Machine learning and deep learning approaches for fake news detection: A systematic review of techniques, challenges, and advancements. IEEE Access . (2025).
+20. Alzubaidi, L; Bai, J; Al-Sabaawi, A; Santamaría, J; Albahri, AS; Al-Dabbagh, BSN; Fadhel, MA; Manoufali, M; Zhang, J; Al-Timemy, AH et al. A survey on deep learning tools dealing with data scarcity: Definitions, challenges, solutions, tips, and applications. J. Big Data ; 2023; 10 , 1 46. [DOI: https://dx.doi.org/10.1186/s40537-023-00727-2]
+21. Ye, Q; Sun, G; Chen, Y; Xu, X. Lcdan: Label confusion domain adversarial network for information detection in public health events. Electronics ; 2025; 14 , 15 3102. [DOI: https://dx.doi.org/10.3390/electronics14153102]
+22. Wang, J; Wang, X; Yu, A. Tackling misinformation in mobile social networks a bert-lstm approach for enhancing digital literacy. Sci. Rep. ; 2025; 15 , 1 1118.2025NatSR.15.1118W1:CAS:528:DC%2BB2MXhsVWht7Y%3D [DOI: https://dx.doi.org/10.1038/s41598-025-85308-4] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/39774143][PubMedCentral: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11707353]
+23. Morita, P.P., Zakir Hussain, I., Kaur, J., Lotto, M., Butt, Z.A. Tweeting for health using real-time mining and artificial intelligence–based analytics: design and development of a big data ecosystem for detecting and analyzing misinformation on twitter. J. Med. Internet Res. 25 , e44356 (2023).
+24. Hajli, N; Saeed, U; Tajvidi, M; Shirazi, F. Social bots and the spread of disinformation in social media: The challenges of artificial intelligence. Br. J. Manag. ; 2022; 33 , 3 pp. 1238-1253. [DOI: https://dx.doi.org/10.1111/1467-8551.12554]
+25. Dedeepya, P., Yarrarapu, M., Kumar, P.P., Kaushik, S.K., Raghavendra, P.N., Chandu, P. Fake news detection on social media through a hybrid svm-knn approach leveraging social capital variables. In 2024 3rd International Conference on Applied Artificial Intelligence and Computing (ICAAIC) , 1168–1175 (IEEE, 2024).
+26. Hasan, M; Ahmed, T; Islam, MR; Uddin, MP. Leveraging textual information for social media news categorization and sentiment analysis. PLoS One ; 2024; 19 , 7 1:CAS:528:DC%2BB2cXitFOitbnO [DOI: https://dx.doi.org/10.1371/journal.pone.0307027] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/39008472][PubMedCentral: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11249226]e0307027.
+27. Akhtar, P., Ghouri, A.M., Khan, H.U.R., Amin ul Haq, M., Awan, U., Zahoor, N., Khan, Z., Ashraf, A. Detecting fake news and disinformation using artificial intelligence and machine learning to avoid supply chain disruptions. Ann. Oper. Res. 327 (2), 633–657 (2023) .
+28. Ahammad, T. Identifying hidden patterns of fake covid-19 news: An in-depth sentiment analysis and topic modeling approach. Nat. Lang. Process. J. ; 2024; 6 , [DOI: https://dx.doi.org/10.1016/j.nlp.2024.100053] 100053.
+29. Hashmi, E; Yayilgan, SY; Yamin, MM; Ali, S; Abomhara, M. Advancing fake news detection: Hybrid deep learning with fasttext and explainable AI. IEEE Access. ; 2024; 12 , pp. 44462-44480. [DOI: https://dx.doi.org/10.1109/ACCESS.2024.3381038]
+30. Gupta, A; Li, H; Farnoush, A; Jiang, W. Understanding patterns of covid infodemic: A systematic and pragmatic approach to curb fake news. J. Bus. Res. ; 2022; 140 , pp. 670-683. [DOI: https://dx.doi.org/10.1016/j.jbusres.2021.11.032] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/34866715]
+31. Joshi, G; Srivastava, A; Yagnik, B; Hasan, M; Saiyed, Z; Gabralla, LA; Abraham, A; Walambe, R; Kotecha, K. Explainable misinformation detection across multiple social media platforms. IEEE Access ; 2023; 11 , pp. 23634-23646. [DOI: https://dx.doi.org/10.1109/ACCESS.2023.3251892]
+32. Polu, OR. Ai-based fake news detection using NLP. J. ID ; 2024; 9339 , 1263.
+33. Zamil, YK; Charkari, NM. Combating fake news on social media: A fusion approach for improved detection and interpretability. IEEE Access ; 2023; 12 , pp. 2074-2085. [DOI: https://dx.doi.org/10.1109/ACCESS.2023.3342843]
+34. Jahanbakhsh, F., Katsis, Y., Wang, D., Popa, L., Muller, M. Exploring the use of personalized AI for identifying misinformation on social media. In Proceedings of the 2023 CHI Conference on Human Factors in Computing Systems , 1–27 (2023).
+35. Kozik, R; Kula, S; Choraś, M; Woźniak, M. Technical solution to counter potential crime: Text analysis to detect fake news and disinformation. J. Comput. Sci. ; 2022; 60 , [DOI: https://dx.doi.org/10.1016/j.jocs.2022.101576] 101576.
+36. Bagozzi, BE; Goel, R; Lugo-De-Fabritz, B; Knickmeier-Cummings, K; Balasubramanian, K. A framework for enhancing social media misinformation detection with topical-tactics. Digit. Threats Res. Pract. ; 2024; 5 , 3 pp. 1-29. [DOI: https://dx.doi.org/10.1145/3670694]
+37. Setiawan, R; Ponnam, VS; Sengan, S; Anam, M; Subbiah, C; Phasinam, K; Vairaven, M; Ponnusamy, S. Certain investigation of fake news detection from facebook and twitter using artificial intelligence approach. Wirel. Pers. Commun. ; 2022; 127 , 2 pp. 1737-1762. [DOI: https://dx.doi.org/10.1007/s11277-021-08720-9]
+38. Bhardwaj, A., Bharany, S., Kim, S. Fake social media news and distorted campaign detection framework using sentiment analysis and machine learning. Heliyon . 10 (16) (2024).
+39. Sadiq, S; Aljrees, T; Ullah, S. Deepfake detection on social media: leveraging deep learning and fasttext embeddings for identifying machine-generated tweets. IEEE Access ; 2023; 11 , pp. 95008-95021. [DOI: https://dx.doi.org/10.1109/ACCESS.2023.3308515]
+40. Hamed, S.K., Ab Aziz, M.J., Yaakub, M.R. Fake news detection model on social media by leveraging sentiment analysis of news content and emotion analysis of users’ comments. Sensors . 23 (4), 1748 (2023).
+41. Edinger, A; Valdez, D; Walsh-Buhi, E; Trueblood, JS; Lorenzo-Luaces, L; Rutter, LA; Bollen, J. Misinformation and public health messaging in the early stages of the mpox outbreak: mapping the twitter narrative with deep learning. J. Med. Internet Res. ; 2023; 25 , [DOI: https://dx.doi.org/10.2196/43841] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/37163694][PubMedCentral: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10282910]e43841.
+42. Alkhaldi, N.A., Asiri, Y., Mashraqi, A.M., Halawani, H.T., Abdel-Khalek, S., Mansour, R.F. Leveraging tweets for artificial intelligence driven sentiment analysis on the covid-19 pandemic. Healthcare . 10 , MDPI, 910 (2022).
+43. Raza, S; Khan, T; Chatrath, V; Paulen-Patterson, D; Rahman, M; Bamgbose, O. Fakewatch: A framework for detecting fake news to ensure credible elections. Soc. Netw. Anal. Min. ; 2024; 14 , 1 142. [DOI: https://dx.doi.org/10.1007/s13278-024-01290-1]
+44. Crone, S. Monkeypox misinformation: Twitter dataset, Kaggle dataset (2022). https://www.kaggle.com/datasets/stephencrone/monkeypox?resource=download (accessed 17 Aug 2025).
+45. Zeng, X., La Barbera, D., Roitero, K., Zubiaga, A., Mizzaro, S. Combining large language models and crowdsourcing for hybrid human–AI misinformation detection. In Proceedings of the 47th International ACM SIGIR Conference on Research and Development in Information Retrieval , 2332–2336 (2024).
+46. Pendyala, VS; Hall, CE. Explaining misinformation detection using large language models. Electronics ; 2024; 13 , 9 1673. [DOI: https://dx.doi.org/10.3390/electronics13091673]
+47. Waheed, A; Azfar, S; Ali, A; Soomro, M. Neural networks for detecting fake news and misinformation: An AI-powered framework for securing digital media and social platforms. Kashf J. Multidiscipl. Res. ; 2025; 2 , 02 pp. 90-111. [DOI: https://dx.doi.org/10.71146/kjmr275]
+48. Mahmood, ORM; Akar, F. Using and comparison of artificial intelligence techniques to detect misinformation and disinformation on twitter. Eur. J. Res. Dev. ; 2024; 4 , 2 pp. 254-264. [DOI: https://dx.doi.org/10.56038/ejrnd.v4i2.467]
+49. Gifu, D. An intelligent system for detecting fake news. Proc. Comput. Sci. ; 2023; 221 , pp. 1058-1065. [DOI: https://dx.doi.org/10.1016/j.procs.2023.08.088]
+50. Stewart, J., Lyubashenko, N., Stefanek, G. The efficacy of detecting AI-generated fake news using transfer learning. Issues Inf. Syst. 24 (2) (2023).
+51. Bao, A. & Detecting artificial intelligence-generated textual and image misinformation using machine learning. In 5th International Symposium on Computer Engineering and Intelligent Communications (ISCEIC) , vol. 2024, 671–676 (IEEE, 2024).
+52. Najee-Ullah, A., Landeros, L., Balytskyi, Y., Chang, S.-Y. Towards detection of AI-generated texts and misinformation. In International Workshop on Socio-Technical Aspects in Security , 194–205 (Springer, 2021).

@@ -1,0 +1,792 @@
+Introduction
+The importance of multi-agent systems has been heavily acknowledged by the research community and industry. A multi-agent system is a system composed of multiple interacting autonomous, self-interested, and intelligent agents,1 and their environment. In such settings, agents need to be incentivized to choose a plan of action, and game theory [1] provides a suitable framework for analyzing these interactions.
+A usual assumption of game theory is that the game specifications (i.e., the rules of interaction, which include the number of players, their strategies and the expected payoff for each strategic choice) are common knowledge among the players. In other words, players have correct (although not necessarily complete) information regarding the game.
+However, in realistic situations, a reasoning agent is often faced with erroneous, misleading and unverifiable information regarding the state of the world or the possible outcomes of her actions (see games with misperception [2, 3–4]). This misinformation may affect the interaction’s outcomes.
+Misinformation in an interaction can occur due to various reasons. For example, the designer may choose to deceive (some of) the agents in order to obtain improved social outcomes or for other reasons (this falls under the general area of mechanism design, see [5]). Or an agent may communicate deceptive information in order to lead the other agents to suboptimal choices and obtain improved outcomes (e.g., fake financial reports misleading investors [6]). Furthermore, when the agents operate in a remote and/or hostile environment, noise and other random effects may distort communication, causing agents to receive a game specification that is different from the intended one (e.g., in the case of autonomous vehicles operating in Mars [7]). Another scenario that could lead to misinformation refers to cases where the environment changes without the agents’ knowledge, causing them to have outdated information regarding the rules of interaction (e.g., an accident causing a major and unexpected disruption in the flow of different roads in a city). Last but not least, endogenous reasons (e.g., limited awareness, bounded computational capacity, cognitive restrictions, biases [8] etc.) may cause agents to misinterpret the situation and assign their own (mistaken) payoffs to different actions.
+Thereupon, some aspects of the situation, or the modeling and reasoning regarding the situation, leads players to incorporate a possibly incorrect viewpoint of the real aspects. Thus, they may miss crucial specifications, and interact relying on a restricted and incorrect perception of the situation. The key characteristic of the described scenario is that the players do not question the rules of interaction given to them; this differentiates this scenario from standard settings of games with other forms of uncertainty (such as Bayesian games [9, 10], uncertainty theory [11] etc.), in which players are well-aware of the fact that the information given to them is incomplete, uncertain or flawed in various ways, and this knowledge is incorporated in their reasoning (see also Fig. 1). In other words, in misinformation games agents don’t know that they don’t know , as opposed to incomplete or imperfect games where the agents know that they don’t know .
+The study of settings where any participant has (possibly) wrong knowledge with regards to the real situation, has been recently considered in defining the concept of misinformation games [5, 12]; this work falls under the hood of games with misperception [2, 3–4]. In misinformation games, each player has a subjective view of the abstract game’s specifications, that may not coincide with the specifications of the real interaction, modelling the fact that agents may operate under an erroneous specification. For that, the proposed method agglomerates both the real situation ( actual game ), and the subjective (misinformed) views of the players. A key characteristic of misinformation games is that the equilibrium (i.e., the set of strategic choices where no player wants to deviate from) is determined by the subjective views of the players, rather than the actual game [12]. This is called the natural misinformed equilibrium in [12]. On the contrary, the actual payoffs received by the players is determined by the actual game, and may be different than the expected ones.
+Given the discrepancy between the actual and the perceived payoffs, a natural question is how the players will react upon their realisation that the received payoffs are different than expected. However, the approach presented in [5, 12] focuses on one-shot interactions, and thus misses this crucial and interesting part of the problem. To address this limitation, this work enhances misinformation games with an iterative time-discrete methodology, called the Adaptation Procedure, which models the evolution of the strategic behaviour of rational players in a misinformation game, as they obtain new information and update their (erroneous) game specifications . The first steps towards this direction were held in [13]; here we extend this approach.
+More specifically, at each time point, players choose a strategic action (using the methodology of [5, 12]), receive the corresponding payoffs, and engulf them into their game specifications. The procedure is then repeated. Importantly, the information received in each time point may lead players to a different choice in the next time point (because they now operate under a different payoff matrix), so the procedure is iterative and stabilises when the players have no incentives to deviate from their current choices, based on what they know so far (which may or may not coincide with the actual game). When the procedure stabilizes we reach a refinement of the natural misinformed equilibrium, that we call the stable misinformed equilibrium . [See PDF for image]
+Fig. 1 Example of games without common and correct information
+
+
+The structure of this paper follows. In Sect. 2 we present some preliminaries, including the concept of misinformation games. Then, in Sect. 3 we introduce the Adaptation Procedure process, and in Sect. 4 we present an algorithmic analysis and tools to compute the Adaptation Procedure and provide some experimental evaluation. In Sect. 5 we review the literature related to this paper and conclude in Sect. 6. Finally, we provide Appendix Appendix A where we present all the proofs of our results.
+This paper is an extended and revised version, combining and extending previous works of ours [5, 12, 13]. More specifically, the main new contributions of the paper, compared to the previous ones, are the following:
+- We elaborate on and describe in detail the inflation process described superficially in [12] (see Propositions 1–6, and Algorithms 1, 2, 3 in Subsection 2.2, as well as Algorithms 4, 5 in Subsection 2.3);
+
+- We provide new theoretical and computational results regarding the adaptation procedure (see Subsection 3.4);
+
+- We provide novel implementations for the Adaptation Procedure (including a parallel one), and new experimental results (see Sect. 4).
+
+
+
+Normal-form misinformation games
+In this section we describe misinformation games; we first present a quick review of normal-form games.
+Normal-form games
+In this paper, we consider normal-form games G . A normal-form game includes a set of players N . Each player i ∈ N has a set of pure strategies that is denoted by S i , and the Cartesian product of all S i s is the set of joint decisions of the players, which is denoted by S . Finally, each player i has a payoff matrix P i ∈ R | S 1 | × … × | S | N | | , assigning a payoff to that player depending on the joint strategy decisions of all players. The payoff matrix of the game is P = ( P 1 , ⋯ , P | N | ) . We follow the usual notation and we denote G as a tuple ⟨ N , S , P ⟩ .
+If player i randomly selects a pure strategy, then she plays a mixed strategy σ i = ( σ i , 1 , … , σ i , | S i | ) which is a discrete probability distribution over S i . Let Σ i be the set of all possible mixed strategies σ i . A strategy profile σ = ( σ 1 , … , σ | N | ) is an | N | -tuple in Σ = Σ 1 × … × Σ | N | . We denote by σ - i the joint decision of all other players except for player i in σ . The payoff function of player i is defined as: h i : Σ → R , such that: 1
+h i ( σ ) = ∑ k ∈ S 1 ⋯ ∑ j ∈ S | N | P i ( k , ⋯ , j ) · σ 1 , k · … · σ | N | , j , where P i ( k , ⋯ , j ) is the payoff of player i in the pure strategy profile ( k , ⋯ , j ) . Further, h i ( σ i , σ - i ) represents the expected payoff of player i as a function of σ . The social welfare function is derived from h as S W ( σ ) : = ∑ i h i ( σ ) .
+In the following, we consider the concept of Nash equilibrium, that is a strategy profile in which no player possesses an improving deviation. Formally, a strategy profile σ ∗ = ( σ 1 ∗ , … , σ | N | ∗ ) is a Nash equilibrium, iff, for any i and for any σ ^ i ∈ Σ i , h i ( σ i ∗ , σ - i ∗ ) ≥ h i ( σ ^ i , σ - i ∗ ) . Further, we denote by NE ( G ) the set of Nash equilibria of G (or simply NE , when G is clear from the context).
+A useful notion in equilibrium computation is the support of a strategy σ i , denoted by supp ( σ i ) , which is the set of pure strategies that are played with positive probability under σ i . Formally, supp ( σ i ) : = { j ∈ [ | S i | ] : σ i , j > 0 } .
+Inflation process for normal form games
+We consider the process of inflation , which can be used to “enlarge” a normal form game, adding new players and strategies, in ways that do not alter the game’s important properties. In particular, the inflated version of a game G , say G ′ , is a “bigger” game (in terms of number of players and available strategies), such that the common players will have the same strategic behaviour and will receive the same payoffs in both games.
+Interestingly, this process has been used in the past in the literature in order to add “dummy” players or strategies, but, to the best of our knowledge, without any appropriate formalisation. Here we introduce the formal machinery necessary to show that this process indeed does not alter the game’s properties.
+The process of inflation will become relevant later, when we define “canonical misinformation games” (see Definition 4). In particular, the process of inflation will allow us to restrict our attention to a specific class of misinformation games, which significantly simplifies our formalization and definitions.
+Algorithmically, to construct an inflated version of a game, we add strategies and players as appropriate, while respecting the above properties. To achieve this, when we add a strategy, we make it dominated (and thus irrelevant from a strategic perspective), and when we add a player, this player is dummy, in the sense that her actions do not affect the strategic choices of other players.
+Before defining inflation, we start with an auxiliary concept, namely compatible strategy profiles . Given two games G and G ′ , and two strategy profiles σ , σ ′ of G , G ′ respectively, we say that σ , σ ′ are compatible if they agree (i.e., contain the same strategic choice) on all players and strategies that are common in the two games. Formally:
+Definition 1
+Consider two normal-form games G = ⟨ N , S , P ⟩ , G ′ = ⟨ N ′ , S ′ , P ′ ⟩ , and let S i (respectively S i ′ ) be the set of strategies available for player i ∈ N in G (respectively i ∈ N ′ in G ′ ). Consider also a strategy profile σ = ( σ ij ) of G and a strategy profile σ ′ = ( σ ij ′ ) of G ′ . Then, we say that σ , σ ′ are compatible , denoted by σ ⋈ σ ′ , if and only if σ ij = σ ij ′ for all i ∈ N ∩ N ′ , j ∈ S i ∩ S i ′ .
+It is easy to see that ⋈ is an equivalence relation. Now we can define the notion of inflation:
+Definition 2
+Consider two normal-form games G = ⟨ N , S , P ⟩ , G ′ = ⟨ N ′ , S ′ , P ′ ⟩ , and let S i (respectively S i ′ ) be the set of strategies available for player i ∈ N in G (respectively i ∈ N ′ in G ′ ). Then, we say that G ′ is an inflated version of G , denoted by G ◀ G ′ , if and only if:
+- N ⊆ N ′
+
+- For all i ∈ N , S i ⊆ S i ′
+
+- P i ( s ) = P i ′ ( s ′ ) whenever i ∈ N and s = ( s j ) j ∈ N ∈ S , s ′ = ( s j ′ ) j ∈ N ′ ∈ S ′ such that s j = s j ′ for all j ∈ N .
+
+- If σ ∈ N E ( G ) , then there exists some σ ′ ∈ N E ( G ′ ) such that σ ⋈ σ ′ .
+
+- If σ ′ ∈ N E ( G ′ ) , then there exists some σ ∈ N E ( G ) such that σ ⋈ σ ′ .
+
+
+
+Some analysis on Definition 2 and its consequences is in order. The first two bullets of the definition are straightforward: in order for G ′ to be an inflated version of G , it must have at least the same players, and at least the same strategies for the (common) players.
+The third bullet guarantees that the two games provide the same payoffs “whenever possible”. In other words, P is, in a sense, a submatrix of P ′ . The effect of this is that players that are common in G and G ′ , while playing common (pure) strategies, will receive the same payoffs in the two games. An immediate consequence of this requirement is that the payoffs will also be the same when common players play any common strategy (pure or mixed):
+Proposition 1
+Consider two normal-form games G = ⟨ N , S , P ⟩ , G ′ = ⟨ N ′ , S ′ , P ′ ⟩ , such that G ◀ G ′ , and let S i (respectively S i ′ ) be the set of strategies available for player i ∈ N in G (respectively i ∈ N ′ in G ′ ). Take also some i ∈ N , and σ , σ ′ strategy profiles in G , G ′ respectively, such that σ ⋈ σ ′ . Then, h i ( σ ) = h i ′ ( σ ′ ) , where h i , h i ′ are the payoff functions of player i in G , G ′ respectively.
+A consequence of Proposition 1 is that, in G ′ , the actions of players that exist only in G ′ do not affect the payoffs of players that are common in G and G ′ . Indeed, for any two strategy profiles σ ^ , σ ~ in G ′ , if these profiles agree on the actions of the common players, then there exists some strategy profile σ in G such that σ ⋈ σ ^ and σ ⋈ σ ~ , and thus, by Proposition 1, h i ′ ( σ ^ ) = h i ( σ ) = h i ′ ( σ ~ ) .
+As a result, P ′ can be seen as consisting of multiple “copies” of P along the extra dimensions imposed by the extra players. Note that this bullet does not impose any immediate requirements for the payoffs of players that exist only in G ′ , or for the payoffs of common players when some (common) player employs a strategy that does not exist in G .
+A further immediate consequence of the third bullet is that, if two games have the same number of players, and the same number of strategies per player, then each one is an inflated version of the other if and only if they are the same game.
+Proposition 2
+Consider two normal-form games G = ⟨ N , S , P ⟩ , G ′ = ⟨ N ′ , S ′ , P ′ ⟩ , such that N = N ′ and S = S ′ . Then, G ◀ G ′ if and only if G = G ′ .
+The last two bullets on Definition 2 ensure that the strategic behaviour of players in both games is the “same”. In particular, the fourth bullet guarantees that any Nash equilibrium σ of G will have a “counterpart” in G ′ , i.e., there will be a Nash equilibrium in G ′ , say σ ′ , in which all common players employ the same strategies as in σ (as usual, we don’t care about the actions of the non-common players). Analogously, the fifth bullet guarantees that any Nash equilibrium σ ′ in G ′ will have a “counterpart” in G , i.e., a Nash equilibrium, say σ in which the common players employ the same strategies as in σ ′ . Note that this requirement disallows the existence of Nash equilibria in G ′ for which any common player employs a non-common strategy with a probability higher than 0, because, in such a strategy profile, the probabilities assigned to the common strategies do not sum to 1, and thus there cannot exist a compatible strategy profile in G . Note also the use of the compatibility relation between strategy profiles to formalise the notion of “counterpart”.
+Clearly, the relation ◀ is a partial order, as shown in the proposition below:
+Proposition 3
+The relation ◀ is a partial order, i.e., for any normal-form games G 1 , G 2 , G 3 the following hold: - G 1 ◀ G 1 (reflexivity)
+
+- If G 1 ◀ G 2 and G 2 ◀ G 1 then G 1 = G 2 (antisymmetry)
+
+- If G 1 ◀ G 2 and G 2 ◀ G 3 then G 1 ◀ G 3 (transitivity)
+
+
+The next question we will consider is how we create an inflated version of a game. For this, we developed the InflateGame algorithm (Algorithm 1), along with two supplementary routines, AddPlayer (Algorithm 2) and AddStrategy (Algorithm 3). In Algorithm 1, the input is a finite normal-form game G , a set of players N ′ and a strategy space S ′ , and the goal is to enlarge (i.e., inflate) G so as to have N ′ players and strategy space S ′ . In lines 1–3 we add players to the game using Algorithm 2, and in lines 4–10 we embed the strategy space using Algorithm 3.
+In supplementary Algorithm 2, we add a new player i in G . Besides the enlargement of the set of players (line 1), we make sure that the strategy space is properly modified in order to support a (single) choice for the new player (line 2). We modify the payoff matrices so as to provide a payoff value for the new player (line 3). More specifically, as each entry of P is an array, we enlarge each such array by one dimension. This is accomplished in line 3 of the algorithm as follows: given an array a ∈ R n we multiply it from the right with the matrix [ I n × n 0 n × 1 ] ∈ R n × n + 1 . This provides a new array with n + 1 dimensions. We perform this operation for every entry of P . Observe that the new player will receive a zero payoff for any strategy profile.
+Finally, in supplementary Algorithm 3, we add a new strategy j for player i in G . Again, we enhance the set of strategies S i of player i in order to support the new strategic choice j , resulting to a new set of strategies S i ′ (line 2). Afterwards, we modify the payoff matrices so as to provide a payoff value for the new strategy. For that, first we initialize the matrix P ′ with dimensions | S - i × S i ′ | (line 3). Then, in lines 4–10 we exhaustively run through all the pure strategy profiles s of the strategic space S - i × S i ′ . If s ∈ S then P ′ has the same values as in P , otherwise P ′ has values less than the minimum value, m (line 1), of P for all players (line 8), in order to make this strategy dominated and thus irrelevant with respect to the Nash equilibrium, as required by the definition; this is ensured by the operation m 1 | N | . Observe that this addition affects all axes in the payoff matrices. Also, the payoff values for the pure strategy profiles that do not include j (aka indexes in P ) are unchanged, but the remaining entries of the payoff matrices have to be such that they do not affect the strategic behavior of the players.
+[See PDF for image]
+Algorithm 1 InflateGame ( G , N ′ , S ′ )
+
+
+[See PDF for image]
+Algorithm 2 AddPlayer ( G , i )
+
+
+[See PDF for image]
+Algorithm 3 AddStrategy ( G , j , i )
+
+
+We can show that these algorithms correctly produce an inflated version of a game. Given the transitivity of ◀ , the results below hold also for repetitive applications of the above algorithms.
+Proposition 4
+Let G be a normal form game, and let G ′ be the normal form game that is the output of AddPlayer ( G , i ) (Algorithm 2). Then G ◀ G ′ .
+Proposition 5
+Let G be a normal form game, and let G ′ be the normal form game that is the output of AddStrategy ( G , j , i ) (Algorithm 3). Then G ◀ G ′ .
+Proposition 6
+Let G be a normal form game, and let G ′ be the normal form game that is the output of InflateGame ( G , N ′ , S ′ ) (Algorithm 1). Then G ◀ G ′ .
+Misinformation games
+Misinformation captures the concept that different players may have a specific, subjective, and thus different view of the game that they play.
+Definition 3
+A misinformation normal-form game (or simply misinformation game ) is a tuple m G = ⟨ G 0 , G 1 , … , G | N | ⟩ , where all G i are normal-form games and G 0 contains | N | players.
+G 0 is called the actual game and represents the game that is actually being played, whereas G i (for i ∈ { 1 , ⋯ , | N | }) represents the subjective view of player i , called the game of player i . We make no assumptions as to the relation among G 0 and G i , and allow all types of misinformation to occur. An interesting special class of misinformation games is the following:
+Definition 4
+A misinformation game m G = ⟨ G 0 , G 1 , … , G | N | ⟩ is called canonical iff:
+- For any i , G 0 , G i differ only in their payoffs.
+
+- In any G i , all players have an equal number of pure strategies.
+
+
+
+The first bullet of Definition 4 is usually true in practice. In order for a player to miss a strategy or player, or to have additional, imaginary, strategies or players, the communication failures should concern entire sections of a payoff matrix, and thus be quite substantial. The second bullet is more commonly violated, because the actual game, G 0 , might violate it.
+In any case, canonical misinformation games are simpler to grasp, and also significantly simplify the formalisation. We can restrict our focus to canonical misinformation games without loss of generality, because we can transform any non-canonical misinformation game into a canonical one by repetitive applications of the inflation process for normal form games that was described in Subsection 2.2. As explained there, the process of inflation does not alter the strategic properties of the normal form games (which in turn determine the strategic properties of the misinformation game).
+To be more precise, we use the Inflation p rocess algorithm (Algorithm 5) to transform a non-canonical mG into a canonical mG without altering its strategic properties. In a nutshell, Algorithm 5 first computes the full list of players and strategies that each game should have in order to ensure the properties of Definition 4 (lines 1–2). Then, it utilizes the AddGame algorithm (Algorithm 4) to plug in a new game in the misinformation game, in order to ensure that any player, either real or fictional, has her own subjective view of the interaction (lines 3–5). In AddGame , we create such a game for any player that is not in N 0 (and thus does not already exist in mG ), ensuring that it has the correct players and strategies ( N ∪ , S ∪ ). Afterwards, Algorithm 5 inflates each of the normal-form games in the non-canonical misinformation game, to ensure that they, too, have the correct players and strategies (lines 6–8). The final resulting mG is returned in line 9.
+[See PDF for image]
+Algorithm 4 AddGame ( m G , N ′ , S ′ )
+
+
+[See PDF for image]
+Algorithm 5 Inflation p rocess ( m G )
+
+
+Since the inflation process does not alter the strategic properties of a game, and any non-canonical misinformation game can be turned into a canonical one using Algorithm 5, we will establish strategy profiles and equilibrium concepts in Subsection 2.4 below, focusing on canonical misinformation games only. As we will see, introducing these concepts for the non-canonical case, brings about all sorts of unrelated technical difficulties that are distracting and complicate the formalism, without contributing to the main intuition.
+Strategy profiles in misinformation games
+The definition of misinformed strategies and strategy profiles is straightforward, once noticing that they refer to each player’s own game:
+Definition 5
+A misinformed strategy , m σ i is a strategy of player i in game G i . We denote the set of all possible misinformed strategies of player i as Σ i i . A misinformed strategy profile of mG is an | N | -tuple of misinformed strategies m σ = ( m σ 1 , … , m σ | N | ) , where m σ i ∈ Σ i i .
+As usual, we denote by m σ - i the ( | N | - 1 ) -tuple strategy profile of all other players except for player i in a misinformed strategy m σ . The payoff function h i of player i under a given profile m σ is determined by the payoff matrix of G 0 , and is defined as h i : Σ 1 1 × ⋯ × Σ | N | | N | → R , such that: h i ( m σ i , m σ - i ) = ∑ k ∈ S 1 1 ⋯ ∑ j ∈ S | N | | N | P i 0 ( k , ⋯ , j ) · m σ 1 , k · … · m σ | N | , j , where P i 0 ( k , ⋯ , j ) is the payoff of player i in the pure strategy profile ( k , ⋯ , j ) under the actual game G 0 . Also, S i j denotes the set of pure strategies of player i in game G j .
+Observe that, although each player’s strategic decisions are driven by the information in her own game ( G i ), the received payoffs are that of the actual game G 0 , that may differ than G i . Further, the payoff function would be ill-defined in case of non-canonical misinformation games.
+Next, we define the solution concept of a misinformation game, where each player chooses a Nash strategy, neglecting what other players know or play:
+Definition 6
+A misinformed strategy, m σ i , of player i , is a misinformed equilibrium strategy , iff, it is a Nash equilibrium strategy for game G i . A misinformed strategy profile m σ is called a natural misinformed equilibrium iff it consists of misinformed equilibrium strategies.
+In the following, we denote by NME ( mG ) (or simply NME, when mG is obvious from the context) the set of natural misinformed equilibria of mG , and by nme the elements of NME ( mG ).
+Example 1
+Consider the canonical misinformation game m G = ⟨ G 0 , G 1 , G 2 ⟩ , where G i = ⟨ { 1 , 2 } , S = { s 1 , s 2 } × { s 1 , s 2 } , P i ⟩ , with i ∈ { 0 , 1 , 2 } and payoff matrices as depicted in Table 1.
+Table 1. Payoff matrices in the misinformation game of Example 1
+(a) P 0
+
+s 1
+s 2
+
+s 1
+(6,6)
+(2,7)
+
+s 2
+(7,2)
+(1,1)
+
+(b) P 1
+
+s 1
+s 2
+
+s 1
+(2,2)
+(0,3)
+
+s 2
+(3,0)
+(1,1)
+
+(c) P 2
+
+s 1
+s 2
+
+s 1
+( - 1 ,1)
+(2, - 2 )
+
+s 2
+(1, - 1 )
+(0,0)
+
+
+Player’s 1 equilibrium strategy is s 2 in G 1 (i.e., player 1 will play (0, 1)), while player’s 2 mixed equilibrium strategy in G 2 is (1/2, 1/2). Thus, we have N M E = { ( s 2 , s 1 ) , ( s 2 , s 1 ) } with nme s ((0, 1), (1, 0)) and ((0, 1), (0, 1)).
+To understand the computational properties of calculating an nme , we observe that any natural misinformed equilibrium consists of the agglomeration of the different Nash equilibrium strategy profiles, one for each G i . The computation of a Nash equilibrium for each G i is PPAD -complete [14], and computing the nme amounts to repeating this computation for each G i . Thus, the computation of the natural misinformed equilibrium is also PPAD -complete.
+As a side note, let us consider how the definitions of this subsection would apply (or not) for the case of non-canonical misinformation games. In a non-canonical misinformation game, a player i may have a subjective view G i that diverts from G 0 in every aspect, i.e., number of players, number of pure strategies, payoffs. We observe that her strategic behavior will still be guided by the contents of her subjective game, G i , so Definition 5 applies normally. Consequently, Definition 6 for the nme is also well-defined. Contrarily, we observe that the formula for computing the payoff values h i for some misinformed strategy profile m σ is no longer well-defined, because there may exist misinformed strategy profiles (either pure or mixed) that are unknown to G 0 , and thus correspond to no entry in the payoff matrix P 0 . Moreover, from the perspective of individual players, it is unclear what a player should do when being informed that another player used a strategy that is unknown to her (or that an unknown player participated in the game), and how the received payoff should be interpreted (since it corresponds to no entry in her own payoff matrix). Addressing this interesting case will be considered in future work.
+Adaptation Procedure
+In previous work (and in our analysis on misinformation games above), only one-shot interactions were considered; this is a major limitation, as we expect players to realise (partly) the shortcomings of their knowledge following the reception of the (unexpected) payoffs and to revise accordingly. To address this shortcoming, we introduce the Adaptation Procedure that enables us to model iterative interactions. Abusing notation, we write m G ( t ) instead of mG in order to plug in the step of interaction (this change in the notation is transfused in every concept).
+We start with an informal description of the Adaptation Procedure, and continue by presenting the respective formalisation and showing some properties.
+Informal description of the Adaptation Procedure
+The Adaptation Procedure is initialized with a misinformation game, say m G ( 0 ) . As explained in Sect. 2.4, this will cause each player to employ one of the equilibrium strategies in her own game, resulting to a natural misinformed equilibrium. The payoff received from the joint strategic choices will be provided by the actual game, G 0 , and this may be different from what each player knows (and expects) from her subjective game. Notably, we assume that the payoffs received by each player for their strategic choices are publicly announced, thus are common knowledge. As a result, players will update their payoff matrices by replacing the erroneous payoffs with the correct ones just received, leading to a new misinformation game.
+Interestingly, the above process is not, in general, linear. When the misinformation game has more than one natural misinformed equilibria, and/or when there exist mixed strategic choices in them, each of these choices will be considered in a separate branch of the process, because the players may choose any of those strategies to play. Any such branch leads to a different new misinformation game, and, thus, our process should take into account all those potential scenarios. To do this, m G ( 0 ) will spawn several new misinformation games, one for each element of the support of the natural misinformed equilibria, eventually forming a tree (more precisely, a directed graph, as there may be self-loops or mergers, as we will show later). Note that this spawning should not be interpreted as leading to multiple parallel processes; instead, it represents different potential ways that the process can unfold.
+The process continues recursively for each branch, creating new misinformation games. When no new misinformation games are spawned (i.e., when the players learn nothing new from the environment and no longer change their payoff matrices), the Adaptation Procedure terminates .
+Observe that the Adaptation Procedure produces new games (and thus new nme s) in each time step. In general an nme is not a stable equilibrium concept when the Adaptation Procedure is considered, because, after the players learn something new about the reality as explained above, they might choose to change their choices. Nevertheless, the nme s of the games appearing in the leaves of the recursive tree at the time when the Adaptation Procedure terminates are stable (nothing new is learnt). Given that, we define a new equilibrium concept, that is, a strategy profile that is an nme of one of the leaves, and we call it stable misinformed equilibrium ( sme ); players do not have incentives to deviate from an sme , even in the presence of the payoff information received by the environment (game).
+Also note that this process would be significantly more complex for non-canonical misinformation games, where the agents could potentially have erroneous information for every aspect of the game, including the available strategies or players. In such scenarios, an agent would be unable to introspect the decisions they made when they learn about a new strategy or player in the game, and would have to expand their game to include the newly learned strategies or players. That would significantly complicate the description of the Adaptation Process, both at the intuitive level above and in the formalisation that follows.
+Formal definition
+Consider a multidimensional matrix A , and a vector v → . We denote by A v → the element of A in position v → . For example, A ( 1 , 2 ) is the top right element of the 2 × 2 matrix A . More general, for a n 1 × n 2 × ⋯ × n m matrix, a position is an m -dimensional vector v ∈ [ n 1 ] × [ n 2 ] × ⋯ × [ n m ] , where [ n i ] = { 1 , 2 , ⋯ , n i } . Furthermore, the set of all position vectors in a multidimensional payoff matrix is the set of joint strategies S . In what follows, we will use the term position vectors when referring in a specific point in the payoff matrix. Thereupon, we define the operation of replacement of element A v → with b as follows:
+Definition 7
+Consider set F , matrix A ∈ F n 1 × n 2 × … × n m , vector v → indicating a position in A and some b ∈ F . We denote by A ⊕ v → b the matrix B ∈ F n 1 × n 2 × … × n m , such that B v → = b and B u → = A u → for all u → ≠ v → .
+In practice, the operator ⊕ v will be used to replace a vector of payoffs (that appears in the position v ) with some other vector. So the set F in our case will consist of all appropriately-sized vectors of real numbers, and b will be one such vector. This replacement reflects the effect of the Adaptation Procedure in the subjective payoff matrices of players, as it leads to the updating of an erroneous payoff vector with the actual one that is communicated to them by the game (and appears in the actual payoff matrix). These ideas are formalised below:
+Definition 8
+Consider a canonical misinformation game m G = ⟨ G 0 , G 1 , ⋯ , G | N | ⟩ , where G i = ⟨ N , S , P i ⟩ (for 0 ≤ i ≤ | N | ), and some vector v → . We define the v → -update of mG , denoted by m G v → , to be the misinformation game ⟨ G 0 , G 1 ′ , … , G | N | ′ ⟩ , where G i ′ = ⟨ N , S , P i ⊕ v → P v → 0 ⟩ , for 1 ≤ i ≤ | N | .
+Definition 8 tells us how to perform the update process that the Adaptation Procedure requires, in particular by replacing the payoffs of the newly learnt position in each of the subjective payoff matrices ( P i ) by the actual payoff given by P 0 (i.e., by P v 0 ). Interestingly, the v → -update of mG is idempotent, ( m G u → 1 ) u → 1 = m G u → 1 , and commutative, ( m G u → 1 ) u → 2 = ( m G u → 2 ) u → 1 .
+Abusing notation, for a set of positions X = { u → 1 , ⋯ , u → k } , we denote by m G X the game m G X = ( ⋯ ( m G u → 1 ) u → 2 ⋯ ) u → k . Given the properties above, the notation m G X is well-defined.
+The position where the update takes place (denoted by v → in Definition 8) is determined by the strategic choices of players, and can be “extracted” from a strategy profile that is an nme , using the following definition:
+Definition 9
+Consider a strategy profile σ = ( σ 1 , … , σ N ) with σ i ∈ [ 0 , 1 ] | S i | and S i = { s i 1 , … , s i | S i | } . The characteristic strategy set of vectors of σ is χ ( σ ) = χ ( supp ( σ 1 ) ) × ⋯ × χ ( supp ( σ N ) ) , with χ ( supp ( σ j ) ) = { i | s ji ∈ supp ( σ j ) } .
+In practice, χ identifies the indices of the strategies that each player plays with non-zero probability, and then returns a set containing all possible vectors that can be formed with these indices (where each point in the vector corresponds to a player). This will be further clarified with the following example:
+Example 2
+Assume a 4 × 3 bimatrix game. Then, the characteristic strategy set of vectors of σ = ( ( 1 / 2 , 0 , 1 / 3 , 1 / 6 ) , (0, 0, 1)) is χ ( σ ) = { ( 1 , 3 ) , ( 3 , 3 ) , ( 4 , 3 ) } . □
+As explained above, the Adaptation Procedure occurs in discrete time steps t ∈ N 0 = N ∪ { 0 } . It starts from t = 0 where player i has the view G i , ( 0 ) , ∀ i ∈ [ | N | ] , and in each time step t we implement the update operation described in Definition 8 for the payoff vector(s) that correspond to the strategic choices of the players. In other words, we update the strategy values of the strategy profiles of the players. The following example illustrates this procedure using the above notions, and is also visualised in Fig. 3:
+Example 1
+(continued) We write mG as m G ( t ) = ⟨ G 0 , G 1 , ( t ) , G 2 , ( t ) ⟩ . Using the support of the nme and the characteristic strategy vector we take χ { ( ( 0 , 1 ) , ( 1 / 2 , 1 / 2 ) ) } = { ( 2 , 1 ) , ( 2 , 2 ) } . So, we have the strategy value vector (2, 1) for the strategy profile ((0, 1), (1, 0)), and the strategy value vector (2, 2) for the strategy profile ((0, 1), (0, 1)).
+Notice that, as one player is randomized, χ ( n m e ) has more than one elements, and the Adaptation Procedure branches result to two new misinformation games, say m G ( 1 a ) , m G ( 1 b ) . The first one becomes, m G ( 1 a ) = ⟨ G 0 , G 1 , ( 1 a ) , G 2 , ( 1 a ) ⟩ with payoff matrices as shown in Table 2 (note how the bottom-left payoff has been updated).
+Table 2. Payoff matrices in the misinformation game of the Example 1 using the nme ((0, 1), (1, 0)) for the update
+(a) P 0
+
+s 1
+s 2
+
+s 1
+(6,6)
+(2,7)
+
+s 2
+(7,2)
+(1, 1)
+
+(b) P 1 , ( 1 a )
+
+s 1
+s 2
+
+s 1
+(2,2)
+(0,3)
+
+s 2
+()
+(1,1)
+
+(c) P 1 , ( 1 a )
+
+s 1
+s 2
+
+s 1
+( - 1 ,1)
+(2, - 2 )
+
+s 2
+()
+(0,0)
+
+
+Similarly, the second one becomes, m G ( 1 b ) = ⟨ G 0 , G 1 , ( 1 b ) , G 2 , ( 1 b ) ⟩ with the payoff matrices shown in Table 3 (note that the bottom-right payoff has been updated). Table 3. Payoff matrices in the misinformation game of the Example 1 using the nme ((0, 1), (0, 1)) for the update
+(a) P 0
+
+s 1
+s 2
+
+s 1
+(6,6)
+(2,7)
+
+s 2
+(7,2)
+(1,1)
+
+(b) P 1 , ( 1 b )
+
+s 1
+s 2
+
+s 1
+(2,2)
+(0,3)
+
+s 2
+(3,0)
+()
+
+P 2 , ( 1 b )
+
+s 1
+s 2
+
+s 1
+( - 1 ,1)
+(2, - 2 )
+
+s 2
+(1, - 1 )
+()
+
+
+The procedure shown in Example 1 is formalised as follows, taking into account the fact that the process may branch when χ ( σ ) is not a singleton set:
+Definition 10
+For a set M of misinformation games, we set: A D M = { m G u → ∣ m G ∈ M , u → ∈ χ ( σ ) , σ ∈ N M E ( m G ) } We define the Adaptation Procedure as the following iterative process: 2
+A D ( 0 ) M = M A D ( t + 1 ) M = A D ( t ) A D M for t ∈ N 0 .
+The functionality of the Adaptation Procedure between two consecutive time steps t and t + 1 , as provided by Definition 10, is depicted in Fig. 2. [See PDF for image]
+Fig. 2 Schematic representation of the functionality of Adaptation Procedure from time step t to time step t + 1 , that is A D t + 1 m G
+
+
+Note that the Adaptation Procedure is defined over a set of misinformation games. Although our intent is basically to apply it over a single misinformation game, the branching process, along with the recursive nature of the definition, forces us to consider the more general case right from the start. Note also that we will often abuse notation and write A D m G (or A D ( t ) m G ) instead of A D { m G } (or A D ( t ) { m G } ).
+The following example shows the second step of the Adaptation Procedure of Example 1. Interestingly, m G ( 1 ) includes a hybrid natural misinformed equilibrium (i.e., one in which one player plays a pure strategy and the other a mixed one), thus illustrating the branching process mentioned above.
+Example 1
+(continued) At t = 1 , the Adaptation Procedure is branched. We demonstrate each branch separately.
+The first branch results from updating profile ( s 2 , s 1 ) in m G ( 0 ) . In the new game, player 1 has equilibrium strategy s 2 in G 1 , ( 1 a ) and player 2 has equilibrium strategy s 1 in G 2 , ( 1 a ) . Thus, the Adaptation Procedure provides a new misinformation game, say m G ( 2 a ) . Observe that the payoff matrices of m G ( 1 a ) are already updated with the correct value with respect to the bottom-left element, therefore m G ( 2 a ) = m G ( 1 a ) .
+The second branch results from updating profile ( s 2 , s 2 ) in m G ( 0 ) . In the new game, we have one pure Nash equilibrium in G 1 , ( 1 b ) for player 1, that is ((0, 1), (0, 1)) and a mixed Nash equilibrium in G 2 , ( 1 b ) with strategy profile ((2/5, 3/5), (1/3, 2/3)) for player 2. Thus, the nme is ((0, 1), (1/3, 2/3)). Applying the characteristic strategy vector χ ( ( 0 , 1 ) , ( 1 / 3 , 2 / 3 ) ) yields { ( 2 , 1 ) , ( 2 , 2 ) } , leading to further branching into new misinformation games m G ( 2 b ) and m G ( 2 c ) .
+Let us consider the element (2, 2) of χ ( ( 0 , 1 ) , ( 1 / 3 , 2 / 3 ) ) (which leads to m G ( 2 c ) ). We note that the payoff matrices of m G ( 1 b ) are already updated, specifically the bottom-left element, making m G ( 2 c ) = m G ( 1 b ) .
+Similarly, for the element (2, 1) of χ ( ( 0 , 1 ) , ( 1 / 3 , 2 / 3 ) ) , we update the bottom-right element of P 1 , ( 1 b ) and P 2 , ( 1 b ) , so m G ( 1 b ) leads to m G ( 2 b ) = ⟨ G 0 , G 1 , ( 2 b ) , G 2 , ( 2 b ) ⟩ with payoff matrices as shown in Table 4.
+Table 4. Payoff matrices in the misinformation game of the Example 1 at time t = 1 , using the nme ((0, 1), (1/3, 2/3))
+(a) P 1 , ( 2 b )
+
+s 1
+s 2
+
+s 1
+(2,2)
+(0,3)
+
+s 2
+()
+()
+
+(b) P 2 , ( 2 b )
+
+s 1
+s 2
+
+s 1
+( - 1 ,1)
+(2, - 2 )
+
+s 2
+()
+()
+
+
+In summary, we deduce that A D ( 2 ) { m G ( 0 ) } = { m G ( 2 a ) , m G ( 1 b ) , m G ( 2 c ) } .
+Stabilisation of the Adaptation Procedure
+The following definition determines the final step of the procedure; this corresponds to the time point where any further iterations do not provide new information to the players:
+Definition 11
+We say that the Adaptation Procedure terminates (or stops ) at step t , iff t is the smallest non-negative integer for which A D ( t + 1 ) M = A D ( t ) M for t ∈ N 0 . We call t the length of the Adaptation Procedure and is denoted by L A D M .
+In essence, the Adaptation Procedure concludes when all spawned misinformation games appear already in the input. We will demonstrate (see Theorem 11) that termination is a well-defined concept for all finite misinformation games, as they invariably reach a termination point.
+To simplify notation, let A D ∗ M represent the set of all misinformation games created by M through successive applications of the A D · function, i.e., A D ∗ M = ⋃ t = 0 ∞ A D ( t ) M . Let A D ∞ M be the set of misinformation games produced by A D · post-termination, i.e., A D ∞ M = A D ( t ) M for t = L A D M . A D ∞ M will be called the Stable Set .
+Definition 12
+Consider a misinformation game mG . Then, σ is a stable misinformed equilibrium (or sme for short) of mG , iff there exists some mG ^ ∈ A D ∞ { m G } such that σ ∈ N M E ( mG ^ ) and, for all v → ∈ χ ( σ ) , mG ^ v → = mG ^ .
+We denote by SME ( mG ) the sme s of mG . The careful reader might wonder why we didn’t define sme s as the nme s of the stable set. The extra condition (for all v → ∈ χ ( σ ) , mG ^ v → = mG ^ ) ensures that the nme satisfies some condition of “stability” in the sense that the players already know the actual payoffs of the positions being played. Note that this is not necessarily true for all nme s, even when restricting ourselves to the nme s of mG s that appear in the stable set: an nme could lead to learning new positions, creating different mG s, which happen to be in the stable set. Such an nme is not an sme , according to Definition 12; instead, an nme is an sme if and only if the players learn nothing because of it. The following example illustrates this scenario (Fig. 3). [See PDF for image]
+Fig. 3 Schematic representation of Example 1
+
+
+Example 1
+(continued) For t = 2 , let us first consider m G ( 2 a ) . As mentioned, m G ( 2 a ) = m G ( 1 a ) , leading to m G ( 3 a ) = m G ( 1 a ) .
+Analogously for m G ( 2 c ) , we observe that m G ( 2 c ) = m G ( 1 b ) so, again, from the analysis in the previous steps of Example 1, it branches into m G ( 3 a ) = m G ( 1 b ) , m G ( 3 b ) = m G ( 2 b ) .
+Finally, for m G ( 2 b ) , we have that both players’ subjective games, G 1 , ( 2 b ) and G 2 , ( 2 b ) , have a pure Nash equilibrium with strategy profile ((0, 1)), (1, 0)). Thus, the nme of m G ( 2 b ) is σ = ( ( 0 , 1 ) , ( 1 , 0 ) ) , for which χ ( σ ) = { ( 2 , 1 ) } . Observe that this position in χ ( σ ) is known to the players, i.e., it holds that P v → i , ( 2 b ) = P v → 0 , for i ∈ { 1 , 2 } , v → = { ( 2 , 1 ) } . Thus, m G ( 3 c ) = m G ( 2 b ) .
+Combining the above, we observe that A D ( 3 ) { m G ( 0 ) } = { m G ( 1 ) , m G ( 2 b ) } = A D ( 2 ) { m G ( 0 ) } , so the Adaptation Procedure terminates at step 2, i.e., L A D { m G ( 0 ) } = 2 .
+Now let us identify the sme s of m G ( 0 ) . As explained above, N M E ( m G ( 1 a ) ) = { ( ( 0 , 1 ) , ( 1 , 0 ) ) } , and N M E ( m G ( 2 a ) ) = { ( ( 0 , 1 ) , ( 1 , 0 ) ) } . Thus, profile σ = ( ( 0 , 1 ) , ( 1 , 0 ) ) is an sme . However, the sole nme of m G ( 1 b ) , ((0, 1), (1/3, 2/3)), does not meet the criteria for an sme since m G v ∉ A D ∞ m G for v = ( 2 , 1 ) , and thus m G ( 1 b ) fails the second condition of Definition 12.
+In Fig. 4, we demonstrate the relationships between the three equilibrium concepts, namely NE, nme , and sme . The top layer represents each player’s subjective view, where they choose according to NE in their perceived game. In the second layer (the misinformation game at t = 0 ), nme s are formed by combining the supports of NE strategies (see Definition 6). Players then update their information based on these NMEs and corresponding payoffs, iterating through the Adaptation Procedure (the next two layers in the figure), according to Definitions 8 and 10. Finally, at termination (i.e., the bottom layer in the figure), the surviving nme s become sme s. [See PDF for image]
+Fig. 4 Schematic summarization for the relationship among NE, nme and sme . An nme is constructed by the supports, of the Nash equilibria, of each player’s subjective game. Thus, the nme constitutes the joined decision the players reach operating individually. An sme is an nme that is stable in the sense that the players do not have an incentive move away from, based on their subjective information
+
+
+Adaptation Procedure: Properties
+General properties
+We will start by providing two useful properties of the Adaptation Procedure. The first one shows that the Adaptation Procedure is “local”, i.e., the different misinformation games in the input of A D · do not interact with each other:
+Proposition 7
+For any set of misinformation games M , A D M = ⋃ m G ∈ M A D { m G } .
+The next two results essentially show that an mG that appears in any step of the Adaptation Procedure cannot reappear in any subsequent step, unless it stays there permanently:
+Proposition 8
+Take some finite sequence m G 1 , ⋯ , m G n such that m G i + 1 ∈ A D { m G i } , for i ∈ [ n - 1 ] and m G 1 ∈ A D { m G n } . Then, m G i = m G j for all i ,  j .
+Proposition 9
+For any two misinformation games mG , m G ′ and t ≥ 0 , if m G ′ ∈ A D ( t ) m G and m G ′ ∈ A D m G ′ then m G ′ ∈ A D ∞ m G .
+From Definition 12, not all misinformation games in the Stable Set contribute an sme . In other words, some of the games in A D ∞ m G are irrelevant when it comes to computing the sme s. Moreover, the termination criterion outlined in Definition 11 indicates a “global” situation, where the sets of misinformation games are identical across two successive steps. The set-theoretic comparison of two sets of misinformation games would be computationally expensive, so a more “local” termination criterion is preferable. Therefore, an interesting question is whether it is safe to discard a misinformation game from future iterations. This problem is addressed jointly with the notion of the terminal set.
+Definition 13
+Let m G ( 0 ) be a misinformation game. We define the terminal set of the Adaptation Procedure on m G ( 0 ) as follows: T = { m G ∈ A D ∗ m G ( 0 ) ∣ m G ∈ A D m G } .
+Example 1
+(continued) The terminal set in Example 1 is T = { m G ( 1 a ) , m G ( 2 b ) } .
+The next proposition shows that the games in the terminal set are also in the Stable Set; in addition, they are the only members of the Stable Set that matter when it comes to computing sme s:
+Proposition 10
+Let T be the terminal set of the Adaptation Procedure on m G ( 0 ) . Then:
+- T ⊆ A D ∞ m G ( 0 )
+
+- For any σ ∈ S M E ( m G ( 0 ) ) , there exists m G ∈ T such that σ ∈ N M E ( m G ) .
+
+
+
+Note that the opposite of the second bullet of Proposition 10 does not hold: a misinformation game in the terminal set may contain NME s that are not themselves SME s, because they “lead” to another misinformation game, thereby violating the condition “for all v → ∈ χ ( σ ) , mG ^ v → = mG ^ ” of Definition 12.
+Consider the implications of Proposition 10 on the computational aspects of the Adaptation Procedure. When a game mG is not a member of the terminal set T , our interest shifts to its outcomes, specifically A D m G , rather than the game itself, since it will not yield an sme . In contrast, if mG is part of the terminal set, we retain it without further processing, as it will perpetually recur (as well as its outcomes), rendering any additional processing superfluous. On the other hand, the games in A D m G \ { m G } may be relevant, if any of them (or any of their descendants) is in the terminal set.
+Finally, Fig. 5 shows the relationship between the Stable Set and the Terminal Set ( T ) in the Adaptation Procedure for misinformation games. The rectangles represent sets of misinformation games at different stages, from the initial set A D ( 0 ) ( m G ( 0 ) ) to the Stable Set A D ∞ ( m G ( 0 ) ) after the procedure terminates. The smaller red rectangle within the Stable Set is the T , containing the misinformation games critical for computing sme s. Only mG s in the T recur and are directly relevant to sme computation, while not all mG s in the Stable Set contribute. mG s outside the T may lead to further steps, but those within T recur without changes, eliminating the need for further processing. [See PDF for image]
+Fig. 5 Relationship between the Stable and Terminal sets. As we show in Proposition 11 the Adaptation Procedure reaches a fixed point after a finite number of steps. We call this fixed point the Stable Set of the Adaption Procedure A D ∞ m G ( 0 ) . The Stable Set A D ∞ m G ( 0 ) will be repeated ad infinitum. The Terminal Set is the set of the misinformation games the generate themselves. In Theorem 14 we will see that in a sense the Terminal Set generates the Stable Set, thus being responsible for the Adaptation Procedure reaching a fixed point
+
+
+Termination, and existence of smes
+In this subsection we show some results related to the termination of the Adaptation Procedure.
+We start by showing that the Adaptation Procedure will always terminate when mG is finite. In particular, when mG is finite, then at any given point in the Adaptation Procedure a finite number of positions can be learnt, and the positions that remain to be learnt are also finite. Therefore the length of the procedure is bounded, as well as the total number of mG s that can be generated at any step, so the set generated by the Adaptation Procedure is finite and the Adaptation Procedure terminates. This result is formally phrased in the next propositions.
+Proposition 11
+Consider a finite | N | -player canonical misinformation game mG on | S | strategies. For the length L A D m G of the Adaptation Procedure on mG , we have, 3
+L A D m G ≤ | S |
+Proposition 12
+Let mG be a | N | -player canonical misinformation game on | S | strategy profiles. Then for the number | A D ∗ { m G } | of all the misinformation games produced during the Adaptation Procedure on mG , it holds that, 4
+| A D ∗ { m G } | = O min | S | L A D m G + 1 , 2 | S | 2 . 2
+Intuitively, Proposition 12 proves that the total number of misinformation games produced during the Adaptation Procedure on a given initial mG depends on two factors: the number of strategy profiles and the length of the Adaptation Procedure.
+Corollary 13
+Assume a | N | -player canonical misinformation game mG , on | S | strategies. Then the stable set A D ∞ m G is also finite.
+Unfortunately, a similar result cannot be shown for infinite games. The following counter-example proves this fact:
+Example 3
+Consider G 0 = ⟨ N , S , P 0 ⟩ such that N = { r , c } , S r = S c = { 1 , 2 , ⋯ } , S = S r × S c , and the payoff for a position ( x , y ) ∈ S r × S c is computed as follows: P ( x , y ) 0 = 1 x , 1 y Observe that the only (pure) Nash equilibrium for G 0 is in position (1, 1), where the payoff is (1, 1).
+Now consider the canonical misinformation game m G = ⟨ G 0 , G r , G c ⟩ , where G r = ⟨ N , S , P r ⟩ such that P ( x , y ) r = ( 1 x + 1 , 1 y ) , and G c = G 0 . By the definition of mG we note that player c knows the correct payoffs and will always play strategy 1 (she will never learn anything by the Adaptation Procedure). On the other hand, player r knows the correct payoffs as far as player c is concerned, but her own payoffs are distorted, and she believes that the value is 1 point more than the actual one. The key observation is that, for player r , any of her subjective payoffs is better than any of her actual ones. Therefore, when she learns any position, this position becomes highly unattractive and cannot be selected again.
+Formally, note that N M E ( m G ) = { σ 0 } , where χ ( σ 0 ) = { ( 1 , 1 ) } . Thus, A D ( 1 ) { m G } = { m G ( 1 ) } , where m G ( 1 ) = m G ( 1 , 1 ) . It is easy to see that N M E ( m G ( 1 ) ) = { σ 1 } , where χ ( σ 1 ) = { 2 , 1 } . Continuing this process, we observe that A D ( i ) { m G } = { m G ( i ) } , where m G ( i ) is such that positions ( 1 , 1 ) , ( 2 , 1 ) , ⋯ , ( i , 1 ) have been learnt. But the only (pure) nme of m G ( i ) corresponds to position ( i + 1 , 1 ) . As a result, the Adaptation Procedure will continuously lead to the learning of new positions (and, thus, to new misinformation games), which shows that the Adaptation Procedure will not terminate. □
+Due to this negative result, all subsequent analysis focuses on finite misinformation games.
+The following theorem characterises a Stable Set as the closure of the terminal set with respect to the adaptation operator A D · .
+Theorem 14
+Let A D ∞ m G be the Stable Set and T the terminal set of the Adaptation Procedure on m G ( 0 ) . Then, A D ∞ m G = A D ∗ T .
+Intuitively the above theorem shows that a misinformation game mG belongs to the Stable Set of the Adaptation Procedure if it is either in the terminal set itself or has an ancestor that belongs to the terminal set. Moreover, Theorem 14 shows that the terminal set contains all the information of the Adaptation Procedure on a misinformation game m G 0 . Not only all the sme s of the Adaptation Procedure are included in the elements of T (see Proposition 10), but also we can reconstruct the Stable Set A D ∞ m G 0 , from the terminal set T . As we shall see in Sect. 4, keeping track of the terminal set suffices to compute the Adaptation Procedure.
+We will now show that all finite misinformation games have an sme . We start with a result that describes a condition sufficient for the existence of an sme . In particular, Proposition 15 states that if the players in some misinformation game m G ′ learn nothing new from the respective nme s (i.e., if A D m G ′ = { m G ′ } ), then the nme s of m G ′ are also sme s. Formally:
+Proposition 15
+If m G ′ ∈ A D ∗ { m G } and A D { m G ′ } = { m G ′ } , then N M E ( m G ′ ) ⊆ S M E ( m G ) .
+Proposition 16
+If mG is finite, then S M E ( m G ) ≠ ∅ .
+An immediate observation from Proposition 16 is the following:
+Corollary 17
+If mG is finite, then T ≠ ∅ .
+Proposition 18 below shows that the upper bound on L A D m G provided by equation 3 is tight.
+Proposition 18
+Let N be a set of players and S a set of strategies. Then there is a | N | -player canonical misinformation game mG , on | S | strategies, such that, L A D m G = | S | .
+Computing the Adaptation Procedure
+In this section, we develop an algorithm to test the properties of the Adaptation Procedure in practice, and investigate its behaviour across a spectrum of randomly generated misinformation games. We also run experiments and discuss about the results.
+The adaptation graph
+We encode the computation of the Adaptation Procedure as a graph search problem. We will see that the Adaptation Procedure operator induces a structure on the set of all misinformation games A D ∗ m G derived from the Adaptation Procedure on mG . We call this structure adaptation graph .
+Definition 14
+Let mG be a misinformation game, and the set of all misinformation games A D ∗ m G derived from the Adaptation Procedure on mG . We denote by Γ = ( A D ∗ m G , E ) the directed graph where, 5
+E = ( m G 1 , m G 2 ) ∣ there is v → ∈ χ ( NME ( m G 1 ) ) , s.t. m G 2 = ( m G 1 ) v → . Further, we denote by Γ ′ = ( A D ∗ m G , E ′ ) the loopless version of Γ where, 6
+E ′ = E \ ( m G 1 , m G 2 ) ∈ E ∣ m G 1 = m G 2 .
+Some notes on Definition 14 are in order. First, by Corollary 13, Γ and Γ ′ are finite. Moreover, comparing Definition 14 with Definition 10, we note that the edge ( m G 1 , m G 2 ) belongs to the adaptation graph Γ if and only if m G 2 ∈ A D m G 1 . Further, the definition of terminal set T (Definition 13) implies that each misinformation game mG that belongs to T has a self-loop in Γ . Moreover, as the following proposition shows, Γ ′ is a directed acyclic graph (DAG) , i.e., Γ is “almost” a DAG.
+Proposition 19
+Let Γ = ( A D ∗ m G , E ) be the adaptation graph of the Adaptation Procedure on a misinformation game mG and Γ ′ its loopless version. Then Γ ′ is a directed acyclic graph.
+Focusing on Γ ′ , we can explore more effectively the adaptation graph Γ . In the following analysis we will use the concept of the degree of a vertex, where d Γ - ( v ) is the number of the incoming edges and d Γ + ( v ) is the number of the outgoing edges in graph Γ .
+Proposition 20
+Let Γ = ( A D ∗ m G , E ) be the adaptation graph, of the Adaptation Procedure, on a misinformation game mG and Γ ′ its loopless version. Then, mG is the only source node of Γ ′ . That is, mG is the only node in Γ ′ such that 7
+d Γ ′ - ( m G ) = 0 .
+Moreover, we are able to characterize the sink nodes of Γ ′ as members of the terminal set T , and we argue that every nme of such a node is an sme .
+Proposition 21
+Let Γ = ( A D ∗ m G , E ) be the adaptation graph of the Adaptation Procedure on a misinformation game mG and Γ ′ its loopless version. Let K be the set of sink nodes in Γ ′ that is 8
+K = { m G ′ ∈ A D ∗ m G ∣ d Γ ′ + ( m G ) = 0 } . Then, K ⊆ T . Moreover, every nme of some m G ′ ∈ K is an sme of the Adaptation Procedure on mG .
+Note that the reverse direction of Proposition 21 is not true. That is, in general, K ⊊ T , and there are sme s which are not nme s of a sink node. Continuing our exploration of the structure of Γ ′ , we remark that the longest path in Γ ′ is L A D m G .
+Proposition 22
+Let Γ = ( A D ∗ m G , E ) be the adaptation graph of the Adaptation Procedure on a misinformation game mG and Γ ′ its loopless version. Then, the length of the longest path in Γ ′ is L A D m G .
+Let us summarize what the above results say about the form of the adaptation graph Γ . First, the adaptation graph is “almost” a DAG; when we omit the self-loops from Γ , the resulting graph Γ ′ is a DAG. The graph Γ ′ begins with a single source node, namely the root of the Adaptation Procedure. Additionally, Γ ′ extends for L A D m G length units, concluding to a set of sink nodes, each of which belongs to the terminal set T . Moreover, every nme of a sink node is an sme . The ideas highlighted here will be exploited in the next subsection to develop algorithms for computing either one, or all sme s; as we shall see, there is an intriguing asymmetry between these two problems (computing a single sme or all sme s), that we explore next.
+Set-based representation: efficiently detecting self-loops
+In the previous subsection we captured the graph structure induced on the space of misinformation games by the Adaptation Procedure. We named this structure the adaptation graph Γ . We also showed that we can characterise the terminal set of the Adaptation Procedure as the nodes in Γ that contain self-loops. Moreover, we observed that we can omit these self-loops during graph exploration, resulting in the graph Γ ′ . Since the self-loop detection constitutes one of the main operations that will be performed at each step of the graph exploration, we want it to be as efficient as possible. In this direction, we define the set-based representation Γ ~ of the adaptation graph Γ , showing that this reduces the computational cost of self-loop detection. Lastly, we will explore Γ ~ , the same way we did with Γ , omitting the self-loops and thus resulting in the graph Γ ~ ′ .
+Assume a misinformation game m G ′ in the adaptation graph Γ . In order to detect whether mG contains a self-loop, we need to determine whether there exists some σ ∈ N M E ( m G ) and some v ∈ χ ( σ ) such that m G = m G v . To determine whether m G = m G v , we need to verify that in both misinformation games, the players have equal subjective and objective payoffs. The computational complexity of this operation is given by the following result.
+Proposition 23
+Let m G 1 , m G 2 be two canonical | N | -player misinformation games with | S | joint strategies. Then the computational complexity to determine if m G 1 = m G 2 is 9
+Θ | N | 2 · | S | .
+To reduce the computational cost of self-loop detection, we will adopt a representation of a misinformation game that allows us to omit equality checks, when possible. In this direction, we will consider the set-based representation Γ ~ of the adaptation graph Γ . Recall that S is the set of all position vectors in a misinformation game mG . Consider a mapping θ : 2 S → A D ∗ m G where, 10
+θ [ X ] = m G X . The mapping θ [ · ] is surjective by construction but not injective, as different sets of position vectors may result in the same misinformation game, e.g., when the subjective payoffs of the players coincide with the objective payoffs at this position vector. Using θ [ · ] we can define the set-based representation Γ ~ .
+Definition 15
+Let Γ = ( A D ∗ m G , E ) be the adaptation graph, of the Adaptation Procedure, on a misinformation game mG . We denote with Γ ~ = ( 2 S , E ~ ) the set-based representation of Γ , where E ~ = ( X , Y ) ∣ Y = X ∪ { v } , X ≠ Y and the edge ( θ [ X ] , θ [ Y ] ) exists in Γ . Further, we denote by Γ ~ ′ = ( 2 S , E ~ ′ ) the loopless version of Γ ~ where, E ~ ′ = E ~ \ ( X , Y ) ∈ E ~ ∣ θ [ X ] = θ [ Y ] .
+Note that, with respect to Definition 15, the vertex set of Γ ~ contains all the position vectors sets, i.e. the whole powerset 2 S . From Proposition 12, in the worst case, all the position vector sets will be connected to the root of the Adaptation Procedure. On the other hand, in general, in Γ ~ there will be isolated nodes, i.e. nodes with zero in and out degree. Subsequently, we implicitly discard the isolated nodes, and only consider the connected component of Γ ~ to which the root of the Adaptation Procedure belongs. The existence of isolated nodes, does not affect the subsequent worst case analysis of our algorithms.
+In Fig. 6 we depict an adaptation graph Γ and its corresponding set-based representation Γ ~ . In Γ ~ , the misinformation games are represented as position vector sets, which are implemented as sorted lists. Additionally, we keep a dictionary that implements θ [ · ] , by mapping position vector sets to misinformation games. Before performing an equivalence check between two misinformation games, we check whether their set-based representations are equal. Note that two position vector sets X , Y that are connected with an edge in Γ ~ , differ by at most one element v → . Given the position vector v → , we can perform a set equivalence check between X , Y , by only checking whether v → belongs to X . This can be done in sub-linear time, with a simple binary search (given that position vector sets are implemented as sorted lists).
+Proposition 24
+Let Γ = ( A D ∗ m G , E ) be the adaptation graph of the Adaptation Procedure on a canonical misinformation game mG , and Γ ~ = ( 2 S , E ~ ) be the set-based representation of Γ . Assume two nodes X ,  Y of Γ ~ , and a position vector v → ∈ χ ( N M E ( θ [ X ] ) ) , such that θ [ Y ] = θ [ X ] v → . The set equivalence X = Y can be performed in 11
+O ( log | S | ) time, where | S | is the number of joint strategies.
+As we see in the sequel, the position vector v → , required by Proposition 24, is always known, as it is the position vector used to apply the update operation to the parent to obtain the child. Our previous observations regarding Γ and Γ ′ apply also for Γ ~ and Γ ~ ′ . In Table 5 we summarize the characteristics of the graphs Γ , Γ ′ , Γ ~ , and Γ ~ ′ (visualised in Fig. 7). [See PDF for image]
+Fig. 6 Correspondence between the adaptation graph Γ and Γ ~
+
+[See PDF for image]
+Fig. 7 Correspondence between all variations of adaptation graph
+
+Table 5. Taxonomy of the adaptation graphs
+Graph
+Edges
+
+Γ = ( A D ∗ m G , E )
+E = ( m G 1 , m G 2 ) ∣ there is v → ∈ χ ( NME ( m G 1 ) ) , s.t. m G 2 = ( m G 1 ) v →
+
+Γ ′ = ( A D ∗ m G , E ′ )
+E ′ = E \ { ( m G 1 , m G 2 ) ∈ E ∣ m G 1 = m G 2 }
+
+Γ ~ = ( 2 F , E ~ )
+E ~ = ( X , Y ) ∣ Y = X ∪ { v } , X ≠ Y and the edge ( θ [ X ] , θ [ Y ] ) exists in Γ
+
+Γ ~ ′ = ( 2 F , E ~ ′ )
+E ~ ′ = E ~ \ { ( X , Y ) ∈ E ~ ∣ θ [ X ] = θ [ Y ] }
+
+
+Before concluding this section, it is important to note that the use of the set equivalence checks does not improve the worst-time analysis. If a set equivalence check fails, a subsequent equality check between the misinformation games is necessary. In the worst-case, each set equivalence check would be followed by a misinformation game equality check. However, in practice, we have observed considerable runtime improvements. This practical benefit justifies our decision to base our subsequent algorithms on this approach.
+Additionally, recall that we cannot explore the Adaptation Procedure solely based on the set-based representation graph Γ ~ . Since we need the underlying misinformation games both for computing the nme s and for performing equality checks, we need to store the θ [ · ] mapping. In the algorithms presented below, θ [ · ] is dynamically mapped to a dictionary. The dictionary is expanded whenever a new misinformation game is discovered. For the details involved in implementing θ [ · ] see [13]. Moreover, in the sections below, we insist on the notation we used here: given a set of misinformation games X , the set of position vectors that correspond to a set of strategy profiles S in X is X ~ : = { χ ( σ ) ∣ for σ ∈ S in X } . For simplicity we will refer to X ~ as χ ( S ( X ) ) . Furthermore, in the following we abuse the notation θ [ X ] , where X is a set of position vector sets. Naturally, θ [ X ] = { θ [ X ] ∣ X ∈ X } .
+Computing ALL-SMEs
+In this subsection, we present and analyse an algorithm for computing all the stable misinformed equilibria of a misinformation game. We state the problem formally below.
+We organize our algorithm in three routines. The main routine is AdaptationProcedure (Algorithm 6), which uses two subroutines, TraverseAdaptationGraph ( m G ) (Algorithm 7) and ComputeSME ( T ) (Algorithm 8).
+Main routine: Adaptation Procedure Algorithm 6 implements the Adaptation Procedure in two phases. In the first phase (line 1), we use Algorithm 7 to traverse the adaptation graph using the set-based representation described previously. That is we traverse Γ ~ . The output of that routine is the terminal set (see Definition 13) and the mapping θ [ · ] . Subsequently, the second phase (line 2) scans the terminal set to identify the stable misinformed equilibria by calling Algorithm 8. In order to do that, the second phase utilizes the mapping θ [ · ] computed in the first phase.
+[See PDF for image]
+Algorithm 6 AdaptationProcedure
+
+
+Phase 1: Traverse Adaptation Graph
+Algorithm 7 ( TraverseAdaptationGraph ( m G ) ) essentially employs a breadth-first traversal of the set-based representation Γ ~ of the adaptation graph to compute the terminal set. To do so, we maintain two sets of sets of position vectors, namely Q ~ (a queue of the nodes that remain to be processed) and V ~ (the set of visited nodes). Moreover, we incrementally compute the θ [ · ] mapping as we traverse the graph.
+In the beginning, the set-based representation of the terminal set T ~ is empty and the sets Q ~ , V ~ start with the value { ∅ } , as we initially have to process the root misinformation game mG . We initialize the θ [ · ] dictionary with the root misinformation game and compute the root’s nme s. In each iteration of the while loop in lines 4–26, we select (arbitrarily) a set of position vectors W ∈ Q ~ , and remove W from Q ~ . The set W denotes the node undergoing processing during the current iteration of the while loop. Note that for each new set X , we compute N M E ( θ [ X ] ) before inserting X to the queue Q ~ .
+To process node W ∈ Q ~ , we compute the expansions X of W . An expansion X of W corresponds to W ∪ { v → } , for some position vector v → ∈ χ ( N M E ( θ [ W ] ) ) . Note that it is possible to have a position vector v → ∈ χ ( N M E ( θ [ W ] ) ) , which also belongs to W .
+In this case, W has a self-loop in Γ ~ , thus constituting a terminal node. Lines 7–9 perform this check, and if positive, add W to the terminal set. Additionally, X is another set-based representation for the same misinformation game. Thus θ [ · ] is updated to reflect that fact.
+For the remaining expansions X = W ∪ { v → } , with v → ∉ W , we firstly check if X is visited, in lines 12–14. If X is visited, we proceed to the next expansion. Otherwise, we append X to the set of visited nodes V ~ , line 15. Recall that, we may have θ [ W ] = θ [ X ] , even if W ≠ X . For instance, the position vector v → may correspond to a position of the payoff matrices, already known to the players. Hence, an additional equivalence check between misinformation games should be performed in lines 17–19. If the equivalence check proves negative, then m G X is a new misinformation game. m G X is added to the dictionary θ [ · ] , and its nme s are computed. Lastly, X is inserted into the queue Q ~ .
+The algorithm concludes when there are no further unprocessed nodes ( Q ~ = ∅ ), in which case the complete adaptation graph has been explored, and all misinformation games that must be added to the terminal set are already there. The terminal set is returned in line 27.
+[See PDF for image]
+Algorithm 7 TraverseAdaptationGraph ( m G )
+
+
+Phase 2: Compute SMEs
+The role of Algorithm 8 is to determine the sme s of the Adaptation Procedure. Given the set-based representation of the terminal set T ~ , it traverses the terminal set and checks whether each nme in each of the misinformation games in the terminal set satisfies Definition 12; if so, it is an sme and it is added to the list of sme s (maintained in variable SME ). Proposition 10 guarantees that this procedure will not miss any of the stable misinformed equilibria.
+[See PDF for image]
+Algorithm 8 ComputeSME ( T ~ )
+
+
+Correctness
+Now we discuss the complexity of algorithms 6, 7, 8. Observe that the correctness of algorithms 6, 8 depends solely on the correctness of Algorithm 7. Indeed, assuming that Algorithm 7 correctly computes the terminal set T , then Algorithm 8 correctly computes the sme s, since it simply verifies Definition 12 for each element in the terminal set. Moreover, the correctness of Algorithm 6 is implied by Proposition 10. Thus, we only need to validate the correctness of Algorithm 7. In this direction, we need to show that Algorithm 7 terminates when and only when the end criterion of Definition 11 is met, and after considering all the misinformation games in A D ∗ m G .
+To simplify the notation of the following proofs we use sets of misinformation games instead of their set-based representations. Consider the sets T ~ , Q ~ , V ~ of Algorithm 7. In the following we consider the corresponding sets of misinformation games, i.e., T , Q , V . Recall that we can transition from a set of sets of position vectors to a set of misinformation games, using the mapping θ [ · ] , e.g., Q = θ [ Q ~ ] .
+We begin by stating a recursive definition of the queue Q , which is respected by Algorithm 7. Observe that only the misinformation games that do not have a self-loop in the adaptation graph Γ are inserted in the queue Q . Therefore, for the i -th iteration of the while loop the following holds. 12
+Q 0 = { m G 0 } , Q i + 1 = A D Q i \ T Let T i = Q i ∩ T . Intuitively, T i contains the terminal sets computed in the i -th iteration. Using the recursive equations in (12), we can rewrite the recursive equation in Definition 10 as, 13
+M 0 = Q 0 , M i + 1 = Q i + 1 ∪ A D i + 1 ⋃ k = 1 i + 1 T k . To see that, note that Q i + 1 is produced from Q i , we apply the adaptation operator on Q i , neglecting the terminal nodes in Q i . To properly compute M i + 1 , we need to reinstantiate the omitted terminal nodes and apply the adaptation operator on them. Noteworthy, Algorithm 7 terminates when Q i = ∅ . We argue that Q i = ∅ if and only if M i = M i + 1 , i.e., the end criterion of Definition 11 holds. In order to prove that, we first need the following lemma.
+Lemma 25
+If T i = Q i ∩ T , where Q i are defined as in equation (12), then it holds T = ⋃ i = 1 ∞ T i .
+The above lemma states that every node in the terminal set will be considered by Algorithm 7, since, at some point, will belong to the queue Q . The following proposition shows that when the queue Q becomes empty, i.e. the graph exploration terminates, then the end criterion of the Adaptation Procedure is met. Thus proving the correctness of Algorithm 7.
+Proposition 26
+[Correctness of Algorithm 7] Consider the equations (12), (13). If Q i = ∅ , then M i + 1 is a Stable Set, and ⋃ k = 1 i + 1 T k = T .
+Complexity
+We now proceed to the time analysis of our method. We begin from Algorithm 7 since it does most of the heavy lifting. For the time complexity of Algorithm 7, it suffices to see that we are essentially doing a breadth-first search in the set-based representation Γ ~ of the adaptation graph. Thus, the computational complexity is bounded by the number of vertices. We state this complexity rigorously in the following proposition.
+Proposition 27
+Assume a canonical | N | -player misinformation game mG , on | S | joint strategies. Then Algorithm 7 will terminate after 14
+O 2 | S | | N | 3 t ( NASH ) | S | 2 .
+The following theorem summarises our analysis of algorithms 6, 7, 8. Note that the total complexity of Algorithm 6 is the sum of the complexities of Algorithms 7, 8.
+Theorem 28
+[Correctness and Complexity of Algorithm 6] Algorithm 6 correctly computes all the sme s of a canonical | N | -player misinformation game m G 0 , on | S | joint strategies in time 15
+O | N | 2 | S | 2 | T ~ | + 2 | S | | N | t ( NASH )
+In the above theorem, we provide an upper bound for the computation of the all the sme s. Since the input to the algorithm is a misinformation game, the size of the input is | N | · | S | . Therefore, from equation 15 our algorithm is exponential to the size of the input. Moreover, Algorithm 6 performs an exponential number of calls to an oracle computing the Nash equilibria of a | N | -player normal-form game. This computational hardness seems to be unavoidable since the Adaptation Procedure (see Definition 10) leads, in the worst case, to an exponential explosion of the number of misinformation games in A D ∗ m G . We will see in the next subsection that computing a single sme appears to be a much easier problem.
+Computing 1-SME
+In this subsection, we will introduce a simple algorithm for computing a single sme of the Adaptation Procedure on a misinformation game mG . First, the computation of a single sme problem is articulated as follows
+The rationale of our algorithm is stated in the following corollary.
+Corollary 29
+Let Γ = ( A D ∗ m G , E ) be the adaptation graph of the Adaptation Procedure on a misinformation game mG . Also, let Γ ′ be the resulting graph after omitting the self-loops from Γ . Let m G ′ be the last node on a maximal path in Γ ′ , starting from mG . Then, all the nme s of m G ′ are sme s.
+From the above corollary, it suffices to find a maximal path in Γ ′ . Intuitively, we can do that by iteratively adapting a single misinformation game, beginning from the root mG . We present this simple method in Algorithm 9. In the following theorem, we discuss the computational complexity of Algorithm 9.
+[See PDF for image]
+Algorithm 9 Find - 1 - SME ( m G )
+
+
+Theorem 30
+Consider the canonical | N | -player misinformation game mG , on | S | joint strategies. Then for the computational complexity of the Algorithm 9 it holds O | S | 2 · | N | 3 · t ( NASH ) .
+Using Theorems 28, 30 we can directly compare the ALL-SMEs problem, which involves computing all the sme s of a misinformation game, and the 1-SME problem, which involves computing a single sme . In both problems, we use an oracle to the NASH problem to compute all the Nash equilibria of a normal-form game. Since NASH is a PPAD -complete problem, both ALL-SMEs and 1-SME are computationally intractable. However, there is a qualitative difference between these problems. In ALL-SMEs , we will be making an exponential number of calls to the NASH oracle (with respect to the size of the input | S | ), whereas in 1-SME , we make only a polynomial number of calls. This difference in the number of NASH oracle calls comes from the fact that Algorithm 7 explores the entire adaptation graph, while Algorithm 9 explores only a small portion of it, corresponding to a single path in the adaptation graph. The latter is achieved by greedily expanding a single misinformation game. Such a greedy approach cannot be applied to the ALL-SMEs problem.
+Implementation
+In this section, we review the implementation details of the algorithms outlined in Subsections 4.3 and 4.4. We will focus on three important parts of Algorithms 7, 8. Namely, the implementation of the Q , V data structures, the computation of the update operation, and the computation of the Nash equilibria. We close this section by briefly discussing a parallel variant of Algorithms 7, 8.
+Before addressing the details mentioned above, we make some remarks on the architecture of our program. The Algorithms 6, 7, 8 are implemented in Python. On the other hand, the update operation and the computation of Nash equilibria form Python subprocesses that communicate with the main program via pipes. This allows for modularity and better maintainability of our code. The subprocess computing the update operation is a logic program, written in the Answer Set Programming language Clingo.3 Further, we use the Gambit [15] package to compute Nash equilibria in | N | -player normal-form games.
+The Q , V data structures
+The implementation of the Q , V data structures significantly influences both the behaviour and the efficiency of Algorithm 7. The set Q essentially denotes a dynamic linear structure of the sets of position vectors to be processed by the algorithm. The implementation of this structure impacts the way the algorithm traverses the graph of misinformation games. Implementing Q as a first in-first out queue will induce a breadth-first search strategy, whereas implementing Q as a first in-last out stack will induce a depth-first search strategy. Both choices are adequate since they offer constant-time insertions and extractions.
+Perhaps the most significant concern for the implementation of V will be to support efficient membership queries (see Algorithm 7, line 15). Therefore, a suitable choice would be a dictionary , with O ( log | V | ) membership queries, or a hash table, with randomized constant membership queries.
+Taking into account the above remarks, we implemented Q as a simple queue, and V as a dictionary because it supports efficient worst-case membership queries.
+Implementing the update operation
+We implemented the update operation of Definition 7 using the Answer Set Programming language Clingo. As the update operation captures the main logic of the program, it is suitable to encode the axioms of Definition 7 using a Logic Programming language. A notable feature of our algorithm is its ability, via the Clingo program, to ascertain whether a child misinformation game diverges from its parent. Therefore, the equality check of lines 17–19 in Algorithm 7 is realized within the logic program.
+In order to encode Definition 7 as a logic program, some technicalities are involved. The payoff function is encoded using the predicate u ( G , P , SP , U ) of arity four. It signifies the payoff value ( U ) awarded to player P in the context of player G ’s normal-form game when the strategy profile SP is played. Note that Clingo does not support lists natively.4 Therefore, we use symbolic functions to encode finite lists. For example, we encode the strategy profile (1, 2, 3), with sp ( 1 , sp ( 2 , sp ( 3 , nul ) ) ) , where sp / 2 is a symbolic function with two arguments and nul / 0 is a constant.
+In Listing 1 we present the logic program for applying the update operation of Definition 7. The logic program takes as input a list of payoff predicates u / 4 and a single predicate pos ( SP ) describing a position vector as a finite list. Then, it outputs (proves) a list of updated payoff predicates v / 4 , which follow the syntax of u / 4 . For each strategy profile SP we check whether the predicate pos ( SP ) holds. If it does, we force the new payoff entry v / 4 of this strategy profile to equal the actual game G 0 . If there is an instance where v ≠ u , then the logic program proves the predicate changed / 0 . Otherwise, the predicate unchanged / 0 holds. This way the Python program can tell whether m G ≠ m G ′ , where m G ′ is a child of mG .
+Computation of Nash equilibria
+To compute the Nash equilibria of a normal-form game we utilized the Gambit package. In particular, we used the gambit-pol command which implements the Support Enumeration method for computing the Nash equilibria in | N | -player normal-form games [1]. [See PDF for image]
+Fig. 8 Two threads T 1 , T 2 simultaneously discovering the same node X . T 1 begins from W , while T 2 starts from Q
+
+
+Parallelism
+In order to fully utilize the computational resources of a modern CPU, a parallel variant of our ALL-SMEs algorithm was developed. In details, Algorithm 6 does not need any parallelization, whereas the parallelisation of Algorithm 8 is straightforward, since Algorithm 8 simply iterates through the terminal set T . On the other hand, developing a parallel version of the traversal algorithm, i.e., Algorithm 7, involves some technicalities that need to be addressed (see Algorithm 10); these are described below.
+Our main objective is to parallelise the expensive computations of Algorithm 7, i.e., the computation of the nmes , which presupposes the computation of Nash equilibria, and the update operation. Recall that these computations are performed by the two subsystems, namely the package Gambit and a logic program in Clingo, respectively. In this direction, we assume k threads. Each thread will execute a variation of Algorithm 7, thus independently traversing the adaptation graph. Each thread will communicate with the others through the shared data structures Q ~ , V ~ , T ~ , θ [ · ] . Observe that for each new misinformation game mG that appears in the adaptation graph we need to compute an nme , and compute the result of the update operation. Since each thread independently traverses the adaptation graph, it is possible to rediscover a node that was previously discovered by another thread (see Fig. 8). This fact entails two possible inefficiencies of parallel traversal, namely redundant computations and long waiting times. In other words, if a new misinformation game is discovered (almost) simultaneously by two threads, i.e., before the one notifies the other about its discovery, it is possible that the same computations will be performed in both threads, thus nullifying the benefits of parallelization. On the other hand, if one thread waits the other to complete its computations before continuing its traversal, the benefit of parallelization is also nullified.
+Our solution to the above problems is described in Algorithm 10. Each of the shared data structures Q ~ , V ~ , T ~ , θ [ · ] is protected by a lock. In order to gain access to the data structure the thread needs to successfully acquire the lock. Note that the independent traversal begins after line 4 and ends in line 43, where the threads are joined. We focus our attention in lines 17–23. Observe that the expensive computations we want to be performed in parallel are carried out in lines 25, 36. Assume that two threads T 1 , T 2 (almost) simultaneously discover X , with T 1 discovering it slightly earlier. Since T 1 arrives slightly earlier at X , it will achieve to acquire the lock for V ~ . If X ∉ V ~ , T 1 will mark X as visited (see line 22) and release the lock. We claim that the expensive computations in lines 25 and 36 will be executed only by T 1 . Additionally, T 2 will only wait for the lines 17–23. These lines only involve a membership query, and (possibly) an insertion to the V ~ data structure. In order to see that, we follow the execution of T 2 . Since T 2 acquires the lock for V ~ after T 1 , the membership query in line 18 will be positive. Thus, T 1 will omit all computations in lines 22– 41, and continue to process the next position vector.
+[See PDF for image]
+Algorithm 10 Parallel - TraverseAdaptationGraph ( m G , k )
+
+
+Experiments
+In this section, we detail our experimental findings on the Adaptation Procedure in misinformation games, exploring its performance across a spectrum of multiplayer misinformation games. The methodology employed involved Monte Carlo simulations, following a structured approach. In particular, we first considered various configurations regarding the number of players and pure strategies per player; these are shown in the first column of Tables 6 and 7 (under “Setting”). For instance, the notation 3 × 2 × 2 denotes a misinformation game with 3 players, where the first player has 3 pure strategies and the other two have 2 pure strategies, across all games in the misinformation game. Then, we constructed the payoff matrices of the misinformation game by using a random process to generate the payoff matrices of the actual game and of each subjective game. In particular, we populated the payoff matrices with integers drawn randomly from the interval [ - 10 , 10 ] . We repeated this process 100 times and executed the Adaptation Procedure for each generated misinformation game.
+For each randomly generated misinformation game (and subsequent run of the Adaptation Procedure), we collected various data regarding the efficiency and characteristics of the process. We present those results below in two separate tables, one concerning the time efficiency of the implementation (Table 6), and one concerning the characteristics of the adaptation graph (Table 7).
+All experiments were conducted on a macOS Ventura version 13.5.2 (22G91) machine, utilizing Python 3.11.4, Gambit 15.1.1, and Clingo 5.4.0. Notably, all experiments were executed using a multi-threaded implementation with eight hardware threads.5 Table 6. Efficiency of the Adaptation Procedure for various realizations
+Setting
+Total time (sec)
+CPU time (sec)
+
+2 × 2
+[0.11, 0.18]
+[0.04, 0.1]
+
+3 × 2
+[0.23, 0.29]
+[0.17, 0.22]
+
+3 × 3
+[0.17, 0.2]
+[0.11, 0.15]
+
+4 × 3
+[1.1, 1.29]
+[1.06, 1.28]
+
+4 × 4
+[1424.42, 1476.48]
+[163.59, 188.12]
+
+2 × 2 × 2
+[1.83, 2.19]
+[1.66, 1.91]
+
+3 × 2 × 2
+[22.76, 30.33]
+[18.94, 22.45]
+
+2 × 2 × 2 × 2
+[3793.66, 4092.59]
+[2172.43, 2386.21]
+
+
+For assessing the efficiency of the process, we used the metrics of Total run time (sec) and CPU run time (sec), as shown in Table 6. CPU time refers to the time consumed only by the Python program, whereas Total time refers to the total elapsed time, including the time consumed by the subprocesses, Clingo and Gambit. For both attributes we provide the interval between the minimum and maximum time as provided by the simulation, in the form [ min ,  max ].
+We observe that when the misinformation game has two players with three pure strategies each ( 3 × 3 ) the calls to Python constitute the main bottleneck of our pipeline, as shown by the fact that CPU time is close to Total time. On the other hand, in 2 × 2 and 4 × 4 settings the elapsed time is dominated by the subprocesses (i.e., Clingo and Gambit), and the CPU time consumes only ∼ 20 % and ∼ 12 % respectively of the elapsed time on average. An explanation here is that for the 2 × 2 case the possible misinformation games spawned from the Adaptation Procedure are few. On the contrary, in the 4 × 4 case, the adaptation graph may have more extensive branches, so Clingo and Gambit take their toll.
+Moreover, as we increase the number of players ( 2 × 2 × 2 × 2 ) we witness that both Total time and CPU time increase rapidly. To comprehend the reason behind this performance degradation, it’s crucial to consider the exponential growth of the search space with the increase in available players and/or strategies. Recall that the computational complexity for computing all Nash equilibria growths exponentially as proved in Theorem 28. Table 7. Characteristics of the adaptation graph for various realizations
+Setting
+# nodes
+unique mG s
+# leaves
+# s m e s
+SP
+
+2 × 2
+13
+7
+6
+3
+2 4
+
+3 × 2
+50
+17
+18
+3
+2 6
+
+3 × 3
+49
+16
+20
+10
+2 9
+
+4 × 3
+451
+132
+205
+9
+2 12
+
+4 × 4
+54122
+10653
+32779
+377
+2 16
+
+2 × 2 × 2
+832
+148
+489
+373
+2 8
+
+3 × 2 × 2
+8226
+1287
+4655
+634
+2 12
+
+2 × 2 × 2 × 2
+632302
+58617
+24346
+102338
+2 16
+
+
+Regarding the characteristics of the Adaptation Procedure, we analyzed various aspects, as shown in Table 7. Below, we explain the meaning of each of these quantities, and analyse the respective results. Note that the number shown for each quantity in Table 7 is the average over all 100 runs (rounded to the closest integer).
+To study the characteristics of the adaptation graph generated by our algorithm, we also implemented the recursive method (2). Using this implementation, we compared the number of nodes (i.e., misinformation games) generated by the implementation (as shown in column “#nodes”) against the number of nodes generated by the implementation of the set-based representation (12) (shown in column “unique mG s”). From this comparison it is obvious that the number of duplicate computations generated by (2) is huge. For example, in the 2 × 2 setting, the (2) computed 13 misinformation games, while the (12) one only 7, meaning that 6 (almost half) of the games computed by the (2) were actually duplicates, and thus caused redundant computations. Analogous observations can be made in the other settings (rows of the table).
+Further, it is interesting to compare the numbers appearing in columns “#leaves” and “# sme s” in the table. The former (“#leaves”) corresponds to the number of distinct sets of position vectors that lead to an mG that belongs to the terminal set (Definition 13), or, in other words, it denotes the size of the terminal set (i.e., the number of distinct mG s that belong to the terminal set). The latter (“# sme s”) corresponds to the actual number of sme s that this terminal set generates (according to Definition 12). Note that all sme s are generated by mG s in the terminal set. However, not every mG in the terminal set is guaranteed to yield an sme ; some may lead to none, while others may lead to one or more sme s. The fact that the numbers in the “#leaves” column are significantly larger than the numbers in the “# sme s” column, signifies that the majority of the mG s in the terminal set produced no sme . Upon reviewing Definitions 12 and 13, we conclude that there are a lot of mG s that “self-replicate” via adaptation (in the sense of Definition 13 on the terminal set), yet they do not achieve “stability” (for their nme s to produce an sme , as described in Definition 12).
+Another interesting observation stems by comparing the numbers appearing in Table 7 across different rows. For example, one might anticipate that the settings 4 × 3 and 4 × 4 would yield comparable outcomes, but, in fact, the adaptation graph for 4 × 3 generates only 451 nodes (132 distinct), whereas 4 × 4 results in 54, 122 nodes (10, 653 distinct). This counter-intuitive result is explained by looking at the last column of the table (“SP”), which denotes the size of the strategy space of the respective setting, i.e., the total number of sets of position vectors that the setting can generate; this in turn corresponds to the maximum possible number of distinct nodes (misinformation games) that the algorithm implementing the Adaptation Procedure could generate (i.e., the maximum possible value of column “unique mG s”).
+Considering the strategy space (“SP”) column values, the 4 × 3 scenario indicates that the Adaptation Procedure could generate up to 2 12 unique misinformed strategy profiles. In contrast, the 4 × 4 setting could yield 2 16 distinct misinformed strategy profiles. It’s noteworthy that the “SP” value by itself does not suffice to fully explain the size of the adaptation graph and the related quantities in all settings. It appears that incorporating more players contributes more to this aspect, compared to the addition of strategies, even when such additions (players or strategies) have a comparable effect on the “SP” value.
+Related work
+Here we present the works that are close to the setting where agents with subjective views of the interaction interact in a turn-based procedure. As stated in [12] the misinformation games are close to the Hypergames (HG), the games with (un)awareness (GwU), and the Selten games (see [4, 9, 16, 17, 18–19]). The first two of these classes are under the hood of games with misperception, often abbreviated as MP [2], while the third is the a posteriori lottery model and defined in Harsanyi’s seminal work [9]. However, since the setting in [12] focused only on one-shot interactions, the comparison with MPs (HGs and GwU) was also affected by this limitation.
+However, MPs do not address only one-shot interactions but have also been proposed as a novel framework to analyze iterative interactions. Towards this direction, there is a significant stream of works that aims in the analysis of players’ beliefs in MP (e.g., [20, 21, 22, 23, 24, 25, 26–27]), where players update their beliefs using probabilistic formulas and techniques. Moreover, the agents have common knowledge about their views, as they update their knowledge in order to converge as close as possible to the outcome that they should have if they did not experience subjectivity. Contrary to these works, in our work the agents update their beliefs in a one-way manner, meaning that the agents update their subjective views plugging into the feedback that they receive from the environment.
+In [20], a learning framework was plugged in with an MP, where the players are completely ignorant regarding opponents’ decisions and any new information is automatically integrated. In [28] the authors describe approaches for MP, where the objective views emerged from partially observable cooperative games, but they assume perfect knowledge of other players’ policies. Here, we drop the constraint of the limited observability and the cooperative setting.
+Two other classes of games that are closely related to the misinformation games are the Selten games [9] and the Global games [29]. In the first case, the agents learn only their own payoff matrix. So the agents have uncorrelated observations, but this is common knowledge. In the second case, the agents receive private and fuzzy observations of the game, where the latter is influenced by small random fluctuations. To cope with incompleteness, the agents take into account a whole family of a priori possible games; this is common knowledge. In other words, the agents know that they do not know, as opposed to the misinformation games where the agents do not have common knowledge and take into account only the agglomeration of their subjective views and the information that is broadcasted from the environment.
+Further, in [30] a class of Bayesian processes for iterated normal form games is studied, where each player knows her own payoff function, but is uncertain about the opponents’ payoffs. Another learning mechanism was introduced in [22] for games with misperception. In the same manner, in [25], a behavioral-based model is provided in order to model the ignorance of each player about adversaries. As opposed to the stream of works that rely on probabilistic techniques, in this work, we take no probabilistic considerations regarding the beliefs of the players. Here we focus on the effect of new information in the misinformed views of the players, i.e., the players “do not know that they do not know”, as opposed to probabilistic approaches, where the players “know that they do not know”. This leads to a conceptual and methodological difference between the Nash-Berk equilibrium concept, developed in [22, 31], and the stable misinformed equilibrium.
+Now we steer our discussion to the solution concepts. In HGs, the outcome is not influenced by the actual/exact game. On the other hand, in GwUs the solution concept is influenced by the elimination of beliefs (rationalizability) and does not require correct conception and information, or mutual knowledge. Here, we both agglomerate the actual/exact game and we do not eliminate any belief towards the outcome. In MPs, the direction is towards the updates that restrict the subjectivity of the agents, while in this work we do not enforce such kind of condition.
+Another equilibrium concept closely related to the solution concept in this work is that of self-confirming equilibrium [32, 33], which captures the idea of “stable” joint decisions in MP. Although it shares the same intuition with the stable misinformed equilibrium, which is that players’ choices stabilize when the choices of their opponents confirm their view, these two concepts have two differences. Firstly, the self-confirming equilibrium is applied in extensive-form games, while the stable misinformed equilibrium is in strategic-form games. Second, the former concept requires that the beliefs of the participants are correct along the path of plays, whereas we do not make such an assumption.
+The limited behaviour of players while the values of their payoffs are non-stationary, has drawn significant attention. Authors in [31] provide a characterization of asymptotic behaviour, based on a continuous time model, where the player thinks that there are two possible payoff functions, yet none of them is true. Moreover, in [26] authors establish convergence of beliefs, and actions, in a misspecified model with endogenous actions. In our case, players do not have second thoughts regarding the received information.
+In a weaker sense, a posteriori lotteries contain any interaction where agents depart from correct/complete information. In this respect, another concept where players have incomplete knowledge is that of Bayesian games [9]. It has attracted considerable attention ( [10, 11, 34, 35], etc.), where a key assumption is that of common priors. Nevertheless, Bayesian games are defined in [9] as a priori lotteries.
+Furthermore, a conceptual difference with misinformation games is that, in Bayesian games, although agents are unsure as to their actual payoff, they are well aware of that, and they do their best out of the uncertainty that they have, e.g. Fig.  1a. On the contrary, in misinformation games, the agents play according to their subjective game definition, without considering mitigation measures, e.g., Fig. 1b. In other words, in Bayesian games players “know that they do not know”, whereas in misinformation games players “do not know that they do not know”. Thus, the scenario depicted in Fig. 1b cannot be captured by Bayesian games, as the players cannot distinguish the actual situation from the one provided to them. Table 8. Basic families of methodologies regarding either one-round or multiple-round interactions with either incomplete or incorrect information
+Class
+Game setting
+Iterative process
+Outcome
+
+HG [36, 37]
+Incorrect information, erroneously aware, they don’t know that they don’t know, no exact/actual game
+Hyper Nash equilibrium
+
+GwU [17]
+Lack of conception, not lack of information
+Notions of rationalizability
+
+MP [22]
+Players know that they don’t know the game setting
+Variants of equilibria
+
+Selten games [9]
+Players know the game setting, know their own attribute vector but don’t know the exact/actual game, know that they don’t know
+Equilibrium selection
+
+Global games [29]
+Players know the game setting, don’t know the exact/actual game, know that they don’t know
+Equilibrium selection
+
+Bayesian games
+Players know the game setting, don’t know the exact/actual game, know that they don’t know
+Bayes-Nash equilibrium
+
+Misinformation games [5, 12]
+Incorrect information, erroneously aware, they don’t know that they don’t know
+Natural misinformed equilibrium
+
+Misinformation games plus Adaptation Procedure [13]
+Incorrect information, erroneously aware, they don’t know that they don’t know the information they learn Becomes commonly known
+Stable misinformed equilibrium
+
+
+Discussion and conclusions
+A possible use case on disaster management
+One possible use case application where we believe that our work on misinformation games and the Adaptation Procedure could be of use is the case of disaster management.
+Disaster management constitutes an important potential application of robots and intelligent systems, such as drones, autonomous vehicles, and mobile robotic systems. In such scenarios, robots are deployed in unpredictable and hazardous environments associated with natural and human-made disasters, most importantly in situations where it is impossible, or too dangerous for humans to intervene.
+In such unpredictable and chaotic environments, operators’ knowledge about the situation is both incomplete and erroneous. Furthermore, communication infrastructure is likely to be damaged, and network congestion makes post-deployment communication unreliable and erratic. These factors underscore the critical need for robots to be highly adaptable. They must operate autonomously, relying on initially faulty information, and adapt dynamically based on sensor data and trial-and-error, allowing them to learn the "rules of the game" in real-time.
+The game-theoretic aspect becomes even more important when multiple robots, with different objectives, are deployed. They will need to both compete and cooperate to achieve their goals, adding a strategic layer to their behavior.
+We believe that the characteristics of the disaster management use case highlight the need for more research in misinformation games and on the adaptation of agents in the face of new information that contradicts their initial game specifications. Such scenarios cannot be addressed by classical game settings, in which the game specification is either fully known to the agents, or, when it is not so (e.g., incomplete games), the agents are fully aware of the limitations of their knowledge. Disaster management scenarios challenge those assumptions, as the lack of knowledge is prevalent and cannot be quantified or fully described through, e.g., probabilities.
+Closing remarks
+This work explores the pervasive nature of misinformation in multi-player interactions. By employing the framework of misinformation games , we gain insights into various real-world dynamics in scenarios where the players’ information on the interaction are erroneous, but the players have no clue that their specifications are false.
+In this setting, we define an iterative process, the Adaptation Procedure , which enables players to refine their strategies through continuous interaction and feedback. This process is rooted in the idea that players will adjust their strategies based on the payoffs that are publicly announced in each iteration, which may be different from what they know, thereby progressively reducing misinformation.
+The Adaptation Procedure models the evolution of players’ decisions as they assimilate new information, culminating in a stable misinformed equilibrium, which is the strategy profile adopted upon process stabilization. We establish that this procedure invariably concludes, guaranteeing the existence of such an equilibrium and study (and prove) various related properties.
+Lastly, we devise algorithmic tools to analyze this evolution. Our analysis reveals the intractability of the stable misinformed equilibrium ( sme ), which is inherited to the problem both by the mechanism the agents reach a joined decision, i.e. by combining the Nash equilibria of each subjective game, and the exponentially large state space they explore. In addition to the theoretical analysis, we provide some experiments demonstrating the characteristics and computational properties of the Adaptation Procedure under various randomly-generated settings.
+Interestingly enough our setting exhibits an intriguing combinatorial structure that seems to be independent of the way the agents move from one state to the other. In other words, it seems to be possible to abstract away the method the players transit from one state to the other, based on the current state, and the subjective information of each player. This introduces a family of adaptation mechanisms for a group of agents, that share the same combinatorial structure. Each member of this family is differentiated from the others by the method the agents use to jointly reach a decision (e.g. the notion of NME discussed here, or a voting scheme). Such a generalized analysis falls outside of the scope of this paper, but provides a fruitful ground for future work.
+Moreover, we will revisit our implementation, considering additional optimizations, and conduct more extensive experiments, possibly in the context of a real-world scenario. Connections and applications of misinformation games to mechanism design will also be explored (see also [12]).
+Author Contributions
+K.V., G.F., and M.B. wrote the sections 2, 3.1 - 3.3, and 4.6. K.V., M.P., and G.F. wrote the sections 3.5–4.5. K.V. wrote section 5, and prepared all figures, tables and algorithms 1–5. M.P. prepared the algorithms 6–10. All authors contributed to section 1, section 6, and subsection 3.4. All authors reviewed the manuscript. All authors contributed to the response and the revised version of the paper.
+Funding
+Open access funding provided by HEAL-Link Greece.
+Data availibility
+No datasets were generated or analysed during the current study.
+Declarations
+Conflict of interest
+The authors declare no competing interests.
+1 Note that we use the terms “agent” and “player” interchangeably throughout this paper.
+2 When L A D m G ≪ | S | , then | S | L A D m G + 1 < 2 | S | . On the other hand, when | S | ≈ L A D m G or | S | ≫ L A D m G , we have 2 | S | < | S | L A D m G + 1 .
+3 https://potassco.org/clingo/.
+4 Unlike other Logic Programming languages, e.g., Prolog.
+5 The implementation of the Adaptation Procedure is in https://github.com/merkouris148/adaptation-procedure-misinformation-games.
+6 Formally, the A D · operator defines a transitive, anti-symmetric (but not reflexive) relation ⪯ A D on the sets of all misinformation games A D ∗ m G ( 0 ) generated from m G ( 0 ) . From Proposition 12 we have that A D ∗ m G ( 0 ) is finite. Thus, there are maximal elements in ⪯ A D . Moreover, we have maximal elements in C , since C ⊆ A D ∗ m G ( 0 ) . The "oldest ancestors" , we discuss here, are these maximal elements of ⪯ A D , restricted on C .
+Publisher's Note
+Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References
+1. Nisan, N; Roughgarden, T; Tardos, E; Vazirani, VV. Algorithmic Game Theory ; 2007; Cambridge University Press: [DOI: https://dx.doi.org/10.1017/CBO9780511800481]
+2. Luce, RD; Raiffa, H. Games and decisions: introduction and critical survey ; 1957; Wiley:
+3. Bennett, PG. Hypergames: Developing a model of conflict. Futures ; 1980; 12 , 6 pp. 489-507. [DOI: https://dx.doi.org/10.1016/0016-3287(80)90005-1]
+4. Yossi, F. Games with unawareness. The B.E. Journal of Theoretical Economics ; 2021; 21 , 2 pp. 433-488.4279079 [DOI: https://dx.doi.org/10.1515/bejte-2018-0186]
+5. Varsos, C., Fasoulakis, M., Flouris, G., & Bitsaki, M. (2022). Coordination Mechanisms with Misinformation. In: ICAART 2022: Proceedings of the 14th International Conference on Agents and Artificial Intelligence - Volume 1, pp. 237–244
+6. Toms, S. Financial scandals: A historical overview. Accounting and Business Research ; 2019; 49 , 5 pp. 477-499. [DOI: https://dx.doi.org/10.1080/00014788.2019.1610591]
+7. Brown, P.N., Borowski, H.P., & Marden, J.R. (2017). Are multiagent systems resilient to communication failures?
+8. Meir, R., & Parkes, D.C. (2015). Congestion games with distance-based strict uncertainty. In: Proceedings of the Twenty-Ninth AAAI Conference on Artificial Intelligence, pp. 986–992.
+9. Harsanyi, JC. Games with incomplete information played by “Bayesian” players, I-III Part I. The Basic Model. Management Science ; 1967; 14 , 3 pp. 159-182.
+10. Zamir, S. Bayesian games: Games with incomplete information ; 2009; Springer: pp. 426-441.
+11. Gao, J. Uncertain bimatrix game with applications. Fuzzy Optimization and Decision Making ; 2013; 12 , 1 pp. 65-78.3031116 [DOI: https://dx.doi.org/10.1007/s10700-012-9145-6]
+12. Varsos, C., Flouris, G., Bitsaki, M., & Fasoulakis, M. (2021). A study of misinformation games. In: PRICAI 2021: Trends in Artificial Intelligence - 18th Pacific Rim International Conference on Artificial Intelligence, vol. 13031, pp. 76–87.
+13. Papamichail, M., Varsos, C., & Flouris, G. (2022). Implementing the adaptation procedure in misinformation games. In: Proceedings of the 12th Hellenic Conference on Artificial Intelligence
+14. Daskalakis, C; Goldberg, PW; Papadimitriou, CH. The complexity of computing a nash equilibrium. SIAM Journal of Computing ; 2009; 39 , 1 pp. 195-259.2506524 [DOI: https://dx.doi.org/10.1137/070699652]
+15. McKelvey, R.D., Turocy, T.L., & McLennan, A. (2014). Gambit: Software tools for game theory, version 16.0.0.
+16. Copic, J., & Galeotti, A. (2006). Awareness as an equilibrium notion: Normal-form games.
+17. Schipper, BC. Unawareness - A gentle introduction to both the literature and the special issue. Mathematical Social Sciences ; 2014; 70 , pp. 1-9.3230458 [DOI: https://dx.doi.org/10.1016/j.mathsocsci.2014.03.002]
+18. Sasaki, Y. Generalized Nash equilibrium with stable belief hierarchies in static games with unawareness. Annals of Operations Research ; 2017; 256 , 2 pp. 271-284.3697211 [DOI: https://dx.doi.org/10.1007/s10479-016-2266-5]
+19. Schipper, BC. Discovery and equilibrium in games with unawareness. Journal of Economic Theory ; 2021; 198 , 4327939 [DOI: https://dx.doi.org/10.1016/j.jet.2021.105365] 105365.
+20. Arrow, K.J., & Green, J.R. (1973). Notes on expectations equilibria in bayesian settings. Technical report, Institute for Mathematical Studies in the Social Sciences. Working Paper No. 33, Stanford University
+21. Esponda, I; Pouzo, D. Equilibrium in misspecified markov decision processes. Theoretical Economics ; 2021; 16 , 2 pp. 717-757.4262355 [DOI: https://dx.doi.org/10.3982/TE3843]
+22. Esponda, I; Pouzo, D. Berk-nash equilibrium: A framework for modeling agents with misspecified models. Econometrica ; 2016; 84 , 3 pp. 1093-1130.3502512 [DOI: https://dx.doi.org/10.3982/ECTA12609]
+23. Esponda, I; Pouzo, D; Yamamoto, Y. Asymptotic behavior of bayesian learners with misspecified models. Journal of Economic Theory ; 2019; 195 , 4256921 [DOI: https://dx.doi.org/10.1016/j.jet.2021.105260] 105260.
+24. Spiegler, R. Bayesian Networks and Boundedly Rational Expectations*. The Quarterly Journal of Economics ; 2016; 131 , 3 pp. 1243-1290. [DOI: https://dx.doi.org/10.1093/qje/qjw011]
+25. Ray, D; King-Casas, B; Montague, PR; Dayan, P. Bayesian model of behaviour in economic games. Advances in Neural Information Processing Systems ; 2008; 21 , pp. 1345-1352.
+26. Heidhues, P; Koszegi, B; Strack, P. Convergence in models of misspecified learning. Theoretical Economics ; 2021; 16 , 1 pp. 73-99.4205832 [DOI: https://dx.doi.org/10.3982/TE3558]
+27. Easley, D; Kiefer, NM. Controlling a stochastic process with unknown parameters. Econometrica ; 1988; 56 , 5 pp. 1045-1064.964148 [DOI: https://dx.doi.org/10.2307/1911358]
+28. Lerer, A; Hu, H; Foerster, J; Brown, N. Improving policies via search in cooperative partially observable games. In: AAAI Conference on Artificial Intelligence ; 2020; 34 , pp. 7187-7194.
+29. Carlsson, H; Damme, E. Global games and equilibrium selection. Econometrica ; 1993; 61 , 5 pp. 989-1018.1234791 [DOI: https://dx.doi.org/10.2307/2951491]
+30. Jordan, JS. Bayesian learning in normal form games. Games and Economic Behavior ; 1991; 3 , 1 pp. 60-81.1089760 [DOI: https://dx.doi.org/10.1016/0899-8256(91)90005-Y]
+31. Fudenberg, D; Romanyuk, G; Strack, P. Active learning with a misspecified prior. Theoretical Economics ; 2017; 12 , 3 pp. 1155-1189.3713677 [DOI: https://dx.doi.org/10.3982/TE2480]
+32. Fudenberg, D; Levine, DK. Self-confirming equilibrium. Econometrica ; 1993; 61 , 3 pp. 523-545.1217834 [DOI: https://dx.doi.org/10.2307/2951716]
+33. Dekel, E; Fudenberg, D; Levine, DK. Payoff information and self-confirming equilibrium. Journal of Economic Theory ; 1999; 89 , 2 pp. 165-185.1731498 [DOI: https://dx.doi.org/10.1006/jeth.1999.2576]
+34. Székely, GJ; Rizzo, ML. The uncertainty principle of game theory. The American Mathematical Monthly ; 2007; 114 , 8 pp. 688-702.2354439 [DOI: https://dx.doi.org/10.1080/00029890.2007.11920460]
+35. Gairing, M; Monien, B; Tiemann, K. Selfish routing with incomplete information. Theory of Computing Systems ; 2008; 42 , 1 pp. 91-130.2365821 [DOI: https://dx.doi.org/10.1007/s00224-007-9015-8]
+36. Sasaki, Y; Kijima, K. Hypergames and bayesian games: A theoretical comparison of the models of games with incomplete information. Journal of Systems Science and Complexity ; 2012; 25 , 4 pp. 720-735.2957664 [DOI: https://dx.doi.org/10.1007/s11424-012-1074-5]
+37. Gharesifard, B., & Cortés, J. (2011). Stealthy strategies for deception in hypergames with asymmetric information. In: 2011 50th IEEE Conference on Decision and Control and European Control Conference, pp. 5762–5767.

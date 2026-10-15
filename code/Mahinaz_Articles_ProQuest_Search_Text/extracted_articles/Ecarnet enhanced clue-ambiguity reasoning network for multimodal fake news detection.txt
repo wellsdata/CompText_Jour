@@ -1,0 +1,513 @@
+Introduction
+The fast growth of social media has created a perfect environment for information diffusion, and people can freely share their daily viewpoints and seek news online. Nevertheless, the misuse of social media platform and the lack of proper supervision to verify the credibility of online posts may induce the wide spreading of fake news. Evidently, manual investigation of these fake news is a laborious task, which motivates recent emerging studies on automatic fake news detection [1]. Note that, modern news and posts are usually exhibited with several modalities, and the form of fake news also aggregates multimodal information, e.g., a real image can be combined with false rumors, while the correct descriptions can be utilized to describe a tampered image. In that sense, multimodal fake news detection is important for combating the widespread dissemination of fake news. [See PDF for image]
+Fig. 1 Example of fake news with suspicious clues. (1) Similar Clues: semantically similar and fail to support detection; (2) Ambiguous Clues: semantically inconsistent and contribute to detection.; (3) Uncertain Clues: ambiguous but not fake, which may bring negative impacts to the detection
+
+
+In recent years, there have already been a lot of works that aggregate multimodal information to detect fake news. In general, classical methods mainly utilize the pre-training models to extract the textual and visual representations from their individual modalities, and model the intermodal interactions by fusing different modalities to detect the fake news [2, 3]. Recent multimodal deep learning models have achieved performance improvement over traditional ones due to their superior ability of feature extraction [4, 5]. Note that, the semantic gap across different modalities could limit their capability to effectively exploit the cross-modal correlations [6], and these works often ignore the potential local ambiguity across different modalities. As shown in Fig. 1, if the fake news is elaborately fabricated, the fake clues are always hidden in the ambiguous details of multimodal content. In practice, the ambiguous clues are most competitive for fake news detection tasks. Therefore, it is imperative to reason the ambiguous clue across different modalities for reliable detections.
+The main challenge of learning the ambiguous clues is to learn the cross-modal discriminative patterns. Nevertheless, the modality gap and feature heterogeneity pose an enormous barrier to address this challenge. Most of the existing works [7, 8] design several layers of neural networks to map image-text data into a latent space, featuring on eliminating the cross-modal semantic isolation. However, these kind of global-based representation methods cannot fully model the fine-grained semantic interaction between the salient image patches and the textual words, which make it difficult to differentiate the cross-modal discriminative patterns. In the stage of multimodal fusion, most detection models [9, 10] attempt to model the inter-modality correlation of news and utilize the fusion-based detection models to detect fake information. Alternatively, the attention mechanism can be utilized to fuse news features [11], which aims to maximize the shared semantic correlation between images and texts. For real-world detection tasks, such approaches can only detect apparent fake news from the simple multimodal data, but which often degrade their performance for more realistic cases that involve complex natural scenes. For these problems, ambiguous clue reasoning provides a new way for fake news detection across complex multimodal data, and the local ambiguous clues can effectively uncover the semantic conflict hidden within the multimodal fake news.
+In this paper, we innovatively propose an Enhanced Clue-Ambiguity Reasoning Network (ECARnet) model for multimodal fake news detection, which lies among the early attempts to excavate valuable ambiguous clues within the heterogeneous multimodal data. To address the potential local ambiguity cases in fake news, the proposed framework realizes effective reasoning on ambiguous clues and combines multimodal feature fusion to improve the detection performance, including three stages: (1) We use a specific feature extraction network to characterize salient regions of news images as well as textual semantic words. Then, a cross-modal weighted residual network is designed to learn similar clue features within the news. (2) Enhanced clue-ambiguity reasoning stage: we pair all image regions and text words into two clue matrices, and design a bidirectional reasoning strategy to update two clue matrices automatically. Specifically, forward reasoning branch employs the two-branch module with the clue correlation analysis to maximally distinguish the ambiguous clues, while backward reasoning branch utilizes the uncertainty learning to eliminate uncertain clues, thereby enhancing the credibility of ambiguous clues. (3) Multimodal feature fusion stage: we utilize the clue ambiguity verification branch to explicitly model the probability distribution of similar clue and ambiguous clue of news, combined with the correlation scores learned from the clue correlation analysis branch, whereby the similar clue features and the ambiguous clue features can be well fused for multimodal fake news detection. The proposed framework improves the state-of-the-art methods by providing the following three contributions:
+- An enhanced clue-ambiguity reasoning network is explicitly developed for efficient multimodal fake news detection. To the best of our knowledge, this is the first attempt to reason the local ambiguous clues across multimodal fake news data, which can be well utilized for fake news detection.
+
+- An efficient bidirectional clue-ambiguity reasoning module is newly designed to enhance the credibility of ambiguous clues. This module can automatically distinguish real ambiguous clues and benefit fake news detection across complex multimodal data.
+
+- Extensive experiments on public benchmarks highlight the advantages of the proposed ECARnet model under various multimodal fake news detection tasks and show its outstanding performances.
+
+
+The remaining part of this paper is organized as follows: Sect. 2 makes an overview of the existing works, and Sect. 3 elaborates the proposed ECARnet framework in detail. The experimental results and discussions are provided in Sect. 4. Finally, we draw a conclusion in Sect. 5.
+Related work
+Fake news detection has recently attracted significant attention in the researchers, and the relevant works can be broadly grouped into unimodal fake news detection, multimodal fake news detection and cross-modal fake news detection.
+Unimodal fake news detection
+The development of fake news detection technology is closely related to the evolution of news forms, and previous studies started from exploring the fake news spread in social media via a single modality, e.g., text or images [12]. Along this line, Ma et al. [13] utilize the recurrent neural networks (RNN) for fake text detection and achieve superior detection results than the traditional handmade models [14]. Subsequently, pre-trained models trained on large scale corpus are widely developed for fake text detection tasks [15, 16]. Similarly, a series of pre-trained visual models are also utilized for extracting the high-level image features, and detecting the fake news images [3, 17]. For instance, Qi et al. [18] explicitly point out that tampered images in social media have obvious traces of manipulation on regions and react to some fake intentions at the high-level semantic level. In addition, human interaction data such as comments and retweets, also provide rich reference information for fake news detection, and such interaction data can be used as social contextual features of news to improve detection performance [19, 20]. Note that, the multimodal characteristics such as image-text correlation and consistency are ignored within these unimodal learning frameworks.
+Multimodal fake news detection
+The textual content and visual information often provide rich information that complements on each other, which can be well combined together to improve the overall fake news detection performance. In the past, many works have been designed to mine useful representations from images and texts of the news for fake news detection.
+Deep multimodal networks have proved to be able to learn accurate image and sentence representations. The popular multimodal fusion detection framework [11] extracts the high-level visual features from the pre-trained VGG19 network and then concatenate them with textual features for detection. Besides, Singhal et al. [21] utilize BERT to learn text features of news and achieve well detection performance. This approach essentially models the underlying semantics of images as a complement to the text and are prone to learn the features that are highly relevant to the dataset. However, its generalization ability is limited. To tackle this problem, researchers have considered to incorporate external knowledge into the detection process to guide the model learning process. For instance, Wang et al. [22] select the event discriminator module as an auxiliary task for fake news detection, which is capable of learning generic features of news in an adversarial way. Khatta et al. [23] exploit two-branch networks with variational autoencoders to learn the shared features. Silva et al. [24] propose two independent latent spaces to learn individual features of news, and enhance the generalization ability of the model by feature deconstruction and reconstruction. Although these methods employ the auxiliary tasks to improve the multimodal fake news detection, they often lack the understanding of the local fake features and do not take full advantage of the fine-grain cross-modal correlations within fake news.
+Alternatively, some studies attempt the efficient multimodal fusion by using mutual enhancement mechanisms. For instance, Jin et al. [25] utilize an attention mechanism to fuse the visual and texture features for reliable multimodal feature representation. Song et al. [2] select a cross-modal attention mechanism and a multi-channel convolutional neural network to achieve bidirectional enhancement among the modeling. Qi et al. [26] extract the visual entities to understand the high-level semantics of images and model the mutual enhancement of multimodal features with the help of visual entities to enhance the multimodal fusion. Though these attention mechanisms have achieved a better performance in multimodal fake news detection, some critical problems are still unsolved. First, how to explicitly measure the inter-modal correlation between images and texts still remain unclear. Second, there still exists an open problem to mine the cross-modal ambiguous clues in multimodal fusion.
+Cross-modal fake news detection
+Cross-modal correlation mining is of crucial importance to learn the semantic consistency across different modalities, and several studies are proposed to realize the importance of cross-modal semantic correlation. Along this line, Xue et al. [27] argue that news with text and visual mismatches are more likely to be fake news, and select to capture the semantic correlation of multimodal news for fake news detection. Zhou et al. [28] utilize the weighting sharing scheme to transform the text features and visual features into a shared feature space, whereby the cosine similarity of the transformed multimodal features can be well calculated for multimodal fake news detection. From the information-theoretic perspective, Chen et al. [6] attempt to learn the global ambiguity correlation between different modalities and utilize the ambiguity for fake news detection. Note that, the above approaches mainly utilize the cross-modal consistency to measure the global semantic correlations of the text and image. Differently, Shang et al. [29] utilize a target-aware feature extraction approach to learn the abstract local semantic information from images to evaluate the degree of cross-modal semantic correlation. Jin et al. [30] implement a fine-grained inference process to exploit the fake information in the news. Although these methods have made preliminary attempts at fine-grained inference, there still lack a fine-grained cross-modal interaction scheme and ambiguity reasoning operation to detect the semantic conflict across different modalities.
+Methodology
+In this section, we first show the problem definition of multimodal fake news detection, and then present the proposed ECARnet model in detail.
+Notation and problem formulation
+The fake news detection task is usually defined as a binary decision problem, focusing on whether the news posted on social media are fake or not. Given a multimodal news dataset D = x i , y i i = 1 N , where news sample ( x i , y i ) represents the i th multimodal content and the ground-truth label (0 means the true news and 1 represents the fake news), and N represents the total number of news. In each news, the multimodal content x i = x i t , x i v includes the text sentence and the attached image sample. The goal of multimodal fake news detection is to learn a mapping function: 1
+f : x i → y i which maps the input multimodal content x i as closely as possible to the position of the ground-truth label y i . Formally, this process can be described as: 2
+y i ^ = argmaxProb y i x i ; θ where θ is the model parameter. [See PDF for image]
+Fig. 2 The overall architecture of the proposed ECARnet model
+
+
+As shown in Fig. 2, ECARnet includes four modules to detect the ambiguous clue across multimodal fake news: (1) multimodal feature extraction module, which is utilized to capture the fine-grained features from the image and text modalities (Sect. 3.2); (2) Cross-modal weighted residual network module, which is designed to generate similar clue features (Sect. 3.3); (3) Bidirectional ambiguous clue reasoning module, which innovates an enhanced reasoning strategy to obtain credible ambiguous clues in two directions (Sect. 3.4); (4) multimodal feature fusion and detection, which combine the ambiguous clue features and similar clue features to perform fake news detection (Sect. 3.5). The above modules are detailed below.
+Multimodal feature extraction
+Deep neural networks have been successfully utilized to learn the compatible features among different modalities, including text and image and audio data [31]. Specifically, the Bottom-up Attention model [32] is selected as the visual feature extractor, which offers the benefit of representing images as a collection of notable regional features tailored to the specific task. We first detect all salient regions using the Fast-RCNN model [33], and then select the top-m from them into the ResNet-101 model [17] for extracting the visual features V = { v 1 , v 2 , . . . , v m } .
+Meanwhile, we feed the sequential list of the words in the posts as the input to the textual feature extractor, featuring on achieving fine-grained local semantic alignment between text and image. Specifically, each word in the text is represented as a word embedding vector, and the embedding vector for each word is initialized with the pre-trained word embedding on given dataset. To integrate the contextual content, the embedding is input into the Bi-GRU network [16], which finally obtains n semantic word features T = { t 1 , t 2 , . . . , t n } .
+Cross-modal weighed residual network
+Due to the different feature extractors of images and texts, there is a huge semantic gap between these heterogeneous features. In order to capture their shared semantic clues, existing methods often utilize the fully connected layers to obtain the shared subspace [6]. Note that, these network structures often ignore the cross-modal correlations between heterogeneous features. In fact, cross-modal shared semantic information not only can promote the model to learn the general representation of news heterogeneous features, but also benefit its ability to detect the general fake news patterns. Specifically, we employ a cross-modal weighted residual network to learn the semantically relevant representation of similar clues. Combining the advantages of dual-stream deep networks [34] and residual network structures [2], the designed cross-modal weighed residual network learns semantic correlations between image and text while preserving the original feature characteristics. Specifically, we perform the max pooling on the set of features output from the multimodal feature extraction module, and obtain the input features t input and v input . Then, the input features are processed by shared layers as: 3
+FC ( t input ) = d ( ω 2 σ ( ω 1 t input ) ) FC ( v input ) = d ( ω 2 σ ( ω 1 v input ) ) where σ is the hyperbolic tangent activation function, ω 1 and ω 2 are the shared parameters, d ( · ) represents the dropout layer, which reduce feature redundancy and improve the generalization ability. After processing through the same network structure with shared weights, we can obtain the visual similar clue features v o and textual similar clue features t o as: 4
+t o = σ ( d ( t input ) + α · FC ( t input ) ) v o = σ ( d ( v input ) + α · FC ( v input ) ) where α represents a learnable scale factor [35]. The residual network structure connects the output features in jumps, which can be well utilized to preserve the original features as well as mitigating the elimination of network gradients. Meanwhile, the shared weighting parameters can well benefit cross-modal compatible feature learning.
+Bidirectional clue-ambiguity reasoning
+In the multimodal feature extraction module, we explore the semantic interactions between image regions and text words in a fine-grained way, which provides the possibility of ambiguous clue reasoning. Inspired by the semantic correlation learning work [36], we calculate their semantic similarity s i from two directions, image-text and text-image, to create two clue matrices M t and M v .
+The main goal of the proposed framework is to remove similar contents and verify the valuable ambiguous contents by continuously optimizing these two clues matrices. Accordingly, the fake pieces that truly affect the authenticity of news can be well derived for fake news detection. In practice, some ambiguous clues may interfere with the detection, and it is necessary to exclude the uncertain clues for detection. To this end, we define the news correlation by measuring the distance between similar contents and ambiguous contents, and construct a two-branch network structure for ambiguous clue reasoning and an uncertainty learning strategy to enhance the ambiguous clue.
+Branch 1: clue ambiguity verification
+Differing from a predetermined threshold to distinguish two features, the clue ambiguity verification branch aims to adaptively determine the optimal boundary in an end-to-end manner. Towards this goal, we utilize the Gaussian distribution to model the similar content similarity and ambiguous content similarity, and adaptively determines the optimal threshold for separating two different distributions. As shown in Fig. 3, the clue distinction method of adaptive threshold optimization significantly outperforms the fixed boundary method. [See PDF for image]
+Fig. 3 Optimal distinction boundary learning for ambiguous clue verification
+
+
+In the clue matrix of each news, the semantic similarity between image region representation v j and text word representation t i can directly reflect the ambiguity level of clues. A larger value in the clue matrix indicates a higher level of semantic similarity between two modalities, while a lower value indicates the potential ambiguity in the clue matrix. Accordingly, we sample all the clue matrices in turn to extract the maximum value s i + and minimum value s i - to reveal the clue semantic correlation: 5
+s i + = max j v j t i T / v j t i j = 1 n s i - = min j v j t i T / v j t i j = 1 n Further, we perform the above operations on all image region features and text word features in the news: 6
+S k + = s 1 + , s 2 + , s 3 + , . . . , s n + S k - = s 1 - , s 2 - , s 3 - , . . . , s n - where k represents the news index in the current iteration epoch, S k + and S k - , respectively, denote the sets of similar contents and ambiguous contents in the clue matrix.
+Based on the sets S k + and S k - , we model the probability of normal distribution regarding the semantic similarity s on similar content and ambiguous content: 7
+f k + ( s ) = 1 σ k + 2 π e - ( s - μ k + ) 2 2 ( σ k + ) 2 f k - ( s ) = 1 σ k - 2 π e - ( s - μ k - ) 2 2 ( σ k - ) 2 where { μ k + , σ k + } and { μ k - , σ k - } are the mean and standard deviation, respectively for the similar distribution and ambiguous distribution.
+After obtaining the two probability distributions, it is necessary to define an explicit boundary t k to distinguish ambiguous clues from similar clues. Specifically, we define the content whose semantic correlation is lower than the boundary as ambiguous clues(i.e., s < t k ), and otherwise as similar clues. The goal of this branch is to maximize the verification of ambiguous clues, so it is necessary to learn an optimal threshold t k , such that the probability of two distinction errors is minimized. During the modeling process, there are two distinction errors: (1) E 1 : distinguish the ambiguous clues as similar clues; (2) E 2 : distinguish the similar clues as ambiguous clues. Therefore, the optimal boundary can be obtained via the following optimization learning process: 8
+min β ∫ t k + ∞ f k - ( s ) d s + ∫ - ∞ t k f k + ( s ) d s s . t . t k ≥ 0 where β is a penalty parameter to distinguish ambiguous clues. Evidently, the optimal solution to this optimization problem can be obtained by searching for its first-order derivative, and its optimal solution is derived by: 9
+t k = max γ 2 k 2 - γ 1 k γ 3 k 1 2 - γ 2 k / γ 1 k , 0 where γ 1 k , γ 2 k and γ 3 k are represented as: 10
+γ 1 k = σ k + 2 - σ k - 2 γ 2 k = μ k + σ k - 2 - μ k - σ k + 2 γ 3 k = μ k - σ k + 2 - μ k + σ k - 2 + 2 σ k + σ k - 2 ln σ k - β σ k + The above optimal boundary learning method is used for the branch of ambiguous clue verification, which is integrated into the training process of the model to achieve iterative updating of the clue matrix M t and M v . Through such forward reasoning, the ECARnet is able to accurately distinguish cross-modal ambiguous clue within the news, ensuring the performance of fake news detection.
+Branch 2: clue correlation analysis
+This branch learns the correlation degree of the two clues by evaluating the Kullback–Leibler divergence [37] between the probability distributions of similar and ambiguous contents. To this end, we propose a learnable correlation score to control the contribution of similar clues and ambiguous clues. A higher correlation scores indicates a lower credibility of the similar clues and the detector should trust in the ambiguous clues. Conversely, the lower the credibility of the ambiguous clues, the less the detector should believe similar clues. Guided by the correlation score, the model performs a dynamic fusion of multiple clues and features of different news.
+Based on the previous sampling results, the similarity distribution of the two clues, can be well obtained to form the following distributions: 11
+q k ( s + ) = N ( s + | μ k + , σ k + ) q k ( s - ) = N ( s - | μ k - , σ k - ) Considering the overall distribution on the news dataset, it can be obtained: 12
+q ( s + ) = E P ( μ + , σ + ) [ q ( s + | μ + , σ + ) ] = 1 N ∑ k = 1 N q k ( s + ) q ( s - ) = E P ( μ - , σ - ) [ q ( s - | μ - , σ - ) ] = 1 N ∑ k = 1 N q k ( s - ) Note that, the probability distribution of ambiguous clues can be utilized as a basis to estimate that of similar clues, we can obtain the correlation scores of ambiguous clues. Conversely, we obtain the correlation score of similar clues. This process can be represented as: 13
+C o r s + ← s - = D KL ( q ( s + | μ k + , σ k + ) | | q ( s - | μ k - , σ k - ) ) D KL ( q ( s + ) | | q ( s - ) ) C o r s - ← s + = D KL ( q ( s - | μ k - , σ k - ) | | q ( s + | μ k + , σ k + ) ) D KL ( q ( s - ) | | q ( s + ) ) C o r s = sigmoid ( 1 2 ( C o r s + ← s - 2 + C o r s + ← s - 2 ) ) where the correlation score C o r s directly reflects the closeness between the estimated probability distribution and the basic probability distribution. Therefore, the correlation score C o r s can be well utilized as the weight for dynamically controlling the ambiguous clue features and similar clue features in the multimodal fusion process.
+Clue uncertainty correction
+During the training process, the designed two-branch network can continuously optimize two clue matrices M t and M v , which achieves forward reasoning on ambiguous clues. Inspired by uncertainty learning [38], we aggregate and reverse-correct the optimized clue matrix to strengthen the credibility of ambiguous clues. As shown in Fig. 4, we describe the enhanced ambiguous clue reasoning from the text perspective, which consists of the forward reasoning stage of textual ambiguous clues and the backward correction stage of textual uncertain clues. [See PDF for image]
+Fig. 4 Bidirectional clue-ambiguity reasoning process for text, including the forward reasoning stage of ambiguous clues and the reverse correction stage of uncertain clues
+
+
+Consequently, the model obtains a more discriminative clue matrix M t after optimization process. Then, the clue matrix M t is aggregated with the original text feature t to produce the textual ambiguous clue t ac = M t ⊗ t . Similarly, we can also obtain the visual ambiguous clue v ac = M v ⊗ v . Further, we add a predictor and a confidence estimation network in parallel. The predictor performs binary classification of t ac and v ac , while the confidence estimation network generates a scalar c from 0 to 1. The process is represented as: 14
+p k , c k = f ( x k , θ ) p k , c k ∈ 0 , 1 where p k represents the classification probability that derived from the softmax activation function, c k represents the confidence score obtained by the sigmoid function. To automatically adjust the uncertain clues, the predicted probability of the predictor is determined by: 15
+p k ∗ = c k · p k + ( 1 - c k ) y k On the one hand, the predictor utilizes a modified probability to achieve the binary classification task. On the other hand, the text confidence estimation network selects a confidence loss function for loss minimization, in the case of text: 16
+L Text = - ∑ k = 1 m log ( p k ∗ ) y k , L C o n f t = - log ( c k ) The loss function of textual ambiguous clues is the sum of classification loss and confidence loss: 17
+L t - c l u e = L Text + η L C o n f t where the hyper-parameter η is utilized to balance two items. Similarly, the loss function of visual ambiguous clues is obtained by: 18
+L v - c l u e = L Vision + η L C o n f v As the derived clue matrix may have uncertain clues, the confidence score c could tend to be 0, leading to an increase in confidence loss. Under such circumstances, the model lacks the confidence in learning ambiguous clues for detection. Fortunately, the confidence score c gradually approaches to 1 as training processing is iteratively increasing, whereby the model increases the learning confidence and achieves the purpose of reverse correction of uncertain clues.
+Multimodal fusion and detection
+Finally, we obtain the similar clue features and ambiguous clue features of news image and text, which are fused by the correlation score as follows: 19
+x ~ = ( ( 1 - C o r s ) × ( t o ⊕ v o ) ) ⊕ ( C o r s × ( t ac ⊕ v ac ) ) where ⊕ represents the concatenation operation. Then, the fused features x ~ are fed into a fully connected network to obtain the predicted labels. The cross entropy loss function is further utilized to regularize the prediction between the ground-truth label y cls and the predicted probability y ~ cls : 20
+L cls = y cls log ( y ~ cls ) + ( 1 - y ~ cls ) log ( 1 - y cls ) Accordingly, the total loss can be formulated as a combination of the unimodal detection loss and the confidence loss: 21
+L total = L cls + λ 1 L t - c l u e + λ 2 L v - c l u e where λ 1 and λ 2 are utilized to balance two items.
+Experiment and analysis
+This section conducts a series of quantitative experiments to investigate the effectiveness and robustness of the proposed multmodal fake news detection method. The experiments and analysis will be detailed in the following subsections.
+Dataset
+To fairly evaluate the performance of the proposed model, two popular multi-modal social media datasets, Weibo and Twitter, are selected for evaluations. The statistical information of the dataset is shown in Table 1. Table 1. The statistical information of datasets
+Dataset
+Trainset
+Testset
+
+Fake news
+Real news
+Fake news
+Real news
+
+Weibo
+3783
+3749
+620
+544
+
+Twitter
+4774
+3958
+467
+333
+
+
+Weibo dataset [39]: The Weibo dataset is collected from the Chinese Sina Weibo platform, which contains all officially verified multimodal fake news on the official rumor reporting platform, ranging from 2012 to 2016, as well as the real news collected from Xinhua News Agency’s Hot News Discovery System during the same period. We obtain 4403 fake news post and 4293 real news post, each corresponding to an image.
+Twitter dataset [26]: The twitter dataset is established by a multimedia validation task organized by the MediaEval Benchmarking organization in 2015, and the multimodal news are mainly derived from all verified fake and real news on the Twitter platform from 2012 to 2016. We obtain 5241 fake news post and 4291 real news post, each corresponding to an image.
+Experimental setup
+In the multimodal feature extraction module, the textual feature extractor characterizes the text words with 300-dimensional semantic word vectors. Meanwhile, the visual feature extractor is utilized to extract top 20 salient image patches with 2048 region feature dimensions from news images. In the cross-modal weighted residual network, the initial value of the scaling factor α is set at 1 and the similar clue feature dimension is fixed to be 64. In the stage of the clue ambiguity verification, the value of the penalty parameter β is set at 1 and the ambiguous clue feature dimension is fixed to be 64. In the stage of the clue uncertainty correction, the value of the hyper-parameter η is set at 0.5. In the stage of the multimodal fusion, we simply set λ 1 and λ 2 as 1 without tuning the hyper parameter.
+In the training process, we utilize the Adam optimizer for loss optimization with an initial learning rate of 10 - 4 , and set the dropout rate as 0.3. For all the baselines and the ECARnet, we use the same batch size of 256 and training epoch is 100. We use the Accuracy(Acc.), Precision(Prec.), Recall and F 1 score between the fake-news class and real-news class as evaluation metrics.
+Fake news detection performance comparison
+To validate the effectiveness of the proposed ECARnet model, ten representative methods are selected for meaningful comparisons:
+- Bi-LSTM [39]: This network employs the bidirectional LSTM and several fully connected layers.
+
+- BERT [40]: It is a pre-trained language models to obtain the text representation of news and uses fully connected layers to make classifications.
+
+- VGG19 [41]: It is a pre-trained deep convolutional network to model news images and uses fully connected layers to make classifications.
+
+- Att-RNN [39]: This RNN-based detection model utilizes the attention mechanism to fuse various features, and we remove the part of social context features for comparison.
+
+- EANN [22]: This domain-adversarial multimodal detection model employs an event discriminator to learn the shared feature representations, and we remove the adversarial component for fair comparison,.
+
+- MVAE [23]: Such multimodal detection model utilizes the variational autoencoder to learn a shared representation, which reconstructs the textual and visual feature representations from the shared latent representation.
+
+- SAFE [28]: This similarity-aware method utilizes the sentence similarity as the auxiliary loss to jointly learn the multimodal relevance.
+
+- Spotfake [21]: This multimodal detection model utilizes BERT and VGG-19 to encode multimodal news posts.
+
+- CARMN [2]: It combines the cross-attention residuals and multichannel convolutional neural networks to achieve multimodal fake news detection.
+
+- CAFE [6]: It is a global ambiguity-aware multimodal detection model, which estimates the global semantic similarity to fuse the multimodal features.
+
+
+Table 2. Performance comparisons with different baselines on two real-world datasets
+Dataset
+Method
+Accuracy
+Fake news
+Real news
+
+Precision
+Recall
+F 1
+Precision
+Recall
+F 1
+
+Weibo
+Bi-LSTM
+0.774
+0.796
+0.758
+0.776
+0.754
+0.793
+0.773
+
+BERT
+0.804
+0.798
+0.831
+0.814
+0.811
+0.776
+0.793
+
+VGG19
+0.635
+0.630
+0.706
+0.666
+0.641
+0.559
+0.597
+
+Att-RNN
+0.781
+0.802
+0.765
+0.783
+0.761
+0.801
+0.781
+
+EANN
+0.810
+0.831
+0.792
+0.812
+0.789
+0.829
+0.809
+
+MVAE
+0.824
+0.854
+0.769
+0.809
+0.802
+0.875
+0.837
+
+SAFE
+0.763
+0.757
+0.799
+0.777
+0.772
+0.726
+0.749
+
+Spotfake
+0.892
+0.902
+0.904
+0.930
+0.847
+0.656
+0.739
+
+CARMN
+0.853
+0.891
+0.814
+0.851
+0.818
+0.894
+0.854
+
+CAFE
+0.840
+0.855
+0.830
+0.842
+0.805
+0.813
+0.809
+
+Ours
+0.929
+0.947
+0.914
+0.931
+0.912
+0.946
+0.928
+
+Twitter
+Bi-LSTM
+0.551
+0.553
+0.679
+0.609
+0.548
+0.413
+0.471
+
+BERT
+0.599
+0.611
+0.468
+0.530
+0.591
+0.720
+0.649
+
+VGG19
+0.567
+0.699
+0.442
+0.542
+0.491
+0.738
+0.590
+
+Att-RNN
+0.681
+0.758
+0.659
+0.705
+0.603
+0.712
+0.653
+
+EANN
+0.678
+0.765
+0.641
+0.698
+0.597
+0.729
+0.657
+
+MVAE
+0.598
+0.697
+0.543
+0.610
+0.518
+0.676
+0.587
+
+SAFE
+0.643
+0.676
+0.506
+0.579
+0.625
+0.772
+0.691
+
+Spotfake
+0.701
+0.730
+0.606
+0.663
+0.682
+0.789
+0.731
+
+CARMN
+0.741
+0.854
+0.619
+0.718
+0.670
+0.880
+0.760
+
+CAFE
+0.806
+0.807
+0.799
+0.803
+0.805
+0.813
+0.809
+
+Ours
+0.828
+0.857
+0.801
+0.828
+0.802
+0.858
+0.828
+
+Best results are highlighted in bold
+
+The quantitative comparison results are displayed in Table 2, and the t-SNE [42] visualization of the weibo features at various stages is shown in Fig. 5, from which we can draw the following observations.
+The proposed ECARnet moddel generally performs better than other competing baselines, and the obtained accuracy, precision, recall, and F 1 scores are always higher than that generated by these baselines. For Weibo dataset, the accuracy and precision values obtained by ECARnet exceed the best results of the baseline methods by up to 3.7 % and 4.5 % , respectively. It indicates that ECARnet is able to fully explore multimodal ambiguous clues and detect the difficult fake news that was possibly missed in the baseline methods.
+The text-based unimodal methods often outperform the vision-based unimodal methods. It indicates that traditional feature extraction methods are difficult to extract the semantic clues for images, which implies that the text may contain more forged content for valuable detection. Comparatively speaking, the multimodal methods mostly outperform the unimodal methods. It indicates that the combination of text modality and visual modality can provide complementary semantic clues, and the fusion of multimodal shared semantic features can significantly improve the fake news detection performance.
+Within the multimodal fusion methods, CARMN yields a poor detection result in the weibo dataset. That is, the weibo dataset contains low quality images and a large amount of irrelevant content, making it difficult for the attention mechanism to extract cross-modal shared content. Therefore, the coarse shared semantic features cannot detect all the fake news and often result in detection failure. For the CAFE model that considers cross-modal ambiguous features, its performance tested on the Weibo dataset is also uncompetitive. This method considers the content ambiguity in a global way and ignores the local fake clues, which limit its detection performance.
+As shown in Fig 5a with Fig 5b, the textual similar clue features are more distinguishable than the visual similar clue features. Under such circumstances, it is difficult to detect the fake news by only relying on visual similar clue. Fortunately, the proposed feature extraction method and the cross-modal weighted residual network can lead to better detection of different clues, which can promote more distinguishable features to verify the ambiguous clues. As shown in Fig 5c and d, the ambiguous clue reasoning is capable of producing visual clue with higher discrimination, which can well compensate for the weakness of visual similar clue. [See PDF for image]
+Fig. 5 Visualization of t-SNE results based on various features for the weibo dataset
+
+
+Ablation analysis
+Within the proposed ECARnet framework, different learning modules are carefully considered for multimodal fake new detection. Next, we further evaluate four variants of ablation experiments to show their effectiveness.
+- w/o ambiguous clue : Model without the enhanced ambiguous clue reasoning module and only utilizes the similar clue features.
+
+- w/o uncertain clue : Model without the backward correcting uncertain clues and directly utilizes all clue features.
+
+- w/o threshold optimization : Ignore two distinction errors and fix the ambiguity distinction threshold to 0.
+
+- w/o correlation score : Remove correlation scores in the multimodal fusion module, and concatenate two clue features with equal weights.
+
+
+Table 3. Ablation studies of the proposed ECARnet
+Methods
+Acc.
+Prec.
+Recall
+F 1
+
+Weibo
+w/o ambiguous clue
+0.868
+0.886
+0.836
+0.861
+
+w/o uncertain clue
+0.871
+0.874
+0.881
+0.868
+
+w/o threshold optimization
+0.877
+0.878
+0.907
+0.848
+
+w/o correlation score
+0.892
+0.910
+0.881
+0.895
+
+ECARnet
+0.929
+0.931
+0.947
+0.914
+
+Twitter
+w/o ambiguous clue
+0.734
+0.771
+0.768
+0.775
+
+w/o uncertain clue
+0.703
+0.748
+0.734
+0.761
+
+w/o threshold optimization
+0.778
+0.785
+0.786
+0.784
+
+w/o correlation score
+0.782
+0.783
+0.803
+0.765
+
+ECARnet
+0.825
+0.813
+0.843
+0.786
+
+Best results are highlighted in bold
+
+The experimental results of the ablation analysis are reported in Table 3. Combined with the t-SNE results in Fig 5, we have the following observations.
+The detection accuracy is decreased if some of the modules within ECARnet are removed, which demonstrates the effectiveness of each learning module. The removal of uncertain clue and ambiguous clue has the most significant impact on the model performance, which implies that there is a large number of faked fragments in the similar and ambiguous content. These semantic clues not only improve the detection performance but also can enhance the interpretability of the detection process. After removing the threshold optimization, the model shows performance degradation due to its failure to accurately distinguish ambiguous clues. That is, the fixed threshold is not conducive to distinguish the ambiguous clues, while the dynamic distinction can benefit the model to make effective reasoning.
+Further, it can be observed that the performances drop significantly if the uncertain clues are removed from Twitter dataset. In contrast to this, the detection performance declines significantly if we remove the ambiguous clues on the Weibo dataset. That is, the sensitivity of the same module evaluated on different datasets can reflect the variability of the datasets. This variability indicates that most of the ambiguous clues of Weibo content can well support detection. Comparatively speaking, there exist more uncertainty in Twitter, which increases the difficulty for detection.
+Fig 5 shows the feature distinction at each learning process. Comparing with Fig. 5e and f, it can be found that the boundary between the fake news and real news can be well differentiated by enhancing the correlation scores, which indicates that the mining of semantic correlation can benefit the model to detect fake information effectively. In addition, as shown in Fig. 5a & c and Fig. 5b & d, comparing the distribution of ambiguous clue with similar clue, it can be observed that it is difficult to judge the truthfulness by only using the similar clue. By contrast, even if the images with more interference contents, the ambiguous clue are more beneficial to detect fake news than similar clue. That is, the ambiguous clues can effectively help the model to make valuable clue reasoning and therefore benefit the efficient fake news detection.
+Early fake news detection
+Early fake news detection in social media can prevent its further spread and reduce its damage. We simulate the early spread of fake news with few samples by adding test data gradually. The sensitivity of different multimodal fake news detection methods to few news directly reflects the early detection performance of the models. As shown in Fig. 6a and b, the proposed ECARnet is capable of achieving the best detection performance at the early fake news spreading stages and significantly outperforms the other multimodal detection models. In particular, the ECARnet achieves superior accuracy after applying half of the Twitter dataset, which efficiently proves its ability to detect fake news in the early stages of propagation. [See PDF for image]
+Fig. 6 Early fake news detection comparisons
+
+
+Clue reasoning analysis
+To visualize the clue reasoning performance within the proposed ECARnet model, we select two multimodal fake news with complex contexts for illustration. During the ECARnet reasoning process, we mask two clue matrices to generate three kinds of clues, and labeling their corresponding image patches. [See PDF for image]
+Fig. 7 Ambiguous clue reasoning in complex multimodal fake news
+
+
+As shown in Fig. 7, it can be observed that the proposed ECARnet framework can well distinguish most textual ambiguous clues, thus inferring the semantic conflicts between image regions and text words. Accordingly, ambiguous clues can be well obtained for fake news detection. It should be noted that the ambiguous details present in the salient image regions are not obvious, which cannot be directly utilized for fake information detection. Under such circumstances, it is difficult to detect fake information from single modality. Fortunately, the exploitation of cross-modal semantic correlation between the image and text data can well excavate the ambiguous clues, which can effectively improve the detection performance.
+Conclusion
+In this work, we have proposed an enhanced clue-ambiguity reasoning network for efficient multimodal fake news detection. Within the proposed framework, a cross-modal weighted residual network is constructed to learn similar clue features across different modalities. Meanwhile, an efficient bidirectional clue-ambiguity reasoning module is designed to explicitly excavate the ambiguous clue features in a more interpretable and plausible way. Specifically, forward reasoning branch employs the two-branch network with clue correlation analysis to maximally distinguish the cross-modal ambiguous clues, while backward reasoning branch utilizes uncertainty learning to enhance the credibility of the derived ambiguous clues. Extensive experiments evaluated on benchmark datasets have shown its promising performance.
+Along the line of the present work, several open problems also deserve our further research. For instance, if the ambiguous clues within the fake samples are insufficient or share similar meanings with the other normal parts, the proposed model may fail to identify these ambiguous clues. Besides, how to use the credibility of different clues to guide the model learning process is another interesting direction, which may further improve the robustness and interpretability of the detection model. These investigations will be studied in our future works.
+Acknowledgements
+This work was supported in part by the Open Project of Zhejiang Lab under Grant 2021KH0AB01, and in part by the National Science Foundation of Fujian Province under Grant 2020J01083 and Grant 2020J01084.
+Author Contributions
+SZ and SP wrote the main manuscript text. XL designed model. LZ prepared figures 1–8. XX prepared tables 1–3. and TL did the experiment. All authors reviewed the manuscript.
+Declarations
+Conflict of interest
+The authors declare no competing interests.
+B. Bao
+Publisher's Note
+Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References
+1. Shu, K; Sliva, A; Wang, SH et al. Fake news detection on social media: a data mining perspective. ACM Spec. Interest Group Knowl. Discov. Data Min. Explor. Newslett. ; 2017; 19 , pp. 22-36. [DOI: https://dx.doi.org/10.1145/3137597.3137600]
+2. Song, CG; Ning, NW; Zhang, YL et al. A multimodal fake news detection model based on crossmodal attention residual and multichannel convolutional neural networks. Inform. Process. Manag. ; 2021; 58 , [DOI: https://dx.doi.org/10.1016/j.ipm.2020.102437] 102437.
+3. Singh, B; Sharma, DK. Predicting image credibility in fake news over social media using multi-modal approach. Neural Comput. Appl. ; 2022; 34 , pp. 21503-21517. [DOI: https://dx.doi.org/10.1007/s00521-021-06086-4] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/34054227]
+4. Nasir, JA; Khan, OS; Varlamis, I. Fake news detection: a hybrid cnn-rnn based deep learning approach. Int. J. Inform. Manag. Data Insights ; 2021; 1 , [DOI: https://dx.doi.org/10.1016/j.jjimei.2020.100007] 100007.
+5. Sheng, Q., Cao, J., Zhang, X.Y., et al.: Zoom out and observe: News environment perception for fake news detection. In: Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), pp 4543–4556, https://doi.org/10.18653/v1/2022.acl-long.311 (2022)
+6. Chen, Y.X., Li, D.S., Zhang, P., et al.: Cross-modal ambiguity learning for multimodal fake news detection. In: Proceedings of the ACM Web Conference, pp 2897–2905, https://doi.org/10.1145/3485447.3511968 (2022)
+7. Wang, Y., Ma, F., Wang, H., et al.: Multimodal emergent fake news detection via meta neural process networks. In: Proceedings of the 27th ACM Conference on Knowledge Discovery & Data Mining, pp 3708–3716, https://doi.org/10.1145/3447548.3467153 (2021)
+8. Lv, J; Wang, X; Shao, C. Tmif: transformer-based multi-modal interactive fusion for automatic rumor detection. Multimed. Syst. ; 2022; [DOI: https://dx.doi.org/10.1007/s00530-022-00916-8]
+9. Guo, H., Cao, J., Zhang, Y.Z., et al.: Rumor detection with hierarchical social attention network. In: Proceedings of the 27th ACM International Conference on Information and Knowledge Management, pp 943–951, https://doi.org/10.1145/3269206.3271709 (2018)
+10. Qian, S.S., Wang, J.G., Hu, J., et al.: Hierarchical multi-modal contextual attention network for fake news detection. In: Proceedings of the 44th ACM International Conference on Research and Development in Information Retrieval, pp 153–162, https://doi.org/10.1145/3404835.3462871 (2021)
+11. Wu, Y., Zhan, P.W., Zhang, Y.J., et al.: Multimodal fusion with co-attention networks for fake news detection. In: Proceedings of the Association for Computational Linguistics, pp 2560–2569 (2021)
+12. Shu, K., Cui, L., Wang, S., et al.: Defend: explainable fake news detection. In: Proceedings of the 25th ACM International Conference on Knowledge Discovery & Data Mining, pp 395–405, https://doi.org/10.1145/3292500.3330935 (2019)
+13. Ma, J., Gao, W., Mitra, P., et al.: Detecting rumors from microblogs with recurrent neural networks. In: Proceedings of the 25th International Joint Conference on Artificial Intelligence, pp 3818–3824 (2016)
+14. Castillo, C., Mendoza, M., Poblete, B.: Information credibility on twitter. In: Proceedings of the 20th International Conference on World Wide Web, pp 675–684, https://doi.org/10.1145/1963405.1963500 (2011)
+15. Zhang, W., Gui, L., He, Y.: Supervised contrastive learning for multimodal unreliable news detection in COVID-19 pandemic. In: Proceedings of the 30th ACM International Conference on Information & Knowledge Management, pp 3637–3641, https://doi.org/10.1145/3459637.3482196 (2021)
+16. Yuan, H; Zheng, J; Ye, QW et al. Improving fake news detection with domain-adversarial and graph-attention neural network. Decis. Support Syst. ; 2021; 151 , [DOI: https://dx.doi.org/10.1016/j.dss.2021.113633] 113633.
+17. Zhou, P., Han, X.T., Morariu, V.I., et al.: Learning rich features for image manipulation detection. In: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pp 1053–1061, https://doi.org/10.1109/CVPR.2018.00116 (2018)
+18. Qi, P., Cao, J., Yang, T., et al.: Exploiting multi-domain visual information for fake news detection. In: 2019 IEEE International Conference on Data Mining, IEEE, pp 518–527, https://doi.org/10.1109/ICDM.2019.00062 (2019)
+19. Shu, K., Wang, S.H., Liu, H.: Beyond news contents: The role of social context for fake news detection. In: Proceedings of the 12th ACM International Conference on Web Search and Data Mining, pp 312–320, https://doi.org/10.1145/3289600.3290994 (2019)
+20. Ben, CNEH; Bouzeghoub, A; Guetari, R et al. Deep learning methods for anomalies detection in social networks using multidimensional networks and multimodal data: A survey. Multimed. Syst. ; 2022; [DOI: https://dx.doi.org/10.1007/s00530-020-00731-z]
+21. Singhal, S., Shah, R.R., Chakraborty, T., et al.: Spotfake: a multi-modal framework for fake news detection. In: Proceedings of the 5th International Conference on Multimedia Big Data, pp 39–47, https://doi.org/10.1109/BigMM.2019.00-44 (2019)
+22. Wang, Y.Q., Ma, F.L., Jin, Z.W., et al.: Eann: event adversarial neural networks for multi-modal fake news detection. In: Proceedings of the 24th ACM Special Interest Group on Knowledge Discovery and Data Mining, pp 849–857, https://doi.org/10.1145/3219819.3219903 (2018)
+23. Khattar, D., Goud, J.S., Gupta, M., et al.: Mvae: multimodal variational autoencoder for fake news detection. In: Proceedings of the World Wide Web Conference, pp 2915–2921, https://doi.org/10.1145/3308558.3313552 (2019)
+24. Silva, A., Luo, L., Karunasekera, S., et al.: Embracing domain differences in fake news: cross-domain fake news detection using multi-modal data. In: Proceedings of the AAAI Conference on Artificial Intelligence, pp 557–565, https://doi.org/10.1609/aaai.v35i1.16134 (2021)
+25. Jin, Z.W., Cao, J., Guo, H., et al.: Multimodal fusion with recurrent neural networks for rumor detection on microblogs. In: Proceedings of the 25th ACM International Conference on Multimedia, pp 795–816, https://doi.org/10.1145/3123266.3123454 (2017)
+26. Qi, P., Cao, J., Li, X.R., et al.: Improving fake news detection by using an entity-enhanced framework to fuse diverse multimodal clues. In: Proceedings of the 29th ACM International Conference on Multimedia, pp 1212–1220, https://doi.org/10.1145/3474085.3481548 (2021)
+27. Xue, JX; Wang, YB; Tian, YC et al. Detecting fake news by exploring the consistency of multimodal data. Inform. Process. Manag. ; 2021; 58 , [DOI: https://dx.doi.org/10.1016/j.ipm.2021.102610] 102610.
+28. Zhou, X.Y., Wu, J.D., Zafarani, R.: Safe:similarity-aware multi-modal fake news detection. In: Proceedings of the 24th Pacific-Asia Knowledge Discovery and Data Mining, pp 354–367, https://doi.org/10.1007/978-3-030-47436-2_27 (2020)
+29. Shang, L; Kou, Z; Zhang, Y et al. A duo-generative approach to explainable multimodal COVID-19 misinformation detection. Proc. ACM Web Conf. ; 2022; 2022 , pp. 3623-3631. [DOI: https://dx.doi.org/10.1145/3485447.3512257]
+30. Jin, Y., Wang, X., Yang, R., et al.: Towards fine-grained reasoning for fake news detection. In: Proceedings of the AAAI Conference on Artificial Intelligence, pp 5746–5754, https://doi.org/10.1609/aaai.v36i5.20517 (2022)
+31. Mosallanezhad, A., Karami, M., Shu, K., et al.: Domain adaptive fake news detection via reinforcement learning. In: Proceedings of the ACM Web Conference, pp 3632–3640, https://doi.org/10.1145/3485447.3512258 (2022)
+32. Connor, CE; Egeth, HE; Yantis, S. Visual attention: bottom–up versus top-down. Curr. Biol. ; 2004; 14 , pp. 850-852.1:CAS:528:DC%2BD2cXotFCktbs%3D [DOI: https://dx.doi.org/10.1016/j.cub.2004.09.041]
+33. Girshick, R.: Fast r-cnn. In: Proceedings of the IEEE International Conference on Computer Vision, pp 1440–1448 (2015)
+34. Zhen, L.L., Hu, P., Wang, X., et al.: Deep supervised cross-modal retrieval. In: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp 10394–10403, https://doi.org/10.1109/CVPR.2019.01064 (2019)
+35. Chung, J.S., Zisserman, A.: Out of time: automated lip sync in the wild. In: Proceedings of the Asian Conference on Computer Vision, pp 251–263, https://doi.org/10.1007/978-3-319-54427-4_19 (2017)
+36. Liu, X; Hu, Z; Ling, H et al. Mtfh: a matrix tri-factorization hashing framework for efficient cross-modal retrieval. IEEE Trans. Pattern Anal. Mach. Intell. ; 2021; 43 , pp. 964-981. [DOI: https://dx.doi.org/10.1109/TPAMI.2019.2940446] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/31514125]
+37. Goldberger, J., Gordon, S., Greenspan, H., et al.: An efficient image similarity measure based on approximations of kl-divergence between two Gaussian mixtures. In: Proceedings of the IEEE International Conference on Computer Vision, pp 487–493, https://doi.org/10.1109/ICCV.2003.1238387 (2003)
+38. Morteza, P., Li, Y.X.: Provable guarantees for understanding out-of-distribution detection. In: Proceedings of the Association for the Advancement of Artificial Intelligence, pp 7831–7840, https://doi.org/10.1609/aaai.v36i7.20752 (2022)
+39. Ma, J., Gao, W., Wei, Z.Y., et al.: Detect rumors using time series of social context information on microblogging websites. In: Proceedings of the 24th ACM International on Conference on Information and Knowledge Management, pp 1751–1754, https://doi.org/10.1145/2806416.2806607 (2015)
+40. Lee, J., Toutanova, K.: Bert:pre-training of deep bidirectional transformers for language understanding. ArXiv Preprint https://doi.org/10.48550/arXiv.1810.04805 (2018)
+41. Sengupta, A; Ye, YT; Wang, R et al. Going deeper in spiking neural networks: Vgg and residual architectures. Front. Neurosci. ; 2019; [DOI: https://dx.doi.org/10.3389/fnins.2019.00095] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/30899212][PubMedCentral: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6416793]
+42. Van der Maaten, L; Hinton, G. Visualizing data using t-sne. Mach. Learn. Res. ; 2008; 9 , pp. 2579-2605.

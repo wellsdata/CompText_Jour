@@ -1,0 +1,684 @@
+Introduction The significant increase in fake news, which undermines fairness, democratic values, and public trust, necessitates the development of effective detection models [1]. The spread of fake news erodes the credibility of the media, leaving audiences confused and misinformed. Studies have shown that fake news has contributed to various crises, negatively impacting economic stability [2], health [3], political stability [4], and media [5]. Manual interventions prove ineffective against the rapid dissemination of fake news [6]. Currently, there is a global reliance on social networks for news [7]. Unlike conventional media, online news dissemination offers immediacy, incurs no expenses, and operates without the constraints of rigorous validation [5, 8]. Machine learning and deep learning models are currently being used to curb the spread of fake news on social media [9]. One crucial factor in increasing the efficiency of these detection models is the optimal use of features. However, these models face limitations related to improving feature representation, such as out-of-vocabulary (OOV) issues, leveraging image-based features, and using efficient pre-trained extraction models. Many social media news posts contain grammatical errors, abbreviations, slang, and obscenities, resulting in noisy datasets [10]. This contributes to OOV issues during model training phases using static word embedding models such as Word2vec and GloVe, limiting the model’s understanding of these phrases. The inability of pre-trained models to generate effective representations can impair the performance of NLP tasks. Furthermore, few studies on fake news detection consider both visual and textual contents. Early studies, focusing mostly on textual features, fail to effectively learn multimodal (text and image) shared representations [11]. However, the multimodal content of posted news, especially images, remains underexplored [12]. Multimodal feature representations have gained popularity in various domains, showing potential in improving classification accuracy by incorporating information from multiple modalities [13]. Many studies in the literature have presented efficient multimodal fake news detection models. However, these models still need improvement to increase detection accuracy, and one of the most significant limitations is the insufficient representation of multimodal news content, which undermines the effectiveness of the detection model. A significant problem in current fake news detection studies is the optimal use of pre-trained models for feature extraction. Despite the importance of feature vector representation and its impact on model performance, numerous studies in fake news detection have overlooked selecting effective methods for feature extraction and accurate representation. Pre-trained models such as BERT and VGG-19, trained on large, diverse datasets, have shown versatility in various tasks. BERT, addressing the OOV problem, was pre-trained on vast text corpora including the Toronto BookCorpus and English Wikipedia [14]. However, the language of social media, often colloquial and profane, differs from the formal language found in these sources [15]. Similarly, the VGG-19 model, pre-trained on the ImageNet dataset, faces challenges in adapting to the diverse contexts of news images [16]. It is worth mentioning that images used in news, which often combine different objects and scenes [17], may differ from ImageNet images that are classified based on objects [18]. Figure 1 illustrates the differences between the ImageNet dataset and the Fakeddit dataset images used in this paper. Although classifying fake news from Fakeddit images may differ from classifying natural objects and images, they can share similar learned features [19]. Given these challenges, as shown in Fig. 2, poor representation of features can lead to low detection accuracy in fake news detection models. The problem of this study is that insufficient representation of multimodal news content undermines the effectiveness of the fake news detection model. A promising solution is fine-tuning pre-trained feature extraction models, allowing better adaptation to specific target domains [20, 21]. Experimental results demonstrate that fine-tuning improves feature extraction, outperforming state-of-the-art methods [22]. Localized fine-tuning in data classification tailors a general pre-trained deep learning model to a specific task or dataset, focusing on the unique aspects of domain-specific data. It involves adjusting a generic pre-trained model’s weights and parameters for a specific task, crucial in machine learning applications [23]. Fig. 1 [Images not available. See PDF.]
+Snapshots from the ImageNet and Fakeddit datasets
+Fig. 2 [Images not available. See PDF.]
+Multimodal feature representation problems and the proposed method for solving them
+
+Accordingly, this study proposes a multimodal fake news detection model, MFND-FR-FBV, based on localized fine-tuning of BERT and VGG-19 models to improve feature representation. The proposed localized fine-tuning strategy includes retraining all BERT layers and adding a Softmax classification layer. For VGG-19, fine-tuning involves retraining only the last convolution block and freezing the first four blocks. This is preceded by replacing the flatting layer with a global average pooling layer and redesigning the classifier part of the VGG-19 model to incorporate 512, 128, and 64 neurons in its hidden dense layers, with a Softmax classification layer. The outputs of these fine-tuned models will be fused into a meta-learner-based classifier for fine-grained fake news classification. Our proposed model demonstrates high detection accuracy compared to contemporary studies.
+- Testing unimodal detection models using GloVe to assess the impact of unimodal features and OOV on detection model performance.
+
+- Proposing a localized fine-tuning strategy to enhance BERT and VGG-19 for optimal representation of multimodal features for a specific task.
+
+- Presenting a fine-grained multimodal fake news detection (MFND-FR-FBV) model, based on a fine-tuning approach.
+
+- Evaluating the proposed model against recent related studies.
+
+
+
+The remainder of this paper is organized as follows: Sect. 2 discusses limitations in multimodal feature representation and their effect on fake news detection models. Section 3 reviews related studies. Section 4 examines the benefits of fine-tuning and its implementation for pre-trained models. Section 5 describes the dataset used and details the proposed model MFND-FR-FBV, including the evaluation metrics and baseline models. Section 6 presents and discusses experimental findings. Finally, Sect. 7 concludes this research and suggests future research directions for enhancing multimodal fake news detection models.
+Background of Study This section is divided into three subsections. Section 2.1 discusses the use of multimodal features in the literature, their importance in detecting fake news, and the role of pre-trained models in extracting efficient features. Section 2.2 explores the importance of using fine-tuning methods for pre-trained models and their impact on improving feature representation. Section 2.3 investigates relevant studies that employed various methods for feature extraction in detecting fake news. Additionally, this section provides a critical analysis of related works, highlighting the most significant limitations of these models.
+Multimodal Feature Representation Investigations into deep learning models have shown that they often outperform other methods in terms of accuracy. However, the efficiency of these models is highly dependent on the effectiveness of feature extraction and representation. Feature representation involves transforming raw data into a set of identifiable and meaningful attributes, known as features. Selecting optimal feature extraction techniques plays a pivotal role in enhancing the accuracy of fake news detection [24]. These techniques aim to extract a set of features, termed a feature vector, which optimizes the rate of accurate predictions using a minimal number of elements [25]. This results in a condensed feature set that effectively represents multiple instances of a particular token [26]. With the growth of social media, news stories have evolved from purely textual formats to multimodal formats, incorporating images [27, 28]. This evolution necessitates the creation of models based on multimodal datasets. Despite the effectiveness of image features in detecting fake news and their contribution, along with textual features, to improve the efficiency of detection models, the majority of earlier studies on fake news detection focused solely on textual features, which are inadequate for learning shared representations of text and image modalities [11]. Multimodal feature representations have gained popularity across various domains, showing the potential to improve classification accuracy by integrating information from multiple sources or modalities. They offer advantages over unimodal representations by addressing challenges such as big data, class imbalance, instance-level difficulty, and enhancing the understanding of relationships between different modalities [21]. Multimodal classification models use various approaches to generate meaningful feature space representations for accurate classification. The employment of multimodal representations has yielded promising results in tasks such as emotion recognition, sentiment analysis [29], and object detection [13]. Despite the development of various models, the examination of the multimodal features of fake news has not been extensively explored. Navigating a multimodal environment introduces unique challenges, particularly in comprehending the connections between varied features from different modalities [30]. Moreover, many fake news detection studies fail to consider effective methods for feature extraction and representation, leading to suboptimal performance. This issue is critical when handling noisy social media data. Most pre-trained models for feature extraction are trained on general data from various fields, leading to poor representation of feature vectors when dealing with specific domains such as detecting fake news on social media and, consequently, reduced detection accuracy. Furthermore, many studies overlook the fine-tuning of pre-trained models, despite its significant impact on increasing detection accuracy [31].
+Fine-Tuning of Pre-trained Models Fine-tuning significantly impacts pre-trained feature extraction models, especially in multimodal classification scenarios. It allows models to better adapt features to specific target domains using labeled data, leading to improved classification accuracy [20, 21]. Fine-tuning involves modifying the parameters of the feature extractor to enhance feature extraction for a specific task. Studies indicate that fine-tuning results in higher accuracy in specific downstream tasks compared to baseline pre-trained models without fine-tuning [22]. It also helps address the curse of dimensionality by reducing feature dimensionality [32] and enables the integration of complex relationships among multimodal features, resulting in more accurate pattern recognition [33]. Pre-trained models, trained on large-scale datasets, have learned general features from various domains, making them ideal for feature extraction [34]. Fine-tuning adjusts a pre-trained model’s weights and parameters using task-specific data, allowing the model to adapt its learned features to better suit the target task. Figure 3 demonstrates this process: fine-tuning adjusts input data X and parameters ( W , b ) for optimal classification. Mathematically, model fine-tuning is represented as follows: 1
+∅ W X + b → MFT ∅ W ′ X + b ′ [Images not available. See PDF.]
+
+Regardless of the variety in the general-domain data employed during pre-training, the data specific to the target task often varies in its distribution. Therefore, the language model (LM) should be fine-tuned to the target task data. This fine-tuning phase typically reaches convergence more swiftly, as it primarily focuses on adjusting to the unique characteristics of the target data. This approach facilitates the development of a robust LM, effective even with smaller datasets [35]. Future directions could focus on improving language model pre-training and fine-tuning, making them more scalable [36]. Fine-tuning has proven effective for enhancing BERT’s performance in various NLP tasks [37]. Ameri, Hempel [38] showed that fine-tuning BERT’s language model substantially increased classification accuracy for cybersecurity feature claims, outperforming other models such as GPT-2, ULMFiT, and ELMo. Fine-tuning transfers learned knowledge from pre-trained models to downstream tasks, improving the accuracy of classification models [39]. It also preserves pre-trained knowledge while learning new information from target data [40], mitigating negative transfer, and improving generalization ability [41]. In the context of Alzheimer’s disease diagnosis, fine-tuning techniques combined with transfer learning have shown promising outcomes [42]. Fine-tuning can address the challenge of insufficient training data and reduce the need for expensive labeling, making it valuable in image classification tasks [43]. Inductive transfer learning has greatly impacted computer vision (CV), where applied models are seldom trained from scratch [44]. Instead, they are typically fine-tuned using models that have been pre-trained on datasets such as ImageNet and MS-COCO [35]. Cai, Guo [23] demonstrated that both segmentation and classification tasks improve through fine-tuning, leading to enhanced performance for specific applications. Fine-tuning often necessitates a substantial number of training examples or the adjustment of the entire parameter set of a pre-trained model [45]. Fine-tuning multimodal fake news detection models faces challenges due to often being trained on smaller datasets or limited topics, leading to a lack of generalization capabilities for real-world data. Given the potential improvements offered by fine-tuned pre-trained models, further research is needed to explore and optimize the fine-tuning process for different multimodal classification tasks and datasets. Fine-tuning plays a crucial role in improving the performance of multimodal fake news detection, but it requires careful consideration of training data, model parameters, and feature fusion techniques [46].
+Related Works The representation of features significantly impacts the accuracy of fake news detection. Numerous studies have proposed different methods for feature extraction to enhance fake news detection. Kumar, Asthana [47] developed several machine learning and deep learning-based models using pre-trained GloVe word embeddings for word vector representation. Raza, Ding [48] introduced a detection model that leverages news articles and social context information, utilizing transformer architecture. In their model, the encoder learns representations from the data on fake news, while the decoder predicts future patterns using insights derived from historical observations. Gôlo, de Souza [49] presented MVAEFakeNews, a multimodal approach using text embeddings and topic information from DBERTML and linguistic information from LIWC, through one-class learning (OCL). Wang, Ma [50] introduced the EANN model, which integrates a multimodal feature extractor, a fake news detector, and an event discriminator. This model employs CNNs to extract both textual and visual features and uses the pre-trained VGG-19 model for image representation. Khattar, Goud [51] suggested a multimodal fake news detection model using pre-trained Word2Vec for word embedding and pre-trained VGG-19 for visual feature representation. Singhal, Shah [52] applied BERT for contextual text features and VGG-19 for visual features in their multimodal fake news detection model. Giachanou, Zhang [53] proposed a model based on a neural network that combines textual, visual, and semantic information, extracting textual features with GoogleNews-vectors-negative300 and computing sentiment scores using VADER. They used several pre-trained models, such as VGG-16, VGG-19, ResNet, Inception, and Xception, to extract image tags. Song, Ning [54] presented a model incorporating a CARN layer to enhance feature representation and a CNN-based MCN layer to reduce the influence of unwanted data. Jing, Yao [55] utilized a transformer-based method for joint embedding of multimodal information (text, visual, and comments), employing Faster-RCNN to extract visual features and BERT to extract textual features. Segura-Bedmar and Alonso-Bartolome [56] used CNN as a feature extractor for both text and images in their multimodal model. Wang, Mao [57] presented a multimodal detection model using RoBERTa for text features and CNN with pre-trained VGG-19 for image features. Hua, Cui [58] proposed a framework for fake news detection with multimodal information encoding, using the pre-trained BERT model for textual encoding and the ResNet model for visual encoding. Kalra, Kumar [59] utilized DistilBERT and VGG-16 for text and visual features extraction, respectively. Jing, Wu [60] introduced a multimodal fake news detection, combining a transformer-based visual feature extractor and a BERT-based text feature extractor. Lastly, Wang, Feng [61] proposed a multimodal transformer-based methodology, extracting two-level visual features and embedding text using BERT. Table 1 presents a critical analysis of the above research, highlighting the limitations that affected detection accuracy. Table 1. A critical analysis of fake news detection research regarding feature representation and their limitations
+Authors and year
+Modality
+Feature extraction technique
+Result
+Limitation
+
+(Text)
+(Image)
+
+Kumar, Asthana [47]
+Text
+Glove
+–
+Accuracy: 57.58–88.78%
+1) OOV occurrence, 2) Neglect of visual features, 3) No fine-tuning
+
+Raza, Ding [48]
+Text
+BART
+–
+Accuracy: 74.8%
+Neglect of visual features from multimodal datasets
+
+Gôlo, de Souza [49]
+Text
+DistilBERT and LIWC
+–
+F1-score: 40.7%–95.2%
+1) Neglect of visual features, 2) No fine-tuning
+
+Wang, Ma [50]
+Text and image
+CNN
+VGG-19
+Accuracy: 71.5%–82.7%
+1) No pre-trained word embedding for text, 2) No fine-tuning
+
+Khattar, Goud [51]
+Text and image
+Word2Vec
+VGG-19
+Accuracy: 74.5%–82.4%
+1) OOV occurrence, 2) No fine-tuning
+
+Singhal, Shah [52]
+Text and image
+BERT
+VGG-19
+Accuracy: 77.77%–89.23%
+No fine-tuning
+
+Giachanou, Zhang [53]
+Text and image
+GoogleNews-vectors-negative300
+VGG-16, VGG-19, ResNet, Inception, and Xception
+F1-score: 62.2%–92.5%
+1) OOV occurrence, 2) No fine-tuning
+
+Song, Ning [54]
+Text and image
+Wor2Vec
+VGG-19
+Accuracy: 74.1%–92.2%
+1) OOV occurrence, 2) No fine-tuning
+
+Jing, Yao [55]
+Text and image
+BERT
+Faster-RCNN
+Accuracy: 85%–85.5%
+1) No pre-trained model for visual features, 2) No fine-tuning
+
+Segura-Bedmar and Alonso-Bartolome [56]
+Text and image
+CNN
+CNN
+Accuracy: 87%
+No pre-trained model for text and visual features
+
+Wang, Mao [57]
+Text and image
+RoBERTa
+CNN and VGG-19
+Accuracy: 88.5%
+No fine-tuning
+
+Hua, Cui [58]
+Text and image
+BERT
+ResNet
+Accuracy: 80.5%
+No fine-tuning
+
+Kalra, Kumar [59]
+Text and image
+DistilBERT
+VGG-16
+Accuracy: 60.38%
+VGG-16 is unsuitable for complex tasks requiring deeper feature capture
+
+Jing, Wu [60]
+Text and image
+BERT
+SwinT
+Accuracy: 83.3%–83.8%
+1) No pre-trained model for visual features, 2) No fine-tuning
+
+Wang, Feng [61]
+Text and image
+BERT
+Faster-RCNN and ResNet
+Accuracy: 87.66%–91.88%
+No fine-tuning
+
+
+Methodology This section provides a detailed description of the methodology adopted in our research. It focuses on the dataset used, the architecture of our proposed model MFND-FR-FBV based on a localized fine-tuning approach, the evaluation metrics, and the baseline studies for comparison.
+Dataset In this study, we utilized the Fakeddit dataset, a comprehensive and advanced benchmark for fake news detection. Introduced by Nakamura, Levy [62], Fakeddit1 is a large-scale, multimodal dataset designed for fine-grained classification. It comprises over a million posts collected from the social media platform Reddit, spanning from March 19, 2008, to October 24, 2019. This dataset encompasses a wide range of domains and includes various features such as user information, images, comments, domains, and other metadata associated with the posts. Fakeddit offers three levels of classification for each post: binary, three-way, and six-way. The six-way classification, which provides a detailed categorization of the content, includes the following labels:
+- "True": Posts in this category accurately reflect factual information, typically consisting of genuine images accompanied by correct captions.
+
+- "Satire": This label is assigned to content that offers a satirical or sarcastic take on current events, often involving exaggerated or incorrect information for humorous effect.
+
+- "Misleading Content": This category encompasses information that has been deliberately altered or presented in a way that aims to deceive the audience.
+
+- "Imposter Content": This class includes content purportedly created by automated systems or bots, rather than genuine human users.
+
+- "False Connection": In these cases, the images included in posts do not accurately match their textual descriptions, featuring posts with irrelevant or unrelated captions to the actual content of the images.
+
+- "Manipulated Content": This class refers to content that has been manually edited or altered using various image editing techniques, typically including submissions where the images have been intentionally modified.
+
+
+
+The Fakeddit dataset, with its diverse content and multimodal nature, presents a comprehensive platform for assessing the efficacy of fake news detection models. Its fine-grained classification system offers a nuanced approach to understanding the complexity of fake news in social media contexts.
+Multimodal Fake News Detection (MFND-FR-FBV) Model Our proposed multimodal fake news detection (MFND-FR-FBV) model, based on fine-tuned BERT and VGG-19 to improve feature representation, encompasses four main phases: phase 1: data preprocessing, phase 2: feature representation, phase 3: multimodal data fusion, and phase 4: model evaluation.
+Data Preprocessing Phase In the data preprocessing phase, we apply specific methods to prepare the text and image data extracted from social media for subsequent analysis and feature extraction.
+
+- BERT Tokenization: The textual content is processed using BERT’s tokenizer, which employs the WordPiece algorithm. This algorithm breaks down words into smaller units (subwords or tokens), effectively addressing the out-of-vocabulary (OOV) problem. By handling words not present in the model’s vocabulary, BERT’s tokenizer improves the model’s grasp of language nuances and maintains a manageable vocabulary size.
+
+- Handling Special Tokens: BERT’s tokenizer automatically manages special tokens, including [CLS], [SEP], and [PAD]. These tokens are crucial for BERT to correctly interpret the beginning, separation, and padding of input sequences, ensuring that the textual data are appropriately structured for effective processing by the model.
+
+
+
+
+- Image Resizing: All images from the dataset are resized to dimensions of 224 × 224 × 3. This resizing is necessary to adapt the images to the input requirements of the VGG-19 model, ensuring that the model can efficiently process and extract features from the images.
+
+- Image Normalization: The images undergo normalization to standardize the pixel values, enhancing the model’s ability to learn from the image data effectively.
+
+
+
+
+- Validation and Test Sets: To evaluate the performance of our model accurately, we allocate 10% of the original dataset to each of the validation and test sets. This division ensures that a sufficient amount of data is reserved for assessing the model’s effectiveness in detecting fake news.
+
+
+
+Through these preprocessing steps, we aim to optimize the text and image data for improved feature extraction and classification performance in the MFND-FR-FBV model.
+Features Representation Phase This phase involves using improved BERT and VGG-19 models to achieve optimal representation of the multimodal features for detecting fake news by utilizing a localized fine-tuning method.
+BERT, a deep learning architecture, is commonly employed in downstream NLP tasks. Its architecture includes stacked encoder layers from the transformer model. BERT’s process involves two primary steps: pre-training and fine-tuning [14]. In pre-training, the BERT model is trained on a large unlabeled corpus through two unsupervised processes: masked language model (MLM) and next sentence prediction (NSP), resulting in an efficient pre-trained model. The BERT-base model comprises an encoder with 12 transformer blocks, 12 self-attention heads, and a hidden size of 768. BERT processes sequences of no more than 512 tokens and outputs sequence representations. Each sequence, containing one or two segments, begins with a [CLS] token for classification and includes [SEP] tokens for segment separation. Attention masks are utilized to highlight relevant tokens [63]. For fine-tuning, the model is initialized with pre-trained parameters. These parameters are then fine-tuned using labeled data tailored for specific tasks, such as classification. The output from the [CLS] token serves as the representation of the entire sequence. A Softmax classifier is appended to the model to predict label probabilities. In this model, BERT’s final hidden state of the [CLS] token is utilized as the sequence representation for text classification tasks. The Softmax layer, receiving a 768-length vector, outputs a six-class probability vector (Fig. 4). This enhancement ensures BERT’s effectiveness in fine-grained fake news classification. Training mechanisms include the AdamW optimizer and a learning rate scheduler to facilitate fast and reliable convergence. The fine-tuning probability p for label prediction c in the BERT model is described as shown in Eq. 2: 2
+p ( c | h ) = soft max Wh where W represents the matrix of parameters specific to the task. The fine-tuning process involves simultaneously adjusting all parameters from BERT along with W , aiming to maximize the log probability of accurately predicting the correct label. The enhancements on the BERT model to extract efficient representations of the features used in fake news detection and then perform fine-grained classification of fake news are as following Algorithm 1. [Images not available. See PDF.]
+
+Algorithm 1 [Images not available. See PDF.]
+Fine-tuning BERT
+
+In fine-tuning, BERT’s entire model is further trained on specific tasks. Adjustments are made to the weights learned from extensive corpora, like Wikipedia and BooksCorpus, to align with the nuances of the new dataset, Fakeddit. The learning rate warm-up scheduler aids in achieving faster convergence. The fine-tuned model is stored for future use. Table 2 details the hyperparameters selected based on the most effective experimental results. Table 2. Fine-tuned BERT hyperparameters
+Hyperparameters
+Value
+
+Max length
+128
+
+Optimizer
+AdamW
+
+Learning rate
+5e − 5
+
+Warm-up rate
+0.1
+
+Dropout
+0.1
+
+Activation function
+Softmax
+
+Loss function
+Cross-entropy
+
+Batch size
+32
+
+Epochs
+8
+
+
+The VGG-19 model, initially pre-trained on the ImageNet dataset, comprises five blocks, each containing several convolutional layers followed by a max-pooling layer. For convolution operations, VGG-19 employs a kernel size of 3 × 3 across its five blocks, with channel sizes of 64, 128, 256, 512, and 512, respectively. Transfer learning allows the model to be adaptively updated based on new samples and applied to new tasks. For the specific task of detecting and classifying images associated with fake news, the VGG-19 model is fine-tuned using the Fakeddit dataset. This process involves retraining only the last convolution block of VGG-19 while keeping the first four blocks frozen. In CNNs, earlier layers typically capture more general, low-level features such as edges, textures, and colors, which are universally useful across various image recognition tasks. The deeper layers, closer to the output, learn more complex and dataset-specific patterns and object representations [64, 65–66]. Instead of using a flattening layer after the feature extractor’s final max-pooling layer, we applied global average pooling (GAP). Figure 5 illustrates the architecture of the fine-tuned VGG-19 model. The redesigned classifier segment of the VGG-19 model incorporates dense layers with dimensions of 512, 128, and 64, followed by a Softmax classification layer. We utilized GAP to decrease the number of learning parameters [67] and to regularize the model [68]. GAP reduces the spatial dimension of the network, leading to faster learning and lower computational costs. It computes the average value of feature maps, preserving dominant information while reducing parameter count. Research indicates that GAP enhances CNN model performance, achieving higher image classification accuracy compared to other pooling methods [69]. The input consists of fake news images, and the output from the GAP layer is flattened into m -dimensional visual features, represented as follows: 3
+X v = x v 1 , x v 2 , … , x v m [Images not available. See PDF.]
+
+The original VGG-19 model, trained on the ImageNet dataset, possesses strong visual feature extraction capabilities. However, its output dimension of 1000 in the fully connected layer is not suitable for our task, which involves six labels for fine-grained fake news classification. We adjusted the output dimension of the fully connected layer to six to match our label categories. The visual features are then fed into the Softmax layer for classification. The model uses the Adam optimizer and cross-entropy loss function. Each dense layer (except the output layer) in the classifier part is followed by dropout, with ReLU as the activation function for dense layers and Softmax for multi-classification in the output layer. The pre-trained weights of VGG-19 have been carefully adjusted to avoid excessive distortion. A smaller learning rate is set for fine-tuning VGG-19, allowing the model to adapt to new data while preserving its original feature extraction ability.
+Fine-tuning VGG-19 on a large, multi-class dataset involves a series of steps similar to those in fine-tuning other deep learning models. Algorithm 2 outlines the enhancements made to the VGG-19 model for extracting effective representations of image features in multimodal fake news detection and performing fine-grained classification. Post-training, the VGG-19 model is saved, retaining its learned weights and biases. Table 3 presents details of the hyperparameters used to tune the VGG-19 model, which were chosen based on the best results from the experiments conducted. Table 3. Fine-tuned VGG-19 hyperparameters
+Hyperparameters
+Value
+
+Optimizer
+Adam
+
+Learning rate
+0.0001
+
+Dropout
+0.2
+
+Activation function
+ReLU
+
+Loss function
+Cross-entropy
+
+Batch size
+64
+
+Epochs
+100
+
+Algorithm 2 [Images not available. See PDF.]
+Fine-tuning of VGG-19
+
+Multimodal Data Fusion Phase After training the BERT and VGG-19 classifiers in the previous stage, this phase involves fusing their probabilities using a late fusion method (decision-level fusion) for fake news detection. We employ a stacked generalization mechanism to integrate the outputs of BERT and VGG-19. Stacking is an effective fusion method wherein a new learner, known as a meta-learner, is trained to combine the outputs (probabilities) of the base classifiers (BERT and VGG-19) that are trained on the same dataset. This method is beneficial for heterogeneous vulnerable learners, allowing them to learn in parallel and then integrate their predictions through a meta-learner [70]. A Softmax-based classifier is utilized as the meta-learner. The objective is for this meta-learner to learn the optimal way to combine predictions from the base models, thereby improving overall accuracy. The architecture of the meta-learner, based on a neural network (NN), is as follows:
+- Input Layer: A 12-dimensional input layer is designed to accommodate 6 probabilities from each base classifier, combining the predictions to form a new dataset.
+
+- Hidden Layers: The ReLU activation function is used for each hidden layer. Two fully connected (dense) layers of 64 and 32 dimensions serve as the first and second hidden layers, respectively.
+
+- Dropout Layers: After each of the first and second hidden layers, dropout layers with a value of 0.4 are implemented.
+
+- Output Layer: A six-dimensional output layer, utilizing Softmax (one for each class), is employed.
+
+
+
+Numerous experiments were carried out to determine the optimal architecture for the proposed multimodal fake news detection (MFND-FR-FBV) model and to set the appropriate hyperparameters. Based on the best experiment conducted, the structure of this model was finalized as shown in Fig. 6, and the hyperparameters were established as listed in Table 4. Fig. 6 [Images not available. See PDF.]
+Architecture of the MFND-FR-FBV model
+Table 4. Hyperparameters of the proposed multimodal fake news detection model (MFND-FR-FBV)
+Hyperparameters
+Value
+
+Optimizer
+Adam
+
+Loss function
+Cross-entropy
+
+Learning rate
+0.0001
+
+Batch size
+256
+
+Epochs
+25
+
+Training strategy
+Early stopping
+
+
+Baseline Models To evaluate the effectiveness of our proposed multimodal fake news detection model (MFND-FR-FBV), we conducted comparisons with several baseline models in the field of fake news detection. These models utilize fine-grained classification and are tested using the multimodal Fakeddit dataset. The baseline models include:
+- FND-T (Bi-LSTM-based Unimodal Model): This model employs Bi-LSTM and focuses solely on textual features extracted using pre-trained GloVe embeddings. It represents an unimodal approach to fake news detection using the Fakeddit dataset.
+
+- Model by Segura-Bedmar and Alonso-Bartolome [56]: This proposed model primarily relies on CNN algorithms to extract both image and text features, which are then combined into a multimodal vector for classification.
+
+- Model by Kalra, Kumar [59]: This multimodal fake news detection model employs pre-trained DistilBERT and VGG-16 for extracting text and image features, respectively.
+
+- Model by Wang, Feng [61]: This model creates a multimodal vector of text embeddings, global visual embeddings, and entity-level visual embeddings using BERT, ResNet, and Faster R-CNN, respectively. The combined multimodal embeddings are then used for classification via a multimodal transformer.
+
+- Our Proposed Model (MFND-FR-FBV): This model represents our novel approach to multimodal fake news detection, incorporating the fine-tuned BERT and VGG-19 models for enhanced feature representation and accuracy.
+
+
+
+The comparison of our proposed model with these baselines aims to demonstrate the advancements and effectiveness of MFND-FR-FBV in accurately detecting fake news within the fine-grained classification framework of the Fakeddit dataset.
+Results and Discussion Implementation Details All experiments in this study were conducted using Python2 (version 3.10) on the Spyder3 editor platform (version 5.15). The training and testing of the proposed models were performed on a PC equipped with an NVIDIA GeForce GTX 1060 GPU with 6 GB of VRAM. The hyperparameters for each proposed model are detailed in the Methodology section.
+Performance Comparison The fine-tuning of the BERT model demonstrated its effectiveness, as evidenced by the high evaluation metrics for the entire model and the classification of news classes detailed in Tables 5 and 6. The model achieved an accuracy of 90.8%, surpassing other unimodal detection models, as depicted in Fig. 7. This suggests that fine-tuning pre-trained models like BERT, originally trained on diverse general-domain corpora, enhances performance when retrained on a specific dataset like Fakeddit and re-tuned for this task. Particularly in the context of social media news, where linguistic diversity, including errors, slang, and profanity, leads to out-of-vocabulary (OOV) words, BERT’s ability to handle these challenges was evident. Its superiority in detecting textual fake news was clear compared to the pre-trained GloVe embeddings used in the FND-T model, which struggled with OOV words, as illustrated in Fig. 8 and Table 7, The fine-tuning of the VGG-19 model also yielded strong performance, achieving an accuracy of 85.9%, as shown in Fig. 9. Detailed class-wise metrics in Tables 8 and 9 indicate that the model effectively distinguishes between different types of manipulated content. Our proposed multimodal detection model, MFND-FR-FBV, utilizing the fine-tuned BERT and VGG-19 models, achieved impressive results. It registered an accuracy of 91.5% as illustrated in Fig. 10, with high values in precision and recall across various news classes. The results, illustrated in Tables 10 and 11, highlight the efficacy of fine-tuning in enhancing feature representation, positively impacting the performance of the MFND-FR-FBV model. The overall accuracy of 91.5% indicates the model’s high effectiveness in correctly classifying the majority of instances across all classes. This level of accuracy reflects the model’s robustness and reliability in real-world applications. The macro-average precision, recall, and F1-score are 0.873, 0.877, and 0.874, respectively, providing a balanced view of the model’s performance across all classes. The results underscore the strength of the MFND-FR-FBV model in leveraging both textual and visual data for comprehensive fake news detection. The high performance across various classes demonstrates the model’s versatility and effectiveness in identifying different types of fake news. The integration of BERT and VGG-19 models through a multimodal approach enhances feature representation, addressing the nuances and complexities of multimodal fake news content. While the model’s overall accuracy of 91.5% is indicative of its capability to effectively classify fake news, the high macro- and weighted-averages reflect balanced performance across different classes, ensuring no significant bias toward any particular category. The strong performance in classes such as ‘False Connection’ and ‘Manipulated Content’ highlights the benefits of integrating textual and visual data. However, the relatively lower performance in detecting imposter content suggests a need for further refinement and possibly additional data or features to improve detection accuracy. Based on the error bars of the models’ classification results, as shown in Fig. 11, narrow error bars indicate that the model’s performance is consistent across different runs or subsets of data. For instance, the MFND-FR-FBV model shows narrow error bars for ‘True,’ ‘Satire,’ ‘Misleading Content,’ and ‘False Connection,’ indicating reliable detection in these categories. Wider error bars indicate greater variability in performance, suggesting that the model’s predictions are less reliable. This is observed in the ‘Imposter Content’ class across all models, indicating the challenge in detecting this type of content. The MFND-FR-FBV model generally shows narrower error bars compared to other models, especially in challenging categories such as ‘Satire’ and ‘Misleading Content.’ This suggests that the multimodal approach improves not only accuracy but also consistency. The error bars highlight that certain classes, such as ‘Imposter Content,’ are more difficult to detect consistently, regardless of the model used. This indicates a potential area for further research and model improvement. Overall, the MFND-FR-FBV model demonstrates a significant advancement in fake news detection, offering a robust tool for tackling the growing challenge of fake news in social media contexts. Table 5. Evaluation of the BERT model (precision, recall, and F1-score) per class
+Class
+Precision
+Recall
+F1-score
+
+True
+0.915
+0.911
+0.912
+
+Satire
+0.822
+0.847
+0.834
+
+Misleading content
+0.904
+0.908
+0.905
+
+Manipulated content
+0.871
+0.862
+0.866
+
+False connection
+0.883
+0.874
+0.878
+
+Imposter content
+0.809
+0.812
+0.810
+
+Table 6. Overall evaluation of the BERT model (accuracy, macro-average, and weighted-average)
+Measure
+Precision
+Recall
+F1-score
+Accuracy
+
+Accuracy
+–
+–
+0.908
+
+Macro-average
+0.867
+0.869
+0.868
+–
+
+Weighted-average
+0.872
+0.873
+0.872
+–
+
+Fig. 7 [Images not available. See PDF.]
+Examples of OOV words from the GloVe in the FND-T model
+Fig. 8 [Images not available. See PDF.]
+Training and validation accuracy and loss of the BERT model
+Table 7. Evaluation of the FND-T model (precision, recall, and F1-score) per class
+Class
+Precision
+Recall
+F1-score
+
+True
+0.881
+0.847
+0.863
+
+Satire
+0.810
+0.789
+0.799
+
+Misleading content
+0.692
+0.713
+0.702
+
+Manipulated content
+0.779
+0.771
+0.774
+
+False connection
+0.627
+0.584
+0.604
+
+Imposter content
+0.783
+0.729
+0.755
+
+Fig. 9 [Images not available. See PDF.]
+Training and validation accuracy and loss of the VGG-19 model
+Table 8. Evaluation of the VGG-19 model (precision, recall, and F1-score) per class
+Class
+Precision
+Recall
+F1-score
+
+True
+0.965
+0.913
+0.938
+
+Satire
+0.693
+0.799
+0.742
+
+Misleading content
+0.907
+0.876
+0.891
+
+Manipulated content
+0.769
+0.898
+0.828
+
+False connection
+0.916
+0.885
+0.900
+
+Imposter content
+0.722
+0.702
+0.711
+
+Table 9. Overall evaluation of the VGG-19 model (accuracy, macro-average, and weighted-average)
+Measure
+Precision
+Recall
+F1-score
+Accuracy
+
+Accuracy
+–
+–
+0.859
+
+Macro-average
+0.828
+0.845
+0.835
+–
+
+Weighted-average
+0.844
+0.852
+0.846
+–
+
+Fig. 10 [Images not available. See PDF.]
+Training and validation accuracy and loss of the MFND-FR-FBV model
+Table 10. Evaluation of the MFND-FR-FBV model (precision, recall, and F1-score) per class
+Class
+Precision
+Recall
+F1-score
+
+True
+0.956
+0.931
+0.943
+
+Satire
+0.818
+0.878
+0.846
+
+Misleading content
+0.929
+0.916
+0.922
+
+Manipulated content
+0.864
+0.820
+0.841
+
+False connection
+0.927
+0.913
+0.919
+
+Imposter content
+0.745
+0.807
+0.774
+
+Table 11. Overall evaluation of the MFND-FR-FBV model (accuracy, macro-average, and weighted-average)
+Measure
+Precision
+Recall
+F1-score
+Accuracy
+
+Accuracy
+–
+–
+0.915
+
+Macro-average
+0.873
+0.877
+0.874
+–
+
+Weighted-average
+0.883
+0.884
+0.883
+–
+
+Fig. 11 [Images not available. See PDF.]
+Error bars for model classification results
+
+Ablation Study In this section, we illustrate how different components contribute to the proposed model during the learning task. We evaluated the performance of our model after separately removing the image-based and textual features. The comparison results, presented in Table 12, indicate that our model generally achieved superior performance across all metrics on the Fakeddit dataset. Removing textual features caused a slight decrease in performance compared to removing image-based features, underscoring the crucial role of textual features in enhancing the model’s performance. This finding suggests that utilizing multimodal features effectively provides representations conducive to accurate classification. Table 12. Ablation results on the Fakeddit dataset for text, image, and multimodal modalities
+Model
+Configuration
+Modality
+Accuracy
+Precision (macro-average)
+Recall (macro-average)
+F1-score (macro-average)
+
+Fine-tuned BERT
+Remove image feature
+Text
+0.908
+0.867
+0.869
+0.868
+
+Fine-tuned VGG-19
+Remove text feature
+Image
+0.859
+0.828
+0.845
+0.835
+
+MFND-FR-FBV
+–
+Text and image
+0.915
+0.873
+0.877
+0.874
+
+
+Comparison of Baseline Models In comparison with baseline studies, which often use generic feature extraction models in their standard versions, our proposed MFND-FR-FBV model employs localized fine-tuning of pre-trained models, adapting them to suit the target task. This method significantly enhances the accuracy of feature representation. As a result, our comprehensive approach achieved higher detection accuracy compared to other baseline models, as summarized in Table 13. Table 13. Comparison with fine-grained detection baselines models using the Fakeddit dataset
+Model
+Modality
+Accuracy
+Precision (macro-average)
+Recall (macro-average)
+F1-score (macro-average)
+
+FND-T
+Text
+0.79
+0.76
+0.74
+0.75
+
+Segura-Bedmar and Alonso-Bartolome [56]
+Text and image
+0.87
+0.76
+0.70
+0.72
+
+Kalra, Kumar [59]
+Text and image
+60.38
+–
+–
+–
+
+Wang, Feng [61]
+Text and image
+89.82
+–
+–
+–
+
+MFND-FR-FBV
+Text and image
+91.5
+0.873
+0.877
+0.874
+
+
+Critical Analysis The results obtained from the fine-tuning of the BERT and VGG-19 models highlight the effectiveness of our proposed strategy in enhancing feature representation for fake news detection. The significant improvement in accuracy and other evaluation metrics compared to baseline models underscores the importance of localized fine-tuning in capturing task-specific nuances. BERT Model: The high performance of the BERT model in handling diverse linguistic inputs, including slang and profanity, showcases its robustness in real-world social media contexts. This aligns with the research objective of enhancing feature representation by focusing on task-specific nuances. VGG-19 Model: The VGG-19 model’s ability to accurately process visual information further complements the textual analysis, providing a comprehensive approach to fake news detection. Multimodal Model (MFND-FR-FBV): The integration of both BERT and VGG-19 models in the MFND-FR-FBV model demonstrates the synergy of multimodal feature representation. This approach significantly boosts the detection accuracy, highlighting the effectiveness of combining textual and visual modalities. The ablation study confirms the critical role of textual features in fake news detection, while the comparison with baseline models validates the superiority of our comprehensive approach. Overall, the proposed strategy of localized fine-tuning significantly enhances the feature representation of pre-trained models, effectively addressing the challenges of fake news detection in a multimodal context.
+Conclusion This study introduced a novel multimodal fake news detection model, MFND-FR-FBV, which emphasizes the importance of feature representation in detecting fake news. The model leverages fine-tuned BERT and VGG-19 models, originally pre-trained on diverse general-domain data, and adapt them to a dataset specific to our task. The fine-tuning approaches were meticulously applied to achieve high accuracy models: BERT was fine-tuned by retraining all layers, whereas VGG-19 was fine-tuned by retraining only the last block and integrating global average pooling instead of flattening the layer after the max-pooling layer with the classifier redesign. The outputs from these fine-tuned models were instrumental in creating an efficient multimodal representation, enhancing the performance of the MFND-FR-FBV model. This approach led to high detection accuracy for fake news, utilizing a meta-learner-based classifier. The focus on improving feature representation played a pivotal role in the model’s success, considering key aspects that contribute to feature-rich representations. Looking ahead, our future work will explore the relationships between multimodal features of fake news, particularly the commonalities that lead to a more comprehensive understanding of these modalities. We aim to use attention mechanisms to improve feature representation, further increasing the efficiency and effectiveness of multimodal fake news detection models.
+Author contributions All mentioned authors fundamentally contributed to the development and writing of this research.
+Funding This research was funded by the Universiti Kebangsaan Malaysia under Geran Universiti Penyelidikan (GUP), Grant Code: GUP-2020–088.
+Data availability Multimodal dataset: https://drive.google.com/drive/folders/1jU7qgDqU1je9Y0PMKJ_f31yXRo5uWGFm The code: https://github.com/suhaib83/Fake-News-Detection.
+Declarations Conflict of interest The authors declare that they have no known competing financial interests or personal relationships that could influence the work reported in this paper.
+Footnotes 1 https://github.com/entitize/Fakeddit.
+2 https://www.python.org/.
+3 https://www.spyder-ide.org/.
+References 1. Azzeh, M et al. Arabic fake news detection in social media context using word embeddings and pre-trained transformers. Arab. J. Sci. Eng. ; 2024; [DOI: https://dx.doi.org/10.1007/s13369-024-08959-x]
+2. Liu, Y; Wu, Y-FBJAToIS. Fned: a deep network for fake news early detection on social media. ACM Trans. Inf. Syst. ; 2020; 38 , 3 pp. 1-33.1288206 [DOI: https://dx.doi.org/10.1145/3386253]
+3. Yussof, I et al. Breast cancer prevention and treatment misinformation on twitter: an analysis of two languages. Digit. Health ; 2023; 9 , 20552076231205742. [DOI: https://dx.doi.org/10.1177/20552076231205742]
+4. Tchakounté, F et al. A smart contract logic to reduce hoax propagation across social media. J. King Saud Univ.-Comput. Inform. Sci. ; 2020; 34 , 6 pp. 3070-8. [DOI: https://dx.doi.org/10.1016/j.jksuci.2020.09.001]
+5. Habib, A et al. False information detection in online content and its role in decision making: a systematic literature review. Soc. Netw. Analys. Min. ; 2019; 9 , 1 pp. 1-20.
+6. Zhou, X et al. Fake news early detection: a theory-driven model. Digit. Threat. Res. Pract. ; 2020; 1 , 2 pp. 1-25.941356 [DOI: https://dx.doi.org/10.1145/3377478]
+7. Shi, L et al. A survey on cross-media search based on user intention understanding in social networks. Inform. Fus. ; 2023; 91 , pp. 566-581. [DOI: https://dx.doi.org/10.1016/j.inffus.2022.11.017]
+8. Mansur, Z; Omar, N; Tiun, SJIA. Twitter hate speech detection: a systematic review of methods, taxonomy analysis, challenges, and opportunities. IEEE Access ; 2023; 11 , pp. 16226-16249. [DOI: https://dx.doi.org/10.1109/ACCESS.2023.3239375]
+9. Bajpai, S; Chaturvedi, AJAJfS. Toward detecting rumor initiator in online social networks using ontology-driven model. Arab. J. Sci. Eng. ; 2024; [DOI: https://dx.doi.org/10.1007/s13369-024-08852-7]
+10. Nilashi, M et al. Recommendation agents and information sharing through social media for coronavirus outbreak. Telemat. Inform. ; 2021; 61 , [DOI: https://dx.doi.org/10.1016/j.tele.2021.101597] 101597.
+11. Kumari, R; Ekbal, AJESwA. Amfb: attention based multimodal factorized bilinear pooling for multimodal fake news detection. Expert Syst. Appl. ; 2021; 184 , 115412. [DOI: https://dx.doi.org/10.1016/j.eswa.2021.115412]
+12. Azri, A et al. Rumor classification through a multimodal fusion framework and ensemble learning. Inform. Syst. Front. ; 2023; 25 , 5 pp. 1795-1810. [DOI: https://dx.doi.org/10.1007/s10796-022-10315-z]
+13. Nitsch, J.; et al.: Learning common and transferable feature representations for multi-modal data. In: IEEE Intelligent Vehicles Symposium (IV), IEEE (2020)
+14. Devlin, J.; et al.: Bert: pre-training of deep bidirectional transformers for language understanding. arXiv preprint arXiv, (2018)
+15. Díaz-Torres, M.J.; et al.: Automatic detection of offensive language in social media: defining linguistic criteria to build a Mexican Spanish dataset. In: Proceedings of the Second Workshop on Trolling, Aggression and Cyberbullying, (2020)
+16. Simonyan, K.; Zisserman, A.J.: Very deep convolutional networks for large-scale image recognition. arXiv prepr arXiv, (2014)
+17. Kou, F et al. Common semantic representation method based on object attention and adversarial learning for cross-modal data in IoV. IEEE Trans. Veh. Technol. ; 2019; 68 , 12 pp. 11588-11598. [DOI: https://dx.doi.org/10.1109/TVT.2018.2890405]
+18. Deng, J.; et al.: Imagenet: a large-scale hierarchical image database. In: IEEE Conference on Computer Vision and Pattern Recognition, IEEE (2009)
+19. Lee, K-S et al. Evaluation of scalability and degree of fine-tuning of deep convolutional neural networks for COVID-19 screening on chest X-ray images using explainable deep-learning algorithm. J. Personal. Med. ; 2020; 10 , 4 213.4169010 [DOI: https://dx.doi.org/10.3390/jpm10040213]
+20. Zheng, K.; Cheng L.; Shen, J.: Boosting few-shot learning by self-calibration in feature space. In: Proceedings of the 1st International Workshop on Methodologies for Multimedia, (2022)
+21 Sleeman, WC, IV; Kapoor, R; Ghosh, PJACS. Multimodal classification: current landscape, taxonomy and future directions. ACM Comput. Surv. ; 2022; 55 , 7 pp. 1-31. [DOI: https://dx.doi.org/10.1145/3543848]
+22. Li, X et al. Improving feature extraction from histopathological images through a fine-tuning ImageNet model. J. Pathol. Inform. ; 2022; 13 , [DOI: https://dx.doi.org/10.1016/j.jpi.2022.100115] 100115.
+23. Cai, J et al. Impact of localized fine tuning in the performance of segmentation and classification of lung nodules from computed tomography scans using deep learning. Front. Oncol. ; 2023; 13 , 1140635. [DOI: https://dx.doi.org/10.3389/fonc.2023.1140635]
+24. Ferguson, M.; et al.: Automatic localization of casting defects with convolutional neural networks. In: IEEE international conference on big data (big data), IEEE (2017)
+25 Aziz, MM et al. Incorporating syntax information into attention mechanism vector for improved aspect-based opinion mining. Neural Comput. Appl. ; 2024; [DOI: https://dx.doi.org/10.1007/s00521-024-09747-2]
+26. Kumar, G.; Bhatia, P.K.: A detailed review of feature extraction in image processing systems. In: Fourth International Conference on Advanced Computing & Communication Technologies, IEEE (2014)
+27. Shi, L et al. Cross-media search method based on complementary attention and generative adversarial network for social networks. Int. J. Intell. Syst. ; 2022; 37 , 8 pp. 4393-4416. [DOI: https://dx.doi.org/10.1002/int.22723]
+28. Japar, N et al. Coherent group detection in still image. Multimed. Tool. Appl. ; 2021; 80 , pp. 22007-22026. [DOI: https://dx.doi.org/10.1007/s11042-021-10763-w]
+29. Nor, N.M.; et al.: Sentiment analysis on depression detection: a review. In: Science and Information Conference, Springer (2022)
+30 Hangloo, S; Arora, BJMS. Combating multimodal fake news on social media: methods, datasets, and future perspective. Multimed. Syst. ; 2022; 28 , 6 pp. 2391-2422. [DOI: https://dx.doi.org/10.1007/s00530-022-00966-y]
+31 Coban, O et al. Domain effect investigation for Bert models fine-tuned on different text categorization tasks. Arab. J. Sci. Eng. ; 2023; 49 , pp. 3685-3702. [DOI: https://dx.doi.org/10.1007/s13369-023-08142-8]
+32. Zhang, L.; et al.: Feature relationships hypergraph for multimodal recognition. In: Neural Information Processing: 18th International Conference, ICONIP 2011, Shanghai, China, Proceedings, Part I 18, Springer, 13–17 November 2011
+33. Zhang, L et al. Grassmann multimodal implicit feature selection. Multimed. Syst. ; 2014; 20 , pp. 659-674. [DOI: https://dx.doi.org/10.1007/s00530-013-0317-1]
+34. Chhabra, S.; et al.: Data fine-tuning. In: Proceedings of the AAAI Conference on Artificial Intelligence, (2019)
+35. Howard, J.; and Ruder, S.J.: Universal language model fine-tuning for text classification. arXiv preprint arXiv, (2018)
+36. Mahajan, D.; et al.: Exploring the limits of weakly supervised pretraining. In: Proceedings of the European conference on computer vision (ECCV), (2018)
+37. Li, J.; et al.: Improving Bert fine-tuning via stabilizing cross-layer mutual information. In: ICASSP 2023–2023 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP), IEE (2023)
+38. Ameri, K et al. Cybert: cybersecurity claim classification by fine-tuning the Bert language model. J. Cybersecur. Priv. ; 2021; 1 , 4 pp. 615-637. [DOI: https://dx.doi.org/10.3390/jcp1040031]
+39. Kumar, A.; et al.: Fine-tuning can distort pretrained features and underperform out-of-distribution. arXiv preprint arXiv, (2022)
+40. Ghazal, TM et al. Alzheimer disease detection empowered with transfer learning. Comput. Mater. Contin. ; 2022; 70 , 3 pp. 5005-5019.
+41. Zheng, J.; et al.: Preserving commonsense knowledge from pre-trained language models via causal inference. arXiv preprint arXiv, (2023)
+42. Luong, H.H.; et al.: Fine-tuning VGG16 for Alzheimer’s disease diagnosis. In: Conference on Complex, Intelligent, and Software Intensive Systems, Springer (2023)
+43. Shen, X.; et al.: AMF: adaptable weighting fusion with multiple fine-tuning for image classification. arXiv preprint arXiv, (2022)
+44. Suratkar, S; Kazi, FJAJfS. Deep fake video detection using transfer learning approach. Arab. J. Sci. Eng. ; 2023; 48 , 8 pp. 9727-9737. [DOI: https://dx.doi.org/10.1007/s13369-022-07321-3]
+45. Jiang, Y et al. Similarity-aware multimodal prompt learning for fake news detection. Inform. Sci. ; 2023; 647 , 119446. [DOI: https://dx.doi.org/10.1016/j.ins.2023.119446]
+46. Tahmasebi, S.; et al.: Improving generalization for multimodal fake news detection. In: Proceedings of the 2023 ACM International Conference on Multimedia Retrieval, (2023)
+47. Kumar, S et al. Fake news detection using deep learning models: A novel approach. Trans Emerg. Telecommun. Technol. ; 2020; 31 , 2 [DOI: https://dx.doi.org/10.1002/ett.3767] e3767.
+48 Raza, S; Ding, CJIJoDS. Fake news detection based on news content and social contexts: a transformer-based approach. Int. J. Data. Sci. Anal. ; 2022; 13 , 4 pp. 335-362. [DOI: https://dx.doi.org/10.1007/s41060-021-00302-z]
+49. Gôlo, MPS et al. One-class learning for fake news detection through multimodal variational autoencoders. Eng. Appl. Artif. Intell. ; 2023; 122 , [DOI: https://dx.doi.org/10.1016/j.engappai.2023.106088] 106088.
+50. Wang, Y.; et al.: Eann: event adversarial neural networks for multi-modal fake news detection. In: Proceedings of the 24th ACM Sigkdd International Conference on Knowledge Discovery & Data Mining, (2018)
+51. Khattar, D.; et al.: Mvae: multimodal variational autoencoder for fake news detection. In: The World Wide Web Conference, (2019)
+52. Singhal, S.; et al.: Spotfake: a multi-modal framework for fake news detection. In: IEEE Fifth International Conference on Multimedia Big Data (BigMM), IEEE (2019)
+53. Giachanou, A.; Zhang, G.; Rosso, P.: Multimodal fake news detection with textual, visual and semantic information. In: Text, Speech, and Dialogue: 23rd International Conference, TSD 2020, Brno, Czech Republic, Proceedings 23, Springer, 8–11 September 2020
+54. Song, C et al. A multimodal fake news detection model based on crossmodal attention residual and multichannel convolutional neural networks. Inform. Process. Manag. ; 2021; 58 , 1 [DOI: https://dx.doi.org/10.1016/j.ipm.2020.102437] 102437.
+55. Jing, Q.; et al.: TRANSFAKE: multi-task transformer for multimodal enhanced fake news detection. In: 2021 International Joint Conference on Neural Networks (IJCNN), IEEE (2021)
+56. Segura-Bedmar, I; Alonso-Bartolome, SJI. Multimodal fake news detection. Information ; 2022; 13 , 6 284. [DOI: https://dx.doi.org/10.3390/info13060284]
+57 Wang, J; Mao, H; Li, HJAS. FMFN: fine-grained multimodal fusion networks for fake news detection. Appl. Sci. ; 2022; 12 , 3 1093. [DOI: https://dx.doi.org/10.3390/app12031093]
+58 Hua, J et al. Multimodal fake news detection through data augmentation-based contrastive learning. Appl. Soft Comput. ; 2023; 136 , [DOI: https://dx.doi.org/10.1016/j.asoc.2023.110125] 110125.
+59. Kalra, S.; et al.: Multimodal fake news detection on Fakeddit dataset using transformer-based architectures. In: Machine Learning, Image Processing, Network Security and Data Sciences: 4th International Conference, MIND 2022, Virtual Event, Proceedings, Part II, Springer, 19–20 January 2023
+60. Jing, J et al. Multimodal fake news detection via progressive fusion networks. Inform. Process. Manag. ; 2023; 60 , 1 [DOI: https://dx.doi.org/10.1016/j.ipm.2022.103120] 103120.
+61. Wang, B et al. Multi-modal transformer using two-level visual features for fake news detection. Appl. Intell. ; 2023; 53 , 9 pp. 10429-10443. [DOI: https://dx.doi.org/10.1007/s10489-022-04055-5]
+62. Nakamura, K.; Levy, S.; Wang, W.Y.J.a.p.a.: r/Fakeddit: a new multimodal benchmark dataset for fine-grained fake news detection. arXiv preprint arXiv, (2019)
+63. Nugroho, K.S.; Sukmadewa, A.Y.; Yudistira. N.: Large-scale news classification using Bert language model: spark nlp approach. In: Proceedings of the 6th International Conference on Sustainable Information Engineering and Technology, (2021)
+64. Yamashita, R et al. Convolutional neural networks: an overview and application in radiology. Insights into imaging ; 2018; 9 , pp. 611-629. [DOI: https://dx.doi.org/10.1007/s13244-018-0639-9]
+65. Alzubaidi, L et al. Review of deep learning: concepts CNN architectures, challenges, applications, future directions. SN Comput. Sci. ; 2021; 8 , pp. 1-74.
+66. Ahmed, SF et al. Deep learning modelling techniques: current progress, applications, advantages, and challenges. Artif. Intell. Rev. ; 2023; 56 , pp. 13521-13617. [DOI: https://dx.doi.org/10.1007/s10462-023-10466-8]
+67 Habib, N et al. Ensemble of CheXNet and VGG-19 feature extractor with random forest classifier for pediatric pneumonia detection. SN comput. Sci. ; 2020; 1 , pp. 1-9. [DOI: https://dx.doi.org/10.1007/s42979-020-00373-y]
+68 Kaushik, H et al. TomFusioNet: a tomato crop analysis framework for mobile applications using the multi-objective optimization based late fusion of deep models and background elimination. Appl. Soft Comput. ; 2023; 133 , [DOI: https://dx.doi.org/10.1016/j.asoc.2022.109898] 109898.
+69 Özdemir, CJESwA. Avg-topk: a new pooling method for convolutional neural networks. Expert Syst. Appl. ; 2023; 223 , [DOI: https://dx.doi.org/10.1016/j.eswa.2023.119892] 119892.
+70 Luo, Z; Wang, H; Li, SJS. Prediction of international roughness index based on stacking fusion model. Sustainability ; 2022; 14 , 12 6949. [DOI: https://dx.doi.org/10.3390/su14126949]

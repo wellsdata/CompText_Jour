@@ -1,0 +1,322 @@
+1. Introduction
+As technology continues to evolve, digital news has become increasingly accessible to users worldwide. This has inadvertently led to a surge in the spread of hoaxes and disinformation online [1]. Renowned platforms, such as social media and the broader internet, have inadvertently become vehicles for the dissemination of misinformation [2], compelling readers to accept and propagate fallacies, thus complicating the discernment of truth [3]. Over the past few years, the term “misinformation” has transitioned from obscurity to becoming a ubiquitous phrase in media discourse. Facts, the essential bedrock for making vital life decisions, are increasingly compromised due to the widespread capability to publish on the internet. The rapid spread of false news poses severe potential consequences, thus underscoring the imperative need to combat misinformation to shield our communities and commerce from the repercussions of misinformation [4]. Misinformation can be identified through an array of techniques incorporating linguistic and non-linguistic cues [5]. However, these methodologies often falter when confronted with the staggering volume and velocity of digital news production [6].
+AI tools can be instrumental in stemming the tide of misinformation on the internet and social platforms. The modern world generates massive amounts of data every second, providing a fertile ground for artificial intelligence tools to analyze and scrutinize vast amounts of social media-generated information. This analytical capability can help separate fact from fiction in the content posted on social media platforms. Deep learning, due to its superior accuracy when trained on extensive datasets, such as text, images, or unstructured data, is currently the most potent AI technology for many applications [7,8]. Consequently, it holds promising potential to automate steps involved in detecting misinformation [9].
+Several successful approaches for misinformation detection with deep learning have been demonstrated, such as the one by Fabula AI [10], a London-based start-up company acquired by Twitter in 2019. Their method leverages both news content and features extracted from social networks, attaining impressive area under the curve (AUC) results of 93%. Other studies have employed deep learning-based methods, such as BERT, for misinformation detection, achieving remarkable accuracy rates [11,12,13,14]. The year 2020 was marked by the COVID-19 pandemic, becoming the dominant news topic worldwide. This rise coincided with an alarming spread of COVID-19-related misinformation on social media, significantly complicating the public’s ability to identify trustworthy news sources. This trend led to protests against government anti-virus measures and other forms of social unrest. AI-powered systems built with deep learning models have been successfully deployed to counter this tide of misinformation. Several studies have proposed developing and testing various deep learning models to aid in predicting the reliability of COVID-19-related news [15,16].
+Our research proposes the development and evaluation of a deep learning system built with Bi-LSTM networks for detecting misinformation. Additionally, this study provides a framework using the genetic algorithm (GA) to fine-tune the proposed Bi-LSTM hyperparameters, ensuring optimal model performance. GA offers a robust approach for fine-tuning the hyperparameters of deep learning models, employing foundational concepts from evolution, such as selection, crossover, and mutation [17]. The primary objective is to identify the optimal set of hyperparameters enabling the Bi-LSTM based deep learning model to converge and minimize the predefined loss function, thereby enhancing the model’s performance.
+The key contributions of this work to the domain of misinformation detection are as follows:
+- Introduction of a GA-tuned Bi-LSTM model: We introduce a novel deep learning model based on Bi-LSTM that is optimized with GA. This unique combination exhibits superior performance in detecting misinformation.
+
+- Implementation and evaluation of multiple machine learning models: Various machine learning models are implemented and evaluated in this study, providing a benchmark to demonstrate the superior performance of our proposed model. Additionally, we integrate these models with TF-IDF vectorization techniques for text data extraction.
+
+- Comprehensive Comparative Analysis: An exhaustive comparative analysis of our proposed GA-tuned Bi-LSTM model is carried out against both the implemented machine learning models and the state-of-the-art techniques. This analysis, performed across a range of performance metrics, provides a holistic and balanced evaluation of the effectiveness of our proposed model.
+
+
+
+The paper is structured as follows:
+- Section 2: Methods—Provides an overview of the methods employed in this research.
+
+- Section 3: Methodology—Delivers a detailed explanation of the adopted methodology.
+
+- Section 4: Experimental Design—Outlines the design of our experiments, detailing the set-up of our GA-tuned Bi-LSTM model and discussing the performance metrics used for evaluation.
+
+- Section 5: Results—Presents and discusses the results, provides a comprehensive comparative performance analysis of the proposed Bi-LSTM model with other traditional machine learning models and state-of-the-art techniques.
+
+- Section 6: Conclusion and Future Work—Concludes the study by summarizing the findings and indicating potential directions for future research.
+
+- Appendix A: TF-IDF—Delivers a thorough explanation of the TF-IDF vectorization technique employed in the study.
+
+
+
+2. Methods
+2.1. Long Short-Term Memory
+The LSTM unit is a sequential recurrent neural network that can handle long-term dependencies [18]. LSTM was developed to address the vanishing gradient problem that traditional recurrent neural networks face. As shown in Figure 1, the LSTM unit is composed of three main components known as gates. The first part is known as the forget gate, the second part is called the input gate and the last one is referred to as the output gate [19].
+
+- 1. . Forget gate
+This gate determines whether the information from the previous timestamp should be kept or is irrelevant and should be forgotten. The decision is made by passing the previous hidden state h < t − 1 > and the current input x < t > via a sigmoid function ( σ ). This gate’s output is expressed in Equation (1). A value closer to 1 indicates keeping, while a value closer to 0 indicates forgetting: (1) f < t > = σ W < f > · h < t − 1 > , x < t > + b < t >
+where W < f > and b < t > are parameters specific to the forget gate.
+
+- 2. . Input gate
+This gate is in charge of adding relevant information to the cell state. This is accomplished in three steps:
+
+- (a) . A sigmoid function is used to control which values are added to the cell state: (2) i < t > = σ W < i > · h < t − 1 > , x < t > + b < i >
+where W < i > and b < i > are the input gate-specific parameter.
+
+- (b) . Using the tanh function, we generate a vector of new candidate values to be added to the cell state: (3) C ˜ < t > = tanh W < c > · h < t − 1 > , x < t > + b < c >
+
+
+- (c) . We multiply the old cell state ( C < t − 1 > ) by the forget gate f < t > and then add i < t > ∗ C ˜ < t > to update the cell state ( C < t > ): (4) C < t > = f < t > ∗ C < t − 1 > + i < t > ∗ C ˜ < t >
+
+
+
+
+- 3. . Output gate
+This gate outputs the updated information. The output gate’s operation is divided into two steps:
+
+- (a) . Determine the parts of the cell state to output via the sigmoid function: (5) o < t > = σ W < o > h < t − 1 > , x < t > + b < o >
+
+
+- (b) . Pass the cell state through the tanh function and multiply it by o < t > to select the components the hidden state h < t > should carry: (6) h < t > = o < t > ∗ t a n h ( C < t > )
+
+The new C < t > and the new h < t > values are then carried over to the next time step.
+
+
+
+
+2.2. Bi-LSTM
+In Bi-LSTM, the input flows in both directions, backward and forward, to keep both future and past sequence information. This is different from the regular LSTM, in which the input flows only in one direction, either forward or backward.
+As shown in Figure 2, we can see how information flows from forward and backward layers. The Bi-LSTM model is commonly used in forecasting text classification tasks.
+2.3. Genetic Algorithm
+The genetic algorithm (GA) is an evolutionary and global optimization technique that belongs to a larger computation study branch known as evolutionary computation. It is applied in computing to find optimum or near-optimum solutions to complex optimization and search problems. The GA is also described as global search heuristics. The GA is inspired by Darwin’s theory of natural evolution, in which the fittest individuals are selected for reproduction to generate offspring of the next generation [20].
+2.3.1. Basics of GA
+In GA, we have a population of possible (encoded) solutions called individuals for a given problem. Each individual has a chromosome. The chromosome includes a set of parameters known as genes that define the individual. Each gene is represented in some way, like it is represented as a string of 0 s and 1 s, as shown in Figure 3. Then these individuals undergo recombination and mutation (as is the case in natural genetics), which leads to generating new offspring (children), and the process is repeated over several generations.
+Each individual is assigned a fitness value using a specific fitness function. The fitness value represents the quality of the solution. The higher the fitness value, the higher the quality of the solution. Individuals with high fitness values have a higher probability of being selected to mate and generate more “better” individuals. From this perspective, we continue to evolve better individuals or candidate solutions over generations until a stopping criterion is reached [20].
+The procedure of a typical GA is given by Algorithm 1 [21]. We start by generating an initial population of N chromosomes. The initial population is usually generated randomly or seeded by other heuristics. The fitness of each chromosome in the population is evaluated. Select parent chromosomes from this population according to their fitness for mating. Apply the crossover operator on the selected parents to form new offspring and then apply the mutation operator on the new offspring. And finally, replace the existing individuals in the population with the new offspring, and this new generated population is used for a further run of the algorithm until a stop condition is met. Algorithm 1:  Pseudocode for a typical GA
+
+
+2.3.2. Chromosome Encoding
+When implementing a GA, it is important to determine what type of encoding should be chosen for the chromosomes. The chromosome must somehow contain information about the solution that it represents. The most common way of encoding is binary encoding, mainly because early works around GA used this encoding type. In binary encoding, as shown in Figure 4, each chromosome is a string of bits (0 s and 1 s), where each bit can represent some characteristics of the solution. There are many other ways of encoding. Encoding is very dependent on the solved problem. For instance, we can encode integers or real numbers directly; sometimes, it is useful to encode some permutations, especially in ordering problems, such as the traveling salesman problem.
+2.3.3. GA Operators
+
+- 1. . Selection
+In the selection process, chromosomes from the current population are selected as parents for mating (crossover). According to Darwin’s theory of evolution, better individuals have a better chance of survival and participation in reproduction in order to produce new offspring. There are several ways to select the best parent chromosomes, such as roulette wheel selection, rank-based selection, tournament selection, Boltzman selection, steady-state selection and others.
+
+- 2. . Crossover
+The crossover is an essential operator because the offspring would be the same as the parent without it. Crossover in a GA is usually applied with a high probability ( p c ). The simplest way to apply crossover is to randomly select a crossover point, which specifies the point for exchanging genes between parents to form new offspring. Such an operator is called a single-point crossover. For example, when the crossover point 2 is selected, all genes from index 3 onwards are exchanged between the two parents to form new offspring, as shown in Figure 5.
+The multi-point crossover operator is also popularly used. Here, gene exchange occurs at multiple points. It is noteworthy that these crossover operators are very generic, as the crossover can be quite complex and mostly depends on the chromosomes encoding. The architect might prefer to implement a problem-specific crossover operator to improve the GA performance.
+
+- 3. . Mutation
+Mutation is necessary for the convergence of the GA. It is described as a small random alteration in the chromosomes to acquire new solutions. Mutation is employed to maintain and incorporate diversity in the genetic population. In other words, mutation helps to escape local optimum solutions. Typically, mutation is implemented with a low probability ( p m ). There are many ways to apply mutation operators. For example, in binary encoding, bit-flip mutation is used, in which one or more random bits are randomly selected and flipped as illustrated in Figure 6.
+Just like the crossover, the technique to use for mutation depends on how the chromosomes were encoded. For instance, in ordering problems where permutation-based encodings are used, swap mutation could be performed in which two genes are randomly chosen, and their values are interchanged.
+
+
+3. Methodology
+The proposed methodology for this study is depicted in Figure 7. It is divided into several stages: data collection, data cleaning and preprocessing, feature extraction, model hyperparameter tuning using GA, and detection by the Bi-LSTM model.
+3.1. Data Collection
+The ISOT misinformation dataset [22] is used for this study. The dataset includes both fake and real news articles. There are 44,919 news articles in the dataset that are almost split between the true and fake categories. The data come from real-world sources, and the true articles were collected by crawling articles from the Reuters website. Fake news articles were obtained from unreliable websites that were flagged by fact-checking organizations, like Politifact and Wikipedia. A wide range of topics are covered in the dataset, but the majority of articles focus on political and international news. The datasets include the entire body of each article and the title, date, and topic, Figure 8.
+3.2. Data Cleaning and Preprocessing
+Data preprocessing involves the transformation of the raw dataset into an comprehensible format. Data preprocessing is a critical step in the data mining process because it helps to make the data more useful. The results of any analytical algorithm are directly influenced by the data preprocessing methods used. Part of the data preprocessing process is demonstrated in the following steps:
+- Removing the unnecessary columns, titles, and text is all that is needed
+
+- Concatenating title and text of news
+
+- Removing punctuations such as # ! ( ) ∗ @ %
+
+- Removing URLs and stop words
+
+- Lowering the text
+
+- Label true news as 1, and fake news as 0
+
+- Lemmatization
+
+- Tokenization
+
+- Splitting the data into random train and test subsets
+
+
+
+3.3. Feature Extraction
+Text data (e.g., social media data) must be transformed into a numerical representation in the form of a vector for consumption by deep learning algorithms [23]. This transformation process is often referred to as “feature extraction”. Word embeddings are frequently used techniques. A word embedding is a type of learned representation for text, in which words with the same meaning are represented similarly. Word2Vec, GloVe, and the Keras embedding layer are popular word embedding techniques used for encoding discrete words into real-valued vectors in a high-dimensional space. For this study, the Keras embedding layer, which is the first hidden layer in the Bi-LSTM model, is used. The Keras embedding layer has the advantage of making it simple to convert positive integer representations of words into word embeddings.
+3.4. Hyperparameter Tuning Using GA
+With increased computing power, researchers are using GA based methods to find optimal neural architectures [24]. The selection of hyperparameters is critical for the success of the neural network architecture, as they have a significant impact on the behavior of the learned model and must be performed carefully [25]. A GA-based approach to finding the optimal hyperparameters in a Bi-LSTM based recurrent network is proposed in this work. The model is trained and evaluated for the misinformation detection problem. To make use of GA, two prerequisites must be met: (1) a solution representation or definition of a chromosome; and (2) an evaluation function to evaluate the solutions’ fitness that are produced during the process. Furthermore, there are three fundamental operations that make up the GA: selection, crossover, and mutation. Seven hyperparameters that have a significant impact on the Bi-LSTM will be tuned by the proposed GA. These hyperparameters are batch size ( b s ), LSTM units ( l u ), dense layers ( d l ), neurons in each dense layer ( d n ), dropout ( d ), optimizer ( o ), and learning rate ( l r ). Figure 9 depicts a binary representation (encoding) for the solution of the length of twelve.
+The following provide additional explanations of this binary chromosome representation.
+
+- b s : the batch size (2-bit) takes values b s ∈ [32, 64, 128, 196] (or 00, 01, 10, 11, respectively).
+
+- l u : the LSTM units (2-bit) takes values l u ∈ [25, 50, 75, 100] (or 00, 01, 10, 11, respectively).
+
+- b s : the number of dense layers (1-bit) which can be 0 (none) or 1 (1-layer).
+
+- d n : the number of dense neurons (2-bit) takes values d n ∈ [25, 50, 75, 100] (or 00, 01, 10, 11, respectively).
+
+- d n : the dropout probability (1-bit) which can be 0 ( 25 % ) or 1 ( 50 % ).
+
+- o : the optimizer (2-bit) takes values o ∈ [SGD, Adam, AdaDelta, RMSProp] (or 00, 01, 10, 11, respectively).
+
+- l r : the learning rate (2-bit) takes values l r ∈ [0.1, 0.01, 0.001, 0.0001] (or 00, 01, 10, 11, respectively).
+A Bernoulli distribution is used to generate a random initialization for the binary solution. Roulette wheel selection, single-point crossover, and adaptive mutation are also employed. The concept of adaptive mutation was first proposed in a paper titled “Adaptive Mutation in Genetic Algorithms” [26] as a solution to the problem of constant mutation. The flaw in traditional GAs is that mutations in all chromosomes, no matter how fit they are, are subject to the same randomness. As a result, a good chromosome is just as susceptible to mutation as a poor one.
+In a nutshell, adaptive mutation works as follows [27]:
+
+- 1. . Determine the population’s average fitness level ( f a v g );
+
+- 2. . Calculate the fitness value ( f ) of each chromosome;
+
+- 3. . A solution is considered a low-quality solution if f ≤ f a v g , and hence the mutation rate should be kept high in order to improve the solution’s quality;
+
+- 4. . A solution is considered a high-quality solution if f > f a v g . To ensure that this high-quality solution is not disrupted, the mutation rate should then be kept at a low level.
+
+
+For the purpose of this research, if f = f a v g , then the solution is considered high quality. Table 1 summarizes the various hyperparameters used for the GA, along with their values.
+
+
+4. Experiment Design
+4.1. Experimental Setup
+In this research, our primary tool for tackling misinformation detection is a bi-directional long short-term memory (Bi-LSTM) neural network model. The ISOT misinformation dataset was used as the benchmark to evaluate the model’s performance. We implemented this Bi-LSTM network in Python 3.9, utilizing the sequential model found in the Keras library. The initial hidden layer of the model, the Keras embedding, facilitated feature extraction. It required the specification of three parameters: vocabulary size, vector space size, and input document length. We opted for 10,000, 64, and 256 as respective values for these parameters in this study. To discover the optimal hyperparameters of the Bi-LSTM model, we employed a genetic algorithm (GA)-based method with an adaptive mutation feature. Using an Nvidia GeForce GTX 1080 TI with 11 GB memory, the GA method took approximately 1.3 h to pinpoint the best combination of hyperparameters for the Bi-LSTM model. The bidirectional LSTM layer included 25 units for each direction, totaling 50 units. There were no intermediate dense layers used. We also implemented a 25% dropout rate following the LSTM layer. Given that misinformation detection is a binary classification problem, the network’s final layer is a dense layer with a sigmoid activation function, comprising a single neuron. The GA determined Adam as the best optimizer with a learning rate of 0.01 and identified 64 as the optimal batch size. For the loss function, we employed binary cross-entropy, given the binary nature (fake or real) of the classes. We split the dataset, allocating 80% for training and reserving the remaining 20% for testing. We initiated the process with 20 epochs, and incorporated an ‘early stopping’ technique to halt the training when the validation loss ceased to improve. The Glorot uniform initializer [28] was used to set the initial random weights of the layers. Table 2 summarizes the final configuration of the Bi-LSTM model, including the optimal hyperparameters identified by the proposed GA. Figure 10 presents a textual summary of the Bi-LSTM model, providing information about the model’s layers and their order, each layer’s output shape, the number of training parameters (weights and biases) in each layer, and the total parameters in the model.
+4.2. Model Evaluation Metrics
+The performance of the proposed Bi-LSTM model for misinformation detection was assessed using four primary metrics: accuracy, precision, recall, and F1-score [29,30,31]. These metrics are defined as follows:
+- 1. . Accuracy: This metric expresses the overall correctness of the model: (7) Accuracy = TP + TN TP + TN + FP + FN
+
+
+- 2. . Precision: This represents the model’s capability to correctly identify positive instances: (8) Precision = TP TP + FP
+
+
+- 3. . Recall: Also known as sensitivity, this measures the coverage of actual positive instances: (9) Recall = TP TP + FN
+
+
+- 4. . F1-score: This provides the harmonic mean of precision and recall, a useful metric when the classes are imbalanced: (10) F 1 - score = 2 TP 2 TP + FP + FN
+
+
+
+
+These metrics are derived from the confusion matrix (Figure 11), which summarizes the prediction outcomes and helps identify the model’s error types. Here, TP represents true positive, TN denotes true negative, FP is false positive (Type I error), and FN is false negative (Type II error).
+The interpretation of the confusion matrix, as depicted in Figure 11, is as follows:
+- True positive (TP): The model correctly predicted fake news when the news was indeed fake.
+
+- True negative (TN): The model correctly identified real news when the news was actually real.
+
+- False positive (FP)—Type 1 error: The model inaccurately identified real news as fake.
+
+- False negative (FN)—Type 2 error: The model inaccurately classified fake news as real.
+
+
+
+These insights from the confusion matrix aid in understanding how the model performs on both classes and the types of errors it tends to make. The understanding of these errors can guide future model refinements and improvements. In the next section, we present the results of applying the Bi-LSTM model to the ISOT fake news dataset, evaluated using these metrics.
+5. Results
+5.1. Model Evaluation
+The Bi-LSTM model, tuned by the genetic algorithm (GA), was trained and evaluated using the ISOT fake news dataset. The model exhibited strong performance in detecting fake news, achieving a test accuracy of 99.39%, precision of 99.22%, recall of 99.51%, and an F1-score of 99.37%. Figure 12 shows the confusion matrix, providing a comprehensive view of the model’s performance.
+Furthermore, Figure 13 and Figure 14 display the evolution of accuracy and loss for both the training and test datasets over eight epochs. These plots demonstrate that the Bi-LSTM model learned effectively without overfitting the training data, as it exhibited comparable performance on the training and test datasets.
+5.2. Comparative Performance Analysis
+The comparative performance of various models, including our proposed approach and the state-of-the-art models from various research studies [11,32,33,34], is presented in Table 3. This comparison is based on a set of performance metrics: accuracy, precision, recall, and F1 score.
+Our proposed Bi-LSTM model, finely tuned using a genetic algorithm (GA), exhibits exemplary performance across all metrics. With an accuracy of 99.52%, the model demonstrates its exceptional ability to differentiate fake news from real ones. The precision and recall of the model, 99.37% and 99.62%, respectively, further consolidate its reliability in minimizing false positives and maximizing the detection of fake news articles. It is also the top performer in terms of the F1-score, a metric combining precision and recall, with a score of 99.50%.
+Notably, our Bi-LSTM model outperforms the state-of-the-art models, achieving higher scores in all metrics compared to the best results of previous research studies. This establishes the superiority of our Bi-LSTM model in the realm of fake news detection.
+In contrast, a Unidirectional LSTM (Uni-LSTM) model, designed with the same GA-tuned hyperparameters as the Bi-LSTM, is slightly less effective, but still shows strong performance with an F1-score of 98.83%. This score competes closely with the models from studies [11,33], and outperforms models in studies [32,34].
+When we compare these results to traditional machine learning algorithms, such as MLP, KNN, extra trees, naive Bayes, gradient boosting, Ada Boost, XGBoost, LDA, and passive aggressive, it is clear that the LSTM-based models outperform these conventional algorithms. Among the traditional models, MLP and XGBoost have the highest F1-scores, each reaching 95.00%.
+It is noteworthy to mention that while LSTM-based models (Bi-LSTM and Uni-LSTM) achieve superior performance, they come with the cost of increased computational resources, compared to traditional machine learning models. This underlines the trade-off that is often at play in the field of machine learning between performance and computational efficiency. Nonetheless, given the high stakes involved in correctly identifying fake news, the superior performance of the Bi-LSTM model provides compelling evidence for its adoption.
+5.3. Performance Benchmarking and Analysis
+Table 3 presents a comparative performance assessment of diverse models, including our proposed methodology and those presented in various studies [9,32,33,34,35,36], evaluated across four key metrics: accuracy, precision, recall, and F1-score.
+In the realm of traditional machine learning models, such as multilayer perceptron (MLP), random forest (RF), Ada boost (AB), linear discriminant analysis (LDA), gradient boosting (GB), k-nearest neighbors (KNN), XGboost (extreme gradient boosting), passive aggressive (PA), and naive Bayes (NB), we experimented with various feature extraction methods, including bag of words (BoW), TF-IDF, and word embeddings. Among these, the TF-IDF vectorization technique manifested superior efficacy for text data extraction, which was then harnessed as inputs to the models. The default hyperparameters of the scikit-learn library were employed for each of these models. For further information about the TF-IDF vectorization technique, please refer to Appendix A.
+Our proposed Bi-LSTM model employed an embedded layer for word representation, a form of word embedding, which proved to be a more suitable approach for this deep learning model. Consequently, although different feature engineering strategies were deployed for traditional machine learning models and our Bi-LSTM model, these strategies were chosen with a focus on compatibility with their respective models and the maximization of performance.
+The Bi-LSTM model, fine-tuned with the GA, delivered outstanding performance across all metrics, distinguishing itself with an accuracy of 99.52.
+Notably, our Bi-LSTM model outstripped the state-of-the-art models, recording higher scores across all metrics compared to the best results from previous studies, thereby asserting its dominance in the field of fake news detection.
+While the unidirectional LSTM (Uni-LSTM) model, configured with the same GA-tuned hyperparameters as the Bi-LSTM, demonstrated slightly reduced effectiveness, it still maintained robust performance with an F1 score of 98.83.
+A comparison of these results with those from traditional machine learning algorithms reveals a clear performance edge for LSTM-based models. Among traditional models, MLP and XGBoost have the highest F1-scores, each achieving 95.00.
+It is essential to note that while LSTM-based models (Bi-LSTM and Uni-LSTM) deliver superior performance, they require more computational resources compared to traditional machine learning models. This highlights the frequent trade-off in machine learning between performance and computational efficiency. However, given the critical importance of accurately identifying fake news, the superior performance of the Bi-LSTM model argues persuasively for its utilization.
+6. Conclusions and Future Work
+In this research, we introduced a GA-Bi-LSTM (genetic algorithm-tuned bi-directional long short-term memory) model to tackle the issue of misinformation detection. Our model demonstrated superior performance across a variety of performance metrics when evaluated on the ISOT misinformation dataset, surpassing both traditional machine learning models and existing methods in the literature. This underscores its potential for practical applications. Nevertheless, we present our GA-Bi-LSTM model not as a comprehensive solution to misinformation but rather as an additional, potent technological tool in the arsenal against misinformation, supplementing and bolstering existing methodologies. Looking ahead, we plan to extend the robustness and adaptability of our GA-Bi-LSTM model by testing it on diverse datasets, including those in different languages or from varied domains, such as the COVID-19 misinformation dataset. Another promising direction for future research is the exploration of other optimization algorithms for hyperparameter tuning and their comparative performance with GA.
+Author Contributions Conceptualization, A.A.B., V.R., T.O., M.K., A.V. and R.P.; Data curation, A.A.B.; Formal analysis, A.A.B.; Investigation, A.A.B., V.R., T.O., M.K., A.V. and R.P.; Methodology, A.A.B., V.R., T.O., M.K., A.V. and R.P.; Project administration, A.A.B.; Software, A.A.B., V.R., T.O., M.K., A.V. and R.P.; Supervision, A.A.B.; Validation, A.A.B.; Visualization, A.A.B.; Writing—review and editing, A.A.B., V.R., T.O., M.K., A.V. and R.P. All authors have read and agreed to the published version of the manuscript.
+Data Availability Statement The data used in this study are publicly available on Kaggle at the following URL: https://www.kaggle.com/clmentbisaillon/fake-and-real-news-dataset (accessed on 20 May 2023).
+Conflicts of Interest The authors declare that they have no conflict of interest.
+Footnotes
+Disclaimer/Publisher’s Note: The statements, opinions and data contained in all publications are solely those of the individual author(s) and contributor(s) and not of MDPI and/or the editor(s). MDPI and/or the editor(s) disclaim responsibility for any injury to people or property resulting from any ideas, methods, instructions or products referred to in the content.
+Figures and Tables Generate image description Figure 1. An illustration of the LSTM unit.
+Generate image description Figure 2. An illustration of the Bi-LSTM unit.
+Generate image description Figure 3. Population, chromosomes and genes.
+Generate image description Figure 4. Example of chromosomes with binary encoding.
+Generate image description Figure 5. Single-point crossover.
+Generate image description Figure 6. Bit-flip mutation.
+Generate image description Figure 7. Proposed methodology.
+Generate image description Figure 8. Distribution of fake news and real news in the ISOT dataset.
+Generate image description Figure 9. Genetic binary representation of a solution.
+Generate image description Figure 10. Textual summary of the Bi-LSTM model indicating the order and details of the layers, output shapes, training parameters per layer, and total parameters in the model.
+Generate image description Figure 11. Visual depiction of the confusion matrix.
+Generate image description Figure 12. Confusion matrix illustrating the performance of the Bi-LSTM model on the ISOT dataset.
+Generate image description Figure 13. Accuracy of the Bi-LSTM model on the training and test datasets.
+Generate image description Figure 14. Loss of the Bi-LSTM model on the training and test datasets.
+Table 1 List of GA hyperparameters and their values.
+Hyperparameter Value
+Population size 20
+Maximum number of generations 100
+Number of Genes 12
+Selection Roulette wheel
+Number of parents to select for mating 2
+Crossover Single-point
+Adaptive Mutation 0.2 (low), 0.6 (high)
+Table 2 Summary of the final configuration and optimal hyperparameters of the Bi-LSTM model.
+Hyperparameter Value
+Batch Size 64
+LSTM units 25
+#Dense layers 0
+#Dense Neurons 0
+Dropout 25%
+Optimizer Adam
+Learning rate 0.01
+Last dense layer activation function Sigmoid
+Loss function Binary cross-entropy
+Table 3 Performance comparison of different models on the test data.
+Model Accuracy Precision Recall F1-Score
+Bi-LSTM 99.52% 99.37% 99.62% 99.50%
+Uni-LSTM 98.89% 98.69% 98.97% 98.83%
+MLP 94.85% 95.80% 94.21% 95.00%
+KNN 90.56% 90.91% 90.91% 90.91%
+Extra Trees 89.70% 92.17% 87.60% 89.83%
+Naïve Bayes 80.69% 85.19% 76.03% 80.35%
+Gradient Boosting 88.41% 89.83% 87.60% 88.70%
+Ada Boost 88.41% 92.73% 84.30% 88.31%
+XGBoost 94.85% 95.80% 94.21% 95.00%
+LDA 90.99% 92.37% 90.08% 91.21%
+Passive Aggressive 87.55% 91.82% 83.47% 87.45%
+Decision Tree [ 32 ] – – – 96.80%
+Random Forest [ 33 ] – – – 99.00%
+Hybrid CNN-RNN [ 9 ] – – – 99.00%
+Linear SVM [ 34 ] – – – 92.00%
+FakeBERT [ 35 ] 98.90% – – –
+deBERTa [ 36 ] 97.70% 97.70% 97.70% 98.90%
+Appendix A. TF-IDF
+Term frequency-inverse document frequency (TF-IDF) is a statistical measure employed to quantify the significance of a word or a phrase within a set of documents, known as a corpus [ 37 ]. The measure is calculated by multiplying two metrics: the term frequency (TF), or how often a word appears in a document, and the inverse document frequency (IDF), or how common the word is across multiple documents.
+TF-IDF is widely used in automated text analysis and is especially valuable for scoring words in machine learning algorithms for NLP tasks. Originally developed for document search and retrieval, the TF-IDF measure is sensitive to the number of times a word appears in a document, counterbalanced by the number of documents containing that word in the entire corpus. As a result, common words such as “this”, “what”, etc., receive a lower score, even if they appear frequently since they lack distinctive meaning within individual documents.
+However, a word that appears many times in a single document but infrequently in the corpus is assigned a high TF-IDF score, indicating its high relevance. The TF-IDF score of a word in a document is computed by multiplying the following two elements:
+- 1. The term frequency of a word in a document, defined in various ways, including:
+
+- Raw count of the number of times a word appears in a document.
+
+- Frequency ratio of the total number of occurrences of a word to the total number of words in the document.
+
+- Logarithmically scaled frequency, such as l o g ( 1 + raw count ) .
+
+
+
+- 2. The inverse document frequency of the word across the entire corpus. This metric indicates the commonality or rarity of a word. A word is considered common if it is close to zero. IDF can be calculated using the logarithm of the total number of documents divided by the number of documents containing the word.
+
+
+
+Mathematically, the TF-IDF score for the word t in the document d within the corpus D is computed as the product of the TF and IDF: (A1) tfidf ( t , d , D ) = tf ( t , d ) · idf ( t , D ) where (A2) tf ( t , d ) = l o g ( 1 + freq ( t , d ) ) and (A3) idf ( t , D ) = l o g N count ( d ∈ D : t ∈ d )
+Here, N represents the total number of documents in the corpus. A higher TF-IDF score indicates the greater relevance or importance of the word. As a word’s relevance decreases, its TF-IDF score approaches zero.
+
+References
+1. Pierri, F.; Ceri, S. False news on social media: A data-driven survey. ACM Sigmod Rec. ; 2019; 48 , pp. 18-27. [DOI: https://dx.doi.org/10.1145/3377330.3377334]
+2. Shu, K.; Bernard, H.R.; Liu, H. Studying fake news via network analysis: Detection and mitigation. Emerging Research Challenges and Opportunities in Computational Social Network Analysis and Mining ; Springer: Berlin/Heidelberg, Germany, 2019; pp. 43-65.
+3. Kumar, S.; Shah, N. False information on web and social media: A survey. arXiv ; 2018; arXiv: 1804.08559
+4. Feng, S.; Banerjee, R.; Choi, Y. Syntactic stylometry for deception detection. Proceedings of the 50th Annual Meeting of the Association for Computational Linguistics (Volume 2: Short Papers) ; Jeju, Republic of Korea, 8–14 July 2012; pp. 171-175.
+5. Conroy, N.K.; Rubin, V.L.; Chen, Y. Automatic deception detection: Methods for finding fake news. Proc. Assoc. Inf. Sci. Technol. ; 2015; 52 , pp. 1-4. [DOI: https://dx.doi.org/10.1002/pra2.2015.145052010082]
+6. Shu, K.; Sliva, A.; Wang, S.; Tang, J.; Liu, H. Fake news detection on social media: A data mining perspective. ACM SIGKDD Explor. Newsl. ; 2017; 19 , pp. 22-36. [DOI: https://dx.doi.org/10.1145/3137597.3137600]
+7. Bataineh, A.A.; Mairaj, A.; Kaur, D. Autoencoder based Semi-Supervised Anomaly Detection in Turbofan Engines. Int. J. Adv. Comput. Sci. Appl. ; 2020; 11 , [DOI: https://dx.doi.org/10.14569/IJACSA.2020.0111105]
+8. Bataineh, A.S.A. A gradient boosting regression based approach for energy consumption prediction in buildings. Adv. Energy Res. ; 2019; 6 , pp. 91-101.
+9. Nasir, J.A.; Khan, O.S.; Varlamis, I. Fake news detection: A hybrid CNN-RNN based deep learning approach. Int. J. Inf. Manag. Data Insights ; 2021; 1 , 100007. [DOI: https://dx.doi.org/10.1016/j.jjimei.2020.100007]
+10. Monti, F.; Frasca, F.; Eynard, D.; Mannion, D.; Bronstein, M.M. Fake news detection on social media using geometric deep learning. arXiv ; 2019; arXiv: 1902.06673
+11. Rodríguez, Á.I.; Iglesias, L.L. Fake news detection using Deep Learning. arXiv ; 2019; arXiv: 1910.03496
+12. Bajaj, S. The Pope Has a New Baby! Fake News Detection Using Deep Learning. 2017; pp. 1-8. Available online: https://web.stanford.edu/class/archive/cs/cs224n/cs224n.1174/reports/2710385.pdf (accessed on 25 May 2023).
+13. Khan, J.Y.; Khondaker, M.; Islam, T.; Iqbal, A.; Afroz, S. A benchmark study on machine learning methods for fake news detection. arXiv ; 2019; arXiv: 1905.04749
+14. Yang, Y.; Zheng, L.; Zhang, J.; Cui, Q.; Li, Z.; Yu, P.S. TI-CNN: Convolutional neural networks for fake news detection. arXiv ; 2018; arXiv: 1806.00749
+15. Wani, A.; Joshi, I.; Khandve, S.; Wagh, V.; Joshi, R. Evaluating deep learning approaches for COVID-19 fake news detection. Proceedings of the International Workshop on Combating Online Hostile Posts in Regional Languages during Emergency Situation ; Virtual, 8 February 2021; Springer: Cham, Switzerland, 2021; pp. 153-163.
+16. Gundapu, S.; Mamidi, R. Transformer based Automatic COVID-19 Fake News Detection System. arXiv ; 2021; arXiv: 2101.00180
+17. Mitchell, M. An Introduction to Genetic Algorithms ; MIT Press: Cambridge, MA, USA, 1998.
+18. Hochreiter, S.; Schmidhuber, J. Long short-term memory. Neural Comput. ; 1997; 9 , pp. 1735-1780. [DOI: https://dx.doi.org/10.1162/neco.1997.9.8.1735]
+19. Al Bataineh, A.; Kaur, D. Immunocomputing-Based Approach for Optimizing the Topologies of LSTM Networks. IEEE Access ; 2021; 9 , pp. 78993-79004. [DOI: https://dx.doi.org/10.1109/ACCESS.2021.3084131]
+20. Holland, J.H. Genetic algorithms. Sci. Am. ; 1992; 267 , pp. 66-73. [DOI: https://dx.doi.org/10.1038/scientificamerican0792-66]
+21. Brownlee, J. Clever Algorithms: Nature-Inspired Programming Recipes. 2011; Available online: https://github.com/clever-algorithms/CleverAlgorithms (accessed on 25 May 2023).
+22. Ahmed, H.; Traore, I.; Saad, S. Detecting opinion spams and fake news using text classification. Secur. Priv. ; 2018; 1 , e9. [DOI: https://dx.doi.org/10.1002/spy2.9]
+23. Bronakowski, M.; Al-khassaweneh, M.; Al Bataineh, A. Automatic Detection of Clickbait Headlines Using Semantic Analysis and Machine Learning Techniques. Appl. Sci. ; 2023; 13 , 2456. [DOI: https://dx.doi.org/10.3390/app13042456]
+24. Galván, E.; Mooney, P. Neuroevolution in deep neural networks: Current trends and future challenges. IEEE Trans. Artif. Intell. ; 2021; 2 , pp. 476-493. [DOI: https://dx.doi.org/10.1109/TAI.2021.3067574]
+25. Al Bataineh, A.; Kaur, D.; Al-khassaweneh, M.; Al-sharoa, E. Automated CNN Architectural Design: A Simple and Efficient Methodology for Computer Vision Tasks. Mathematics ; 2023; 11 , 1141. [DOI: https://dx.doi.org/10.3390/math11051141]
+26. Libelli, S.M.; Alba, P. Adaptive mutation in genetic algorithms. Soft Comput. ; 2000; 4 , pp. 76-80. [DOI: https://dx.doi.org/10.1007/s005000000042]
+27. Gad, A.F. PyGAD: An Intuitive Genetic Algorithm Python Library. 2021; Available online: http://xxx.lanl.gov/abs/2106.06158 (accessed on 25 May 2023).
+28. Glorot, X.; Bengio, Y. Understanding the difficulty of training deep feedforward neural networks. Proceedings of the Thirteenth International Conference on Artificial Intelligence and Statistics, JMLR Workshop and Conference Proceedings ; Sardinia, Italy, 13–15 May 2010; pp. 249-256.
+29. Bataineh, A.A. A comparative analysis of nonlinear machine learning algorithms for breast cancer detection. Int. J. Mach. Learn. Comput. ; 2019; 9 , pp. 248-254. [DOI: https://dx.doi.org/10.18178/ijmlc.2019.9.3.794]
+30. Al Bataineh, A.; Kaur, D.; Jalali, S.M.J. Multi-layer perceptron training optimization using nature inspired computing. IEEE Access ; 2022; 10 , pp. 36963-36977. [DOI: https://dx.doi.org/10.1109/ACCESS.2022.3164669]
+31. Al Bataineh, A.; Manacek, S. MLP-PSO hybrid algorithm for heart disease prediction. J. Pers. Med. ; 2022; 12 , 1208. [DOI: https://dx.doi.org/10.3390/jpm12081208] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/35893302]
+32. Ozbay, F.A.; Alatas, B. Fake news detection within online social media using supervised artificial intelligence algorithms. Phys. A Stat. Mech. Its Appl. ; 2020; 540 , 123174. [DOI: https://dx.doi.org/10.1016/j.physa.2019.123174]
+33. Ahmad, I.; Yousaf, M.; Yousaf, S.; Ahmad, M.O. Fake news detection using machine learning ensemble methods. Complexity ; 2020; 2020 , 8885861. [DOI: https://dx.doi.org/10.1155/2020/8885861]
+34. Ahmed, H.; Traore, I.; Saad, S. Detection of online fake news using n-gram analysis and machine learning techniques. Proceedings of the International Conference on Intelligent, Secure, and Dependable Systems in Distributed and Cloud Environments ; Vancouver, BC, Canada, 26–28 October 2017; Springer: Cham, Switzerland, 2017; pp. 127-138.
+35. Kaliyar, R.K.; Goswami, A.; Narang, P. FakeBERT: Fake news detection in social media with a BERT-based deep learning approach. Multimed. Tools Appl. ; 2021; 80 , pp. 11765-11788. [DOI: https://dx.doi.org/10.1007/s11042-020-10183-2]
+36. Blackledge, C.; Atapour-Abarghouei, A. Transforming fake news: Robust generalisable news classification using transformers. Proceedings of the 2021 IEEE International Conference on Big Data (Big Data) ; Orlando, FL, USA, 15–18 December 2021; IEEE: Piscataway, NJ, USA, 2021; pp. 3960-3968.
+37. Salton, G. Introduction to Modern Information Retrieval ; McGraw-Hill: New York, NY, USA, 1983.

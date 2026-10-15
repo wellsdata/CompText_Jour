@@ -1,0 +1,719 @@
+Introduction
+With the rapid development of social media and the widespread use of mobile devices, fake news has become widely spread unchecked on social media platforms. It damages the public physical and mental health and undermines the media’s credibility. It even influences political decisions. For instance, during the 2016 US presidential election, maliciously fabricated fake and partisan news possibly caused the citizens’ prejudice about political candidates [1]. To effectively detect fake news, some artificial intelligence-based models [2, 3] have attracted the attention of researchers. These models solve the time-consuming and labor-intensive problems of traditional fake news detection. The artificial intelligence-based models model news and extract various features to realize effective and rapid fake news detection.
+We classify existing fake news detection models into three categories: traditional feature engineering-based models, traditional deep learning-based models, and graph neural network-based models. Most traditional feature engineering-based models extracted practical features from news content and dissemination patterns. However, these traditional feature engineering-based detection models rely heavily on high-quality manual-extracted features and low detection efficiency. Traditional deep learning models have been successfully applied to many natural language processing tasks, such as text extraction, sentiment analysis, and classification. Many researchers capture emotional language elements of language based on stylistic features of news [4]. However, capturing the high-level semantic information and spread structure information of news is challenging, which limits the further improvement of fake news detection accuracy. The model based on graph neural network can effectively capture the higher-order semantic representation of news [5, 6]. A piece of news on a social network includes the news itself, the users who post or repost the news, the comments, and the path of news spread. Among them, the words of the news itself and users are the constituent information, while comments and forwarding are the interactive information of the news. However, most of the current models based on graph networks do not model the composition and interactive information of news simultaneously. This is insufficient for semantic information learning and ignores the spread structure information of news. In addition, most current models only deal with part of them simultaneously. For example, Jing et al. [7] used a transformer structure to sample text information at different levels to realize multi-modal feature fusion. However, this model only used the text information of news instead of the propagation information of news. Bazmi et al. [8] not only extracted the content features of news but also added the features of users and news sources, but didn’t involve the propagation mode of news. Liu et al. [9] proposed a novel rumor detection framework based on structure-aware retweeting graph neural networks. To capture the propagation patterns, they designed a novel conversion method to transform the complex retweeting tree as more tractable binary tree without losing the reconstruction information. The framework effectively fused structural patterns and node-level representations of retweeting trees to perform rumor detection.
+Fake news is a social product. News on social media does not exist in isolation, but is connected and interactive with each other. To address the current problems in fake news detection, we propose a novel dual-channel hierarchical attention network with dynamic feature fusion for fake news detection in this paper. Our model mainly consists of three components. Specifically, first, we construct a multi-source informative tweet heterogeneous graph. The heterogeneous graph can comprehensively represent the semantic information of news, as well as the interaction information with comments and retweets. Then the multi-source information is split into semantic information networks and spreads diffusion networks. Second, we design a dual-channel node-pair attention network to extract higher-order representations of news. The network can intuitively learn the news’s semantic features and structural information. The sub-channel-level attention mechanism learns the weights of nodes in heterogeneous graphs. Finally, we perform a dynamic sub-channel-level attention mechanism fusion of the two sub-channels. Through semantic-level and spread-structure-level attention mechanisms, the inter-sub-channel graph attention mechanism can distinguish differences between different sub-channels. The three components jointly capture the global semantic relational information and spread structure information of news, enabling high-precision fake news detection.
+Summarily, the contribution of the paper is listed as follows:
+- The constructed model not only includes news content, words, users, and other information. In addition, to characterize news content information and spread structural characteristics, the news spread and diffusion characteristics are introduced into the model more comprehensively.
+
+- Using comprehensive information to construct a heterogeneous graph, we extract the high-level feature representation by the dual-channel mechanism. Furthermore, we design different modes of attention mechanisms to distinguish the importance of different nodes and sub-channels.
+
+- Experiments on three real datasets show that our proposed model outperforms all baseline models.
+
+
+
+Related work
+Traditional machine learning-based models
+Early fake news detection models introduced user social engagement as input. Its features were mainly extracted manually crafted from news content. For example, Yang et al. [6] proposed a SVM classifier with RBF(Radial Basis Function) kernel, which recognized rumors by training various new features. Zhao et al. [10] explored a decision tree-based detection model to identify fake news by ranking queried Twitter clusters. Choudhary et al. [11]proposed a sequential neural language model that extracted specific news’ syntactic, grammatical, sentimental, and readability features. It obtained the content attributes that generate language-driven features. Alonso et al. [12] studied the different uses of sentiment analysis in fake news detection by determining the polarity and intensity of sentiment expressed in news texts. Shu et al. [13] further introduced user social engagement as auxiliary information to improve fake news detection.
+However, these manually crafted feature-driven models are time-consuming and labor-intensive, and the model’s performance depends on the quality of the extracted features. Moreover, due to the feature sparsity of short text itself, these traditional methods cannot extract enough features for classification well, so their effectiveness is poor [14]. Furthermore, these features heavily depend on the dataset, and some cannot even be extracted.
+Traditional deep learning-based models
+Traditional deep learning has achieved exciting results on many natural language processing tasks. Many researchers have begun to explore deep neural networks for fake news detection. For example, Goldani et al. [3] proposed convolutional neural networks (CNN) with marginal loss and different embedding models for fake news detection. Paka et al. [15] proposed Cross-SEAN, a cross-stitch-based semi-supervised end-to-end neural attention model that leveraged many unlabeled data. Zhang et al. [16] represented dual emotions and their relationships by mining publisher emotional and social emotional features. They utilized a bidirectional GRU for fake news detection. Qian et al. [17] proposed a novel hierarchical multi-modal contextual attention network for fake news detection by jointly modeling the multi-modal context information and the hierarchical semantics of text in a unified deep model.
+However, these models ignored the structural features and complex attribute features of news and were hard to extract high-order information representations of news.
+Graph neural network-based models
+Recently, researchers have paid more attention to graph neural network-based fake news detection since graph embedding can preserve graph topology and graph node content information. To discover the potential valuable information in these complex networks, researchers commonly model, learn and represent the data features of these networks using a heterogeneous graph network [18]. For example, Hu et al. [19] constructed a directed heterogeneous document graph for each news piece containing topics and entities. They achieved fake news detection by introducing an external knowledge base to compare with entity representations in the heterogeneous graph. Mehta et al. [20] viewed fake news detection as reasoning over the relations between sources, articles they published, and users on social media in a graph framework. After embedding this information, they formulated inference operators which augment the graph edges by revealing unobserved interactions between its elements. Yang [21] mapped the fake news detection problem to a semi-supervised classification task on graphs. She built a text graph based on tweet similarity and used a graph neural network to classify tweets as true and false. Huang et al. [2] proposed a meta-path based heterogeneous graph attention network framework. On this basis, Ran et al. [22] proposed an end-to-end multi-channel graph attention network by constructing three subgraphs in parallel and combining them with an event-sharing module. Sun et al. [23] proposed an effective way to reformulate node-level and edge-level tasks to graph-level tasks, which can further match many pre-training pretexts. This research lays a foundation for the combination of graph models and NLP tasks. Sun et al. [24] proposed a novel hypergraph-based neural network to learn social influence flowing from users to users, users to environments, environment to users, and environments to environments. The neural network can be learned via a task-free method, making the model very flexible to support various data mining tasks and fake news detection sociological analysis. To improve the accuracy and robustness of rumor detection, Sun et al. [25] proposed to integrate and exploit the content, propagation structure, and temporal relations because the information in the networks always spreads dynamically with significant structures.
+These models have achieved good results on fake news detection tasks. However, they did not take into account the global semantic information and structural information of news content at the same time, and ignored the influence of data sparse and noisy information.
+The proposed model
+To tackle the problems of current graph neural network-based models, we propose a novel fake news detection model based on a dual-channel graph convolutional attention network with dynamic feature fusion, named DGCAN. As shown in Fig. 1, the model includes three key components: a tweet heterogeneous graph, dual-channel graph convolutional attention network, and dynamic feature fusion. First, we construct a tweet heterogeneous graph that fuses tweet-word and tweet-user relationships. The heterogeneous graph effectively model the interaction between news and its comments and retweets. Second, we developed a dual-channel graph convolutional attention network. The network models the tweet-word subgraph and the tweet-user subgraph, comprehensively considers the input data’s structural information and feature information, and extracts the higher-order structural features of news content semantics and spread structure, respectively. Specifically, we design a semantic information extractor to capture news content semantic information. We also construct a spread and diffusion extractor with a time stamp to obtain news’s vertical and horizontal diffusion information. Furthermore, we combine with the dynamic feature fusion layer to capture the global relationship information of nodes. The aggregating dual-channel subgraphs layer fuses the information of different sub-channels by introducing an attention mechanism. Finally, after processing the three key components, we feed the obtained features into the fully connected layer and the prediction layer to realize fake news detection. [See PDF for image]
+Fig. 1 The architecture of our model DGCAN. Part a illustrates a heterogeneous graph containing news, words, and users. The tweet heterogeneous graph can be decomposed into the semantic information network and propagation diffusion network according to the meta-path. The subgraph information is extracted by dual-channel graph convolutional attention network as shown in Part b . After that, the dynamic feature fusion component is followed to learn the global features showed in part c
+
+
+Tweet heterogeneous graph construction
+The definitions and meanings of the symbols used in our DGCAN model are shown in Table 1. Table 1. Notations and explanations
+Notation
+Explanation
+
+G
+Graph
+
+V
+Set of nodes
+
+E
+Set of edges
+
+T
+Series of source tweets
+
+W
+Set of words
+
+U
+Set of users
+
+A ij
+The weight of edges between node i and node j
+
+W
+Weight matrix
+
+X W
+The word set feature vectors
+
+X T
+The tweet set feature vectors
+
+X U
+The user set feature vectors
+
+Q φ t ( u )
+Linear projection matrices
+
+X tw
+The semantic features
+
+X tu
+The spread diffusion structure features
+
+X tw ′ ′
+The semantic features with global semantic relation information
+
+X tu ′ ′
+The spread diffusion structure features with global spread structural information
+
+e i , j
+Weight coefficient
+
+α i , j
+Attention weight
+
+x i
+The embedding representation of node i
+
+γ tw , γ tu
+The weight of different sub-channels
+
+ω t w ( t u )
+The sub-channel importance
+
+E ( x i )
+The embedding vector of each tweet
+
+
+We construct the tweets and users’ relationship information contained in the dataset as a tweet-word-user heterogeneous graph denoted as G = V , E , where V = T , W , U and E = E tw , E ww , E tu denote the node set and edge set, respectively. T = t 1 , t 2 , … , t T represents a series of source tweets, where t i indicates the i -th tweet. W = w 1 , w 2 , … , w W represents a set of words contained in the source tweets, where w j indicates the j -th word. And U = u 1 , u 2 , … , u U represents a set of social media users who posted or retweeted the news, where u k indicates the k -th user. E tw , E ww , and E tu represent tweet-word, word-word, and tweet-user edges, respectively. E tw describes the inclusion relationship between tweets and words. By modeling the words in the tweet, the semantic information of the content of the tweet is revealed. Its weight is calculated by the TF-IDF (term frequency-inverse document frequency) value of the word, where the word frequency is the number of times a word appears in a tweet. The inverse document frequency is the ratio of the total number of tweets to the number of tweets that contain the word. E ww represents the word co-occurrence information in the tweet. The global co-occurrence information of the word is collected by setting a fixed-size sliding window in the tweet. And the edge weight is calculated by the word association measure, the PMI (point-wise mutual information) value [26] E tu reflects the interaction between tweets and users: users publish, retweet, or comment on tweets. It is weighted by the reciprocal time the user posted or retweeted the tweet. Formally, the edge weight between node i and node j is calculated as formula 1: 1
+A ij = T F - I D F ij i ∈ T , j ∈ W P M I i , j i , j ∈ W 1 t + 1 i ∈ T , j ∈ U 1 i = j 0 o t h e r w i s e . where t represents the elapsed time since user j retweeted or replied to tweet t i . TF-IDF is a weighting method obtained by calculating the term frequency and the inverse document frequency. PMI donates the correlation between two words.
+Formally, the goal of our fake news detection task is to learn a classification function f : t i → L i that maps a tweet t i to class labels L i , where L i ∈ { non-rumors, false rumors, true rumors, unverified rumors } .
+Dual-channel graph convolutional attention network
+In our constructed tweet-word-user heterogeneous graph, the features of the word set W are denoted as X W = { x w 1 , x w 2 , x w 3 , … , x w W } , x w i ∈ R N , where x w i is the feature embedding of the word w i and N is the dimension of the word embedding. The feature representation of the set of tweets T is X T = { x t 1 , x t 2 , x t 3 , … , x t T } , x t i ∈ R N , where x t i is the feature representation of the tweet t i . The feature representation of each tweet is calculated from the average of the word embeddings contained in that tweet, i.e., x t i = 1 t i ∑ w j ∈ t i x w j . The feature representation of the user set U is X U = { x u 1 , x u 2 , x u 3 , … , x u U } , x u i ∈ R S , where x u i is the feature representation of the user u i and the dimension is S . In the obtained feature representation, different types of nodes in the tweet-word sub-channel have the same feature space, whereas different types of nodes in the tweet-user sub-channel are located in different feature spaces. To project nodes located in different feature spaces into the same latent vector space, we design transformation matrices Q φ t and Q φ u for tweet and user nodes in the spread information extractor sub-channel. The projection process is as formula 2: 2
+X T ( U ) ′ = Q φ t ( u ) · ( X T ( U ) + X T ( U ) 0 ) where X T 0 ∈ R T × N and X U 0 ∈ R U × S is a dynamic feature vectors whose value is updated with the gradient. X T ( U ) and X T ( U ) ′ are the original feature vectors and the feature representation obtained after projection, respectively. Q φ t and Q φ u are the tweet and user nodes linear projection matrices, respectively.
+Then, we concatenate the node feature vectors in the two sub-channels. Through these two sub-channels, we obtain the semantic features as X tw = x t 1 , x t 2 , x t 3 , … , x t T , x w 1 , x w 2 , x w 3 , … , x w W , x t i ∈ X T , x w i ∈ X W , and the spread diffusion structure features are denoted as X tu = x t 1 , x t 2 , x t 3 , … , x t T , x u 1 , x u 2 , x u 3 , … , x u U , x t i ∈ X T ′ , x u i ∈ X U ′ , respectively.
+After that, we apply nodes on the two sub-channels to perform deep feature extraction on the graph convolutional network [27]. Specifically, according to the constructed graph G and the obtained feature matrix X , feature extraction is performed layer by layer, and the information of each layer is obtained by the weighted sum of the information of the previous layer and the information of neighbor nodes. Its feature extraction process is as follows: 3
+H 1 = ( A ^ X W 0 ) 4
+H i + 1 = σ ( D ^ - 1 / 2 A ^ D ^ - 1 / 2 H i - 1 W i ) where σ ( · ) is the nonlinear activation function, here we use the ReLU activation function. W i is the trainable weight matrix for a specific layer. A ^ = A + I is the adjacency matrix of the graph G with self-connection I , and D ^ is the degree matrix of A ^ .
+Finally, we get the feature representation of the tweet-word subgraph as X tw ′ = { x t 1 ′ , x t 2 ′ , x t 3 ′ , … , x t T ′ , x w 1 ′ , x w 2 ′ , x w 3 ′ , … , x w W ′ } , and the feature representation of the tweet-user subgraph are denoted as X tu ′ = { x t 1 ′ , x t 2 ′ , x t 3 ′ , … , x t T ′ , x u 1 ′ , x u 2 ′ , x u 3 ′ , … , x u U ′ } .
+In our constructed heterogeneous sub-channel, different nodes have different importance, so we utilize the self-attention mechanism [28] to learn the weights of different nodes. Given the node pair ( i , j ) in the subgraph, the self-attention mechanism S learns the weight coefficient e ij of the node, which represents the importance of node to node. Its calculation process is as formula 5: 5
+e i , j = l ( W x i , W x j ) , x i , x j ∈ X t w ( t u ) ′ here l is implemented by a single-layer feedforward neural network, which is parameterized by a weight vector v , we use L Re [29] as the activation function, and W represents the weight matrix. X tw ′ and X tu ′ represent the feature representation of the tweet-word and tweet-user subgraphs, respectively.
+Then, we use the softmax function to normalize the weight coefficients to get the final attention weight α i , j : 6
+α i , j = softmax ( e i , j ) = e σ ( v T · [ W x i | | W x j ] ) ∑ k ∈ N i e σ ( v T · [ W x i | | W x k ] ) where σ ( · ) is the activation function, v represents the weight vector, · T denotes the transpose operation, and | | indicates the connection operation.
+Next, we aggregate the neighbor node feature representation of node i and the corresponding weight coefficients to update the embedding representation of node i . The aggregation process is as formula 7: 7
+x i ( 1 ) = σ ∑ j ∈ N i α i , j W x j where x i ( 1 ) indicates the updated embedding of node i , σ ( · ) denotes the nonlinear activation function, W is the same weight matrix as Eq. 5, and N i represents the set of nodes, including node i itself and all neighbor nodes.
+We extend the self-attention mechanism to multi-head attention to stabilize the learning process and avoid excessive variance. Specifically, we repeatedly execute the transformation of Eq. 7 for K times and concatenate the learned feature representations to obtain the final output: 8
+x i ′ ′ = | | K k = 1 σ ∑ j ∈ N i α i , j k W k x j here | | represents the connection operation, α i , j k donates the weight coefficient for performing the k -th attention, and W k x j represents the corresponding weight matrix.
+Given the node representation X tw of the tweet-word sub-channel and the node representation X tu of the tweet-user sub-channel, after feeding the node representation into the graph convolutional neural network and the attention layer within the subgraph. Finally, we can obtain the feature representation X tw ′ ′ = { x t 1 ′ ′ , x t 2 ′ ′ , x t 3 ′ ′ , … , x t T ′ ′ , x w 1 ′ ′ , x w 2 ′ ′ , x w 3 ′ ′ , … , x w W ′ ′ } of the tweet-word sub-channel with global semantic relation information and the feature representation X tu ′ ′ = { x t 1 ′ ′ , x t 2 ′ ′ , x t 3 ′ ′ , … , x t T ′ ′ , x u 1 ′ ′ , x u 2 ′ ′ , x u 3 ′ ′ , … , x u U ′ ′ } of the tweet-user sub-channel with global spread structural information.
+Dynamic feature fusion
+The dual-channel subgraphs based on meta-path decomposition contain different information, and their contributions to fake news detection are also different. For example, for widely spread news, its propagation features may be more important than its semantic features. At this time, the dynamic feature fusion layer can effectively extract news features by giving higher weight to the propagation features. To accurately identify fake news, we design a dynamic feature fusion layer for learning the weights of different sub-channels. The learning process is as formula 9: 9
+( γ tw , γ tu ) = attention sub - channel ( X tw ′ ′ , X tu ′ ′ ) where attention sub - channel ( X tw ′ ′ , X tu ′ ′ ) represents a feedforward neural network that learns sub-channels weights.
+Specifically, we first use a nonlinear transformation to transform the node representation in the sub-channel. Then, the similarity between the transformed representation and the inter-sub-channel attention vector b is taken as the importance of the sub-channel node. The sub-channel importance is obtained by averaging the node importance. The sub-channel importance is calculated as formula 10: 10
+ω tw ( tu ) = 1 X tw ( tu ) ′ ′ ∑ x i ∈ X tw ( tu ) ′ ′ b T · tan h ( W sub - channel x i ) where W sub - channel represents the sub-channel weight matrix, b is the attention vector between sub-channels. After obtaining the sub-channel importance, we normalize it using the softmax function, and the semantic information extractor and spread information extractor weights are denoted as γ tw and γ tu , respectively: 11
+γ t w ( t u ) = e ω t w ( t u ) ∑ Φ ∈ { t w , t u } e ω Φ Finally, using the learned sub-channel weights and joint representations of nodes within the sub-channels, we can obtain the tweet representation X T of the heterogeneous graph: 12
+X T = { x 1 , x 2 , x 3 , … , x T } 13
+E ( x i ) = ∑ Φ ∈ t w , t u γ Φ · x t i , x t i ∈ X Φ ′ ′ where T represents the total number of tweets, and x t i represents that node i has global semantic relationship information and global structural information in the Φ sub-channel.
+Fake news classification
+We feed the tweet representation X T into a feed-forward neural network (FNN) and normalize it with the softmax function to get the predicted fake news probability distribution: 14
+f = p ( L i | t i , G ; θ ) = softmax(FNN ( E ( x i ) ) ) where L i is the tweet category label, t i is the i -th tweet, and the θ is the model parameter.
+In this work, we use the cross-entropy loss and regularization term to train the parameters of the model, and the specific training process is as formula 15: 15
+L = - ∑ i ∈ T y i f + λ | | θ | | 2 2 where y i represents the ground truth one-hot vector of the i -th tweet, λ is the coefficient, | | · | | 2 2 is the L 2 regularization term, which is mainly used to prevent overfitting.
+Experiments
+In this section, we conduct comprehensive experiments to verify the performance of the proposed model in fake news detection and design ablation experiments to demonstrate the effectiveness of each component.
+Datasets
+We conduct experiments on three real datasets, Weibo [30], Twitter15 and Twitter16 [31]. Weibo is a Chinese long-text dataset, and contains only two types of news: true rumors(TR) and false rumors(FR). Different from the binary classification task, Twitter15 and Twitter16 are English datasets and belong to short text datasets. The news in the datasets is divided into four categories: true Rumors(TR), false Rumors(FR), non-rumors(NR), and unverified rumors(UR). Users in the dataset include all users who publish, re-tweet and reply to news, and posts include all news items that retweet and reply to the source tweet. We randomly select 10 % of the data as the validation set during the experiments. And the rest of the data is divided into training set and testing set according to the ratio of 3:1. The details of the datasets are shown in Table 2. Table 2. Statistics of the datasets
+Statistic
+Weibo
+Twitter15
+Twitter16
+
+Source tweets
+4664
+1490
+818
+
+Posts(comments or retweets)
+3,805,656
+331,612
+204,820
+
+Users
+2,746,818
+276,663
+173,487
+
+False rumors
+2313
+370
+205
+
+True rumors
+2351
+372
+207
+
+Non-rumors
+0
+374
+205
+
+Unverified rumors
+0
+374
+201
+
+Propagation path
+1,837,779
+37,339
+17,543
+
+Average cascade length
+816
+223
+251
+
+
+Evaluation metrics
+Most existing efforts to detect fake news have focused on the binary task of classifying news as true or false. The classification results of fake news include four categories, which are true positive, false positive, true negative, and false negative.
+True Positive (TP): The prediction is false news, and the actual labeling in the dataset is also false.
+False Positive (FP): The prediction is false news, but the dataset is marked true.
+True Negative (TN): The predicted news is true, and the actual annotation in the dataset is also true.
+False Negative (FN): The news predicted as true but labeled as false in the dataset.
+Model performance evaluation indexes include precision, recall, F1 score and accuracy, which can evaluate the performance of the classifier from different perspectives. Specifically, precision is the proportion of samples that are correctly predicted to be fake news, and it is shown as formula 16. Recall is the proportion of all fake news found by the model. It is used to measure the sensitivity of the classifier, and it is calculated as formula 17. F1 is based on the harmonic average of the precision and recall rates. It comprehensively considers the performance measurement of precision and recall, and it is shown as formula 18. Accuracy measures the proportion of samples that the model predicts correctly, as shown in formula 19. 16
+Precision = | TP | | TP | + | FP | 17
+Recall = | TP | | TP | + | FN | 18
+F 1 = 2 · Precision · Recall Precision + Recall 19
+Accuracy = | TP | + | TN | | TP | + | FP | + | TN | + | FN |
+Baseline models
+We compare our model with the following fourteen baseline models:
+DTR [10]: A Decision Tree-based model to identify rumors by ranking Twitter clusters for searching enquiry phrases.
+SVM-TS [32]: A linear SVM-based classifier that uses time series to model changes in the social context of news.
+SVM-TK [31]: A SVM-based classifier that utilizes tree-based kernels to compute spread tree similarity for fake news detection.
+GRU-RNN [30]: RNN with GRU units to identify rumors by modeling the sequential structure of news.
+BU-RvNN and TD-RvNN [33]: A recursive neural network for top-down and bottom-up traversal based on spread tree for fake news detection by capturing news spread structure and content semantic information.
+PPC [34]: The propagation path classifier based on recurrent and convolutional networks realizes fake news detection by modeling user sequence features.
+GLAN [35]: A global–local attention network, the local semantic relations and global structural information of tweet propagation are captured for rumor detection.
+Bi-GCN [36]: A bi-directional graph convolutional network model for rumor detection by building top-down and bottom-up rumor propagation trees.
+PLAN [37]: A structure-aware-based hierarchical self-attention model for rumor detection by learning the propagation structure of rumors.
+PPA-WAE [38]: A lightweight propagation path aggregation (PPA) network is combined with a neural topic model in the Wasserstein Autoencoder (WAE) framework. It captured the propagation structure representation of rumors and event insensitive stance patterns in response propagation trees where no source post is included.
+HGATRD [2]: A meta-path based heterogeneous graph attention network framework was proposed to capture the semantic relations and structural information for rumor detection.
+MGAT-ESM [22]: An end-to-end multi-channel graph attention network with an event-sharing module enables rumor detection by aggregating propagation structural information and event-invariant features.
+Fake news detection performance
+Tables 3, 4 and 5 show that our model outperforms the baseline models’ detection performance on three datasets. Specifically, in the Weibo dataset, the best baseline model achieves 96.2 % detection accuracy. Our model is 1.2 % more accurate than the best baseline. Our model DGCAN achieves optimal results on all indicators, which indicates that our model is not only suitable for short-text news, but also suitable for detecting long-text fake news. In the Twitter15 dataset, the detection accuracy of the best model in the baseline is 90.8 % . In the Twitter16 dataset, the best model detection accuracy in the baseline is 91.6 % . Our model is 1.5 % and 2.4 % more accurate than these two models. It proves the effectiveness of the DGCAN model in fake news detection. Table 3. Fake news detection results on Weibo
+Model
+Accuracy
+Precision
+Recall
+F1
+
+DTR [10]
+0.789
+0.789
+0.789
+0.789
+
+SVM-TS [32]
+0.885
+0.537
+0.490
+0.499
+
+GRU-RNN [30]
+0.910
+0.914
+0.910
+0.910
+
+BU-RvNN [33]
+0.903
+0.902
+0.897
+0.900
+
+TD-RvNN [33]
+0.847
+0.844
+0.847
+0.845
+
+PPC [34]
+0.916
+0.920
+0.917
+0.916
+
+GLAN [35]
+0.902
+0.904
+0.901
+0.902
+
+Bi-GCN [36]
+0.961
+0.883
+0.913
+0.885
+
+PLAN [37]
+0.943
+0.943
+0.943
+0.943
+
+PPA-WAE [38]
+0.962
+0.962
+0.963
+0.963
+
+DGCAN(Ours)
+0 . 973
+0 . 969
+0 . 973
+0 . 972
+
+Bold values indicate best performance
+Table 4. Fake news detection results on Twitter15
+F1
+
+Model
+Accuracy
+NR
+FR
+TR
+UR
+
+DTR [10]
+0.409
+0.501
+0.311
+0.364
+0.473
+
+SVM-TK [31]
+0.667
+0.619
+0.669
+0.772
+0.645
+
+SVM-TS [32]
+0.544
+0.796
+0.472
+0.404
+0.483
+
+GRU-RNN [30]
+0.641
+0.684
+0.634
+0.688
+0.571
+
+BU-RvNN [33]
+0.708
+0.695
+0.728
+0.759
+0.653
+
+TD-RvNN [33]
+0.723
+0.682
+0.758
+0.821
+0.654
+
+PPC [34]
+0.842
+0.818
+0.875
+0.811
+0.790
+
+GLAN [35]
+0.890
+0.936
+0.908
+0.897
+0.817
+
+Bi-GCN [36]
+0.864
+0.847
+0.861
+0.917
+0.829
+
+PLAN [37]
+0.852
+0.840
+0.846
+0.884
+0.837
+
+PPA-WAE [38]
+0.873
+0.899
+0.881
+0.869
+0.843
+
+HGATRD [2]
+0.905
+0.940
+0.905
+0.909
+0.864
+
+MGAT-ESM [22]
+0.908
+0.916
+0.922
+0.922
+0.870
+
+DGCAN(Ours)
+0 . 923
+0 . 964
+0 . 923
+0 . 924
+0 . 878
+
+Bold values indicate best performance
+
+We observed that traditional machine learning-based baselines (such as DTR, SVM-TK, and SVM-TS) performed not well because they needed to distinguish the importance of different information. Among these models, SVM-TK performs better than other models because the model exploits the structural features of news spread. In addition, deep learning-based models (such as GRU-RNN, BU-RvNN, TD-RvNN, PPC, PLAN, and PPA-WAE) all have better performance than those based on traditional machine learning models. Furthermore, graph neural network models (such as GLAN, Bi-GCN, HGATRD, and MGAT-ESM) performed well. Among these models, MGAT-ESM performs better than other models because the model exploits the structural features of news spread and takes full advantage of the attention mechanism. MGAT-ESM constructs three subgraphs to detect fake news. In comparison, our model constructs two subgraphs to realize the modeling of news text, users, and propagation path. Compared with constructing three subgraphs, noise information is reduced. In addition, our model further improves detection accuracy by capturing horizontal diffusion information of news.
+In addition, for the Twitter15 and Twitter16 datasets, we observed a significant increase in F1 values in the NR category. After analysis, we think that this result is associated with the news of the datasets. Most of the news in the NR category is factual, without emotional polarity words, and most of them are published by official media. For NR news, the features captured by the model are relatively uniform. Other categories vary in style and include categories such as satirical news. For these news, the features captured by the model vary widely. Therefore, when performing classification, the model can easily misclassify. Table 5. Fake news detection results on Twitter16
+F1
+
+Model
+Accuracy
+NR
+FR
+TR
+UR
+
+DTR [10]
+0.465
+0.643
+0.393
+0.419
+0.403
+
+SVM-TK [31]
+0.662
+0.643
+0.623
+0.783
+0.655
+
+SVM-TS [32]
+0.574
+0.755
+0.420
+0.571
+0.526
+
+GRU-RNN [30]
+0.633
+0.617
+0.715
+0.577
+0.527
+
+BU-RvNN [33]
+0.718
+0.723
+0.712
+0.779
+0.659
+
+TD-RvNN [33]
+0.737
+0.662
+0.743
+0.835
+0.708
+
+PPC [34]
+0.863
+0.843
+0.898
+0.820
+0.837
+
+GLAN [35]
+0.897
+0.876
+0.854
+0.864
+0 . 947
+
+Bi-GCN [36]
+0.879
+0.824
+0.874
+0.937
+0.873
+
+PLAN [37]
+0.874
+0.853
+0.839
+0.917
+0.888
+
+PPA-WAE [38]
+0.887
+0.882
+0.903
+0.921
+0.842
+
+HGATRD [2]
+0.886
+0.903
+0.857
+0.925
+0.857
+
+MGAT-ESM [22]
+0.916
+0.910
+0.896
+0.948
+0.908
+
+DGCAN (ours)
+0 . 940
+0 . 946
+0 . 909
+0 . 958
+0.945
+
+
+Ablation study
+In order to verify the effectiveness of each component, we design four variant models of the DGCAN model, which are as follows:
+DGCAN: Indicates that we use all components of the DGCAN model;
+DGCAN-sp_gcn: We omit the node pair graph convolutional layer in the spread information extractor sub-channel from the DGCAN model;
+DGCAN-se_gcn: It indicates that we remove the node pair graph convolution layer in the semantic information extractor sub-channel from the DGCAN model;
+DGCAN-sp_att: We omit the attention in the spread information extractor sub-channel from the DGCAN model to measure the variant model performance;
+DGCAN-se_att: It indicates that we remove the attention from the semantic information extractor sub-channel from the DGCAN model.
+Tables 6, 7 and 8 are the ablation experimental results of three datasets. They show that when each component in the model is removed, the model’s performance decreases to varying degrees, indicating that each module in our model plays a role and contributes to fake news detection. Among them, when we remove the graph attention layer in the semantic information extractor sub-channel, the performance trend of the model on the three datasets is consistent. That is, the model performance decreases the most. It indicates that the graph attention layer in the semantic information extractor sub-channel can capture tweets’ global semantic relationship information, which is very important for model performance. Table 6. Ablation experimental results on Weibo
+Model
+Accuracy
+Precision
+Recall
+F1
+
+DGCAN
+0.973
+0.969
+0.973
+0.972
+
+DGCAN-sp-gcn
+0.951
+0.949
+0.955
+0.952
+
+DGCAN-se-gcn
+0.942
+0.940
+0.946
+0.942
+
+DGCAN-sp-att
+0.865
+0.858
+0.870
+0.864
+
+DGCAN-se-att
+0.704
+0.688
+0.710
+0.699
+
+Table 7. Ablation experimental results on Twitter15
+F1
+
+Model
+Accuracy
+NR
+FR
+TR
+UR
+
+DGCAN
+0.923
+0.964
+0.923
+0.924
+0.878
+
+DGCAN-sp-gcn
+0.881
+0.914
+0.911
+0.892
+0.811
+
+DGCAN-se-gcn
+0.884
+0.909
+0.909
+0.876
+0.841
+
+DGCAN-sp-att
+0.824
+0.733
+0.837
+0.910
+0.820
+
+DGCAN-se-att
+0.598
+0.885
+0.471
+0.550
+0.480
+
+Table 8. Ablation experimental results on Twitter16
+F1
+
+Model
+Accuracy
+NR
+FR
+TR
+UR
+
+DGCAN
+0.940
+0.946
+0.909
+0.958
+0.945
+
+DGCAN-sp-gcn
+0.908
+0.913
+0.841
+0.958
+0.913
+
+DGCAN-se-gcn
+0.891
+0.896
+0.867
+0.925
+0.876
+
+DGCAN-sp-att
+0.804
+0.675
+0.817
+0.871
+0.830
+
+DGCAN-se-att
+0.707
+0.788
+0.623
+0.738
+0.652
+
+
+Furthermore, for the graph attention layer, the spread information extractor sub-channel plays a more significant role in the non-rumor class. The semantic information extractor sub-channel works better in the remaining three classes. Specifically, when we remove the attention layer in the spread information extractor, the F1 value drops by 23.1 % and 27.1 % in the non-rumor class on Twitter15 and Twitter16, respectively. When removing the attention layer in the semantic information extractor, the F1 value decreases by 7.9 % and 15.8 % , respectively. This result is consistent with our perception that users pay more attention to non-rumors. This is because non-rumors are more likely to be responded by users with high credibility, and their spread paths are relatively fixed. Therefore, the spread information extractor with global spread structural information is more conducive to distinguishing true and false rumors.
+Hyperparameter sensitivity
+We investigated the effect of different hyperparameters on the model performance. Figure 2 shows the model accuracy results with different numbers of attention heads. Figure 3 shows the model accuracy results for the hyperparameter dropout with different values. From Fig. 2, we observe that when the number of attention heads is 8, the model achieved optimal performance on the Weibo dataset. It works best on the Twitter15 dataset when the number of attention heads is 4. When the number of attention heads is 1, it works best on the Twitter16 dataset. Through analysis, this may be related to the textual characteristics of different datasets. The number of comments and retweets of news in the dataset is different. Thus, news with different cascade depths requires different numbers of attention heads. For dropout, the three datasets show a trend of first increase and then decrease. When the dropout values are 0.5, 0.4, and 0.3, the optimal results are achieved on Weibo, Twitter15, and Twitter16. [See PDF for image]
+Fig. 2 Results with different number of heads
+
+[See PDF for image]
+Fig. 3 Results with different dropout
+
+
+Time efficiency analysis
+The time efficiency of the model is a very important index, which represents the feasibility of the model in practical application. To verify the time performance of our model, we analyze the time required for each model to run. The comparison results of each model are shown in Fig. 4. It can be observed that for each model, the time cost of running on the Weibo dataset is greater than the Twitter15 and Twitter16 datasets. This is because Twitter15 and Twitter16 are short-text datasets. Different from the two datasets, Weibo belongs to the long-text dataset, furthermore, the news amount is much larger than Twitter15 and Twitter16, so the model runs for a long time. Our model has achieved good results on all three datasets. After analysis, we think that this result is associated with the effective features of news extracted by the model. Our DGCAN model can effectively extract news features. Specifically, when the model is faced with new tweets, it can quickly sketch the features of new tweets combined with previous news features. By combining the previous experience, the model does not need to analyze the news features repeatedly, which greatly saves the time cost. The results verify the effectiveness of DGCAN in time efficiency. In addition, it also fully confirms the feasibility of our model in practical applications. [See PDF for image]
+Fig. 4 Time efficiency of the models
+
+
+Conclusion
+Most fake news detection models do not take advantage of all the attribute features in the news. Furthermore, it is not easy to fuse the extracted multiple features effectively. In the fake news detection models based on graph neural networks, problems such as difficulty extracting discriminative features from various graph structures and treating all features equally result in excessive noise information. To solve these problems, we construct a tweet heterogeneous graph containing news, words, and user information. Then, we design dual-channel graph convolution to extract the semantic and spread structure higher-order features. In addition, we fuse attention to distinguish the importance of different nodes and reduce the weight of noise information. Furthermore, we design inter-sub-channel attention to distinguish the importance of different sub-channels and achieve effective dynamic feature fusion. Experiments on two datasets demonstrate the effectiveness of the proposed model.
+The three datasets we used were all text datasets. To enrich the information contained in the datasets, we will further integrate multi-modal information such as pictures and videos. Our model learns the news’ fixed expression and dissemination structure by extracting the invariant features. We further improve the effect of fake news detection by integrating the meta-attributes of users. Furthermore, we consider building hypergraphs for fake news detection and further explore how this model can be adapted or extended to different languages and cultural contexts. In addition, we will use the mechanism of "anti-empirical attack" [39], which can generate traces of "attack" behavior, and attempt the empirical rules of the fake news detection model. The model will further find improvement strategies to prevent news from being disguised in content.
+Acknowledgements
+This research was partially funded by the National Natural Science Foundation of China (NSFC), No. 61832014 and 61373165. The authors thank anonymous reviewers for their valuable comments and suggestions.
+Author Contributions
+MZ contributed to conceptualization; GR involved in methodology; MZ and YZ involved in validation; MZ and YZ involved in writing—original draft preparation; GR involved in writing—review and editing; GR involved in supervision. All authors have read and agreed to the published version of the manuscript.
+Funding
+This research was partially funded by the National Natural Science Foundation of China (NSFC), Nos. 61832014 and 61373165.
+Availability of data and materials
+The three real datasets are as follows: Weibo is from [30], and Twitter15 and Twitter16 are from [31].
+Declarations
+Conflict of interest
+The authors declare that they have no conflict of interest.
+Ethics approval
+Not applicable.
+Consent to participate
+Not applicable.
+Consent for publication
+Not applicable.
+Publisher's Note
+Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References
+1. Allcott, H; Gentzkow, M. Social media and fake news in the 2016 election. J Econ Perspect ; 2017; 31 , 2 pp. 211-236. [DOI: https://dx.doi.org/10.1257/jep.31.2.211]
+2. Huang Q, Yu J, Wu J, Wang B (2020) Heterogeneous graph attention networks for early detection of rumors on twitter. IEEE, pp 1–8
+3. Goldani, MH; Safabakhsh, R; Momtazi, S. Convolutional neural network with margin loss for fake news detection. Inf Process Manag ; 2021; 58 , 1 [DOI: https://dx.doi.org/10.1016/j.ipm.2020.102418] 102418.
+4. Przybyla P (2020) Capturing the style of fake news 34(01):490–497
+5. Yang X, Lyu Y, Tian T, Liu Y, Liu Y, Zhang X (2021) Rumor detection on social media with graph structured adversarial learning, pp 1417–1423
+6. Yang F, Liu Y, Yu X, Yang M (2012) Automatic detection of rumor on sina weibo, pp 1–7
+7. Jing, J; Wu, H; Sun, J; Fang, X; Zhang, H. Multimodal fake news detection via progressive fusion networks. Inf Process Manag ; 2023; 60 , 1 [DOI: https://dx.doi.org/10.1016/j.ipm.2022.103120] 103120.
+8. Bazmi, P; Asadpour, M; Shakery, A. Multi-view co-attention network for fake news detection by modeling topic-specific user and news source credibility. Inf Process Manag ; 2023; 60 , 1 [DOI: https://dx.doi.org/10.1016/j.ipm.2022.103146] 103146.
+9. Liu B, Sun X, Meng Q, Yang X, Lee Y, Cao J, Luo J (2023) Nowhere to hide: online rumor detection based on retweeting graph neural networks. IEEE Trans Neural Netw Learn Syst
+10. Zhao Z, Resnick P, Mei Q (2015) Enquiring minds: early detection of rumors in social media from enquiry posts, pp 1395–1405
+11. Choudhary, A; Arora, A. Linguistic feature based learning model for fake news detection and classification. Expert Syst Appl ; 2021; 169 , [DOI: https://dx.doi.org/10.1016/j.eswa.2020.114171] 114171.
+12. Alonso, MA; Vilares, D; Gómez-Rodríguez, C; Vilares, J. Sentiment analysis for fake news detection. Electronics ; 2021; 10 , 11 1348. [DOI: https://dx.doi.org/10.3390/electronics10111348]
+13. Shu K, Wang S, Liu H (2018) Understanding user profiles on social media for fake news detection. IEEE, pp 430–435
+14. Lyu, P; Rao, G; Zhang, L; Cong, Q. Bilgat: bidirectional lattice graph attention network for chinese short text classification. Appl Intell ; 2023; 53 , 19 pp. 22405-22414. [DOI: https://dx.doi.org/10.1007/s10489-023-04700-7]
+15. Paka, WS; Bansal, R; Kaushik, A; Sengupta, S; Chakraborty, T. Cross-sean: a cross-stitch semi-supervised neural attention model for covid-19 fake news detection. Appl Soft Comput ; 2021; 107 , [DOI: https://dx.doi.org/10.1016/j.asoc.2021.107393] 107393.
+16. Zhang X, Cao J, Li X, Sheng Q, Zhong L, Shu K (2021) Mining dual emotion for fake news detection, pp 3465–3476
+17. Qian S, Wang J, Hu J, Fang Q, Xu C (2021) Hierarchical multi-modal contextual attention network for fake news detection, pp 153–162
+18. Feng, K; Rao, G; Zhang, L; Cong, Q. An interlayer feature fusion-based heterogeneous graph neural network. Appl Intell ; 2023; 53 , 21 pp. 25626-25639. [DOI: https://dx.doi.org/10.1007/s10489-023-04840-w]
+19. Hu L, Yang T, Zhang L, Zhong W, Tang D, Shi C, Duan N, Zhou M (2021) Compare to the knowledge: Graph neural fake news detection with external knowledge, pp 754–763
+20. Mehta N, Goldwasser D (2021) Tackling fake news detection by interactively learning representations using graph neural networks, pp 46–53
+21. Yang Y (2021) Covid-19 fake news detection via graph neural networks in social media. IEEE, pp 3178–3180
+22. Ran, H; Jia, C; Zhang, P; Li, X. Mgat-esm: multi-channel graph attention neural network with event-sharing module for rumor detection. Inf Sci ; 2022; 592 , pp. 402-416. [DOI: https://dx.doi.org/10.1016/j.ins.2022.01.036]
+23. Sun X, Cheng H, Li J, Liu B, Guan J (2023) All in one: Multi-task prompting for graph neural networks, pp 2120–2131
+24. Sun, X; Cheng, H; Liu, B; Chen, H; Xu, G; Yin, H. Self-supervised hypergraph representation learning for sociological analysis. IEEE Trans Knowl Data Eng ; 2023; 35 , 11 pp. 11860-11871. [DOI: https://dx.doi.org/10.1109/TKDE.2023.3235312]
+25. Sun, X; Yin, H; Liu, B; Meng, Q; Cao, J; Zhou, A; Chen, H. Structure learning via meta-hyperedge for dynamic rumor detection. IEEE Trans Knowl Data Eng ; 2023; 35 , 9 pp. 9128-9139. [DOI: https://dx.doi.org/10.1109/TKDE.2022.3221438]
+26. Zhang, X; Zhang, T; Zhao, W; Cui, Z; Yang, J. Dual-attention graph convolutional network ; 2020; Berlin, Springer: pp. 238-251.
+27. Kipf TN, Welling M (2016) Semi-supervised classification with graph convolutional networks. arXiv:1609.02907
+28. Vaswani A, Shazeer N, Parmar N, Uszkoreit J, Jones L, Gomez AN, Kaiser Ł, Polosukhin I (2017) Attention is all you need. In: Advances in neural information processing systems, vol 30
+29. Xu B, Wang N, Chen T, Li M (2015) Empirical evaluation of rectified activations in convolutional network. arXiv:1505.00853
+30. Ma J, Gao W, Mitra P, Kwon S, Jansen BJ, Wong K-F, Cha M (2016) Detecting rumors from microblogs with recurrent neural networks, pp 3818–3824
+31. Ma, J; Gao, W; Wong, K-F. Detect rumors in microblog posts using propagation structure via kernel learning ; 2017; New York, Association for Computational Linguistics: [DOI: https://dx.doi.org/10.18653/v1/P17-1066]
+32. Ma J, Gao W, Wei Z, Lu Y, Wong K-F (2015) Detect rumors using time series of social context information on microblogging websites, pp 1751–1754
+33. Ma, J; Gao, W; Wong, K-F. Rumor detection on twitter with tree-structured recursive neural networks ; 2018; New York, Association for Computational Linguistics: [DOI: https://dx.doi.org/10.18653/v1/P18-1184]
+34. Liu Y, Wu Y-F (2018) Early detection of fake news on social media through propagation path classification with recurrent and convolutional networks, vol 32, No. 1
+35. Yuan C, Ma Q, Zhou W, Han J, Hu S (2019) Jointly embedding the local and global relations of heterogeneous graph for rumor detection. IEEE, pp 796–805
+36. Bian, T; Xiao, X; Xu, T; Zhao, P; Huang, W; Rong, Y; Huang, J. Rumor detection on social media with bi-directional graph convolutional networks. Proc AAAI Conf Artif Intell ; 2020; 34 , 01 pp. 549-556.
+37. Khoo LMS, Chieu HL, Qian Z, Jiang J (2020) Interpretable rumor detection in microblogs by attending to user interactions 34(05):8783–8790
+38. Zhang, P; Ran, H; Jia, C; Li, X; Han, X. A lightweight propagation path aggregating network with neural topic model for rumor detection. Neurocomputing ; 2021; 458 , pp. 468-477. [DOI: https://dx.doi.org/10.1016/j.neucom.2021.06.062]
+39. Sun X, Cheng H, Dong H, Qiao B, Qin S, Lin Q (2023) Counter-empirical attacking based on adversarial reinforcement learning for time-relevant scoring system. IEEE Trans Knowl Data Eng

@@ -1,0 +1,519 @@
+Introduction
+According to “Pew Research Center”1, over 80% of U.S. adults get news from online social media including several news websites (e.g., BBC 2, National Public Radio 3). However, many such news sites (e.g., Natural News 4, Humans Are Free 5) deliberately publish manipulated contents to harm the reputation of a famous person or to spread “infodemic”6 etc. Additionally, such unreliable news articles gain more popularity when social media users put their opinions, sentiments, etc. on these news stories. The spread of such false news has many negative repercussions, thus identifying fabricated information has become a crucial research challenge in the modern world. For example, a news analysis on BuzzFeed reported that top misleading election news stories on Facebook showed more engagement than the election contents from top reliable news websites during the last three months of the US presidential campaign [1].
+To deal with the aforesaid issues, a variety of different deep neural network (DNN)-based misinformation identification techniques have been proposed in recent times. Existing DNN-based misinformation detection approaches utilize propagation structure [2, 3], Multi-Task Learning [4, 5, 6, 7, 8, 9, 10–11], and trendy DNN models such as RNN [12], GCN [13, 14], Co-Attention [15], LLMs [14, 16, 17, 18, 19–20, 20], Variational Autoencoder [5], etc. to achieve state-of-the-art (SOTA) performance. More recently, researchers have also started leveraging visual information such as images that are attached to news articles or tweets for veracity identification, giving rise to the multimodal misinformation detection area. One line of work [21] in this direction focuses on capturing correlations between modalities while the other [22] attempts to retain the unique properties of each modality during feature fusion. Additionally, some works [23] extract high-order complementary information from the multi-modal context for detecting misinformation. However, these models’ performance is compromised due to their incapability to identify components that contribute significantly to a misinformation sample. This also limits their performance compared to other existing modals that can harness the explainable components of a misinformation.
+Existing misinformation detection models lack transparency, often failing to provide sufficient explanation why a claim is identified as fake/unreliable. To combat this, researchers have developed explainable algorithms for misinformation detection [24, 25–26]. dEFEND [24] is the one such technique that provides explanations with the help of sentence-comment co-attention component. However, dEFEND requires long documents for news articles and it also relies on textual content of user comments [25]. To mitigate these problems, researchers propose another explainable method GCAN [25] which works in a more realistic scenario on the online social network. One major limitation of both dEFEND and GCAN is that they can not be applied into multimodal setting [26]. Moreover, existing multimodal misinformation detection approaches [21, 27, 28] overlook the information consistency issue between textual and visual contents. To address these challenges, researchers further develop a multimodal explainable misinformation detection framework, DGExplain [26] that captures the complex association between different modalities and leverages user comments to identify and explain misinformation.
+Despite all, these explainable models can achieve a moderate performance gain and this is caused by their vague classification of explainable components. By explainable components, we mean, those minimum and the most significant (MS) elements in a misinformation sample whose removal would render the sample as non-fake. Hence, mere ranking of the elements of sample would not provide any information about the fakeness of misinformation sample since, one can not bring this information into use. As a rank of 2 in a sample of 2 elements and in a sample of 10 elements might have different importance in context of these misinformation samples. However, if we know that exactly x elements of first sample and y elements of second sample are the reasons of fakeness of the sample, we can have a much stronger classification model as well as an informative outcome to the end users who is interested in visualizing and presenting explainable and non-explainable components of the sample. A good application of such model can be found in social media/journalism where any misinformation sample need to be segregated into fake and non-fake components automatically. Nevertheless, the assumed model will also rank the elements in terms of significance for both explainable (MS) and non-explainable (least significant or LS) components. However, here the elements might have repeated ranks and the number of explainable components would vary from sample to sample. Such a model is assumed to perform much better in terms of classification along with giving a clear picture of explainablity of the sample components. To conclude, the existing explainable misinformation detection systems [24, 25–26, 29] observe a limited performance since they mostly rely on the ranking system (using attention weights) to generate the fixed-size explanations such as top k sentences or user comments. However, in a realistic scenario, multiple elements (sentences or visual grids) might have equal importance/rank. For example, fifth, sixth, and seventh elements of the have equal rank , as shown in Fig. 1; hence choosing top k elements results in information truncation. We notice similar observations for other samples too. To validate our claim, we show the frequency distributions of sample news text from two benchmark COVID-19 multimodal fake news repositories (ReCOVery, and MMCoVaR) in terms of TF-IDF, word embedding, and sentiment analysis tasks. As shown in Fig. 2, it is obvious that every histogram follows a Gaussian distribution, indicating multiple MS sentences lie at the mean of the distribution. It is worth mentioning that the terms “MS information”, “explainable component”, and “contributing component” are used interchangeably throughout this article. Similar is true for the terms “LS information”, “non-explainable component”, and “non-contributing component”. [See PDF for image]
+Fig. 1 Selecting top k as explainable elements (textual or visual content) for each “unreliable/fake"sample might lead us to information truncation. This intuition is illustrated by “brown” dashed rectangle where size of each of these fixed-length bucket is 5. Unlike the SOTA explainable models, the proposed model uses a variable-length bucket (“blue"dashed rectangle) that helps to capture required most significant information that can alter the sample prediction
+
+
+In this study, we propose a unique m ultimodal EX plainable misinformation detection framework using AC ute T hresholding mechanism ( mEXACT ). Different from the existing explainable solutions, mEXACT finds the variable-size bucket of MS information that significantly contributes to the detection of misinformation. Hence, mEXACT is a more generic and effective misinformation detection technique. We conduct extensive experiments on two benchmark COVID-19 multimodal fake news repositories and it turns out that our proposed approach significantly outperforms SOTA models in terms of accuracy, precision, recall and f1 score. The key contributions of this paper are summarised as follow:
+- The proposed model unveils the fact that multiple elements (either text or images) in fake information can be of similar significance which primarily attribute to the fakeness of the instance. While the existing trendy models relying on ranking scheme fail to capture this fact and result into vital information truncation and limited performance (See Fig. 2 and Fig. 6). [See PDF for image]
+Fig. 2 To show that multiple elements could carry similar significance, the most significant sentences of each news text are first selected. Next, histograms of such most significant sentences are computed based on three different types of features: TF-IDF, word embedding, and sentiment analysis. For this example, we pick correctly predicted “unreliable/fake” samples for News ID 67 in ReCOVery and News ID 100 in MMCoVaR
+
+
+
+- To the best of our knowledge, we are the first to reveal that explainability relies on those most significant multimodal information that can toggle the model prediction for the unreliable samples. However, recent models which are prevalent, fail to provide such insight on the explainability of fake information conveying no answer to the question, why an instance is fake (detailed in Section 6.4.5).
+
+- Experimental Results show that our proposed model achieves promising improvements over SOTA techniques across two benchmark data repositories (See Section 6.4.1).
+
+
+The rest of this paper is structured as follows: Section 2 reviews the relevant existing work. We then present our research objectives and define the problem we are addressing in Section 3 and Section 4, respectively. Following this, Section 5 elaborates our proposed methodology. Section 6 provides the experimental setup, the baseline models, and the key results. Finally, we conclude the paper in Section 7.
+Related work
+To gain a comprehensive understanding of multimodal explainable misinformation detection, we should first examine the role of explainable artificial intelligence (XAI) in the modern era. Next, an in-depth review of the literature on the use of multimodality in misinformation detection is discussed. Finally, the integration of XAI into the misinformation detection task outlines the additional methods that can be used to explain black box models.
+Explainable AI (XAI)
+To build trust in the black box (machine learning (ML) or deep learning (DL) algorithms) models, researchers have recently developed Explainable AI [30] that provides understandable explanations for its predictions. XAI has gained popularity across several domains where the potential repercussions are significant. (a) Healthcare: Due to the high-risk factor in clinical applications, doctors and practitioners must understand how the black box model arrives at its conclusion. As a result, a plethora of XAI solutions [31, 32–33] was proposed in the medical domain. (b) Natural Language Processing (NLP): XAI can also become helpful in providing the justifications for various NLP applications including sentiment analysis [34, 35], text classification [36, 37], language translation, and so on. (c) Recommendation Systems: To present better transparency and to increase user trust, a variety of explainable recommendation techniques was developed [38, 39–40] in recent times. (d) DeepFakes Detection: With the recent advancement of DNN models and AI techniques, a lot of manipulated multimedia contents (images, videos, etc.) has become ubiquitous in online social media. Hence, numerous explainable deepfake detection solutions [41, 42] were introduced to improve the trust of users. While XAI techniques have proven essential in various domains, including healthcare, NLP, recommendation systems, etc., their application in other challenging domains such as fake news detection, particularly in multimodal settings is still in its early stages. Therefore, the following section will study the key research that currently exists in the area of Multimodal Misinformation Detection.
+Multimodal misinformation detection
+One of the primary multimodal misinformation detection solutions was proposed by Jin et al. [43]. The authors in [43] first extracted features from three different modalities: textual content, social context, and visual content of a post, and further efficiently aggregated these three modalities to capture effective representation for a tweet instance. However, existing multimodal misinformation detection systems primarily focus on capturing event-specific features. Therefore it has become a unique challenge to detect misleading content on unseen events. To overcome this issue, authors in [27] proposed an Event Adversarial Neural Networks (EANN). The main challenge of using EANN was the dependency on additional sub-task such as event discriminator. Hence, another study introduced SpotFake [28] that employed BERT language model and pre-trained VGG-19 to extract textual as well as visual features respectively. Nevertheless, all these above-mentioned studies failed to capture the correlations between the modalities. Hence, to learn the correlations across the modalities, MVAE [21] jointly trained a Multimodal Variational Autoencoder and a Fake News Detector component. Recently, a study [23], focused on capturing high-order complementary information from the multi-modal context; thus assisting in misinformation detection. Another work [22] utilized two modules (CARN and MCN) to retain the unique properties of individual modalities while fusing multiple modalities. More recently, a Knowledge-guided Dual-consistency multimodal misinformation detection model was proposed to exploit inconsistencies in social media rumors [44]. Drawing inspiration from human reasoning, another study introduced HCCIN [45], a unique framework that analyzes consistency and inconsistency in multi-modal information for fake news detection. Another line of work [46] introduced a solution called CMMTN to jointly learn inter-modality and intra-modality relationship between text and images. Additionally, CMMTN employed masking technique to reduce the noise in the multimodal data. To capture the inter-modality relationships in misinformation detection task, a novel contrastive learning-based TTEC model [47] was developed. In short, TTEC combined four approaches: (a) data amplification, (b) multimodal information encoding, (c) feature fusion and (d) joint learning. Another recent study [48] proposed a robust domain and cross-modal method called RDCM to tackle the difference between training data and real-world data (domain shift). Different from the existing multimodal studies, Wu et al. [49] investigated human’s various reading habits to generate a new system called MRHFR. Authors in [50] presented CAF-ODNN, a unified framework that employs Complementary Attention Fusion and an Optimized Deep Neural Network. This technique efficiently captures crucial cross-modal relationships; thus improving multimodal fake news identification task. Another framework FMC [51] was introduced to effectively detect fake news by integrating multi-granularity feature fusion with contrastive learning, leveraging pre-trained models for textual and visual feature extraction, cross-modal alignment, and self-attention mechanisms. However, these models can not solve the black box challenges in misinformation detection. Therefore, there is an urgent requirement to develop explainable systems for detecting misleading information.
+Explainable misinformation detection
+To increase the trustworthiness of misinformation detection techniques, many efforts have been made to develop explainable solutions for identifying misinformation [24, 25–26, 29, 52, 53]. For example, Shu et al. introduced an explainable fake news detection system by capturing top -k justifications [24]. Yang et al. employed three separate networks ( MIMIC , ATTN , and PERT ) to provide explanations from different perspectives of news statement [52]. Kou et al. proposed a graph-based explainable fauxtography detection model to capture existing connections among different components of a post [29]. To detect fake news in a more realistic scenario on online social media, Lu et al. developed an explainable graph-aware dual co-attention mechanism [25]. To combat COVID-19 infodemic, Ayoub et al. employed DistilBERT for accurate misinformation detection and SHAP for transparent model explanations [54]. Recently, DGExplain models cross-modal interactions between news text and news images, utilizing user comments to spot and explain misinformation [26].
+However, current explainable misinformation detection models struggle to separate the MS information from the LS counterpart in multimodal data, hindering progress in misinformation detection. In this study, we present a new multimodal explainable framework, mEXACT that improves misinformation detection by learning variable-size MS buckets.
+Research objective
+While promising, current explainable AI methods for detecting misinformation, both single modal and multimodal, face limitations. These approaches use ranking systems to generate explanations of a fixed size elements (text and images). Additionally, these solutions fail to differentiate between elements crucial for understanding why something is misinformation (explainable) and those that are not (non-explainable). Hence, our goal is to build an unique multimodal explainable misinformation detection technique that seggregates explainable elements from non-explainable with the help of variable-length bucket of MS information; thus enhancing the misinformation detection task. In addition, we aim to demonstrate that explanations for unreliable samples are most effective when they focus on the key pieces of information from text and images that significantly impact the model’s prediction.
+Task formulation
+Suppose we have a set of COVID-19 related multimodal news articles, where each news article, is composed of three information: (a) News Text: it consists of a set of sentences describing the news event, (b) News Image: an attached image that discusses the news topic, and (c) User Comments: a set of collected social media post corresponding to is denoted as , where is the tweet or user comment for . Given this information, our goal is to construct a binary classifier which takes each of the aforesaid multimodal information as input and identify the reliability of . If the news text and/or the attached image provides misleading information, then the news article is considered unreliable i.e. , or reliable otherwise i.e. . Additionally, we aim to capture the MS and LS multimodal components, giving social media users a better understanding of why unreliable samples are misleading.
+Proposed approach
+This study aims to identify and classify misinformation using explainable multimodal features, providing valuable insights into the detection process. To fulfill this goal, our proposed framework uses three components: (a) Multimodal Feature Extractor, (b) Acute Thresholding, and (c) Model Prediction as shown in Fig. 3. This section first outlines the utility of each of these components and then discusses the model loss functions. [See PDF for image]
+Fig. 3 mEXACT Framework: Our proposed model extracts useful multimodal features with the help of TFE, CFE, and VFE components. Next, we aggregate all these extracted encoded multimodal representation together and finally predict the veracity using fully connected (FC) layers. To improve misinformation detection and provide a clear explanation, we capture the MS and LS information with the help of “Acute Thresholding” network and second output terminal ()
+
+
+Multimodal Feature Extractor (MFE)
+As discussed in Section 4, COVID-19-related news articles have three different modalities (News Text, News Image, and User Comments). Therefore, this component is further decomposed into three sub-components: (1) Textual Feature Extractor (TFE), (2) Visual Feature Extractor (VFE), and (3) Comment Feature Extractor (CFE).
+Textual Feature Extractor (TFE)
+To extract meaningful latent representation from each news text, we go through a series of steps. Given a sentence, (where ) containing P number of words, each word is first converted to its corresponding vector with the help of word embedding representation. To obtain the annotation of each word from both directions, we then use bidirectional GRU (Bi-GRU) [55]. 1
+2
+Here and indicate the forward and backward hidden states respectively. These two hidden states are then concatenated to produce the final annotation for each word, i.e., . We further apply an attention mechanism to compute the importance of each word in a sentence. Hence, for , attention is calculated as follows. 3
+4
+5
+where is the “tanh” activation function, represents the attention weight of word in the sentence for , is the context vector, , and are the parameters to be learned. In a nutshell, we can summarize the feature extraction process for a given news text as 6
+7
+8
+Here, E , G , A and t are the abbreviation of Embedding, Bi-GRU, Attention operations and textual features respectively, is the embedding matrix, where B , , , and indicate batch size, maximum number of sentences in , maximum sentence length, and embedding dimension respectively. and where is the number of GRU units.
+Comment Feature Extractor (CFE)
+Social media users often post short texts by expressing their opinions towards unverified news. User opinions can provide important cues such as stances, sentiments, etc. in detecting the veracity of misleading information. Therefore, for a given user comments, , we adopt a method similar to that used in TFE (Section 5.1.1) to capture the meaningful latent comment representation. 9
+10
+11
+Here, , , where , and represent the maximum number of the posts in , and maximum tweet length respectively.
+Visual Feature Extractor (VFE)
+To extract visual features, we choose an autoencoder [56] that consists of two components: (a) an encoder and (b) a decoder. The reason for choosing autoencoder is that it uses an unsupervised manner to learn compressed and informative representations of visual information. Note that, both the encoder and decoder are deep neural networks (a series of 2-dimensional convolutional neural network (2DCNN) for the encoder and a series of Transposed convolution layers for the decoder). We first train this autoencoder across COVID-19 data repository. Next, each news image is fed to this pretrained autoencoder for extracting the meaningful representation . The loss function of the autoencoder is as follows: 12
+Here is the reconstructed image, is the reconstruction loss function, and where h , w , and indicate height, width and embedding dimension of the news image.
+Acute Thresholding
+The heart of our proposed model is “Acute Thresholding” () network. The term “acute” stands for a strict boundary that separates the MS information from the LS information in each of the generated news (), comment () and visual representation (). For a given input feature matrix X , this network first computes the normalized significance score of each element in X . Next, applies a thresholding function () to each entry of the generated matrix (). 13
+14
+15
+Here is the softmax activation function, is the ( i ,  j )-th entry of , is the empirically defined threshold value, and is the resultant feature matrix containing least significant (LS) entries. Note that, we can easily extract the MS information by tracing the deleted entries in . For the given multimodal data, we can sum up this whole thresholding mechanism as follows: 16
+17
+18
+where , , are extracted LS encoded features corresponding to news text, user comments, and news image respectively.
+Model prediction
+This component is composed of two output terminals with parameters sharing. The first output terminal takes the aggregated multimodal information (, , and ) as input and predicts whether the corresponding news article is misleading or not. The second terminal works in an adversarial manner; this terminal is trained on inverted ground truth labels in the case of unreliable samples. To isolate fake content within unreliable samples, we aim at finding the most significant information contributing to their unreliability. Hence, removing this critical MS information should reverse the sample’s label. That is the reason the output terminals are of inverted labels during the fake samples. Thus it is necessary to provide an adversarial setup for the output terminals during the training for such samples. In other words, the second terminal forces the first output terminal to efficiently learn the MS features; thus facilitating in performing misinformation detection. 19
+20
+where . Finally, we apply two fully connected layers over each of these aggregated multimodal encoded features to perform the final prediction. 21
+22
+Here, , and are the predicted labels of first and second output terminals respectively, is the “sigmoid” activation function, are the learnable parameters.
+Model loss
+Since our final goal is to check whether an input news article is reliable or unreliable, we use two binary cross-entropy loss functions to optimize the prediction error of the proposed framework. The binary cross-entropy can be calculated as: 23
+24
+where n is the number of samples, , are the binary cross-entropy loss functions for and respectively. The complete model loss is defined as follows: 25
+where two weights , and are used to tune the proposed model. The entire workflow of our proposed model is outlined in Algorithm 1.
+[See PDF for image]
+Algorithm 1 mEXACT
+
+
+Experiments
+In this section, the details of different experiments conducted is provided. Apart from many other experiments conducted, two broadly emphasized experiments are: (1) to check for the prediction performance of the proposed model over the SOTA model, (2) to explore the explainability in terms of contributing (MS) and non-contributing (LS) features for a fake sample. The details start with datasets, various experimental setups, and more as follows. Table 1. Dataset Statistics
+Dataset
+ReCOVery
+MMCoVaR
+
+#News Articles
+Avg. #Tweets
+#Unique Publishers
+Duration
+#News Articles
+Avg. #Tweets
+#Unique Publishers
+Duration
+
+Reliable
+1311
+29
+21
+Jan. 2020- May 2020
+1626
+13
+52
+Feb. 2020-May 2021
+
+Unreliable
+557
+12
+31
+908
+12
+39
+
+
+Datasets
+We conduct experiments on two recently published and publicly available multimodal COVID-19 datasets: ReCOVery  [57], and MMCoVaR  [58]. As shown in Table 1, both datasets initially use two fact checking websites in order to annotate each news media site with one of the possible labels: (i) “Reliable”, and (ii) “Unreliable”. Next, ReCOVery uses three COVID-19-related (SARS-CoV-2, COVID-19, and Coronavirus) keywords to crawl the required news articles. Different from ReCOVery, MMCoVaR employs 9 COVID-19 vaccine-related keywords (“vaccine”, “vaccinated”, “COVID-19 Pfizer”, “COVID-19 Moderna”, “COVID-19 Janssen”, “Moderna vaccines”, “Janssen vaccines”, “Johnson & Johnson’s vaccines”, “Biontech vaccine”) for article crawling. For the news article dataset, authors provide various information such as “News ID”, “URL Link”, “Image”, “Body Text”, “Label” etc. for both the repositories where “Body Text” and “Image” provide textual and visual modality information for each news. Finally, to collect the social media data for each of the gathered news articles, Twitter Premium Search API7, and Twitter developer API8 are used by ReCOVery and MMCoVaR respectively. It is noteworthy that we use the same number of news articles and tweets as suggested in [26]. To make a fair comparison with DGExplain, we use 80% of the data for training purposes and the remaining 20% for model testing. We preprocessed both datasets based on methods outlined in relevant literature  [57, 58].
+Experimental settings & evaluation metric
+In this section, we share the implementation details of our proposed approach. We use a popular word embedding technique GloVe [59] to extract vector representations of words from news and comments. The glove has been used in many literature [24, 26], providing efficient word embedding vectors with zero padding that are much applicable to this domain. The maximum number of sentences in a news text and the maximum number of posts in a user comments are 50 and 150, respectively. We employ the hyperopt9 python library to implement the Tree of Parzen Estimators (TPE) algorithm [60], which searches the parameter space. Our model hyper-parameter space is defined as10: the number of units in the last and second-last FC (fully connected) layer are and respectively; the number of units in the bidirectional GRU is ; we apply different learning rates ; we experiment with different embedding dimension in GloVe: ; the reported optimal threshold values are as follows where , , and represent threshold of news text, user comments and news image respectively; the value of both and is 1.4; the optimal result is observed when the batch size is 32 and the dropout rate is 0.5 . To enhance the size and quality of datasets, we employ data augmentation to train the autoencoders for image reconstruction. Note that the Keras and Tensorflow libraries are used to implement our proposed model on an 11 GB NVIDIA GeForce GTX 1080 Ti GPU. To prevent overfitting, we halt model training when both training and validation loss converges. We employ precision, recall, f1 score, and accuracy as the four evaluation metrics because we aim to perform the binary classification task.
+SOTA methods
+Our proposed approach is compared to a variety of SOTA techniques, encompassing rumor detection (HSA [61]), multimodal fake news detection (BTIC [62], SAFE [63], EANN [27], SpotFake [28], MVAE [21]), fauxtography (ExFaux [29]) identification, explainable multi-view fake review detection (EMVD [64]) and explainable misinformation detection models (dEFEND [24], DGExplain [26]). This comprehensive evaluation ensures a robust assessment of our method’s effectiveness.
+HSA  [61]: A hierarchical bidirectional LSTM-based rumor detection model that employs attention mechanism to combine social information.
+ExFaux  [29]: ExFaux is the first weakly supervised end-to-end DNN-based explainable fauxtography detection system that identifies which component (text, image, or their association) of the post is false.
+dEFEND  [24]: A popular explainable fake news detection solution that provides justifications using a sentence-comment co-attention network.
+BTIC  [62]: A contrastive learning based unreliable news detection framework that leverages both textual as well as visual information.
+SAFE  [63]: A multimodal fake news detection solution that captures similarities between textual content and visual information.
+EANN  [27]: To capture shared features for newly emerging rumors, authors propose an Event Adversarial Neural Networks (EANN) that has three components: multimodal feature extractor, fake news detector, and event discriminator.
+SpotFake  [28]: To detect fake news, SpotFake uses BERT language model and pre-trained VGG-19 to extract textual as well as visual features respectively.
+MVAE  [21]: MVAE jointly trains Variational Autoencoder and Fake News Detector components to identify whether a multimodal post is fake or not.
+DGExplain  [26]: To capture the complex association between different modalities, DGExplain utilizes duo-generative cross-modal feature generation mechanism.
+EMVD  [64]: A soft voting based E nsemble M ulti- V iew D eep learning approach that is used for fake review detection task. In our study, we compare our proposed model with two variants of EMVD. (a) EMVD 1: In this ensemble technique, news text, user comments and news image are fed through Bidirectional-Long Short-Term Memory (Bi-LSTM), Deep Neural Network (DNN) and Convolutional Neural Network (CNN) respectively.(b) EMVD 2: This variant applies DNN, Bi-LSTM and CNN to news text, user comments and news image respectively. Table 2. Performance comparison of our proposed approach with SOTA models
+ReCOVery
+MMCoVaR
+
+Method
+Accuracy
+Precision
+Recall
+F1 Score
+Accuracy
+Precision
+Recall
+F1 Score
+FLOPs
+
+HSA [61]
+0.779
+0.737
+0.736
+0.736
+0.803
+0.782
+0.785
+0.784
+
+ExFaux [29]
+0.763
+0.719
+0.695
+0.704
+0.769
+0.784
+0.694
+0.707
+
+dEFEND [24]
+0.856
+0.826
+0.813
+0.823
+0.856
+0.847
+0.831
+0.838
+
+BTIC [62]
+0.763
+0.719
+0.695
+0.704
+0.829
+0.823
+0.791
+0.803
+
+SAFE [63]
+0.831
+0.803
+0.789
+0.795
+0.788
+0.773
+0.749
+0.757
+
+EANN [27]
+0.847
+0.816
+0.834
+0.824
+0.833
+0.819
+0.810
+0.814
+
+SpotFake [28]
+0.681
+0.637
+0.650
+0.641
+0.699
+0.670
+0.620
+0.623
+
+MVAE [21]
+0.825
+0.813
+0.755
+0.774
+0.815
+0.805
+0.834
+0.808
+
+EMVD 1 [64]
+0.860
+0.880
+0.780
+0.810
+0.804
+0.795
+0.781
+0.786
+
+EMVD 2 [64]
+0.810
+0.829
+0.698
+0.723
+0.793
+0.793
+0.7556
+0.766
+
+DGExplain [26]
+0.897
+0.890
+0.861
+0.873
+0.895
+0.896
+0.871
+0.881
+
+Ours
+0.958
+0.958
+0.941
+0.949
+0.934
+0.934
+0.925
+0.929
+
+Our results are shown in bold letter
+
+[See PDF for image]
+Fig. 4 Performance measure of mEXACT by changing the values of , , and for both ReCOVery (top row), and MMCoVaR. Here , , and represent threshold of news text, user comments and news image respectively
+
+
+Experimental results
+This section begins by comparing our proposed model against several baselines on two benchmark datasets. We then report performance of mEXACT on different experimental conditions like applying different thresholds, and varying embedding dimensions. Next, we provide the details of our autoencoder neural network model and its generated results. To demonstrate the explainability of our model, we provide several illustrations and supporting evidence. Finally, a concise ablation study reveals the crucial role each component plays in mEXACT ’s overall success.
+Comparison with SOTA
+We evaluate mEXACT on two multimodal COVID-19 news datasets and compare these results with several baselines. As shown in Table 2, our proposed approach outperforms the best-performing baseline with a good margin, obtaining (6.8–8.7)%, and (4.9–5.4)% improvements in terms of (Accuracy-F1 Score) across ReCOVery and MMCoVaR respectively. Two influential factors enhance the model performance: (1) Applying the acute thresholding mechanism to each of the encoded representations of ,, and help our proposed model learn the variable-size bucket of key MS information in identifying misinformation. (2) Employing the second output terminal in an adversarial manner (in case of “unreliable” labels) forces our framework to efficiently leverage learned MS information in obtaining such promising results. Different from our approach, existing explainable misinformation detection systems solely depend on the ranking methods; thus capturing redundant information or truncating important information. This constraint of the ranking system hinders the existing SOTA from exploring another dimension of explainability. On the contrary, our approach identifies a strict lower bound of significant information, the key components of a false claim. Note that the reported reconstruction loss of our autoencoder model on ReCOVery and MMCoVaR datasets are 0.0033, and 0.0043 respectively, demonstrating the efficacy of this image reconstruction technique. We have also conducted a comparative analysis (as mentioned in Table 2) of our proposed model against SOTA techniques based on FLOPs, and the results indicate that mEXACT requires the fewest operations, indicating it achieves the highest execution efficiency compared to other baseline methods. Table 3. We illustrate the MS and LS Information of News Text from correctly predicted “unreliable"News Text
+Dataset
+News ID
+MS Information
+LS information
+
+ReCOVery
+1712
+[’Saman Kojouri Press TV, Tehran, For the first time in their history, International Quds Day events have gone online as a result of the deadly COVID-19 pandemic.’,...]
+[’To mark the occasion this year, applications have been made to stream messages from a wide array of community leaders, activists and public figures.’]
+
+1984
+[’kusai kedri press tv, barcelona barcelona may still be under strict lockdown..., but young drummer... want end to lockdown.’,...]
+[’their previous petitions to protest were turned down by spanish ministry of interior for health reasons, until today’,...]
+
+MMCoVaR
+3597
+[’alex jones breaks down ut bioweapon research study that confirms lethality and dangers of taking covid vaccine.’,...]
+[’watch full thursday, may 6 episode of alex jones show to get full scoop!’]
+
+2548
+[’The Niece of Bee Gees singer Barry Gibb has been found dead with her dog by her side as her family... worry they will not be able to give her a fitting send off because of the ongoing coronavirus pandemic.’,...]
+[’he had just celebrated his 30 th birthday.’,...]
+
+
+Applying Different Threshold Values
+Selecting an accurate threshold value enables our proposed model to effectively capture MS information for each modality. Therefore, we observe the behavior of our proposed model with the change of the threshold values. As shown in Fig. 4, we vary the value of , , and in the range of , , and respectively. To start with an initial random threshold value, we follow discrete uniform distribution over the integers from 1 to n, assuming each integer has an equal probability of being chosen; thus default values of , , and are 1/50, 1/150, and 1/784 respectively. We further keep on increasing and decreasing the default values to analyze the change in model performance. Note that 50, 150 and 784 represent the #sentences in , posts in , and #grids in respectively. It is observed that applying the threshold higher or lower than than the chosen value of , , and degrades the performance of mEXACT (Fig 5). Table 4. Performance measure of mEXACT after removing MS data from , and
+ReCOVery
+MMCoVaR
+
+MS Data Removal
+Accuracy
+F1 Score
+Accuracy
+F1 Score
+
+0.958
+0.949
+0.934
+0.929
+
+0.953
+0.943
+0.928
+0.921
+
+0.937
+0.922
+0.912
+0.904
+
+0.921
+0.901
+0.912
+0.903
+
+0.904
+0.879
+0.879
+0.864
+
+[See PDF for image]
+Fig. 5 The Shapley values of correctly predicted MS bucket of unreliable test samples from ReCOVery (left) and MMCoVaR
+
+
+Varying embedding dimension
+GloVe [59] assigns each word a vector of real numbers in the embedding space. The choice of embedding dimension is a hyperparameter that we can adjust based on specific dataset. This section outlines the performance of mEXACT by varying the size of embedding. Common choices for the dimensionality of GloVe embeddings include: and where indicate i -dimensional vectors. Experimental results report that mEXACT achieves best performance while we use for ReCOVery and for MMCoVaR, as shown in Fig. 8.
+Details of our autoencoder model
+Autoencoders can efficiently compress images by capturing the essential features and discarding redundant information. The encoder’s job is to compress the data as much as possible while still keeping the the most prominent features of the original data. Decoder reverse-engineers the process of the encoder, expanding the compressed information back into a full-sized image. As discussed in Section 5.1.3, encoder contains several 2D convolution layer where each of this convolution layer is followed by a maxpooling layer. To increases the spatial dimensions of feature maps in neural networks, Decoder employs Deconvolution and Upsampling layers. 26
+27
+28
+29
+30
+31
+Here , and are the original and reconstrucetd image respectively, represents Transposed convolution layer, performs upsampling on the input feature map, are the parameters to be learned throughtout the autencoder network. Figures 9, and 10, demonstrate the efficacy of our autoencoeder model on ReCOVery and MMCoVaR respectively.
+Explainability
+This section provides proper justifications that describe how effectively our model captures explainable multimodal features. To validate our claim, we perform the following tasks. (1) Distribution of the MS sentences in : Existing explainable systems overlook the fact that multiple components might carry similar significance and hence ranking them lose the vital information. To illustrate this fact, we plot histograms of MS sentences in a news text in terms of TF-IDF, Embedding, Sentiment, and encoded representation (generated by our proposed model). As mentioned in Fig. 2, and Figure 6, each of the histograms follows a Gaussian distribution intuitively; thus justifying our claim that there can be more than one significant as well as of equally significant information contributing to the fakeness of a sample. Computation of TF-IDF, Word-Embedding, and Sentiment Analysis are described as follows. TF-IDF: For a single MS sentence, we compute the TF-IDF score of each word in that sentence relative to all the MS sentences in . We further take the summation of all the TF-IDF scores corresponding to each word, thus obtaining a single score for each MS sentence. We repeat this process for the remaining MS sentences and finally generate the histogram of all the MS sentences in . Word-Embedding: We use GloVe word embedding [59] to extract meaningful vector representation of each word in a single MS sentence in . We then take the mean of all the obtained vectors in a MS sentence; thus obtaining a single MS sentence representation. Sentiment Analysis: We use VADER [65], a rule-based method that extracts polarity scores for each given MS sentence. Next, we choose the compound score as the final MS sentence representation. (2) Identifying the MS information in unreliable samples: Existing explainable misinformation detection approaches can not provide a boundary between MS and LS components. Since only these components can alter the prediction results of the sample, capturing such information has become an urgent need in the world of Explainable AI. Moreover, an end user can easily get a clear vision of explainability by manually inspecting the MS and LS components of an image (or text). As shown in Figure 7, we illustrate a few correctly predicted news images, and their MS and LS counterparts. A similar observation is also reported for news text (see Table 3). Just to reiterate, it is intuitive that the amount of MS component cannot be the same for every sample (image or text), this is proved in this Fig. 7 and Table 3. However, no other recent models are able to identify this crucial information which can alter the model prediction and hence affect the end users observations. (3) Usage of Shapley values: To ensure that our model explanations (MS) are consistent, reliable, and trustworthy, we take the help of SHAP ( SH apley A dditive ex P lanations) [66], an interpretability tool based on Shapley values. Shapley values describe how each feature has contributed to the model prediction (Figs. 8, 9 and 10). As shown in Fig. 5, we observe that the Shapley value is always positive for each unreliable MS bucket of test sample, indicating that each MS bucket significantly contributes to the misinformation detection process. (4) Reducing the size of MS bucket: To understand the importance of identified MS bucket in each sample, we delete different amount of entries in this bucket and then conduct experiments. Results demonstrate that reducing the involvement of MS features directly hampers the model performance, as shown in Table 4. [See PDF for image]
+Fig. 6 Histograms of the model generated encoded representation of MS sentences in on ReCOVery (left) and MMCoVaR. To put a fair analogy, we use the same News IDs (67 for ReCOVery and 100 for MMCoVaR) as mentioned in Fig. 2
+
+[See PDF for image]
+Fig. 7 Some correctly predicted reconstructed news images and their corresponding MS and LS counterparts. These images show that the proposed model is able to identify the MS and LS components clearly. Also, to note that the size of MS bucket is different (variable) in each image, which could not have been identified by any of the ranking model without the loss of information. The numbers inside the parentheses represent the news id. Note that, images with news id 1532, 1993, 1525, and 1971 are sampled from “ReCOVery”. Remaining images are taken from “MMCoVaR”
+
+
+Table 5. Ablation experiments on ReCOVery and MMCoVaR datasets to check the utility of each component of our proposed framework
+ReCOVery
+MMCoVaR
+
+Method
+Accuracy
+Precision
+Recall
+F1 Score
+Accuracy
+Precision
+Recall
+F1 Score
+
+Ours w/o
+0.862
+0.906
+0.772
+0.807
+0.848
+0.838
+0.854
+0.843
+
+Ours w/o
+0.909
+0.899
+0.878
+0.888
+0.833
+0.842
+0.798
+0.811
+
+Ours w/o
+0.928
+0.923
+0.898
+0.911
+0.897
+0.891
+0.888
+0.889
+
+Ours
+0.958
+0.958
+0.941
+0.949
+0.934
+0.934
+0.925
+0.929
+
+[See PDF for image]
+Fig. 8 Investigating the ideal embedding dimension for optimal model performance on ReCOVery (left) and MMCoVaR
+
+[See PDF for image]
+Fig. 9 Visualization of reconstructed output (bottom row) of pretrained autoencoder model on ReCOVery dataset where images in the bottom row represent reconstructed images
+
+[See PDF for image]
+Fig. 10 Visualization of reconstructed output (bottom row) of pretrained autoencoder model on MMCoVaR dataset where images in the bottom row represent reconstructed images
+
+
+Ablation study
+As shown in Table 5, we perform three types of ablation experiments. (1) Ours w/o : Ignoring the TFE component heavily affects the model performance on both datasets; indicating that news text carries the most crucial information for detecting misinformation. (2) Ours w/o : This variant fails to meet the optimal performance because user opinions have an influence on the veracity of the false news articles. (3) Ours w/o : Visual information plays a crucial role in identifying misinformation for various reasons such as spotting manipulations, capturing inconsistencies, etc. Therefore, ignoring such important visual cues can lead to a degradation in classification performance.
+Limitations
+The proposed model can be seen an efficient explainable fake news detection model based on standard metrics, however, being a deep learning model, its architectural origin limits its degree of explainability. Like any other explainable deep learning models, the current model has dependency over external techniques for justification of its working when the dataset changes. Our current experimentation has adopted the dataset of similar domain, hence the exact performance effectiveness of the proposed model for dataset from different domain would require another set of experimental trails. Additionally, the empirically chosen threshold could be automated, but that finding is subject to architectural modification and the observation of new experimental results.
+Discussion and implications
+Current explainable misinformation detection techniques mostly rely on top k elements (sentences or visual grids) to generate explanations. However, in reality, many different elements of the content might be equally important for spotting misinformation; hence trusting on the fixed-size explanations hinders the end users to properly comprehend the understanding of explanability. In addition, these studies struggle to achieve high performance gain due to their vague classification of explainable components. Our proposed approach is different. It aims to identify a lower bound of MS information whose removal can toggle the model prediction. Coming to the practical implications of our work, we can state that our proposed solution can be beneficial for social media platforms, journalists, and news organizations. It allows these platforms to more effectively highlight misleading content by segregating explainable and non-explanaibale components. To check the validity of our proposed model, we conduct experiments on two multimodal benchmark datasets. Results report that mEXACT achieves significant performance gain over the best performing baseline. Ultimately, the proposed model is capable of identifying the most significant elements of samples that explain the fakeness of the sample in text as well as visually.
+Conclusion
+Existing models often employ fixed-size explanations, leading to information loss and limited performance. Additionally, the provided results are less user-friendly and ambiguous for the end users. We propose mEXACT , a novel approach that leverages misinformation thresholding to identify variable-size buckets of check-worthy misinformation, enabling the distinction between contributing and non-contributing components for improved explainability. Results show that mEXACT constantly outperforms SOTA approaches across two COVID-19 datasets in terms of accuracy. Our future work involves automating the threshold of the proposed model and deploying this model for explainable deepfake detection, highlighting inconsistencies in the video such as unnatural expressions or lip movements that do not match the audio. Furthermore, we aim to test how well our model performs on diverse datasets from various research areas.
+Acknowledgments
+The First Author would like to thank the Faculty Initiation Grant (FIG), ABV-IIITM Gwalior, India to support this work.
+Author contributions
+Saswata Roy: Conceptualization, Methodology, Software, Writing - Original draft preparation. Manish Bhanu: Conceptualization, Methodology, Software, Writing - Original draft preparation. Shalini Priya: Supervision, Visualization, Formal analysis and investigation. Joydeep Chandra: Supervision, Visualization, Formal analysis and investigation. Sourav Kumar Dandapat: Supervision, Visualization, Formal analysis and investigation.
+Data availability
+This study compares the proposed approach against SOTA models on two benchmark and publicly available datasets, with accurate citations provided.
+Declarations
+Competing interests
+The authors declare that they have no competing interests.
+Ethical and informed consent for data used
+Our research utilized data from two publicly available multimodal repositories, with accurate citations provided.
+1 https://www.pewresearch.org/fact-tank/2021/01/12/more-than-eight-in-ten-americans-get-news-from-digital-devices/
+2 https://www.bbc.com/
+3 https://www.npr.org/
+4 https://www.naturalnews.com/
+5 https://humansbefree.com/
+6 https://www.factcheck.org/2020/02/fake-coronavirus-cures-part-1-mms-is-industrial-bleach/
+7 https://developer.twitter.com/en/docs/twitter-api/premium/search-api/overview
+8 https://developer.twitter.com/en/docs/twitter-api
+9 http://hyperopt.github.io/hyperopt/
+10 The best performance is achieved using italic (ReCOVery), underline (MMCoVaR) and bold (for both datasets) hyperparameter values.
+Publisher's Note
+Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References
+1. Silverman C (2016) Viral fake election news outperformed real news on facebook in final months of the us election. BuzzFeed News 16
+2. Ma J, Gao W, Wong K-F (2017) Detect rumors in microblog posts using propagation structure via kernel learning. Association for Computational Linguistics
+3. Ma J, Gao W, Wong K-F (2018) Rumor detection on twitter with tree-structured recursive neural networks. Association for Computational Linguistics
+4. Kochkina E, Liakata M, Zubiaga A (2018) All-in-one: Multi-task learning for rumour verification. In: Proceedings of the 27th international conference on computational linguistics, pp 3402–3413. Association for computational linguistics. https://www.aclweb.org/anthology/C18-1288
+5. Cheng M, Nazarian S, Bogdan P (2020) Vroc: Variational autoencoder-aided multi-task rumor classifier based on text. In: Proceedings of the web conference vol 2020, pp 2892–2898
+6. Wei P, Xu N, Mao W (2019) Modeling conversation structure and temporal dynamics for jointly predicting rumor stance and veracity. In: Proceedings of the 2019 conference on empirical methods in natural language processing and the 9th international joint conference on natural language processing (EMNLP-IJCNLP), pp 4787–4798. Association for Computational Linguistics. https://doi.org/10.18653/v1/D19-1485. https://aclanthology.org/D19-1485
+7. Kumar S, Carley KM (2019) Tree lstms with convolution units to predict stance and rumor veracity in social media conversations. In: Proceedings of the 57th Annual Meeting of the Association for Computational Linguistics, pp 5047–5058
+8. Yu J, Jiang J, Khoo Lms, Chieu Hl, Xia R (2020) Coupled hierarchical transformer for stance-aware rumor verification in social media conversations. Association for Computational Linguistics
+9. Liao, Q; Chai, H; Han, H; Zhang, X; Wang, X; Xia, W; Ding, Y. An integrated multi-task model for fake news detection. IEEE Trans Knowl Data Eng ; 2021; 34 , 11 pp. 5154-5165. [DOI: https://dx.doi.org/10.1109/TKDE.2021.3054993]
+10. Dahou, A; Ewees, AA; Hashim, FA; Al-qaness, MA; Orabi, DA; Soliman, EM; Tag-eldin, EM; Aseeri, AO; Abd Elaziz, M. Optimizing fake news detection for arabic context: A multitask learning approach with transformers and an enhanced nutcracker optimization algorithm. Knowl-Based Syst ; 2023; 280 , 111023. [DOI: https://dx.doi.org/10.1016/j.knosys.2023.111023]
+11. Ghosh S, Mitra P (2023) Catching lies in the act: A framework for early misinformation detection on social media. In: Proceedings of the 34th ACM conference on hypertext and social media, pp 1–12
+12. Bugueño M, Sepulveda G, Mendoza M (2019) An empirical analysis of rumor detection on microblogs with recurrent neural networks. In: Social computing and social media. design, human behavior and analytics: 11th international conference, SCSM 2019, Held as Part of the 21st HCI International Conference, HCII 2019, Orlando, FL, USA, July 26-31, 2019, Proceedings, Part I 21, pp 293–310. Springer
+13. Bian T, Xiao X, Xu T, Zhao P, Huang W, Rong Y, Huang J (2020) Rumor detection on social media with bi-directional graph convolutional networks. In: Proceedings of the AAAI conference on artificial intelligence vol 34, pp 549–556
+14. Fang, X; Wu, H; Jing, J; Meng, Y; Yu, B; Yu, H; Zhang, H. Nsep: Early fake news detection via news semantic environment perception. Inf Process & Manag ; 2024; 61 , 2 [DOI: https://dx.doi.org/10.1016/j.ipm.2023.103594] 103594.
+15. Bazmi, P; Asadpour, M; Shakery, A. Multi-view co-attention network for fake news detection by modeling topic-specific user and news source credibility. Information Processing & Management ; 2023; 60 , 1 [DOI: https://dx.doi.org/10.1016/j.ipm.2022.103146] 103146.
+16. Ma J, Gao W (2020) Debunking rumors on twitter with tree transformer. ACL
+17. Ma J, Li J, Gao W, Yang Y, Wong K-F (2021) Improving rumor detection by promoting information campaigns with transformer-based generative adversarial learning. IEEE Transactions on Knowledge and Data Engineering
+18. Roy, S; Bhanu, M; Saxena, S; Dandapat, S; Chandra, J. gdart: Improving rumor verification in social media with discrete attention representations. Inf Process & Manage ; 2022; 59 , 3 [DOI: https://dx.doi.org/10.1016/j.ipm.2022.102927] 102927.
+19. Praseed, A; Rodrigues, J; Thilagam, PS. Hindi fake news detection using transformer ensembles. Eng Appl Artif Intell ; 2023; 119 , [DOI: https://dx.doi.org/10.1016/j.engappai.2022.105731] 105731.
+20. Hu, B; Sheng, Q; Cao, J; Shi, Y; Li, Y; Wang, D; Qi, P. Bad actor, good advisor: Exploring the role of large language models in fake news detection. Proceedings of the AAAI conference on artificial intelligence ; 2024; 38 , pp. 22105-22113. [DOI: https://dx.doi.org/10.1609/aaai.v38i20.30214]
+21. Khattar D, Goud JS, Gupta M, Varma V (2019) Mvae: Multimodal variational autoencoder for fake news detection. In: The World Wide Web Conference, pp. 2915–2921
+22. Song, C; Ning, N; Zhang, Y; Wu, B. A multimodal fake news detection model based on crossmodal attention residual and multichannel convolutional neural networks. Inf Process & Manage ; 2021; 58 , 1 102437. [DOI: https://dx.doi.org/10.1016/j.ipm.2020.102437]
+23. Qian S, Wang J, Hu J, Fang Q, Xu C (2021) Hierarchical multi-modal contextual attention network for fake news detection. In: Proceedings of the 44th international ACM SIGIR conference on research and development in information retrieval, pp 153–162
+24. Shu K, Cui L, Wang S, Lee D, Liu H (2019) defend: Explainable fake news detection. In: Proceedings of the 25th ACM SIGKDD international conference on knowledge discovery & data mining, pp 395–405
+25. Lu Y-J, Li C-T (2020) GCAN: Graph-aware co-attention networks for explainable fake news detection on social media. In: Proceedings of the 58th annual meeting of the association for computational linguistics, pp 505–514. Association for Computational Linguistics. https://doi.org/10.18653/v1/2020.acl-main.48. https://aclanthology.org/2020.acl-main.48
+26. Shang L, Kou Z, Zhang Y, Wang D (2022) A duo-generative approach to explainable multimodal covid-19 misinformation detection. In: Proceedings of the ACM web conference vol 2022, pp 3623–3631
+27. Wang Y, Ma F, Jin Z, Yuan Y, Xun G, Jha K, Su L, Gao J (2018) Eann: Event adversarial neural networks for multi-modal fake news detection. In: Proceedings of the 24th Acm Sigkdd international conference on knowledge discovery & data mining, pp 849–857
+28. Singhal S, Shah RR, Chakraborty T, Kumaraguru P, Satoh S (2019) Spotfake: A multi-modal framework for fake news detection. In: 2019 IEEE fifth international conference on multimedia big data (BigMM), pp 39–47. IEEE
+29. Kou Z, Zhang D.Y, Shang L, Wang D (2020) Exfaux: A weakly supervised approach to explainable fauxtography detection. In: 2020 IEEE international conference on big data (Big Data), pp 631–636. IEEE
+30. Phillips, PJ; Hahn, CA; Fontana, PC; Broniatowski, DA; Przybocki, MA. Four Principles of Explainable Artificial Intelligence ; 2020; Maryland, Gaithersburg: 18.
+31. Dindorf, C; Teufl, W; Taetz, B; Bleser, G; Fröhlich, M. Interpretability of input representations for gait classification in patients after total hip arthroplasty. Sensors ; 2020; 20 , 16 4385. [DOI: https://dx.doi.org/10.3390/s20164385]
+32. Magesh, PR; Myloth, RD; Tom, RJ. An explainable machine learning model for early detection of parkinson’s disease using lime on datscan imagery. Comput Biol Med ; 2020; 126 , [DOI: https://dx.doi.org/10.1016/j.compbiomed.2020.104041] 104041.
+33. Subbalakshmi K.P, Chen M, Wang N (2024) Explainable cnn-attention network (c-attention network) architecture for automated detection of alzheimer’s disease. Google Patents. US Patent App. 18/022,981
+34. Cambria E, Liu Q, Decherchi S, Xing F, Kwok K (2022) Senticnet 7: A commonsense-based neurosymbolic ai framework for explainable sentiment analysis. In: Proceedings of the thirteenth language resources and evaluation conference, pp 3829–3839
+35. Zucco C, Liang H, Di Fatta G, Cannataro M (2018) Explainable sentiment analysis with applications in medicine. In: 2018 IEEE international conference on bioinformatics and biomedicine (BIBM), pp 1740–1747. IEEE
+36. Bhattarai B, Granmo O-C, Jiao L (2022) Convtexttm: An explainable convolutional tsetlin machine framework for text classification. In: Proceedings of the thirteenth language resources and evaluation conference, pp 3761–3770
+37. Arous I, Dolamic L, Yang J, Bhardwaj A, Cuccu G, Cudré-Mauroux P (2021) Marta: Leveraging human rationales for explainable text classification. In: Proceedings of the AAAI conference on artificial intelligence vol 35, pp 5868–5876
+38. Chen X, Zhang Y, Qin Z (2019) Dynamic explainable recommendation based on neural attentive models. In: Proceedings of the AAAI conference on artificial intelligence vol 33, pp 53–60
+39. Xian Y, Fu Z, Muthukrishnan S, De Melo G, Zhang Y (2019) Reinforcement knowledge graph reasoning for explainable recommendation. In: Proceedings of the 42nd international ACM SIGIR conference on research and development in information retrieval, pp 285–294
+40. Tan J, Xu S, Ge Y, Li Y, Chen X, Zhang Y (2021) Counterfactual explainable recommendation. In: Proceedings of the 30th ACM international conference on information & knowledge management, pp 1784–1793
+41. Xu Y, Raja K, Pedersen M (2022) Supervised contrastive learning for generalizable and explainable deepfakes detection. In: Proceedings of the IEEE/CVF winter conference on applications of computer vision, pp 379–389
+42. Yu C, Zhang X, Duan Y, Yan S, Wang Z, Xiang Y, Ji S, Chen W (2023) Diff-id: An explainable identity difference quantification framework for deepfake detection. CoRR https://doi.org/10.48550/arXiv.2303.18174
+43. Jin Z, Cao J, Guo H, Zhang Y, Luo J (2017) Multimodal fusion with recurrent neural networks for rumor detection on microblogs. In: Proceedings of the 25th ACM international conference on multimedia, pp 795–816
+44. Sun M, Zhang X, Ma J, Xie S, Liu Y, Philip SY (2023) Inconsistent matters: A knowledge-guided dual-consistency network for multi-modal rumor detection. IEEE Transactions on Knowledge and Data Engineering
+45. Wu L, Liu P, Zhao Y, Wang P, Zhang Y (2023) Human cognition-based consistency inference networks for multi-modal fake news detection. IEEE Transactions on Knowledge and Data Engineering
+46. Wang J, Qian S, Hu J, Hong R (2023) Positive unlabeled fake news detection via multi-modal masked transformer network. IEEE Transactions on Multimedia
+47. Hua, J; Cui, X; Li, X; Tang, K; Zhu, P. Multimodal fake news detection through data augmentation-based contrastive learning. Appl Soft Comput ; 2023; 136 , [DOI: https://dx.doi.org/10.1016/j.asoc.2023.110125] 110125.
+48. Liu H, Wang W, Sun H, Rocha A, Li H (2023) Robust domain misinformation detection via multi-modal feature alignment. IEEE Transactions on Information Forensics and Security
+49. Wu L, Liu P, Zhang Y (2023) See how you read? multi-reading habits fusion reasoning for multi-modal fake news detection. In: Proceedings of the AAAI conference on artificial intelligence vol 37, pp 13736–13744
+50. Luvembe, AM; Li, W; Li, S; Liu, F; Wu, X. Caf-odnn: Complementary attention fusion with optimized deep neural network for multimodal fake news detection. Inf Process & Manag ; 2024; 61 , 3 [DOI: https://dx.doi.org/10.1016/j.ipm.2024.103653] 103653.
+51. Yan, F; Zhang, M; Wei, B; Ren, K; Jiang, W. Fmc: Multimodal fake news detection based on multi-granularity feature fusion and contrastive learning. Alex Eng J ; 2024; 109 , pp. 376-393. [DOI: https://dx.doi.org/10.1016/j.aej.2024.08.103]
+52. Yang F, Pentyala SK, Mohseni S, Du M, Yuan H, Linder R, Ragan ED, Ji S, Hu X (2019) Xfake: Explainable fake news detector with visualizations. In: The world wide web conference, pp 3600–3604
+53. Ali, S; Abuhmed, T; El-Sappagh, S; Muhammad, K; Alonso-Moral, JM; Confalonieri, R; Guidotti, R; Del Ser, J; Díaz-Rodríguez, N; Herrera, F. Explainable artificial intelligence (xai): What we know and what is left to attain trustworthy artificial intelligence. Inf Fusion ; 2023; 99 , [DOI: https://dx.doi.org/10.1016/j.inffus.2023.101805] 101805.
+54. Ayoub, J; Yang, XJ; Zhou, F. Combat covid-19 infodemic using explainable natural language processing models. Inf Process & Manage ; 2021; 58 , 4 102569. [DOI: https://dx.doi.org/10.1016/j.ipm.2021.102569]
+55. Bahdanau D, Cho K, Bengio Y (2014) Neural machine translation by jointly learning to align and translate. CoRR arXiv:1409.0473
+56. Rumelhart DE, McClelland JL, PDP Research Group C (1986) Parallel Distributed Processing: Explorations in the Microstructure of Cognition, Vol. 1: Foundations. MIT press,
+57. Zhou X, Mulay A, Ferrara E, Zafarani R (2020) Recovery: A multimodal repository for covid-19 news credibility research. In: Proceedings of the 29th ACM international conference on information & knowledge management, pp 3205–3212
+58. Chen M, Chu X, Subbalakshmi K (2021) Mmcovar: multimodal covid-19 vaccine focused data repository for fake news detection and a baseline architecture for classification. In: Proceedings of the 2021 IEEE/ACM international conference on advances in social networks analysis and mining, pp 31–38
+59. Pennington J, Socher R, Manning CD (2014) Glove: Global vectors for word representation. In: Proceedings of the 2014 conference on empirical methods in natural language processing (EMNLP), pp 1532–1543
+60. Bergstra J, Bardenet R, Bengio Y, Kégl B (2011) Algorithms for hyper-parameter optimization. Advances in neural information processing systems 24
+61. Guo H, Cao J, Zhang Y, Guo J, Li J (2018) Rumor detection with hierarchical social attention network. In: Proceedings of the 27th ACM international conference on information and knowledge management, pp 943–951
+62. Zhang W, Gui L, He Y (2021) Supervised contrastive learning for multimodal unreliable news detection in covid-19 pandemic. In: Proceedings of the 30th ACM international conference on information & knowledge management. CIKM ’21, pp. 3637–3641. Association for Computing Machinery. https://doi.org/10.1145/3459637.3482196
+63. Zhou X, Wu J, Zafarani R (2020) Safe: Similarity-aware multi-modal fake news detection. In: Lauw H, Lim E-P, Wong R, Ntoulas A, Ng S.-K, Pan S. (eds.) Advances in Knowledge Discovery and Data Mining - 24th Pacific-Asia Conference, PAKDD 2020, Proceedings. Lecture Notes in Computer Science (including subseries Lecture Notes in Artificial Intelligence and Lecture Notes in Bioinformatics), pp. 354–367. Springer. https://doi.org/10.1007/978-3-030-47436-2_27. Publisher Copyright: Springer Nature Switzerland AG 2020. Copyright: Copyright 2020 Elsevier B.V., All rights reserved.; 24th Pacific-Asia Conference on Knowledge Discovery and Data Mining, PAKDD 2020; Conference date: 11-05-2020 Through 14-05-2020
+64. Mohawesh, R; Xu, S; Springer, M; Jararweh, Y; Al-Hawawreh, M; Maqsood, S. An explainable ensemble of multi-view deep learning model for fake review detection. J King Saud Univ-Comput Inf Sci ; 2023; 35 , 8 [DOI: https://dx.doi.org/10.1016/j.jksuci.2023.101644] 101644.
+65. Hutto C, Gilbert E (2014) Vader: A parsimonious rule-based model for sentiment analysis of social media text. In: Proceedings of the international AAAI conference on web and social media vol 8, pp 216–225
+66. Lundberg SM, Lee S-I (2017) A unified approach to interpreting model predictions. Advances in Neural Information Processing Systems 30

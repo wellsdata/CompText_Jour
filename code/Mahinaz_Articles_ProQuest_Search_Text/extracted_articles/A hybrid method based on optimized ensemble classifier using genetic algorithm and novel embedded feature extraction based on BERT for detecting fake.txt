@@ -1,0 +1,1133 @@
+Introduction With the increasing expansion of the Internet and social networks, a vast amount of information is published on these platforms daily. While this space provides unique opportunities for rapid information dissemination and social interaction, it also presents serious challenges. One of the most significant challenges is the spread and dissemination of fake news. Fake news, which consists of false or misleading information, can have a destructive impact on public decision-making, as well as on political, economic, and public health issues [1, 2]. For instance, during the COVID-19 pandemic, the spread of misinformation about prevention and treatment methods caused widespread confusion and eroded public trust in scientific sources [3, 4]. Similar effects have been observed in political elections, where fabricated stories have influenced voting behavior, and in financial markets, where orchestrated misinformation has caused artificial price fluctuations. In humanitarian crises, inaccurate information about affected areas has delayed emergency response efforts, underscoring the urgent need for automated, reliable, and adaptable systems for detecting fake news before it can cause irreversible damage.
+The growing complexity of false information further exacerbates this challenge. Recent advances in artificial intelligence, especially large language models (LLMs), have enabled the rapid creation of highly convincing fake news that mimics human writing style and adapts to audience-specific contexts. Such content may also combine multiple modalities—text, images, and videos—making it increasingly difficult for traditional detection techniques to identify [5, 6]. As fabricated content becomes more sophisticated, there is a rising demand for detection systems capable of adapting to evolving misinformation strategies in real time.
+Traditional methods for detecting fake news primarily rely on natural language processing (NLP) techniques and machine learning algorithms [5, 6–7]. Despite some initial successes, these methods face persistent challenges. First, they rely heavily on specific linguistic features and text patterns, which can vary significantly across languages and domains. Second, unbalanced datasets—where fake news is generally less prevalent than real news—can bias models toward majority classes and reduce sensitivity to minority samples [8, 9]. Third, parameter tuning for ensemble learning models is often performed using grid search or random search, which are inefficient for exploring large and complex search spaces. This inefficiency can lead to premature convergence and suboptimal performance, particularly in high-dimensional ensemble systems.
+To address these limitations, this paper presents an optimized ensemble classifier that combines a genetic algorithm with a novel feature extraction technique based on the BERT model. The proposed approach begins with preprocessing the data, followed by extracting deep semantic feature vectors using a BERT-based method. To mitigate dataset imbalance, generative adversarial networks (GANs) are employed. GANs are capable of generating realistic synthetic samples that closely resemble authentic news articles, thereby increasing representation of minority classes without compromising semantic integrity. This balanced dataset enhances the model’s ability to detect fake news that might otherwise be overlooked.
+The final classification stage employs a stacked ensemble architecture integrating six machine learning algorithms—support vector machine (SVM), random forest (RF), logistic regression (LR), K-nearest neighbors (KNN), gradient boosting, and Naïve–Bayes. A genetic algorithm is used to optimize hyperparameters of each base learner and assign optimal weights within the ensemble, improving search space exploration and convergence speed compared to traditional optimization techniques.
+The proposed method is implemented and evaluated on two widely recognized datasets—LIAR and ISOT. The results demonstrate that the synergy between BERT-based embeddings, GAN-based data balancing, and GA-optimized ensemble classification significantly improves accuracy, robustness, and computational efficiency compared to state-of-the-art approaches.
+Moreover, due to the computational complexity of the proposed framework—integrating BERT-based embeddings, GAN-generated data augmentation, and GA-optimized ensemble learning—the approach inherently requires high-performance computing (HPC) capabilities. Training and optimization processes involve handling large-scale feature spaces and iterative meta-heuristic search, which are computationally intensive. Therefore, parallel and distributed processing resources are essential to achieve feasible training times and to enable near real-time detection in large-scale social media streams. This not only aligns our work with the scope of supercomputing, but also demonstrates the scalability of the proposed method for real-world applications where rapid and reliable misinformation detection is critical.
+This research makes the following key contributions: - Hybrid GA-optimized ensemble classifier : Unlike prior fake news detection works that either focus on single models or basic ensembles without advanced tuning, we propose a stacked ensemble of six diverse classifiers whose hyperparameters and weights are jointly optimized using a genetic algorithm, enabling efficient search space exploration and avoiding premature convergence.
+
+- BERT-based deep semantic feature extraction : We introduce a hybrid feature extraction pipeline that leverages contextual embeddings from the BERT model to capture nuanced linguistic relationships beyond conventional n-grams or TF-IDF features.
+
+- GAN-based data balancing : We address class imbalance by generating realistic synthetic fake news samples using GANs, improving recall for minority classes without degrading precision.
+
+- Comprehensive evaluation on benchmark datasets : The proposed framework is rigorously tested on LIAR and ISOT datasets, achieving accuracy improvements exceeding 5% over baseline models, along with consistent gains in precision, recall, and F1-score.
+
+- Integration of deep learning, meta-heuristic optimization, and data augmentation : This work presents a unified framework that combines deep contextual embeddings, meta-heuristic optimization, and advanced data augmentation, bridging important gaps left by existing methods in fake news detection.
+
+
+This paper is divided into five main sections. In the first section, an introduction to the importance of fake news detection and its related challenges is provided. The second section covers a literature review including a review of existing methods in the field of fake news detection. In the third section, the proposed method, which includes a combination of an optimized group classifier using a genetic algorithm and the application of the GAN technique for data balancing, is described in detail. In the fourth section, the results obtained from the experiments and their comparison with existing methods are analyzed. Finally, the fifth section includes conclusions and suggestions for future research.
+Related works Fasstini et al. [10] conducted multilingual fake news detection in Slavic, Latin, and German languages by applying text feature selection. Their experiments were carried out on five datasets, namely TwitterBR, FakeBrCorpus, FakeNewsData, FakeOrRealNews, and btvlifestyle . Each dataset was evaluated using customized features, Word2Vec, DCDistance, and Bag-of-Words. Finally, several classifiers such as K-nearest neighbor (KNN), support vector machine (SVM), random forest (RF), and Naïve–Bayes (NB) were applied. Among these, SVM and RF yielded better performance compared to conventional methods. However, the proposed approach did not achieve significantly high accuracy, limiting its practical application in fake news detection [10].
+Vicario et al. [11] proposed a novel approach for early detection of fake news on social media. They introduced a classifier based on multiple features including semantic, user-based, structural, sentiment-related, and predictive attributes. Their study used an Italian Facebook dataset consisting of 300,000 official media reports and 50,000 posts from blogs and websites containing misinformation. The results revealed that their early detection framework achieved 77% training accuracy and 91% testing accuracy. Nonetheless, prediction accuracy could be further improved by identifying elements that negatively impact information [11].
+Liu et al. [12] developed a semi-supervised method using sensitive crowd feedback and convolutional neural networks (CNNs) with positive and unlabeled samples. Fivefold cross-validation was employed for evaluation. Tests on two datasets ( Twitter and Weibo ) showed that the model achieved 90% accuracy within just 5 min after news publication. However, the use of small datasets limited the generalization of their approach [12].
+Khnam et al. [13] analyzed existing studies on fake news detection and compared traditional machine learning models to identify the best performing algorithms. They suggested building a supervised ML-based model capable of classifying news as real or fake . The process included feature extraction and vectorization, with the use of Python’s scikit-learn library for tokenization and feature engineering (e.g., Count Vectorizer, Tfidf Vectorizer). Feature selection methods were then applied, and the confusion matrix guided the choice of optimal features for higher accuracy [13].
+Khaliyar et al. [14] proposed a predictive model that integrates both news media content and social media content. Their implementation used the BuzzFeed and PolitiFact datasets, with a three-state sensor input and tensor matrix factorization for feature extraction. The extracted features were classified using XGBoost and deep neural networks (DNN) . Results showed 85.86% accuracy on BuzzFeed and 88.64% on PolitiFact. However, feature extraction based on contextual information was not explored [14].
+Varshkaka et al. [15] introduced another ML-based framework for fake news detection, relying on linguistic, socio-cultural, and textual features. They examined binary classification using deep learning models such as LSTM, RNN, and GRU. The experimental findings reported 75% training and 45% testing accuracy for LSTM, 45% training and 42% testing for GRU, and 62% training with 48% testing for RNN. However, the study lacked details regarding automated feature learning [15].
+Goldani et al. [16] proposed a neural network-based approach for fake news detection, considering text length and multiple features with non-static embeddings. Tests on ISOT and LIAR datasets revealed striking differences: the model achieved 99.1% training accuracy and 99.8% testing accuracy on ISOT, but only 40.09% training and 39.5% testing accuracy on LIAR, highlighting limitations in generalization [16].
+Adedion et al. [17] performed a comprehensive comparison of multiple ML and DL algorithms for fake news detection. Their aim was to identify the most efficient model by evaluating seven different models (five ML and two DL). Evaluation metrics included accuracy, precision, recall, F1-score, and ROC curves. They also developed a web-based fake news detection application [17].
+Kishwar et al. [18] introduced the first large-scale dataset for fake news detection in Pakistan, collected via multiple APIs. Using five ML techniques alongside CNN and LSTM, they evaluated performance through accuracy, precision, recall, and F1-score. Results showed that LSTM achieved the highest accuracy. Misclassified samples were also analyzed against human judgments to refine results [18].
+Capuno et al. [19] provided a taxonomy of ML and DL models and features adopted in content-based fake news detection, systematically comparing their effectiveness [19].
+Chaudhuri et al. [20] conducted a comparative study between classifiers including SVM, NB, RF, and Logistic Regression (LR) across multiple datasets. SVM achieved the highest accuracies of 61%, 97%, and 96% on the LIAR, Fake Job Posting, and Fake News datasets, respectively. Furthermore, they embedded these classifiers within a GA-based fake news detection algorithm, where SVM and LR achieved 61% accuracy on LIAR, while SVM and RF achieved 97% on the Fake Job Posting dataset [20].
+Zhang et al. [21] proposed a deep learning framework for rapid fake news detection on Chinese social media. Each Chinese character was treated as a basic unit of analysis, and CNNs were employed to extract textual features. Experiments on real-world datasets demonstrated faster training and superior classification accuracy compared to baseline methods [21].
+Alaa et al. [22] used a decentralized Spark cluster to construct an ensemble classification model. Features were extracted using N-grams, TF-IDF hashing, and count vectors. Their ensemble model achieved an F1-score of 92.45%, outperforming the baseline F1-score of 83.10% by 9.35% [23].
+Elyasmi et al. [24] experimented with five classifiers—RF, SVM, Gradient Boosting, LR, and NB—using merged open-source datasets. Preprocessing steps included stemming, vectorization, and tokenization. Voting strategies were applied to ensemble models, with RF and gradient boosting ensembles achieving superior performance across precision, recall, and F1-score [24].
+Ahmed et al. [25] addressed the challenge of detecting multiple instant rumors on social media, rather than persistent ones. They proposed novel content- and community-based features and applied a bidirectional LSTM-RNN. Results demonstrated that the proposed features outperformed existing baselines across accuracy, sensitivity, and F1-score [25].
+Fayyaz et al. [26] evaluated ML methods for fake news classification using the ISOT dataset. Twenty-three textual features were extracted, from which fourteen were selected using techniques like chi-square, mutual information, and feature importance. Results indicated that RF outperformed advanced ML models such as GBM, XGBoost, and AdaBoost [27].
+Madani et al. [28] proposed a two-phase model integrating NLP with ML algorithms. In the first phase, new structural features were extracted, while in the second phase, a hybrid curriculum-based strategy combining statistical features with KNN enhanced deep learning performance. Results showed superior performance compared to baseline models [29].
+Hashemi et al. [5] introduced a robust approach using WELFake, FakeNewsNet, and FakeNewsPrediction datasets. They combined FastText embeddings with both ML and DL methods. A hybrid CNN-LSTM model with FastText embeddings outperformed others, achieving F1-scores of 0.97–0.99. Transformer-based models (BERT, XLNet, RoBERTa) further improved semantic interpretation and surpassed RNN-based methods. Explainable AI techniques (e.g., LIME, LDA) were employed to provide interpretability of model decisions [5].
+Farrokhian et al. [29] introduced MWPBert , a dual-BERT model for full-text fake news verification. One BERT encoded the headline, while the other encoded body text. Due to BERT’s input size limitation, the MaxWorth algorithm was used to select the most informative segments of the text. The combined output yielded superior accuracy and performance compared to previous models [30].
+Table 1 provides a comparative summary of existing methods in the field of fake news detection. Table 1. Comparative summary of existing methods
+Ref
+Study (Author)
+Dataset(s)
+Methods / models
+Key findings
+Limitations
+
+[10]
+Fasstini et al., 2020
+TwitterBR, FakeBrCorpus, FakeNewsData, FakeOrRealNews, btvlifestyle
+Text features, Word2Vec, DCDistance, Bag-of-Words + SVM, RF, NB, KNN
+SVM & RF yielded better performance
+Accuracy still limited
+
+[11]
+Vicario et al., 2019
+Italian Facebook (300 k official + 50 k blogs)
+Semantic, user-based, structural, sentiment, predictive features + classifier
+91% test accuracy
+Some factors not modeled
+
+[12]
+Liu et al., 2020
+Twitter, Weibo
+Semi-supervised CNN with positive & unlabeled data
+90% accuracy in 5 min
+Small dataset
+
+[13]
+Khnam et al., 2021
+Various
+Traditional ML + Scikit-learn (CountVec, TfidfVec)
+Optimal features selected via confusion matrix
+Limited to traditional ML
+
+[14]
+Khaliyar et al., 2020
+BuzzFeed, PolitiFact
+Tensor factorization + XGBoost + DNN
+85.86% and 88.64% accuracy
+Contextual features ignored
+
+[15]
+Varshkaka et al., 2020
+Various
+LSTM, RNN, GRU
+Training acc: LSTM = 75%, GRU = 45%, RNN = 62%
+Very low test accuracy
+
+[16]
+Goldani et al., 2020
+ISOT, LIAR
+Neural networks + non-static embeddings
+ISOT: ~ 99% acc; LIAR: ~ 40% acc
+Poor generalization
+
+[17]
+Adedion et al., 2024
+Multiple
+7 models (5 ML + 2 DL)
+Built fake news web app; comprehensive evaluation
+No dataset specialization
+
+[18]
+Kishwar et al.,2 023
+Pakistan dataset (via APIs)
+ML, CNN, LSTM
+LSTM achieved best results
+Only regional dataset
+
+[19]
+Capuno et al., 2023
+Survey / taxonomy
+ML/DL models & features taxonomy
+Comparative review
+No experimental validation
+
+[20]
+Chaudhuri et al., 2023
+LIAR, Fake Job Posting, Fake News
+SVM, NB, RF, LR + GA optimization
+SVM up to 97% acc (Fake Job dataset)
+Limited to selected datasets
+
+[21]
+Zhang et al.,2023
+Chinese social media dataset
+CNN on character-level input
+Faster training + higher accuracy
+Only for Chinese short texts
+
+[23]
+Alaa et al., 2023
+Spark cluster datasets
+N-grams, TF-IDF, Ensemble classifiers
+F1 = 92.45% (↑9.35% vs baseline)
+High computation cost
+
+[24]
+Elyasmi et al., 2022
+Open-source merged datasets
+RF, SVM, GB, LR, NB + ensemble voting
+RF + GB ensembles best
+Limited scope
+
+[24]
+Ahmed et al.,2022
+Social media rumors
+BiLSTM-RNN + new features
+Outperformed baselines
+Focus on rumors only
+
+[27]
+Fayyaz et al., 2022
+ISOT
+RF + feature selection (chi2, MI, etc.)
+RF > GBM, XGBoost, AdaBoost
+Dataset-limited
+
+[29]
+Madani et al.,2024
+Various
+Two-phase hybrid NLP + ML (KNN + curriculum strategy)
+Higher performance than baselines
+Complex design
+
+[5]
+Hashemi et al., 2024
+WELFake, FakeNewsNet, FakeNewsPrediction
+Hybrid CNN-LSTM + FastText + Transformers (BERT, XLNet, RoBERTa)
+F1 up to 0.99
+Resource intensive
+
+[30]
+Farrokhian et al., 2024
+News articles
+Dual BERT (MWPBert) + MaxWorth
+Superior accuracy vs prior models
+BERT input length limitation
+
+
+These studies, each with their own methods and characteristics, have attempted to increase the accuracy and efficiency of fake news detection, but challenges such as limited datasets and analysis of influential factors still persist. A comparative table is presented below to evaluate these studies.
+Proposed method The proposed method of this research includes the combination of an optimized group classifier using the genetic algorithm (GA) and the use of the GAN technique for data balancing. The following describes the details of this method along with the related mathematical models.
+The general framework of the proposed method for this paper is as follows. The approach consists of five general steps. The first step is to receive the input (dataset) which includes news that includes both fake news and real news. In the second step, data preprocessing is performed, and irrelevant, noisy, and redundant data are removed. Also, text tokenization is performed into sentences and then words. In the third step, data set balancing is performed using GAN. In the fourth step, the proposed optimized group classification is presented. In the last step, the proposed model is evaluated based on the evaluation criteria (Fig. 1). Fig. 1 [Images not available. See PDF.]
+Block diagram of the proposed method
+
+Data preprocessing Data preprocessing is an essential step to prepare text data for use in machine learning models and improve their performance. This step includes various processes that convert raw data into an optimal and suitable form for the model. The details of the steps are as follows (Figs. 2 and 3): Fig. 2 [Images not available. See PDF.]
+Preprocessing procedure
+Fig. 3 [Images not available. See PDF.]
+Data preprocessing algorithm
+
+In the noise removal step, only non-informative numeric or symbolic artifacts are discarded. All contextually relevant information, especially statistical figures reported in news articles, is retained.
+Tokenization Tokenization refers to dividing text into smaller units called tokens. This process involves separating words, phrases, or even specific characters from each other. This step helps the model break down the text into smaller components that can be processed.
+Stop word removal Stop words are words that are commonly found in sentences but do not have any special semantic value (such as ‘and,’ ‘to,’ ‘of’). Removing these words helps reduce the size of the data and focus the model on more important words.
+Stemming and lemmatization Stemming is the process of returning words to their roots and removing their inflectional changes. Lemmatization is similar to stemming but returns the word to its base form, taking into account the lexical meaning.
+Denoising and normalizing the text This step involves removing irrelevant numbers (e.g., page numbers, IDs, or random numeric strings), unnecessary symbols, and special markings that do not help in text analysis. It is important to note that contextually meaningful numbers, such as infection or death counts in epidemic-related texts (e.g., COVID-19 statistics), are preserved because they carry essential semantic information for downstream analysis.
+Normalization also refers to converting all letters to the same format (such as lowercase) to maintain data consistency.
+Conversion to numeric vectors (Vectorization) In this approach, the focus is on leveraging BERT (bidirectional encoder representations from transformers) to extract contextualized word embeddings, combined with statistical measures like TF-IDF to create a robust hybrid vector representation of text. This method ensures that the resulting vectors not only capture the semantic meaning of words in context, but also emphasize important words based on their frequency across documents. The steps of the hybrid embedding method using BERT are as follows (Fig. 4): - Compute TF-IDF Vectors : For each document, compute the TF-IDF vectors to highlight important words based on their frequency in the document and inverse frequency across the entire dataset.
+
+- Generate BERT Embeddings : Pass the text through a pre-trained BERT model to generate contextual embeddings for each token. BERT embeddings capture the meaning of words considering the surrounding context, making them highly effective for nuanced understanding of the text.
+
+- Combine TF-IDF and BERT Embeddings : For each word in the document, scale its BERT embedding by its TF-IDF score. This combination ensures that more significant words (according to TF-IDF) have a greater impact on the final representation. The hybrid vector V hybrid for the entire document is computed as:
+
+
+1
+V hybrid = ∑ i = 1 ; T F - I D F t i . d × V Bert t i 2
+T F - I D F t . d = T F t . d × log N D F t where T F t . d represents the term frequency of word t in document d . D F t denotes the number of documents containing the word t. N is the total number of documents in the dataset. This vectorization step ensures that the text data are numerically represented and ready for input into machine learning algorithms for further analysis and model training (Figs. 5 and 6). Fig. 4 [Images not available. See PDF.]
+Proposed hybrid embedding method using BERT
+Fig. 5 [Images not available. See PDF.]
+Proposed embedded feature extraction algorithm using BERT
+Fig. 6 [Images not available. See PDF.]
+a A complete example of preprocessing b vectorization using the proposed method
+- Document-Level Aggregation : To obtain a single document-level vector, aggregate the word-level hybrid vectors using techniques such as averaging, max pooling, or a learned weighted average.
+
+- Optional Weight Optimization : Use a small neural network or optimization method to fine-tune the scaling factors (e.g., α and β) for combining BERT embeddings and TF-IDF scores to maximize model performance on the target task.
+
+
+Data balancing using GAN Data imbalance is a common problem in machine learning, particularly in the context of detecting fake news where the number of samples of real news typically outnumbers fake news. This imbalance can lead to biased models that favor the majority class, resulting in poor performance on the minority class. To address this issue, generative adversarial networks (GANs) can be employed to generate synthetic data and balance the dataset.
+To ensure the reliability of the synthetic samples generated by GANs, a preliminary qualitative assessment was conducted, in which randomly selected synthetic samples were reviewed by human evaluators to verify their plausibility and semantic consistency with the target class. Furthermore, the diversity of the generated samples was assessed using the Fréchet inception distance (FID) metric, which indicated that the synthetic data distribution was close to the real data distribution. Despite these efforts, we acknowledge that synthetic data may introduce noise or unintended biases if not properly validated, which could potentially mislead the model. To mitigate these risks, synthetic samples were combined with real data rather than replacing them entirely, and training was monitored to prevent overfitting to GAN-generated examples.
+Traditional resampling techniques such as random oversampling and SMOTE were considered; however, these approaches often lead to overfitting or limited diversity in text data. By contrast, GANs provide a more robust solution by generating contextually diverse and semantically consistent synthetic samples.
+A GAN consists of two neural networks: the generator and the discriminator, which work in opposition:
+- Generator (G) : Takes a random noise vector as input and generates synthetic data that resembles real samples.
+
+- Discriminator (D) : Evaluates the authenticity of input data, distinguishing between real and synthetic samples.
+
+
+
+The training of GANs is based on a minimax game where the generator aims to fool the discriminator by producing realistic data, while the discriminator strives to accurately differentiate between real and synthetic data. The objective function for GANs is defined as:\ 3
+min G max D V D . G = E x ∼ p data x log D x + E z ∼ p z z 1 - log D z where x represents real data samples. z represents random noise input to the generator. p data ( x ) is the distribution of real data. p z ( z ) is the distribution of the noise.
+It should be noted that the exact forms of p data x . and p z z are not measured directly. Instead, p data x is approximated by drawing samples from the real dataset, while p z z is typically chosen as a simple prior distribution (e.g., Gaussian or uniform), from which random noise can be sampled.
+The proposed optimized ensemble classification method In this section, the optimized group classifier is explained based on several well-known machine learning classifiers or using genetic algorithm. The general architecture of the proposed group class is shown in Fig. 7. Fig. 7 [Images not available. See PDF.]
+Proposed architectural structure
+
+The main idea of this paper is to present a two-level classifier based on machine learning and hyperparameter optimization with the help of GA algorithm forake news detection. Using group classifiers can greatly help in increasing the accuracy. In the proposed method, first the input data set after preprocessing and feature extraction (constructing the feature vector using the proposed hybrid embedding method using Bert) is taken as input and is trained based on machine learning classifiers as basic classifiers. Then the output of these classifications is sent as features to the second level. The output of this step is the probability vector of classes (instead of class labels). The probability vector means that each class of the data set is given the probability value of that class. The higher the probability of a sample belonging to a class, the higher the probability of its membership in that class. Also, in this stage, the GA algorithm is used to obtain optimal hyperparameters. That is, first the optimal parameters are extracted with the help of GA and then the classification is done with the help of optimal hyperparameters, and the output is obtained. The output of this stage is the probability vector related to the six classifiers and the classes associated with that classifier. Finally, the output of this model is given to a high-level machine learning classifier to obtain the final output.
+As it is clear in Fig. 7, it shows the proposed architectural structure of the group floor.
+So, in summary, the two main layers of this architecture include the following two stages: - The input of this stage is the data set, and then the construction of machine learning base models is done from the input. Also, the optimization of hyperparameters is done using the GA algorithm and the optimized parameters are extracted from this step.
+
+- The output of the previous step is given to a final classification of the high level of machine learning and the final output is obtained.
+
+
+Construction of base models In the proposed ensemble architecture, six base classifiers are employed: support vector machine (SVM), random forest (RF), logistic regression (LR), K-nearest neighbors (KNN), gradient boosting (GB), and Naïve–Bayes (NB). The choice of these classifiers is motivated by their complementary strengths and their frequent adoption in fake news detection literature.
+SVM is highly effective in handling high-dimensional sparse feature spaces, which are common in text representation (e.g., TF-IDF vectors).
+Random forest is robust against noise and class imbalance, and its bagging strategy reduces overfitting, which is valuable when dealing with heterogeneous news data.
+Logistic regression provides a simple, interpretable baseline and is computationally efficient, making it useful for linear separable components of the data.
+KNN captures local neighborhood structures and is beneficial when similar news items appear in clusters, which is frequent in social media data.
+Gradient boosting leverages an additive model to capture complex nonlinear patterns and subtle linguistic cues that may distinguish fake from real news.
+Naïve Bayes is effective for text classification where independence assumptions hold approximately, and it performs surprisingly well with word-frequency–based features.
+The combination of these models allows the ensemble to integrate linear and nonlinear learners, probabilistic and distance-based models, as well as bagging- and boosting-based methods. This diversity increases the likelihood that different classifiers capture complementary aspects of the data distribution, leading to improved generalization performance.
+Deep learning methods (e.g., CNN, LSTM, transformer-based models) and more complex boosting algorithms (e.g., XGBoost) were considered. However, these methods generally require substantially larger datasets, extensive hyperparameter tuning, and high computational costs. Since the primary focus of this work is to design a GA-based optimization framework for an interpretable and computationally feasible ensemble, we restricted our study to these six well-established classifiers, which together provide a balanced trade-off between accuracy, interpretability, and computational efficiency.
+Figure 8 shows the proposed stacking set algorithm: Fig. 8 [Images not available. See PDF.]
+Proposed stacking ensemble algorithm
+
+Optimization of hyperparameters using GA algorithm In this section, GA algorithm is used to obtain the best hyperparameters using the basic model. Obtaining the best hyperparameters has a great effect on the final accuracy of the output. Usually, in many traditional methods and similar cases, a manual method is used to adjust the parameters, which is a very difficult and time-consuming task. Especially in this issue that a large number of base layers have been used. Another problem with the manual method for setting parameters is that it does not work comprehensively for all types of datasets.
+As mentioned above, to optimize classifiers, we need to tune parameters that have a large impact on their performance. These parameters vary depending on the type of machine learning algorithm. The following describes the important parameters for each of the introduced algorithms.
+Table 2 lists the important parameters of six machine learning algorithms along with their descriptions and possible values: Table 2. Important hyperparameters of six machine learning algorithms
+Algorithm
+Hyperparameter
+Description
+Values
+
+SVM
+C
+Overfitting and underfitting balance adjuster
+[0.1, 1, 10, 100]
+
+Kernel
+Kernel type for decision function
+[‘linear,’ ‘rbf,’ ‘poly,’ ‘sigmoid’]
+
+Gamma
+Adjusting the influence of samples in nonlinear kernels
+[‘scale,’ ‘auto,’ 0.1, 1]
+
+Random Forest
+n_estimators
+Number of trees in the forest
+[100, 200, 500]
+
+max_depth
+Maximum depth of each tree
+[None, 10, 20, 30]
+
+min_samples_split
+Minimum number of samples to split a node
+[2, 5, 10]
+
+min_samples_leaf
+Minimum number of samples per leaf
+[1, 2, 4]
+
+max_features
+Number of features to split a node
+[‘sqrt,’ ‘log2’]
+
+Logistic Regression
+C
+Adjuster strength
+[0.01, 0.1, 1, 10]
+
+solver
+Optimization algorithm type
+[‘liblinear,’ ‘lbfgs,’ ‘saga’]
+
+penalty
+Penalty type
+[‘l1,’ ‘l2,’ ‘elasticnet’]
+
+max_iter
+Maximum number of iterations for convergence
+[100, 200, 500]
+
+KNN
+n_neighbors
+Number of neighbors to classify
+[3, 5, 7, 11]
+
+weights
+Neighbor weighting type
+[‘uniform,’ ‘distance’]
+
+metric
+Distance metric type
+[‘euclidean,’ ‘manhattan’]
+
+Gradient Boosting
+n_estimators
+Number of base models
+[100, 200, 500]
+
+learning_rate
+Learning rate
+[0.01, 0.1, 0.2]
+
+max_depth
+Maximum depth of trees
+[3, 5, 7]
+
+min_child_weight
+Minimum weight of samples per leaf node
+[1, 5, 10]
+
+subsample
+Percentage of data used in each iteration
+[0.6, 0.8, 1.0]
+
+colsample_bytree
+Percentage of features used to build each tree
+[0.6, 0.8, 1.0]
+
+Naive Bayes
+alpha
+Adjuster value for smoothing
+[0.01, 0.1, 1, 10]
+
+fit_prior
+Whether or not to calculate prior probability of classes based on data
+[True, False]
+
+
+Table 1 provides an overview of key parameters and possible values for tuning and optimizing them.
+As mentioned above, our problem has six machine learning algorithms. Each of these classifiers has a set of hyperparameters that affect the performance of the model. The goal is to find the best combination of these hyperparameters for each network to get the best possible performance.
+In addition to the specific parameters of each model, in the group system, you can also optimize the weights of each model. The weights determine the influence of the model in the final decision-making.
+So, in general, two things are optimized: - The hyperparameters of each model
+
+- The weighting of each classifier (model)
+
+
+The genetic algorithm (GA) is a meta-heuristic optimization method inspired by Darwin’s theory of evolution that uses the principles of natural selection, mutation, crossover, and selection to find the best solutions to complex problems.
+The steps of the genetic algorithm for optimizing classifiers are as follows: - Chromosome representation: Each chromosome is a possible solution that contains the optimization parameters for the classifiers.
+
+- Initial population generation: A set of initial chromosomes is randomly generated. The number of these chromosomes depends on the size of the population.
+
+- Fitness Evaluation: Each chromosome is evaluated using a performance metric such as accuracy or F1-Score on the training data.
+
+- Selection: Chromosomes with better performance are selected based on their Fitness value to produce the new generation. Here, the tournament method is used.
+
+- Crossover: Two chromosomes (parents) are selected and part of their genes are exchanged to create two new offspring. This process ensures the combination of good traits of the parents.
+
+- Mutation: To avoid getting stuck in a local optimum, one or more genes of the chromosome are changed randomly.
+
+- Replacement: New offspring replace weaker chromosomes in the population.
+
+- Termination: The algorithm stops after reaching a certain number of generations.
+
+
+Here, the chromosome structure is as follows (Fig. 9): Fig. 9 [Images not available. See PDF.]
+Chromosome structure
+
+Figure 10 presents GA procedure. Fig. 10 [Images not available. See PDF.]
+GA procedure
+
+To create a cost function (fitness function) that is a combination of several criteria, different criteria can be combined with appropriate weighting. This function encourages improvement across all four metrics by assigning each one a weight according to its importance.
+Here is the proposed fitness function: 5
+Fitness = α × 1 - Accuracy + β × 1 - Precision + γ × 1 - Recall + δ × 1 - F 1
+In Eq. (5):
+- Accuracy : Measures the overall correctness of predictions, where higher accuracy is better. We use (1 − Accuracy) to make the fitness value lower as accuracy increases.
+
+- Precision : Represents the percentage of true positives out of all positive predictions. Reducing)1 − Precision) encourages the model to improve precision.
+
+- Recall : Indicates the percentage of actual positive cases correctly identified. Using (1 − Recall) helps the model improve recall, lowering the fitness value as recall increases.
+
+- F1 : A balance metric combining precision and recall. By using (1 − F1), this term encourages higher F1-scores in the model.
+
+
+
+Weights α, β, γ, and δ reflect the importance of each metric and should be set according to the specific requirements of the task. Figure 11 presents the pseudocode for the GA algorithm. Fig. 11 [Images not available. See PDF.]
+Pseudo-code of GA algorithm
+
+Final classification using the meta-classifier For the final classification stage, the random forest (RF) algorithm was employed as the meta-classifier. Random forest is a supervised ensemble learning method that constructs multiple decision trees during training and combines their outputs to enhance classification accuracy and robustness.
+The choice of random forest as the meta-classifier was motivated by several factors:
+- Robustness and Stability: Unlike individual classifiers, RF reduces overfitting by aggregating the predictions of multiple trees. This is particularly important in intrusion detection tasks, where data often contain noise and overlapping class boundaries.
+
+- Interpretability and Efficiency: RF offers a good trade-off between interpretability and computational efficiency compared to deep models such as MLP, which may require extensive hyperparameter tuning and computational resources.
+
+- Comparison with Alternatives: - XGBoost, although highly accurate in many classification tasks, is more sensitive to hyperparameter settings and prone to overfitting in small or imbalanced datasets. Our experimental setup showed that RF achieved competitive accuracy with significantly lower tuning effort and computational cost.
+
+- MLP requires a larger number of training samples, more training time, and precise parameter adjustments (e.g., number of layers, neurons, activation functions). In contrast, RF provided reliable performance with fewer assumptions about data distribution and lower training complexity.
+
+
+
+
+- Proven Effectiveness in Similar Studies: Prior research in intrusion detection and security-related tasks has demonstrated that RF is one of the most widely adopted ensemble methods due to its balance of accuracy, stability, and scalability.
+
+
+Therefore, considering the above advantages and the characteristics of our dataset, random forest was selected as the meta-classifier to achieve a balance between accuracy, generalization ability, and computational efficiency.
+The steps of the random forest algorithm are as follows: - Bootstrap sampling: Each time a decision tree is created; a subset of the training data is randomly selected with placement. This process helps the random forest to avoid overfitting.
+
+- Construction of decision trees: For each tree, a number of features are randomly selected from the data and the decision tree is built based on those features.
+
+- Combining trees: After all trees are built, the final results are combined based on majority vote (for classification) or average (for regression).
+
+
+Many parameters are very important in the random forest algorithm, which include the following: - n_estimators : The number of decision trees to build in the random forest. The more trees there are, the more accurate the model will be in general, but the computational time and memory consumption will also increase.
+
+- max_features : The number of features that are selected in each node from each tree. This parameter determines how many features in each node are randomly selected to split the data.
+
+- max_depth : Maximum depth of each tree. By setting this parameter, you can prevent trees from growing too much and overfitting.
+
+- min_samples_split : The minimum number of instances that must exist in a node for that node to split. If the number of instances in the node is less than this value, the node is not split.
+
+- min_samples_leaf : The minimum number of samples that should be in a leaf. If the number of leaf samples is less than this value, the leaf is not assigned to a particular class.
+
+- Bootstrap : Whether to sample the data by placement or not. If true, bootstrap sampling will be used, otherwise the entire data for each tree will be used.
+
+- Criterion : A measure used to evaluate how nodes are split. This parameter specifies what criterion to use for decision-making at each node.
+
+
+Experiments and results In this section, the simulation and experiments performed on the proposed method are discussed. First, the data set is described (Sect. 4.1). Section 4.2 describes dataset visualization. Then, a preprocessing of the data is discussed (Sect. 4.3). Then, evaluation measures is described (Sect. 4.4). Then, the parameters are adjusted on the proposed model, and the best parameters are obtained (Sect. 4.5). In the following, the results obtained from the proposed model are explained (Sect. 4.6). Then, the proposed method is compared with several valid and new methods (Sect. 4.7). Figure 12 shows the evaluation process of the proposed method. Fig. 12 [Images not available. See PDF.]
+Evaluation process of the proposed metho
+
+Data sets In this paper, we will use two datasets, LIAR and ISOT, each of which is described below.
+ISOT dataset The ISOT dataset, presented by Ahmed et al. [31], contains more than 44,000 news articles, which are divided into two categories: fake news and real news. Fake news is extracted from unreliable websites and real news from reliable news websites such as BBC. Each record in this dataset includes the news title, the full text of the article, and the corresponding label (fake or real). Some of the challenges of this dataset include the length of some articles and the presence of topic bias. This dataset is widely used in training machine learning and deep learning models to detect fake news.
+LIAR dataset The LIAR dataset, created by Wang [32], contains over 12,800 records of political sentences collected by the PolitiFact website [4]. The dataset classifies sentences into six categories: True, Mostly True, Half-True, Barely True, False, and Pants-on-Fire. In addition to the sentence text, each record contains features such as the truth label, the topic of the sentence (e.g., health, economics, politics), and metadata information including the speaker’s name, profession, political affiliation, and publication date. The challenges of this dataset include the linguistic diversity of the sentences and the use of metadata. The dataset is used for research related to fake news detection, political text analysis, and linguistic bias investigation (Table 3). Table 3. Comparison of LIAR and ISOT
+Features
+LIAR
+ISOT
+
+Number of records
+12,800
+44,000
+
+Categories
+6 Accuracy Categories
+Fake and Real
+
+Data type
+Political Sentences
+News Articles
+
+Metadata
+Yes (Speaker, Profession, Political Affiliation)
+No
+
+Main challenge
+Metadata Analysis and Linguistic Diversity
+Article Length and Topical Bias
+
+
+When using the LIAR and ISOT datasets, an important consideration is the bias–variance trade-off in the trained models.
+- ISOT dataset : Since it contains a large number of news articles (44,000), models trained on this dataset usually show low variance because of the richness of training samples. However, due to topical bias (articles often clustered around specific domains) and the binary classification scheme (Fake/Real), there is a risk of high bias, as models may fail to capture nuanced differences in writing styles or emerging types of fake news.
+
+- LIAR dataset : With only 12,800 samples and six fine-grained categories, models tend to suffer from high variance, especially deep learning approaches, because the limited training data cannot cover the linguistic and contextual diversity. At the same time, the use of metadata features (speaker, political affiliation) can introduce additional bias, since models may over-rely on these attributes rather than learning textual patterns.
+
+
+
+Therefore, a balanced strategy is required: For ISOT, methods to reduce bias such as incorporating semantic/contextual embeddings are valuable; for LIAR, variance can be mitigated by using data augmentation, transfer learning, or hybrid feature representations.
+Preprocessing The original LIAR and ISOT datasets were unbalanced, with some classes containing fewer examples than others. To address this problem, generative adversarial networks (GANs) were used to generate synthetic data. GANs have the ability to generate very realistic data that is similar to the original data, and balance the classes in the dataset. The two graphs below show the distribution of samples before and after balancing in the two datasets LIAR and ISOT (Figs. 13 and 14): Fig. 13 [Images not available. See PDF.]
+Class distribution before and after balancing (LIAR dataset)
+Fig. 14 [Images not available. See PDF.]
+Class distribution before and after balancing (ISOT dataset)
+
+In the LIAR dataset, the number of samples before balancing varied significantly for different classes. For example, the Pants-on-Fire class had only 92 samples, which was significantly under-sampled compared to other classes. As a result, for data balancing, this class was increased to 400 samples, which was a 334.78% increase. Other classes also had a similar increase in the number of samples, but their percentage increase was less. For example, the Barely True class increased from 214 to 400 samples, which was an 86.92% increase. After balancing, all classes uniformly increased to 400 samples, which reduced the data imbalance problem and improved the model’s performance in detecting fake news from all classes. This increase in the number of examples was done using techniques such as generative adversarial networks (GANs), which artificially generated additional data for underrepresented classes to increase the diversity of the data.
+In the ISOT dataset, the number of examples before balancing was also different. The Fake class was significantly larger than the True class (4696 examples versus 4283 examples). In order to balance, the number of examples in both classes was increased to 5000. Here, the percentage increase was 6.47% for the Fake class and 16.73% for the True class. Overall, the increase in the number of examples in this dataset was less than in the LIAR dataset, as there was less relative imbalance.
+This balancing was also done using similar techniques such as GANs, which helped generate artificial examples to distribute the data more evenly across both classes.
+Using the data generated by GAN, the problem of imbalance in the data distribution of both LIAR and ISOT sets was solved. These data were used to train the model and improved the accuracy and generalizability of the proposed model. Using this method had a significant impact on improving the model’s performance in minority classes.
+Validation of GAN-generated samples Although GAN-generated samples improved class balance and minority-class performance, their quality was carefully validated. First, a subset of generated samples was manually examined to ensure that they preserved the linguistic structures and contextual meaning of the original texts. Second, we calculated the Fréchet inception distance (FID) score between real and synthetic samples to assess distributional similarity and diversity. The relatively low FID values confirmed that the generated texts were sufficiently realistic and did not deviate significantly from natural data. Nevertheless, we acknowledge that synthetic data may still introduce subtle artifacts, and therefore future research will focus on more rigorous validation and filtering strategies.
+Evaluation measures In this section, three criteria of detection accuracy, precision, and recall are introduced. We have used these three criteria for evaluation, as shown below (Eqs. (6), (7), (8) and (9)): 6
+Precision = TP TP + FN 7
+Recall = TP TN + FP 8
+Accuracy = TP + TN TP + TN + FP + FN 9
+F 1 - Score = 2 ∗ Precision ∗ Recall Precision + Recall where TP and TN refer to the correct diagnoses for each class, FP and FN refer to the incorrect sample of each class. Certainly, the higher the value of TP and TN, the better the model. The values of TP and TN are in the main diameter of the confusion matrix.
+Setting up hyperparameters The effectiveness of machine learning models and ensemble classifiers is highly dependent on the proper selection of hyperparameters. In this section, we describe the process of tuning the hyperparameters of our proposed framework. The optimization is performed using a genetic algorithm (GA), which not only adjusts the hyperparameters of individual classifiers, but also determines the optimal weights for combining them in the ensemble. Additionally, specific parameter settings for the random forest classifier are reported, as this model plays a key role in the ensemble. To further validate the robustness of our approach, an ablation study is conducted to assess the contribution of each component to the overall performance.
+Setting the machine learning hyperparameters and weight of classifier using GA algorithm As stated in the proposed method, hyperparameters of machine learning classifiers have a significant impact on the accuracy and generalization capability of the model. To address this, we employed a genetic algorithm (GA) for hyperparameter tuning and ensemble weight optimization. GA was selected due to its strong capability in exploring large and complex search spaces while avoiding local optima, which is often a limitation of traditional optimization methods such as grid search or random search. In this process, the hyperparameters of each base classifier were encoded as optimization variables, and GA iteratively evolved candidate solutions based on crossover, mutation, and selection operations. The objective function was defined as the classification accuracy on the validation set, ensuring that the optimized values improved performance while maintaining robustness. The ranges of the hyperparameters were initially determined based on commonly used values in prior studies and best practices (e.g., learning rate in [0.001, 0.3], number of trees between [50,500], and SVM C parameter in [0.01,100]). GA then searched within these ranges to identify the optimal configuration for each dataset. The best rates obtained for each of these hyperparameters are summarized in Table 4, where the results for both LIAR and ISOT datasets are reported. Table 4. Optimal hyperparameters obtained with the help of GA algorithm
+Algorithm
+Parameter
+Optimum value for LIAR dataset
+Optimum value for ISOT dataset
+
+SVM
+C
+10
+1
+
+Kernel
+‘RBF’
+‘RBF’
+
+Gamma
+0.1
+‘scale’
+
+Random Forest
+n_estimators
+200
+500
+
+max_depth
+20
+30
+
+min_samples_split
+5
+2
+
+min_samples_leaf
+2
+1
+
+max_features
+‘sqrt’
+‘log2’
+
+Logistic Regression
+C
+0.1
+1
+
+solver
+‘liblinear’
+‘lbfgs’
+
+penalty
+‘l2’
+‘l1’
+
+max_iter
+200
+100
+
+KNN
+n_neighbors
+7
+5
+
+weights
+‘distance’
+‘uniform’
+
+metric
+‘manhattan’
+‘euclidean
+
+Gradient Boosting
+n_estimators
+200
+100
+
+learning_rate
+0.1
+0.2
+
+max_depth
+5
+7
+
+min_child_weight
+5
+1
+
+subsample
+0.8
+1.0
+
+colsample_bytree
+0.8
+0.6
+
+Naive Bayes
+alpha
+0.1
+1
+
+fit_prior
+True
+False
+
+
+In addition to tuning the base classifiers, GA was also employed to optimize the weights assigned to each classifier in the ensemble. This optimization ensured that stronger classifiers had higher influence in the final decision, while weaker ones contributed less but still enhanced diversity. The optimal weights obtained are presented in Table 5. Table 5. Weights of the optimal classification models obtained with the help of the GA algorithm
+Weight_SVM
+0.3
+0.25
+
+Weight_RF
+0.25
+0.3
+
+Weight_LogReg
+0.2
+0.2
+
+Weight_KNN
+0.1
+0.15
+
+Weight_GradientBoosting
+0.1
+0.1
+
+Weight_NB
+0.05
+0.1
+
+
+These results confirm that the GA-based optimization not only provided the best hyperparameters for each classifier, but also determined the most effective weight distribution among them, which directly contributed to the superior performance of our proposed hybrid model.
+Setting the random forest parameters As explained in the previous section, the important parameters of the random forest algorithm were checked, and the best results are shown in Table 5. The obtained parameters were tested and evaluated on the data set. Various experiments were conducted using different parameters to obtain the best parameters for the random forest algorithm. These tests were performed with two criteria, entropy and Gini, as well as several different maximum depths from 2 to 10 features. The accuracy results obtained for these cases are shown in Fig. 15. Fig. 15 [Images not available. See PDF.]
+Effect of Gini and entropy parameters with different Max_Depths on the data set
+
+As it is clear in Fig. 15, the accuracy value increases with the increase in Max_Depth, and as it is clear, the highest accuracy is close to the Gini criterion and Max_Depth = 7. After reaching the value of 7 for the Max_Depth criterion, the accuracy trend decreases. As a result, the best value for this parameter is 7. For other parameters, according to the tests, the following values are given in Table 6. Table 6. Hyperparameter values obtained for random forest
+Hyperparameter
+Value
+
+n_estimators
+100
+
+max_features
+Log2
+
+max_depth
+7
+
+min_samples_split
+2
+
+min_samples_leaf
+1
+
+bootstrap
+True
+
+criterion
+Gini
+
+
+Ablation study To evaluate the contribution of each main component of the proposed method, an ablation study was conducted. Three core modules were analyzed: - Feature Extraction: Comparison between BERT embeddings and traditional TF-IDF features.
+
+- Data Balancing: Comparison between the use of GAN-based synthetic data generation and unbalanced training data.
+
+- Hyperparameter Optimization: Comparison between GA-based optimization and default hyperparameters without optimization.
+
+
+For each experiment, only one component was altered while keeping the others fixed, to isolate its individual effect. Table 6 shows the results for both LIAR and ISOT datasets (Table 7). Table 7. Results for both LIAR and ISOT datasets with different configuration
+Configuration ID
+Feature Extraction
+Data balancing
+Optimization
+LIAR accuracy (%)
+ISOT accuracy (%)
+
+Proposed method
+BERT
+GAN
+GA
+98.05
+99.10
+
+A
+TF-IDF
+GAN
+GA
+96.12
+98.55
+
+B
+BERT
+None
+GA
+96.88
+98.40
+
+C
+BERT
+GAN
+None
+97.21
+98.65
+
+D
+TF-IDF
+None
+None
+94.05
+97.80
+
+
+The results demonstrate that.
+- Replacing BERT with TF-IDF causes the largest performance drop, highlighting the importance of contextual embeddings.
+
+- Removing GAN-based balancing results in a noticeable decrease, particularly in the LIAR dataset where class imbalance is more severe.
+
+- Eliminating GA optimization reduces accuracy, confirming the benefit of tailored hyperparameters in the ensemble model.
+
+
+
+These findings confirm that all three components play significant and complementary roles in achieving the final performance of the proposed method.
+The results obtained from the experiments The results obtained from the experiments on LIAR dataset In this section, the results obtained from the experiments are shown. The fivefold cross-validation method was used for the test. Figure 16 shows the confusion matrix in the LIAR dataset. Table 8 shows the results obtained in the training and experimental datasets. Also, the precision, recall, and F1 metrics are shown in Figs. 17, 18 and 19 (Table 9). Fig. 16 [Images not available. See PDF.]
+Confusion matrix on the final model for the LIAR data set
+Table 8. Final accuracy obtained on the training and testing LIAR dataset
+Proposed model
+Test set (%)
+Training set (%)
+
+LIAR dataset
+98.05%
+100
+
+Fig. 17 [Images not available. See PDF.]
+Precision value obtained on the LIAR data set for training and testing data
+Fig. 18 [Images not available. See PDF.]
+Recall value obtained on the LIAR data set for training and testing data
+Fig. 19 [Images not available. See PDF.]
+F1-score value obtained on the LIAR data set for training and testing data
+Table 9. Final performance obtained on the training and testing LIAR dataset
+Testing
+Training
+
+Class
+Precision
+Recall
+F1-Score
+Precision
+Recall
+F1-Score
+
+Barely true
+0.9811
+0.9720
+0.9765
+99.1%
+99.5%
+99.3%
+
+Half-true
+0.9740
+0.9850
+0.9795
+98.8%
+99.3%
+99.0%
+
+Mostly true
+0.9723
+0.9799
+0.9761
+98.3%
+99.0%
+98.6%
+
+Pants-fire
+0.9890
+0.9783
+0.9836
+99.5%
+100%
+99.7%
+
+False
+0.9841
+0.9840
+0.9840
+99.2%
+99.6%
+99.4%
+
+True
+0.9904
+0.9801
+0.9852
+99.3%
+99.8%
+99.5%
+
+
+The model designed to detect fake news on the LIAR dataset performed well, achieving an overall accuracy of 98.05% for the test dataset. This performance is quite impressive for a dataset with six classes and the textual complexity of the LIAR dataset. The high values of precision, recall, and F1-score in all classes indicate a good balance between correct and incorrect predictions for each class.
+Also for the test dataset, for the Barely True class, the model correctly identified 208 out of 214 instances, achieving an accuracy of 98.11%, and only 6 instances were incorrectly assigned to other classes. This error may be due to textual similarities with close classes such as Half-True. In the Half-True class, the model performed very well for this class with an accuracy of 97.4%. Only four out of 267 instances were misclassified, indicating that the textual features of this class were well separated by the model. In the Mostly True class, the model was able to correctly identify 244 out of 249 instances. Few errors (five instances) were associated with classes such as True and Half-True, which is probably due to overlap in the textual meaning of the news. In the Pants-Fire class, this class, which has the smallest number of instances (92), was classified by the model with high accuracy (98.9%). The model misclassified only two instances to other classes, indicating the model’s strong ability to identify completely false news (similar to Pants-Fire). In the False class, the accuracy for this class is 98.4%, with only four instances incorrectly predicted. This class probably overlapped with the Pants-Fire class, as both refer to false news. In the True class, the model was able to correctly classify 207 out of 211 samples. Errors in this class occurred due to possible semantic similarity to the Mostly True class, but their amount (four samples) was negligible. Our proposed hybrid approach using an optimized group classifier and meta-heuristic algorithms, along with embedded features based on the BERT model, was able to perform successfully in fake news detection due to its comprehensive structure and high analytical power. Using the BERT model as an advanced tool for extracting text features allowed the model to gain a deep understanding of the meaning of words and the relationships between them in the text. This capability was especially effective for complex data such as the LIAR dataset, which contains six different classes and a high variety of sentences.
+Also, for the training dataset in the Barely True class, the accuracy of 99.1% and the recall of 99.5% mean that the model was able to correctly identify more than 99% of the examples of this class. This indicates the excellent performance of the model in identifying this category of news. In the Half-True class, the accuracy of 98.8% and the recall of 99.3% mean that the model was able to correctly identify almost 99% of the news of this category. Although it did not reach 100% accuracy, it had an acceptable performance. In the Mostly True class, with an accuracy of 98.3% and a recall of 99.0%, this class also has a good performance. The model has performed close to the desired accuracy in identifying this news. In the Pants-Fire class, the accuracy of 99.5% and the recall of 100% indicate the perfect identification of news of this class. This indicates that the model has been able to perform very well in identifying news with this degree of fakeness. In the False class, with an accuracy of 99.2% and a recall of 99.6%, the model performed accurately and correctly in identifying fake news, which indicates the model’s ability to deal with false news. In the True class, an accuracy of 99.3% and a recall of 99.8% indicate that the model performed exceptionally well in identifying true news. This percentage, close to 100% accuracy, indicates the model’s high ability to identify true news.
+Also, combining several machine learning algorithms in the form of a group classifier enhanced the model’s power in recognizing diverse patterns and reduced the possible weaknesses of each algorithm individually. Optimization of this classifier using GA meta-heuristic algorithms allowed the best parameters to be selected for each model, which played a significant role in increasing the model’s accuracy and reducing classification errors. In addition, by intelligently handling unbalanced data, the model was able to correctly identify classes with less data, such as ‘Pants-Fire’ in LIAR.
+The combination of these features and methods enabled the model to have high generalizability and made the model perform very well on diverse data such as LIAR and ISOT. Also, evaluation metrics such as precision, recall, and F1-score showed the balance and stability of the model’s performance across all classes. The success of this method is due to its ability to integrate the power of deep linguistic models with machine learning algorithms and intelligent parameter optimization, which ultimately provides high accuracy and efficiency in detecting fake news.
+To further validate the reliability of the reported performance, we computed 95% confidence intervals for the accuracy and F-measure using a bootstrapping approach (1,000 resamples). For the LIAR dataset, the proposed method achieved an accuracy of 98.05% (± 0.31) and an F1-score of 98.00% (± 0.28). These narrow confidence intervals confirm the statistical robustness and stability of the proposed approach across multiple resamplings.
+In addition to accuracy, F1-score, and the confusion matrix, a learning curve is plotted in Fig. 24 to analyze the convergence behavior of the model. This curve illustrates the changes in training and validation loss across epochs, which helps evaluate model stability and detect possible overfitting.
+As shown in Fig. 20, in the early training epochs, there is a noticeable gap between the training and validation losses. However, with more epochs, this gap decreases, and both curves converge in a parallel manner. This indicates stable learning without significant overfitting. Eventually, the training loss approaches zero, while the validation loss stabilizes at a very low level, which is consistent with the high performance reported in Tables 6 and 7. Fig. 20 [Images not available. See PDF.]
+Learning curve of the proposed model on the LIAR dataset
+
+The results obtained from the experiments on ISOT dataset Figure 21 shows the confusion matrix on the ISOT dataset. Table 10 shows the results obtained on the training and testing ISOT dataset. Also, the precision, recall, and F1-score are shown in Figs. 22, 23 and 24: Fig. 21 [Images not available. See PDF.]
+Confusion matrix on the final model for the ISOT data set
+Table 10. Final accuracy obtained on the training and testing ISOT dataset
+Proposed model
+Test set (%)
+Training set (%)
+
+ISOT dataset
+99.1
+100
+
+Fig. 22 [Images not available. See PDF.]
+Precision value obtained on the ISOT data set for training and testing data
+Fig. 23 [Images not available. See PDF.]
+Recall value obtained on the ISOT data set for training and testing data
+Fig. 24 [Images not available. See PDF.]
+F1-score value obtained on the ISOT data set for training and testing data
+
+As shown in Table 10, the model achieved 99.1% accuracy in predicting the experimental data, indicating a very strong performance in distinguishing between fake and real news (Table 11). Table 11. Final performance obtained on the training and testing LIAR dataset
+Testing
+Training
+
+Metric
+Precision
+Recall
+F1-Score
+Precision
+Recall
+F1-Score
+
+Fake
+99.30%
+99.00%
+99.20%
+100%
+100%
+100%
+
+TRUE
+99.10%
+99.20%
+99.10%
+100%
+100%
+100%
+
+
+As shown in Table 9 and Figs. 21, 22 and 23, all the criteria for both Fake and True classes are close to each other and above 99%. This shows that the model distinguishes well between fake and real news and the balance between these two classes is maintained. For the fake class, the model identified fake news with high accuracy (99.3%) and kept the number of false positives very low. Also, in this class, the recall value is 99.0%, which means that the model was able to identify the vast majority of fake news correctly. Only a limited number of fake news were incorrectly classified as real. As a result, the f1-score value reached 99.2%, which shows an excellent balance between precision and recall, indicating that the model has been very successful in identifying fake news overall. For the True class, the model was also very accurate (99.1%) in identifying real news and reduced the number of false negatives. The recall value was also 99.2%, which indicates that the model was able to identify most of the real news and only a small number of them were mistakenly identified as fake. The F1-score was also 99.1%, which indicates the stable performance of the model in identifying real news. In total, out of a total of 8979 test samples, only 46 examples of fake news were mistakenly classified as real, and only 33 examples of real news were mistakenly identified as fake. These small errors indicate the model’s power in identifying the boundary between fake and real news. The advantages of the model’s performance on the ISOT dataset are the high balance between precision and recall, which indicates that this balance indicates a reduction in false positives and false negatives simultaneously, which is very important for detecting fake news. It is also high accuracy for the test data, where the model performance on the test data is very close to perfect accuracy (99.1%), which indicates that the model is well-learned from the training data and also performs well on the unseen (test) data. Also, the model has a uniform and robust performance in identifying both Fake and True classes. This is very important in real applications, because often in classification problems, one of the classes has a lower accuracy.
+Compared to the LIAR dataset, the ISOT dataset is simpler, as it only contains two classes (fake and true). The high accuracy of the model on ISOT indicates that the feature extraction and model architecture have been able to adapt well to two-class data.
+The proposed model has been able to achieve very high accuracy on the ISOT dataset by combining an optimized group classifier and meta-heuristic algorithms. These results show that the model is not only accurate in identifying fake and real news, but also maintains a balance between different criteria. The success of this model is due to the design of BERT-based features and the use of the power of optimized group classifiers.
+Similarly, we computed 95% confidence intervals for the ISOT dataset using the same bootstrapping approach. The model achieved an accuracy of 99.10% (± 0.25) and an F1-score of 99.00% (± 0.22). The narrow margins of these confidence intervals demonstrate the robustness and consistency of the proposed method when distinguishing between fake and real news.
+To further evaluate the performance of the proposed model on the ISOT dataset, the learning curve is presented in Fig. 25. This figure demonstrates the progression of training and validation losses throughout the training process, providing insight into the generalization capability of the model. Fig. 25 [Images not available. See PDF.]
+Learning curve of the proposed model on the ISOT dataset
+
+According to Fig. 25, the model converges efficiently during the training process. After the initial epochs, the training and validation loss curves align closely and maintain a relatively stable trajectory. This behavior indicates that the model has achieved good generalization and has successfully avoided overfitting. The final accuracy above 99%, as reported in Tables 8 and 9, further confirms this conclusion.
+Variance analysis across data subsets To further assess the robustness and stability of the proposed hybrid model, we conducted a variance analysis by evaluating the performance across different subsets of the LIAR and ISOT datasets using fivefold cross-validation. For each fold, the data were randomly partitioned while preserving class balance. The results are reported as mean ± standard deviation, providing insight into how consistently the model generalizes across different subsets.
+Table 12 shows the performance on the LIAR dataset, and Table 13 presents the corresponding results on the ISOT dataset. Table 12. Variance analysis results on LIAR dataset (fivefold cross-validation)
+Fold
+Accuracy (%)
+F1-score (%)
+AUC (%)
+
+Fold-1
+97.9
+98.0
+98.8
+
+Fold-2
+98.1
+98.1
+99.0
+
+Fold-3
+98.0
+98.1
+98.9
+
+Fold-4
+98.2
+98.2
+99.1
+
+Fold-5
+97.9
+98.0
+98.7
+
+Mean ± Std
+98.0 ± 0.12
+98.1 ± 0.08
+98.9 ± 0.15
+
+Table 13. Variance analysis results on ISOT dataset (fivefold cross-validation)
+Fold
+Accuracy (%)
+F1-score (%)
+AUC (%)
+
+Fold-1
+99.0
+99.0
+99.1
+
+Fold-2
+99.2
+99.1
+99.2
+
+Fold-3
+99.1
+99.0
+99.0
+
+Fold-4
+99.1
+99.0
+99.1
+
+Fold-5
+99.0
+99.1
+99.1
+
+Mean ± Std
+99.1 ± 0.07
+99.0 ± 0.05
+99.1 ± 0.07
+
+
+Computational efficiency analysis In this section, we analyze the computational efficiency of the proposed GA-based hyperparameter optimization for the ensemble of six classifiers. Although genetic algorithms offer an effective search mechanism for complex parameter spaces, they require a higher computational cost compared to simpler approaches such as random search.
+To assess the scalability of our approach, we benchmarked both training and prediction times of the ensemble model optimized with GA against a random search baseline on the LIAR and ISOT datasets. The results are presented in Table 14. Table 14. Comparison of computational efficiency between GA and random search
+Dataset
+Optimization method
+Avg. training time (s)
+Avg. prediction time (s)
+
+LIAR
+GA Optimization
+185.4
+0.92
+
+LIAR
+Random Search
+122.7
+0.91
+
+ISOT
+GA Optimization
+172.6
+0.88
+
+ISOT
+Random Search
+115.2
+0.87
+
+
+The results show that GA optimization incurs approximately 1.4–1.5 × longer training times than random search. However, prediction times are nearly identical for both methods, as the optimization process is only performed once offline. Given that the optimization is an offline process and does not affect real-time inference, the proposed GA-based approach remains computationally feasible and scalable for deployment in large-scale environments.
+Overfitting control and generalization To prevent overfitting during training, several strategies were employed. First, the datasets were divided into independent training, validation, and test sets, ensuring that the model’s performance was evaluated on unseen data. Early stopping was applied to terminate the training process once the validation accuracy plateaued, preventing the model from memorizing the training data. Furthermore, dropout layers and L2 regularization were incorporated to reduce model complexity and avoid over-dependence on specific neurons. In the case of the LIAR dataset, which is relatively small compared to ISOT, cross-validation was also performed to ensure the robustness of the results. These measures collectively ensured that despite the high training accuracy achieved, the model maintained strong generalization ability on validation and test sets, as reflected in the reported experimental outcomes.
+In addition to the quantitative metrics, a qualitative case analysis was conducted to better understand the behavior of the proposed model. For example, in the LIAR dataset, the model correctly identified subtle linguistic cues in statements such as ‘The unemployment rate has dropped for the fifth consecutive quarter,’ which was labeled as true, despite the presence of potentially misleading contextual information. Conversely, some errors occurred in cases where the input contained sarcasm, irony, or ambiguous phrasing, such as ‘This new policy will save every citizen millions, ’ which the model misclassified due to its exaggerated structure. Similar patterns were observed in the ISOT dataset, where the model achieved strong performance in distinguishing politically biased content but occasionally failed on articles with highly sensationalized yet factually correct titles. These examples highlight both the strengths and the remaining limitations of the proposed method in dealing with nuanced and context-dependent textual information.
+Comparison with other works In this section, a final comparison between the proposed method and other methods is made. In recent years, various approaches have been made to identify fake news using machine learning and deep learning algorithms. However, most of these methods have limitations in accuracy or performance on real datasets. Our method was able to achieve very high accuracy by using machine learning optimized group classification using GA algorithm and also using a combined weighting method. The results obtained from this research are compared with some previous methods in Table 15. Table 15. Comparison of proposed method and other existing methods
+Ref (Year)
+Method
+LIAR
+ISOT
+
+Accuracy (%)
+F1-score
+AUC
+Accuracy (%)
+F1-score
+AUC
+
+[16], 2021
+Capsule Neural Networks
+78.20
+78.00
+85.00
+98.70
+98.00
+99.00
+
+[5], 2024
+Hybrid deep learning with FastText and explainable AI
+94.50
+95.00
+97.00
+98.90
+99.00
+99.00
+
+[33], 2021
+Ensemble machine learning with feature extraction
+84.00
+84.00
+88.00
+99.00
+99.00
+99.00
+
+[34], 2024
+Enhanced features through text-to-image transformation with customized models
+92.00
+92.00
+95.00
+98.70
+99.00
+99.00
+
+[35], 2025
+Improved multi-modal framework using NLP and BiLSTM
+95.60
+96.00
+98.00
+96.30
+96.00
+97.00
+
+[26], 2024
+Attribute-wise Attention model with BiLSTM
+60.31
+61.00
+65.00
+99.00
+99.00
+99.00
+
+[36], 2025
+Ensemble Transformer Model (RoBERTa + DeBERTa) with LLM-augmented Dataset and Model Optimization
+96.65
+96.66
+98.00
+96.65
+96.66
+98.00
+
+Proposed method
+Ensemble Classifier Optimized GA Algorithm and novel feature extraction approach utilizing contextual embeddings derived from BERT
+98.05
+98.00
+99.00
+99.10
+99.00
+99.00
+
+
+In recent years, a wide range of approaches have been developed for fake news detection, leveraging techniques from classical machine learning to advanced deep learning and transformer-based architectures. Capsule neural networks [16] demonstrated the potential of structural sentence modeling, reaching 78.2% accuracy on LIAR and 98.7% on ISOT. Ensemble machine learning with feature engineering [33] improved performance to 84% on LIAR and 99% on ISOT, while text-to-image transformation with customized models [34] further increased LIAR accuracy to 92%. More recent works such as hybrid FastText with explainable AI [5] and multi-modal BiLSTM frameworks [35] have shown notable progress, achieving up to 95.6% accuracy on LIAR.
+With the rise of transformer architectures, models like the attribute-wise attention BiLSTM [26] and ensemble transformer combinations (RoBERTa + DeBERTa) [36] have achieved high accuracy, with [36] obtaining 96.65% on LIAR and ISOT alongside strong F1 and AUC scores. Despite these advances, our proposed method—an ensemble classifier optimized using a genetic algorithm with novel embedded BERT-based feature extraction—outperforms all baselines, achieving 98.05% on LIAR and 99.1% on ISOT. The integration of BERT’s deep contextual embeddings with GA-based optimization enables an adaptive, high-performing classification strategy that remains competitive even against the latest transformer ensembles.
+Robustness and Generalization to Unseen Data : A critical challenge in fake news detection is ensuring that models trained on a particular dataset maintain high performance when applied to previously unseen samples or cross-domain data. While many prior works demonstrated high accuracy on benchmark datasets, they often suffered from reduced performance when exposed to out-of-distribution news articles. In contrast, our proposed method maintains strong generalization capabilities due to three factors: - Rich contextual features from BERT embeddings , which capture semantic nuances across domains.
+
+- GA-based optimization of ensemble classifiers , which mitigates overfitting by preventing the dominance of a single weak classifier.
+
+- Balanced learning enabled by GAN-based data augmentation , which introduces diversity and reduces bias toward majority classes.
+
+
+As a result, our approach demonstrates resilience against unseen and imbalanced data distributions, suggesting practical applicability in real-world scenarios where fake news often evolves dynamically.
+Visual Comparative Analysis : To further clarify the comparative performance of our method against baseline models, we provide a radar plot representation (Fig. 26), which simultaneously depicts the Accuracy, F1-score, and AUC for each approach. This graphical illustration highlights the balanced superiority of the proposed method across multiple evaluation metrics, unlike some baselines which excel in accuracy but underperform in robustness or F1-score. Fig. 26 [Images not available. See PDF.]
+Rader plot comparison of fake news detection methods
+
+Why the Hybrid Method Outperforms Others : The consistent outperformance of our framework can be attributed to the following design choices:
+- Generalization beyond training data : By combining the representational power of BERT with the adaptive optimization of GA, the method avoids overfitting and performs effectively even with unseen samples.
+
+- Mitigation of overfitting : Unlike prior approaches that rely on a single model or limited feature space, the hybrid ensemble distributes learning across multiple classifiers while GA tunes their weights dynamically, reducing variance and improving stability.
+
+- Balanced performance : The model achieves not only the highest accuracy, but also strong F1 and AUC scores, demonstrating that it does not trade recall for precision or vice versa.
+
+
+
+Conclusion of Comparative Analysis : These results indicate that while transformer-based ensembles have narrowed the performance gap, the proposed hybrid optimization and feature extraction framework maintains superior accuracy, robustness, and balanced performance across datasets. This combination confirms its effectiveness for robust and generalizable fake news detection in dynamic and evolving environments.
+Statistical Significance Analysis : To further validate the reliability of the performance improvements, statistical significance tests were conducted between the proposed method and competing baselines. A paired t test was performed on the accuracy values across multiple experimental runs (fivefold cross-validation) for both the LIAR and ISOT datasets.
+- On the LIAR dataset, the proposed method achieved statistically significant improvements compared to the best competing baseline ( p -value < 0.01).
+
+- On the ISOT dataset, although the differences with some recent methods were marginal in terms of raw accuracy, the paired t test still confirmed statistical significance ( p -value < 0.05).
+
+- Additionally, a one-way ANOVA test was performed across all compared methods, further confirming that the improvements achieved by our model were statistically significant at the 95% confidence level.
+
+
+
+These statistical analyses reinforce that the superior performance of the proposed method is not due to random variation but reflects genuine and robust improvements over prior approaches.
+Conclusion and future works The proposed method in this study, by combining an optimized ensemble classifier based on a genetic algorithm and extracting new embedded features using BERT, achieved high accuracy in detecting fake news on the LIAR and ISOT datasets. The results demonstrate that using BERT as a powerful tool for extracting linguistic and semantic features, along with combining optimized machine learning models, outperforms previous approaches in addressing the challenges of fake news detection. The high accuracy obtained indicates the model’s strong ability to identify complex patterns in news data.
+Nevertheless, several challenges remain that can be addressed in future work. One important direction is to extend the evaluation to larger-scale and more diverse benchmark datasets, including multilingual data that better capture the cultural and linguistic variety of fake news in real-world environments. Another important extension is a systematic comparison with advanced transformer-based architectures (e.g., RoBERTa, XLNet, DeBERTa), which could provide further insights into the effectiveness of the proposed hybrid approach. Additionally, investigating the impact of multimedia fake news (e.g., combining images, videos, and texts) could open up a new research avenue. Improving the processing speed and reducing computational complexity are also essential for practical deployment. Finally, extending this approach to real-world applications, such as web-based detection tools or integration into social networks, in collaboration with cybersecurity experts and social psychologists, may be an effective step toward reducing the spread of misinformation.
+Furthermore, due to the computational complexity of integrating BERT-based embeddings, GAN-generated data augmentation, and GA-optimized ensemble learning, the proposed method inherently requires high-performance computing (HPC) and parallel/distributed infrastructures. Leveraging HPC resources ensures scalability and real-time applicability when dealing with massive social media streams, aligning the framework with the scope of supercomputing. Future work will further investigate distributed training strategies and GPU/TPU acceleration to enhance efficiency and enable deployment in real-time large-scale environments.
+Author’s contribution K.A.D. conceived the research idea, designed the methodology, and contributed to the implementation of the genetic algorithm. G.A.G. (corresponding author) led the project, designed the ensemble classifier framework, and performed the feature extraction using BERT. F.M. contributed to data preprocessing, experimental setup, and evaluation of the model on the LIAR and ISOT datasets. A.A. assisted in optimizing the ensemble classifier, analyzed the results, and contributed to the statistical validation of the findings. All authors participated in writing and revising the manuscript, and all authors reviewed and approved the final version of the manuscript.
+Data availability No datasets were generated or analysed during the current study.
+Declarations Conflict of interest The authors declare no competing interests.
+Publisher's Note Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+1. Alghamdi, J; Luo, S; Lin, Y. A comprehensive survey on machine learning approaches for fake news detection. Multimed Tools Appl ; 2024; 83 , 17 pp. 51009-51067. [DOI: https://dx.doi.org/10.1007/s11042-023-17470-8]
+2. Raza, S; Paulen-Patterson, D; Ding, C. Fake news detection: comparative evaluation of BERT-like models and large language models with generative AI-annotated data. Knowledge Inform Syst ; 2025; 67 , 4 pp. 1-26. [DOI: https://dx.doi.org/10.1007/s10115-024-02321-1]
+3. Cui, W; Shang, M. MIGCL: fake news detection with multimodal interaction and graph contrastive learning networks. Appl Intell ; 2025; 55 , 1 pp. 1-23. [DOI: https://dx.doi.org/10.1007/s10489-024-05883-3]
+4. Wang, X; Meng, J; Zhao, Di; Meng, X; Sun, H. Fake news detection based on multi-modal domain adaptation. Neural Comput Appl ; 2025; [DOI: https://dx.doi.org/10.1007/s00521-024-10896-7]
+5. Hashmi, E; Yayilgan, SY; Yamin, MM; Ali, S; Abomhara, M. Advancing fake news detection: hybrid deep learning with fasttext and explainable AI. IEEE Access ; 2024; [DOI: https://dx.doi.org/10.1109/ACCESS.2024.3381038]
+6. Abualigah, L; Al-Ajlouni, YY; Daoud, MS; Altalhi, M; Migdady, H. Fake news detection using recurrent neural network based on bidirectional LSTM and GloVe. Soc Netw Anal Min ; 2024; 14 , 1 [DOI: https://dx.doi.org/10.1007/s13278-024-01198-w] 40.
+7. Mahmud, Tanjim, Imran Hasan, Mohammad Tarek Aziz, Taohidur Rahman, Mohammad Shahadat Hossain, and Karl Andersson (2024) Enhanced fake news detection through the fusion of deep learning and repeat vector representations. In: 2024 2nd International Conference on Intelligent Data Communication Technologies and Internet of Things (IDCIoT), pp. 654–660. IEEE, 2024
+8. Al Ghamdi, MA; Bhatti, MS; Saeed, A; Gillani, Z; Almotiri, SH. A fusion of BERT, machine learning and manual approach for fake news detection. Multimedia Tools Appl ; 2024; 83 , 10 pp. 30095-30112. [DOI: https://dx.doi.org/10.1007/s11042-023-16669-z]
+9. Farhangian, F; Cruz, RMO; Cavalcanti, GDC. Fake news detection: taxonomy and comparative study. Inf Fusion ; 2024; 103 , [DOI: https://dx.doi.org/10.1016/j.inffus.2023.102140] 102140.
+10. Faustini, PHA; Covões, TF. Fake news detection in multiple platforms and languages. Expert Syst Appl ; 2020; [DOI: https://dx.doi.org/10.1016/j.eswa.2020.113503]
+11. Vicario, MD; Quattrociocchi, W; Scala, A; Zollo, F. Polarization and fake news: Early warning of potential misinformation targets. ACM Trans Web ; 2019; 13 , 2 pp. 1-22. [DOI: https://dx.doi.org/10.1145/3316809]
+12. Liu, Y; Wu, Y-FB. FNED: A deep network for fake news early detection on social media. ACM Trans Inf Syst (TOIS) ; 2020; 38 , 3 pp. 1-33.1288206 [DOI: https://dx.doi.org/10.1145/3386253]
+13. Khanam Z, Alwasel BN, Sirafi H, Rashid M (2021) Fake news detection using machine learning approaches. In: IOP conference series: materials science and engineering. 1099(1):012040. IOP Publishing
+14. Kaliyar, RK; Goswami, A; Narang, P. DeepFakE: improving fake news detection using tensor decomposition-based deep neural network. J Supercomput ; 2020; [DOI: https://dx.doi.org/10.1007/s11227-020-03294-y]
+15. Vereshchaka, A; Cosimini, S; Dong, W. Analyzing and distinguishing fake and real news to mitigate the problem of disinformation. Comput Math Organ Theory ; 2020; [DOI: https://dx.doi.org/10.1007/s10588-020-09307-8]
+16. Goldani, MH; Momtazi, S; Safabakhsh, R. Detecting fake news with capsule neural networks. Appl Soft Comput ; 2021; 101 , [DOI: https://dx.doi.org/10.1016/j.asoc.2020.106991] 106991.
+17. Adedoyin Festus, and Brindha Mariyappan (2024) Fake News Detection using Machine Learning Algorithms and Recurrent Neural Networks. Authorea Preprints
+18. Kishwar, A; Zafar, A. Fake news detection on Pakistani news using machine learning and deep learning. Expert Syst Appl ; 2023; 211 , [DOI: https://dx.doi.org/10.1016/j.eswa.2022.118558] 118558.
+19. Capuano, N; Fenza, G; Loia, V; Nota, FD. Content based fake news detection with machine and deep learning: a systematic review. Neurocomputing ; 2023; [DOI: https://dx.doi.org/10.1016/j.neucom.2023.02.005]
+20. Choudhury, D; Acharjee, T. A novel approach to fake news detection in social networks using genetic algorithm applying machine learning classifiers. Multimed Tools Appl ; 2023; 82 , 6 pp. 9029-9045. [DOI: https://dx.doi.org/10.1007/s11042-022-12788-1]
+21. Zhang, Q; Guo, Z; Zhu, Y; Vijayakumar, P; Castiglione, A; Gupta, BB. A deep learning-based fast fake news detection model for cyber-physical social services. Pattern Recognit Lett ; 2023; 168 , pp. 31-38. [DOI: https://dx.doi.org/10.1016/j.patrec.2023.02.026]
+22. Alaa, Altheneyan; Alhadlaq, Aseel. Big data ML-based fake news detection using distributed learning. IEEE Access ; 2023; 11 , pp. 29447-29463. [DOI: https://dx.doi.org/10.1109/ACCESS.2023.3262833]
+23. Altheneyan, A; Alhadlaq, A. Big data ML-based fake news detection using distributed learning. IEEE Access ; 2023; 11 , pp. 29447-29463. [DOI: https://dx.doi.org/10.1109/ACCESS.2023.3260763]
+24. Elyassami S, Alseiari S, ALZaabi M, Hashem A, Aljahoori N (2022) Fake news detection using ensemble learning and machine learning algorithms. Combating Fake News with Computational Intelligence Techniques. 149–162.
+25. Ahmad, T; Faisal, MS; Rizwan, A; Alkanhel, R; Khan, PW; Muthanna, A. Efficient fake news detection mechanism using enhanced deep learning model. Appl Sci ; 2022; 12 , 3 [DOI: https://dx.doi.org/10.3390/app12031743] 1743.
+26. Fayaz, M; Khan, A; Bilal, M; Khan, SU. Machine learning for fake news classification with optimal feature selection. Soft Comput ; 2022; 26 , 16 pp. 7763-7771. [DOI: https://dx.doi.org/10.1007/s00500-022-06773-x]
+27. Heidari, AA; Mirjalili, S; Faris, H; Aljarah, I; Mafarja, M; Chen, H. Harris hawks’ optimization: algorithm and applications. Future Gener Comput Syst ; 2019; 97 , pp. 849-872. [DOI: https://dx.doi.org/10.1016/j.future.2019.02.028]
+28. Madani, M; Motameni, H; Roshani, R. Fake news detection using feature extraction, natural language processing, curriculum learning, and deep learning. Int J Inf Technol Decis Making ; 2024; 23 , 03 pp. 1063-1098. [DOI: https://dx.doi.org/10.1142/S0219622023500347]
+29. Farokhian, M; Rafe, V; Veisi, H. Fake news detection using dual BERT deep neural networks. Multimed Tools Appl ; 2024; 83 , 15 pp. 43831-43848. [DOI: https://dx.doi.org/10.1007/s11042-023-17115-w]
+30. Hakak, S; Alazab, M; Khan, S; Gadekallu, TR; Maddikunta, PKR; Khan, WZ. An ensemble machine learning approach through effective feature extraction to classify fake news. Future Gener Comput Syst ; 2021; 117 , pp. 47-58. [DOI: https://dx.doi.org/10.1016/j.future.2020.11.022]
+31. Ahmed, Hadeer; Traore, Issa; Saad, Sherif. Detecting opinion spams and fake news using text classification. Security and Privacy ; 2018; 1 , 1 e9. [DOI: https://dx.doi.org/10.1002/spy2.9]
+32. Wang WY (2017) ‘Liar, liar pants on fire’: A new benchmark dataset for fake news detection. arXiv preprint arXiv:1705.00648
+33. Rustam, F; Jurcut, AD; Alfarhood, S; Safran, M; Ashraf, I. Fake news detection using enhanced features through text to image transformation with customized models. Discover Computing ; 2024; 27 , 1 pp. 1-26. [DOI: https://dx.doi.org/10.1007/s10791-024-09490-1]
+34. Alsuwat, E; Alsuwat, H. An improved multi-modal framework for fake news detection using NLP and Bi-LSTM. J Supercomput ; 2025; 81 , 1 177. [DOI: https://dx.doi.org/10.1007/s11227-024-06671-z]
+35. Merryton, AR; Gethsiyal Augasta, M. An attribute-wise attention model with BiLSTM for an efficient fake news detection. Multimed Tools Appl ; 2024; 83 , 13 pp. 38109-38126. [DOI: https://dx.doi.org/10.1007/s11042-023-16824-6]
+36. Ishraquzzaman, Md; Chowdhury, MAI; Rahman, S; Khan, R. Ensemble transformer-based detection of fake and AI–generated news. Appl Comput Intell Soft Comput ; 2025; 2025 , 1 3268456.

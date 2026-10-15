@@ -1,0 +1,794 @@
+Introduction The introduction of social media as a source of information in the late 2010s fundamentally altered the way people receive information and news. This transformation has increased public access to information and improved public awareness. However, it has also contributed to the extensive spread of misinformation and fake news due to amplified digital dissemination. The distribution of fake news has several negative outcomes. It can adversely affect public perceptions, contributing to political instability, and destabilizing business and the economy 1 .
+Previous studies on the spread of misinformation have proven that fake news spreads rapidly than factual information 2 . The authors conducted a large-scale analysis of approximately 126,000 news items. Their findings show that fake news is more likely to be shared than real news. In total, fake news was shared more than 4.5 million times by approximately three million users. Annotation reliability was ensured using a high inter-annotator agreement (95–98%) across six independent fact-checking organizations. These results highlight the rapid and large-scale dissemination of fake news from online sources.
+This issue is particularly critical for low-resource language communities. However, credible statistics to measure the extent of misinformation in these environments are lacking. The vast majority of current fake-news detectors specialize in high-resource languages, including English, Hindi, and Spanish on which large annotated datasets and language resources can be easily obtained 3 . Burmese is a Sino-Tibetan language and the official language of Myanmar, spoken by most of the population. It is also used by Burmese diaspora communities in other countries, such as Thailand, Malaysia, Singapore, and the United States. Although Burmese is a widely spoken language, research on natural language processing (NLP) for Burmese remains limited. This is largely because of the absence of annotated datasets, linguistic resources, and benchmarks. Given these limitations, developing effective Burmese-specific fake news detection systems using conventional supervised learning approaches remains challenging.
+The present research on the detection of fake news is mostly based on high-resource languages. They are based on large-scale annotated datasets, standardized benchmarks, and clearly defined evaluation protocols. In contrast, low-resource languages, such as Burmese, have few studies. The existing literature is typically based on translations, small collections, or inconsistent labelling, making it difficult to make consistent comparisons between models. This lack of a standardized dataset and systematic evaluation process is a significant research gap in the dynamics of multilingual, language-specific, and hybrid transformer models under low-resource conditions.
+Transfer learning has been an effective solution to the challenges associated with low-resource languages. Recent developments in natural language processing have demonstrated that transformer-based models can be used efficiently for multilingual text classification. Multilingual bidirectional encoder representations from transformers (mBERT) and cross-lingual robustly optimized bidirectional encoder representations from transformers (XLM-RoBERTa) models have the ability to capture linguistic relations between languages 4, 5–6 . These models have been used to detect propaganda and sentiment analysis, and have performed fairly well compared to the old methods of machine learning. Multilingual models such as mBERT and XLM-RoBERTa are pretrained on large cross-lingual datasets. By exploiting similar multilingual representations, such models can be adapted to Burmese 7 . The approach significantly reduces the usage of large task-specific datasets and has been demonstrated to be helpful in low-resource natural language processing tasks 8 .
+Transformer models have brought significant improvements to natural language processing since they are capable of identifying complex contextual and semantic relationships 9, 10–11 . Nevertheless, their application to the detection of fake news in low-resource languages, such as Burmese, is lacking. Some issues with low-resource languages are the lack of large-scale annotated corpora, linguistic resources, and standardized benchmarks. These restrictions limit the production and testing of powerful models. This has made it difficult to learn Burmese to detect misinformation, as it has been with other well-studied languages. Language-specific and multilingual transformer models have performed well in various natural language processing (NLP) tasks. However, their use in the detection of fake news in the Burmese language has not been systematically tested. In particular, none of the comparative studies of multilingual, language-specific, and hybrid architectures of transformers have been conducted in a consistently low-resource environment.
+This study aims to fill this gap by providing a systematic and controlled analysis of transformer-based architectures for fake news detection in the Burmese language. This study explores multilingual, language-specific, and hybrid transformer-based models under a single experimental setup with respect to performance, stability, and error analysis. A balanced dataset of Burmese news headlines was created, consisting of authentic news created by trustworthy sources and fake news created using different strategies, such as the use of social media, manual creation, and semantic transformations created by rules. All models were tested using the same preprocessing, training, and evaluation parameters to enable a fair comparison without any bias. Standard classification metrics were used to evaluate the model performance, and to test the robustness and statistical significance of performance differences, cross-validation and statistical significance testing were used, respectively. This designed study allows a trustworthy evaluation of model conduct and offers an understanding of the learning of representations and generalization in low-resource language environment.
+The primary contributions of this study are as follows. - A balanced Burmese fake news headline dataset was created to aid research in low-resource language environments.
+
+- A comparative analysis of multilingual (mBERT and XLM-RoBERTa), language-specific (Burmese RoBERTa), and hybrid (XLM-RoBERTa + Convolutional Neural Network (CNN)) transformer models was conducted under the same experimental conditions.
+
+- The model conditions, performance, and error behavior were analyzed to understand its behavior under low-resource settings.
+
+- An experimental framework for Burmese fake news detection is developed, providing a baseline for future research in low-resource misinformation detection.
+
+
+The current study also examines the effectiveness of multilingual and language-specific transformer architectures on fake news detection in Burmese, CNN-based local feature extraction in hybrid transformer architectures and the comparative stability of transformer-based models on limited training data conditions.
+This study is based on fake news detection in headlines only and not in the entire news story. This design reflects the real-world behavior of consuming information. A significant proportion of users consume news primarily through the headlines rather than the full articles. False news titles are more likely to capture the essence of a statement and the essential stakeholders within an article. As a result, they are particularly effective in managing user perceptions and sharing behaviours. It has been demonstrated in the past studies that classification based on the headline-based features can be achieved an accuracy of 78% using the linear models of support vector machine (SVM) against 71% using the article body text alone 12 . The validity of the experimental findings in this study is also significant in establishing the usefulness of headline-level analysis when resources are scarce. However, the current study is limited to the detection of fake news at the headline level. The findings may not be applicable to full-text or discourse-level analyses.
+This study presents a rigorous empirical basis for recognizing fake news using transformers in the Burmese language. It emphasizes methodological clarity, controlled experimentation, and limitations due to low-resources. These findings demonstrate the significance of representation learning and evaluation stability in low-resource NLP. The findings can be used to develop portable misinformation detection systems for practical use.
+The remainder of this paper is organized as follows. “Literature review” section provides a broad overview of the literature on machine learning-based fake news detectors and transformers. “Methodology” section deals with the methodology, data building, preprocessing, and model structures. “Results and discussion” section presents the results of the experiment, and explains it, as well as the conclusions and future research directions.
+Literature review The detection of fake news using automated techniques has become common practice as the amount of fake news in digital media has grown exponentially. The earliest fake news detectors used a traditional machine learning model and surface textual features. Popular features used in early fake news detectors include bag-of-words, term frequency-inverse document frequency (TF-IDF), and n-gram-based features. Examples of classifiers that have demonstrated reasonable performance are support vector machines, logistic regression and Naive Bayes. Nonetheless, these methods are extremely reliant on lexical surface patterns. They do not have a contextual background; thus, they make poor generalizations across domains and languages, particularly in low-resource situations 13 .
+In low-resource languages, the scarcity of annotated datasets is often filled with traditional models with hand-crafted grammatical and linguistic characteristics. For example, an ensemble voting system with a linguistic feature-based word embedding (LFWE) model was employed in a study on Hindi fake news detection. The accuracy of this approach was 98.49% 14 . Despite the strong experimental performance of these methods, they are limited to shallow feature representations. They also fail to capture deeper semantic relationships.
+Recent developments in fake news detection have led to the adoption of machine learning using deep learning models. CNNs, recurrent neural networks (RNNs), and long short-term memory (LSTM) networks are deep learning structures that allow feature extraction from raw text without manual selection. This results in better and more consistent performance. For example, a fake-news detection study in Slovakia attained accuracies of 92.38 and 93.56 with CNNs and LSTM models, respectively 15 . Study 16 has highlighted the importance of quality of dataset and neural modelling. This showed that even in low-resource settings, high levels of misinformation detection can be achieved when high-quality datasets are employed.
+Despite these developments, first-generation deep learning architectures have some fundamental constraints. Their sequential processing prevents them from capturing long-range dependencies. This poses a problem for long or complicated news articles. CNNs do not have variable kernel sizes. RNN-based models cannot maintain long-term dependencies and are computationally inefficient. Owing to these limitations, attention-based systems have been developed. The models enhance the understanding of the context because more emphasis is placed on pertinent words and phrases. Nevertheless, the ability to work with long text sequences presents scalability and efficiency issues for attention-augmented CNN and RNN models.
+These constraints have resulted in the use of transformer models. Transformers model contextual dependencies with self-attention and process complete sequences simultaneously. Transformer structures have been observed to outperform conventional machine learning and recurrent models by a significant margin. They are especially successful in working with long sentences and complicated semantic relations 17 . Transformers address much of the structural constraints of previous models, as they lead to the modelling of contextual dependencies between all tokens simultaneously.
+Several studies have demonstrated that transformer architectures are suitable for fake news recognition. Studies such as 18,19 demonstrate transformer models to be better than the traditional and recurrent models. They have greater capabilities for grasping fine-grained semantic features and long-range dependencies. Hybrid designs have also been reported to improve performance. Transformer-based bidirectional encoder representations of light gradient boosting machine (LightGBM) classifier 20 . The accuracy of this approach was 99.88% and 96.94%, and the F1-score was 99.88% for the information, security, and object technology (ISOT) and text and image information-based convolutional neural network (TI-CNN), respectively.
+Although effective as models, transformer-based models have practical problems, especially in terms of the cost of computing, and compatibility with real-time environments. To correct such deficiencies, hybrid architectures have been proposed. These architectures are a combination of transformers, lightweight classifiers, and other neural components. Indicatively, a hybrid model that is based on the combination of bidirectional encoder representations from transformers (BERT) and generative pre-trained transformer (GPT) based classifiers were shown to have an accuracy of 99.78 per cent on a dataset that consisted of 72,134 news articles 21 . This indicates that real-time applications are feasible. The comparable architectural optimization and multilingual hybrid approaches were also taken into consideration in 17,22 , and the usefulness in the data-scarce situations was stated.
+Fake news detection in low-resource languages has become an active area of research. BanFakeNews-2.0 was used to systematically analyze different approaches in Bengali 23 . Large language models fine-tuned with quantized low-rank adaptation (QLoRA) outperformed BERT-based models, with an 87% F1-score, and QLoRA with 89%. These conclusions are much better than those achieved using conventional machine learning methods. The same findings were achieved in 24 , where it was demonstrated that language-specific transformer pretraining can learn to capture the linguistic peculiarities of low-resource languages more effectively.
+However, fake news detection in low-resource languages remains significantly underdeveloped because of several other factors, such as the scarcity of annotated data, morphological complexity, and unstandardized natural language processing systems. Several studies have been conducted on alternative methods for addressing these problems. For example, a Thai fake news detection study combined the criteria importance through intercriteria correlation (CRITIC) technique with naïve Bayes, decision trees, and K-Nearest Neighbours (KNNs). The models achieved accuracies of 80.83%, 80.37%, and 75.75%, respectively 25 . Detection accuracy can be improved by incorporating social contextual cues and textual features. However, such metadata is often unavailable in low-resource language settings 26 .
+In particular, there is a lack of research on the Burmese language. A preliminary study developed a Burmese fact-checking dataset by translating the fake news challenge dataset (FNC-1B) 27 . BERT-based classifiers achieved accuracies of 81% on the translated dataset and 79% on a manually annotated dataset. These findings highlight the significance of language-specific pretraining and adaptation to transformer-based models in low-resource environments. Nevertheless, several issues remain unresolved. These include insufficient publicly available high-quality datasets and linguistic issues, such as irregular composition of characters, inconsistency in spacing, formation of compounds, and often mixing of the code with English. These aspects do not allow for systematic evaluations and benchmarking. A summary of the representative studies and their limitations is presented in Table 1.
+Table 1. Summary of existing studies and their limitations in fake news detection.
+Study/reference
+Method/model used
+Key findings
+Limitations/research gap
+
+13
+Traditional machine learning (TF-IDF, n-grams, SVM, Naïve Bayes)
+Established baseline performance for fake news detection
+Relies on superficial lexical features; lacks contextual understanding; poor generalization in low-resource settings
+
+14
+LFWE + Ensemble (Hindi)
+Achieved high accuracy (98.49%) using linguistic features
+Limited semantic representation; dependent on handcrafted features
+
+15,16
+Deep learning models (CNN, RNN, LSTM)
+Improved performance through automatic feature extraction
+Difficulty capturing long-range dependencies; sequential limitations
+
+17
+Transformer-based models
+Strong contextual modelling and improved performance over traditional approaches
+High computational cost; scalability challenges
+
+18,19
+Transformer architectures
+Effective in capturing semantic relationships and long-range dependencies
+Limited evaluation in low-resource and controlled experimental settings
+
+20
+BERT + LightGBM hybrid model
+Very high performance (up to 99.88% accuracy and F1-score)
+Focused on only high-resource datasets
+
+21
+Hybrid BERT + GPT models
+High accuracy (99.78%) with potential for real-time applications
+Requires large-scale data; computationally intensive
+
+22
+Transformer-based models (Hindi, Swahili, Indonesian, and Vietnamese)
+Improved performance (F1 up to 89%) in low-resource settings
+Limited dataset size; lack of standardized evaluation frameworks
+
+23
+Machine learning with feature selection
+Moderate performance
+Strong dependency on feature engineering; lacks deep contextual modelling
+
+24
+Machine learning with feature selection
+Moderate performance
+Lacks Contextual Modelling
+
+25
+CRITIC technique + Naïve Bayes, Decision Tree, KNN (Thai)
+Moderate performance (80.83%, 80.37%, 75.75%)
+Traditional models lack deep contextual understanding; limited effectiveness for complex linguistic patterns
+
+26
+Textual features + social contextual cues
+Improved detection performance using metadata
+Depends on social/contextual metadata, which is often unavailable in low-resource settings
+
+
+The existing literature does not contain a unified and controlled model to evaluate transformer-based structures in low-resource languages (Burmese language). The limitation is the motivation of the current research, which presents balanced benchmark data and an integrated experimental framework that would permit fair, repeatable, and systematic comparisons of multilingual, language-specific, and hybrid transformer models.
+The available literature demonstrates that transformer-based models are useful for detecting fake news, especially in high-resource languages. However, their use in Burmese is limited because of the absence of publicly available datasets and standard evaluation environments. Moreover, few studies have compared multilingual, language-specific, and hybrid transformer models under the same experimental conditions in low-resource environments. To eliminate these shortcomings, the current study uses a comparative analysis of transformer-based models on a balanced dataset of Burmese news headlines. The performance, stability, and error behavior were analyzed in a low-resource environment.
+Methodology In this study, the detection of fake news in Burmese is proposed as a binary-text classification problem. All news headlines were labelled as real or fake. The proposed systematic approach includes dataset structure, annotation, preprocessing, model training, and evaluation processes. Figure 1 shows the entire sequence of work, which can be summarized as follows:
+- Step 1: Collection of authentic news headlines from verified sources.
+
+- Step 2: Generation of fake news using controlled strategies.
+
+- Step 3: Annotation based on source and generation method.
+
+- Step 4: Data preprocessing and tokenization.
+
+- Step 5: Dataset splitting into training, validation, and test sets.
+
+- Step 6: Training of transformer-based models under identical conditions.
+
+- Step 7: Evaluation using classification metrics, cross-validation, and statistical testing.
+
+
+
+This structured design ensures that performance differences arise from the model behavior rather than inconsistencies in the data or experimental settings.
+Fig. 1 [Images not available. See PDF.]
+End-to-end methodology of the proposed Burmese fake news detection framework.
+
+Dataset construction and annotation Data design objective Because of the lack of large publicly available datasets on Burmese misinformation, a balanced benchmark dataset was created. This dataset allows for systematic and controlled testing of transformer-based structures in a low-resource environment. The dataset consists of real news sourced from trusted sources and fake news generated using controlled strategies, as shown in Fig. 2. These strategies include gathering social media, manual generation steered by common tendencies of misinformation, and semantic changes directed by regulations. The construction and annotation of the datasets were defined. The label of every headline is the direct product of its creation and inception. This design makes the labeling process clear and organized. It is also diverse and realistic, with controlled experimental analysis supported. Categorical balance as the primary design principle was observed, and label symmetry and consistency were applied at the headline level to ensure that the model was compared fairly and without bias. This ensures that any observed difference in performance may be due to the modelling behavior and not due to bias in the data.
+Fig. 2 [Images not available. See PDF.]
+Overview of dataset construction process for Burmese fake news detection.
+
+Authentic news collection The sample contained 10,000 Burmese news headlines that were categorized into topical categories and binary labels of veracity. The dataset included 5000 authentic news headlines obtained from a publicly available Burmese news dataset on Kaggle. This dataset contains 30,942 records originally sourced from Democratic Voice of Burma (DVB) News 28 . To minimize category bias, authentic news headlines were selected with approximately equal distribution across 11 topical categories. This prevents the models from learning topic frequency shortcuts. The number of samples in each category was 454 and 456, which showed minimal imbalance in the domains. This is essential, particularly in low-resource language settings, where topic biases may lead to artificially high performance due to topical biases and not due to semantic understanding. Figure 3 illustrates the balanced distribution of authentic news headlines across all the categories. Topical categories were included to have a balanced representation of the domain and to have less bias in the model training. However, the classification problem here is binary fake news detection, that is, a prediction of whether a headline is genuine or fake and not the topical category of the headline.
+Fig. 3 [Images not available. See PDF.]
+True news count per category.
+
+Fake news construction strategy Because of the absence of large, publicly available Burmese fake-news corpora, a multisource strategy was used to generate fake-news headlines that were as diverse and controlled as possible. There were three complementary ways of obtaining fake news samples: - Social media disinformation (55%): 2750 fake news headlines were obtained from publicly available social media websites, mostly Facebook, which is one of the largest distribution channels of content in the Burmese language. The headlines were chosen for their popularity and frequency of circulation to indicate the actual patterns of misinformation in the real world, such as informal expressions, half-statements, and unprovable statements.
+
+- Manual fabrication (31%): This dataset contained 1550 fake news headlines produced based on actual news content. This was done according to patterns of misinformation that generally entail misdirecting causal assertions, partisan framing, unreliable sources, and the distortion of factual or numerical information. Manual generation allowed the addition of linguistically well-formed and semantically corrupted headlines that appear as realistic misinformation but are grammatically correct.
+
+- Rule-based semantic transformation (14%): To further diversify the dataset, a rule-based generation framework was employed to systematically generate authentic news headlines. Within this structure, important semantic terms, such as numerical values, names of individuals, and names of geographical locations, were substituted. To ensure language uniformity, machine translation was used to translate the original Burmese headlines into English. This was achieved by applying rules to make it fake and then translating it back into Burmese. This generated valid fake news headlines that seemed real and were syntactically correct but had minor differences in their meanings. These manipulations were controlled to ensure that there was no undue noise and overloading with fake news.
+
+
+The suggested multisource approach offers a moderate balance between realism and control. Social media data include natural linguistic variation, and manual and rule-based generation introduces systematic semantic distortions. Such a hybrid design enhances the diversity of the datasets and preserves the consistency of the experiment, which is critical for strong evaluation under low-resource conditions. These generation strategies also define the labeling of fake samples in the dataset, as described in “Annotation and validation” section.
+Dataset composition and balance The last dataset comprised 5000 real and 5000 fake news headlines, which created a perfectly balanced binary classification problem. Figure 4 illustrates that all 11 categories have more or less equal exposure of 9.1% of the overall dataset; thus, they are equally exposed to topical domains in both the training and evaluation datasets. The balanced design minimizes the likelihood of a model being biased towards dominant categories and highlights the linguistic and semantic information used in the process of detecting false information. As depicted in Fig. 2, the dataset has a significant distinction between real and fake news sources, in addition to controlled diversity in the generation of fake news.
+Fig. 4 [Images not available. See PDF.]
+Overall category distribution of the dataset.
+
+Annotation and validation The problem was modelled as a binary classification. The headlines were tagged according to their sources and methods of generation. Annotation is a rule-based and source-driven process, which guarantees consistency and limits subjectivity.
+- Real news (label = 0) consists of headlines accessed through the verified and publicly available DVB News dataset on Kaggle 28 . These headlines are valid and unmodified journalistic facts that form a credible ground truth.
+
+- Fake news (label = 1) comprises headlines that are either shared by unverified social media accounts or generated through controlled processes, such as manual fabrication and semantic transformation through rule-driven processes, as discussed in “Fake news construction strategy” section.
+
+
+
+Verification criteria were used to label fake news gathered from social media sources. A headline was regarded as fake when it was issued by unverified sources or when it contained information that did not match what was issued by credible news sources. Correspondingly, headlines fall under the category of fake when they contain false semantic information, such as false numerical data, replaced entities (e.g., people or places), or altered relationships.
+The fake news sample was labelled based on systematic transformation rules that reflected the misinformation model in the real world. These are: - manipulation of numbers to overstate or misrepresent factual data,
+
+- alteration of named objects, individuals, or places,
+
+- false or unprovable assertion,
+
+- Contextual distortion by manipulation of relationships among events or objects.
+
+
+This ensured that fake headlines remained grammatically correct while conveying misleading meanings.
+To ensure the quality of the dataset and the reliability of the annotation, several validation processes were employed. Similar and repetitive headlines were removed to prevent repetition and bias. Assignments of labels to them were verified in a systematic way so as to be able to fit between the source or generation process and class assigned. Second, the samples were spread across topical categories to have equal representation and avoid the effect of domain-specific bias.
+The fake headlines produced were manually screened during dataset construction. This guarantees linguistic correctness and semantic plausibility. This review confirmed that the reformatted headlines were still grammatically correct in Burmese but with semantic distortion manipulations under control to correspond with the characteristics of real-world misinformation.
+Table 2 presents examples of the real and fake versions of the headlines produced with different types of assistance and different strategies to demonstrate the process of annotation and transformation. These examples demonstrate that semantic transformations, namely, numerical changes, altering an object, or distorting the context, are made without impairing grammatical correctness.
+Table 2. Sample of real and corresponding generated fake news headlines.
+
+Methodological validity and interpretation scope Synthetically and manually generated fake news offers an empirical approach to the issue of data scarcity in low-resource language studies. Although synthetic generation can lead to the introduction of stylistic regularities, the process is under the control of the user. It maintains grammatical correctness but introduces semantic distortions consistent with the pattern of misinformation observed in the real world. It is assumed that the dataset will be useful in the comparative evaluation of model robustness in controlled low-resource environments rather than being a completely organic misinformation benchmark.
+To the best of our knowledge, no publicly available or standardized benchmark data for Burmese fake news detection exist. Current research uses corpora that are translated or closed datasets that use varying labels and experimental conditions. Consequently, it is not possible to directly compare and contrast them with previous research in numerical terms. This study focused on intra-model controlled internal comparisons under the same experimental conditions.
+Moreover, the data are confined to fake news at the level of headlines. This design decision is in line with previous results that have shown that users find themselves interacting with news content, mostly in the form of headlines, which may often represent the main argument of a news article. Therefore, the reported results should be interpreted as upper-bound comparative measurements. However, they do not represent the absolute performance in real-world deployment scenarios. Thus, the dataset built in the present study can be used as one of the first benchmark resources to estimate transformer-based models in the context of low-resource Burmese experimental conditions.
+Data preprocessing Data preprocessing was performed to maintain consistency, fairness, and reliability of the data in all experiments. Two datasets containing real and fake news were provided as two different Excel files. A binary score was used, with real news set to 0 and fake news set to 1. The datasets were combined and randomly shuffled. This eliminated the ordering bias and prevented the models from learning category-specific patterns.
+To maintain a balance in the classes, a merged dataset was divided into 70% for training, 15% for validation, and 15% for testing. Stratified splitting was used to maintain an equal class ratio across all subsets. This ensures a fair evaluation. Figure 5 shows the distribution of authentic and fake news headlines according to their categories, which proves the balanced representation of all categories.
+Fig. 5 [Images not available. See PDF.]
+Category-wise distribution of authentic and fake news headlines.
+
+Text normalization was performed before tokenization to consider the peculiarities of the Burmese text. Any white spaces, hidden characters, and leading or trailing spaces were removed because uneven spacing can also be detrimental to tokenizing Burmese. A pretrained tokenizer was used for each transformer model to perform tokenization. The text data were tokenized into subword units. The sequences were truncated or padded to a maximum length of 128 tokens. The tokens were then converted into numerical representations of the corresponding words.
+The tokenized data were converted into Hugging Face dataset objects and subsequently into PyTorch tensors to enable efficient training using a graphics processing unit (GPU). A batch size of 16 was used in the PyTorch DataLoader to load the mini-batches. The same preprocessing steps were applied to all the models, including the hybrid architectures. This ensured that the performance differences were due to the model design rather than the data processing variations.
+Models architecture The models selected in this study represent different transformer-based learning paradigms that are suitable for low-resource language processing. Multilingual models, namely mBERT and XLM-RoBERTa, were selected because of their ability to leverage cross-lingual transfer learning. These models have performed well in low-resource language settings 4, 5–6 . To evaluate the impact of pretraining the Burmese language in a language-specific manner, Burmese RoBERTa was selected. To investigate the possibility of local feature extraction to supplement transformer-based features when classifying fake news, a hybrid framework consisting of XLM-RoBERTa and CNN was employed. This study contrasts these four fake news detectors that use transformers in the Burmese language in a limited data setup. All models were trained based on the same preprocessing techniques, hyperparameters, and metrics to ensure fair and controlled comparisons.
+The training parameters used for all models are listed in Table 3. Identical hyperparameters were applied across all the architectures to ensure consistency and experimental fairness. The AdamW optimizer was used because of its effectiveness in fine-tuning large transformer models. Its decoupled weight decay helps reduce overfitting 29 . A low learning rate was adopted to stabilize the convergence under limited data conditions.
+Table 3. Parameters used for all models.
+Parameter
+Value
+
+Optimizer
+AdamW
+
+Learning rate
+2 × 10⁻⁶
+
+Weight decay
+0.01
+
+Minimum learning rate
+1 × 10⁻⁷
+
+Number of epochs
+10
+
+Batch size
+16
+
+Maximum sequence length
+128
+
+Dropout rate
+0.2
+
+Loss function
+Cross-entropy
+
+Gradient clipping threshold
+1.0
+
+
+Transformer-based models significantly outperform conventional machine learning approaches in fake news detection as presented by 30 . The authors used DistilBERT, which achieved an accuracy as high as 99.91%. Based on these findings, all transformer models in this study were initialized with pretrained weights and fine-tuned end-to-end on the Burmese dataset. A dropout rate of 0.2 was applied before the final classification layer to reduce overfitting, which may have resulted from the relatively small dataset. Binary classification was performed using a SoftMax output layer with a cross-entropy loss.
+Table 4 presents the architectural details of all the evaluated models. All models used normalized Burmese headlines with a fixed maximum input-sequence length to ensure a consistent input representation.
+Table 4. Internal architecture details of all models.
+Aspect
+XLM-RoBERTa
+Hybrid XLM-RoBERTa + CNN
+mBERT
+Burmese RoBERTa
+
+Model type
+Transformer-based classifier
+Hybrid Transformer–CNN classifier
+Transformer-based classifier
+Transformer-based classifier
+
+Pretrained encoder
+XLM-RoBERTa -base
+XLM-RoBERTa-base
+bert-base-multilingual-cased
+saihtaungkham/BurmeseRoBERTa
+
+Input text
+Normalized Burmese news titles
+Normalized Burmese news titles
+Normalized Burmese news titles
+Normalized Burmese news titles
+
+Tokenization
+XLM-RoBERTa tokenizer
+XLM-RoBERTa tokenizer
+mBERT tokenizer
+Burmese-RoBERTa tokenizer
+
+Maximum sequence length
+128
+128
+128
+128
+
+Core encoding layer
+Transformer encoder
+Transformer encoder
+Transformer encoder
+Transformer encoder
+
+Primary feature representation
+CLS token embedding
+Multi-path representation (CNN + attention)
+CLS token embedding
+CLS token embedding
+
+Additional feature layers
+None
+1D CNN layers (kernel sizes 3 and 5)
+None
+None
+
+Pooling strategy
+CLS pooling
+Max-pooling (CNN) + attention pooling
+CLS pooling
+CLS pooling
+
+Attention mechanism
+Self-attention (Transformer)
+Self-attention + learnable attention pooling
+Self-attention (Transformer)
+Self-attention (Transformer)
+
+Regularization layer
+Dropout
+Dropout
+Dropout
+Dropout
+
+Classifier head
+Fully connected linear layer
+Fully connected linear layer
+Fully connected linear layer
+Fully connected linear layer
+
+Output classes
+Binary (fake/real)
+Binary (fake/real)
+Binary (fake/real)
+Binary (fake/real)
+
+
+The hyperparameter tuning strategy and training settings used for all models are summarized in Table 5. A cosine annealing learning rate scheduler was used to gradually reduce the learning rate and ensure a smooth convergence. Gradient clipping was applied to stabilize the optimization and prevent exploding gradients. All the models were evaluated using the same metrics. This ensures that the performance differences are attributable solely to the model design rather than experimental variations.
+Table 5. Hyperparameter tuning and training configuration for all models.
+Aspect
+XLM-RoBERTa
+Hybrid XLM-RoBERTa + CNN
+mBERT
+Burmese RoBERTa
+
+Loss function
+Cross-Entropy Loss
+Cross-Entropy Loss
+Cross-Entropy Loss
+Cross-Entropy Loss
+
+Optimizer
+AdamW
+AdamW
+AdamW
+AdamW
+
+Learning rate
+2 × 10⁻⁶
+2 × 10⁻⁶
+2 × 10⁻⁶
+2 × 10⁻⁶
+
+Weight decay
+0.01
+0.01
+0.01
+0.01
+
+Learning rate scheduler
+Cosine Annealing
+Cosine Annealing
+Cosine Annealing
+Cosine Annealing
+
+Scheduler parameters
+Tmax = 10, ηmin = 1e−7
+Tmax = 10, ηmin = 1e–7
+Tmax = 10, ηmin = 1e−7
+Tmax = 10, ηmin = 1e−7
+
+Batch size
+16
+16
+16
+16
+
+Epochs
+10
+10
+10
+10
+
+Dropout rate
+0.2
+0.2
+0.2
+0.2
+
+Gradient clipping
+Not applied
+Max-norm = 1.0
+Max-norm = 1.0
+Max-norm = 1.0
+
+Train/val/test split
+70/15/15
+70/15/15
+70/15/15
+70/15/15
+
+Random seed
+42
+42
+42
+42
+
+Evaluation metrics
+Accuracy, Precision, Recall, F1, Receiver Operating Characteristic - Area Under Curve (ROC-AUC)
+Accuracy, Precision, Recall, F1, ROC-AUC
+Accuracy, Precision, Recall, F1, ROC-AUC
+Accuracy, Precision, Recall, F1, ROC-AUC
+
+
+Baseline models Conventional machine learning and lightweight deep-learning models were used as baselines. The machine learning baseline is based on TF-IDF feature analysis with the SVM classifier, which can be considered an effective approach to capture lexical patterns on the surface. The lightweight pretrained frameworks investigated were two neural networks with a CNN with attention pooling and a bidirectional long short-term memory (BiLSTM). Although these models lack a deep contextual understanding, they provide useful reference points for evaluating transformer-based architectures.
+Multilingual bidirectional encoder representations from transformers (mBERT) mBERT is the multilingual transformer that is pretrained on Wikipedia texts of 104 languages and a shared vocabulary of WordPieces 31 . Although Burmese is also represented in pretraining, it is a low-resource language with little representation compared to high-resource languages such as English. This architecture involves the final hidden layer signifying the [CLS] token as a fixed-length sentence embedding, an additional dropout layer, and a linear classifier. This structure allows us to measure the effectiveness of general multilingual representations in transferring to Burmese fake news detection without architectural enhancements.
+Hybrid cross-lingual robustly optimized bidirectional encoder representations from transformers (XLM-RoBERTa) XLM-RoBERTa is a multilingual, multi-advanced, pretrained model trained on large-scale and heterogeneous corpora in more than 100 languages. It is trained on much larger datasets compared to mBERT, which allows more powerful cross-lingual representations 7 . The classification architecture follows the same pattern as mBERT, and the final output of the hidden layers is subjected to dropout and a linear classifier. This uniformity causes a change in performance owing to the pretrained representations, as opposed to architectural variations.
+Burmese language-specific robustly optimized bidirectional encoder representations (Burmese RoBERTa) Burmese RoBERTa was tested to assess the impact of language-specific pretraining. This is a monolingual transformer model trained only on the Burmese corpora. The model is pretrained with a Masked Language Modelling pretext on diverse Burmese data, including Wikipedia, OSCAR and domain-specific news sources 32 . Being dedicated to one language fully, Burmese RoBERTa is better adjusted to language peculiarities, including the use of compound words, inconsistent spacing, and code mixing, which appear to be particularly relevant to the detection of fake news.
+Hybrid cross-lingual robustly optimized bidirectional encoder representations from transformers + convolutional neural networks (XLM-RoBERTa + CNN) The most advanced architecture considered in this study was a hybrid architecture that involved XLM-RoBERTa with convolutional neural networks and attention pooling. The representations generated by the pretrained encoder are token-level representations, which are then fed through two one-dimensional CNNs with kernel sizes of 3 and 5 to identify local patterns involving misleading content. Max-pooling is applied to extract salient features and an attention-pooling system is applied in order to weight informative tokens with higher weights. The hybrid functions are regularized and pretrained and sent to an fc classifier. The hybrid architecture enables the realization of global and local feature extraction on top of the global contextual data, which is especially suitable for low-resource language settings.
+Training and evaluation strategy The training and evaluation were controlled and uniform. The test was divided into a training set (70%), validation set (15%), and test set (15%). All models were then trained using the same preprocessing steps and hyperparameters to enable a fair comparison of all models (Tables 3 and 5). To measure the performance of the classification, the model performance was measured using several measures, such as accuracy, precision, recall, F1-score, and receiver operating characteristic area under the curve (ROC-AUC).
+The 5-fold cross-validation of the training set was used to measure the robustness and generalization of the model. The training data were split into five-folds. All the folds were used for validation, and the rest of the folds were used for training. The test set was not maintained under the same conditions and was not used for any other evaluation. This asymmetry ensures that the findings reflect a sensible application of generalization. The McNemar test was performed on the model predictions in the test set to determine statistical significance. This type of experimental design was chosen so that any difference in performance was due to the model architecture and not differences in data processing or training.
+Results and discussion Training and validation analysis The training and validation curves provide information about the learning processes and generalization behavior. Figure 6 shows that all the models based on transformers are fast-convergent, and the learning is consistent. All the transformer models converged in approximately ten epochs and were well validated.
+Fig. 6 [Images not available. See PDF.]
+Training and validation accuracy of all models.
+
+The convergence speed of Burmese RoBERTa was higher, and the validation accuracy was more convincing, suggesting the effectiveness of language-specific pretraining. BiLSTM converged more slowly and generalized poorly compared to the baseline models. Similarly, the CNN-attention model lacks long-range contextual dependencies; hence, its performance is poor.
+The training and validation loss curves for all models are shown in Fig. 7. The training loss of the transformer-based models also decreased rapidly, and the validation loss followed the same trend, indicating that overfitting did not occur extensively. The BiLSTM and CNN-attention models exhibited a higher loss during validation; however, their training behavior remained consistent. In summary, these results demonstrate that the model based on transformers is stable in learning and generalization on the Burmese dataset.
+Fig. 7 [Images not available. See PDF.]
+Training and validation loss of all models.
+
+Overall performance comparison of models All models were evaluated under identical experimental conditions to draw a fair comparison between them. The performance of the models was assessed using various measures, such as accuracy, precision, recall, F1-score, and ROC-AUC. Although accuracy is a general performance metric, it is not relevant to fake news detection tasks, where false positives and false negatives are relevant. The consistency of positive predictions was tested using precision, and the ability to detect misinformation was tested using recall. The F1-score represents the balance between the two measures.
+Table 6 reports the results for all models. The best overall performance was achieved by Burmese RoBERTa, with an accuracy of 0.979, precision of 0.966, recall of 0.992, F1-score of 0.979, and ROC-AUC of 0.995. The findings indicate that language pretraining that is specific to a language is a useful tool for appropriately capturing the linguistic characteristics of Burmese. The results of the hybrid XLM-RoBERTa + CNN and mBERT models were almost equal, with an accuracy and F1-score of 0.976 for both and ROC-AUCs of 0.994 and 0.992, respectively. XLM-RoBERTa was also competitive, with an accuracy of 0.973. The fact that the differences in performance between models based on transformers are relatively small suggests that the role of representation learning is relatively more significant than architectural variation in low-resource settings. This means that improvements in the quality of data and training policies might be more helpful than the mere complexity of the model.
+Table 6. Comparative performance of all models.
+Models
+Accuracy
+Precision
+Recall
+F1-Score
+ROC-AUC
+
+XLM-RoBERTa
+0.973
+0.968
+0.979
+0.973
+0.994
+
+mBERT
+0.976
+0.961
+0.993
+0.976
+0.992
+
+Burmese RoBERTa
+0.979
+0.966
+0.992
+0.979
+0.995
+
+Hybrid XLM-RoBERTa + CNN
+0.976
+0.970
+0.983
+0.976
+0.994
+
+CNN-Attention
+0.766
+0.753
+0.792
+0.772
+0.829
+
+BiLSTM
+0.887
+0.895
+0.877
+0.886
+0.950
+
+TF-IDF + SVM
+0.878
+0.859
+0.904
+0.881
+0.939
+
+
+The results show that multi-lingual and language-specific transformer models work well in detecting fake news in low-resource Burmese languages. Burmese RoBERTa outperformed the other models in all the metrics, while multilingual models like mBERT and XLM-RoBERTa also performed very competitively on all measures. Further, the differences in the observed performance between the multilingual, language-specific, and hybrid transformer models were not seen to be statistically significant through statistical significance analysis. The results indicate that contextual representation learning is more important than architecture variations in the task of detecting misinformation in low-resource settings.
+Performance on synthetic and real-world fake news To further examine the model behavior, the performance was tested individually on synthetic/real-world fake news data. Table 7 shows the performance of synthetic fake news, with all transformer-based models performing well. The XLM-RoBERTa + CNN and Burmese RoBERTa models produced the best results (0.986 and 0.985, respectively), indicating that they can detect well in the presence of controlled semantic distortions.
+Table 7. Model performance on synthetically generated fake news headlines.
+Model
+Accuracy
+Precision
+Recall
+F1-Score
+ROC-AUC
+
+XLM-RoBERTa
+0.974
+0.973
+0.976
+0.974
+0.996
+
+mBERT
+0.976
+0.990
+0.961
+0.975
+0.998
+
+Hybrid XLM-RoBERTa + CNN
+0.986
+0.979
+0.994
+0.986
+0.998
+
+Burmese RoBERTa
+0.985
+0.997
+0.973
+0.985
+0.996
+
+
+Table 8 shows the results for real-world fake news collected from social media. The overall performance was high; however, it was not as high as that of synthetic data. A possible reason for this performance discrepancy is the higher linguistic diversity, colloquial expressions, and noise in the social media content. However, the good performance of all models indicates that good generalization to real-life misinformation situations can be achieved.
+Table 8. Model performance on socially collected real-world fake news headlines.
+Model
+Accuracy
+Precision
+Recall
+F1-Score
+ROC-AUC
+
+XLM-RoBERTa
+0.960
+0.940
+0.985
+0.960
+0.988
+
+mBERT
+0.961
+0.938
+0.988
+0.962
+0.981
+
+Hybrid XLM-RoBERTa + CNN
+0.963
+0.946
+0.981
+0.963
+0.990
+
+Burmese RoBERTa
+0.967
+0.953
+0.988
+0.970
+0.992
+
+
+This improved performance on synthetic data can probably be explained by the controlled generation processes that create explicit semantic distortions without grammatical inconsistencies. Although real-life samples were used, further testing on a fully natural dataset is required to ascertain robustness. Thus, the results should be considered as estimates of the upper-bound performance under experimental conditions.
+Confusion matrix analysis The confusion matrices for all the tested models are shown in Fig. 8. This allows for a more detailed analysis of classification errors than aggregate measures. Models based on transformers exhibited the same misclassification behavior, with small variations between architectures. Surprisingly, the XLM-RoBERTa + CNN model slightly reduced the number of false positives compared to XLM-RoBERTa, which suggests that the CNN layer uses enhanced local feature extraction and decision boundaries. This indicates that hybrid architectures can offer small benefits in the capability to differentiate subtle misleading features. In comparison, the BiLSTM and CNN-Attention models generated higher false-positive and false-negative rates. Although the TF-IDF + SVM baseline demonstrates relatively stable predictions, it does not go without misclassifications, which demonstrates the flaws of the surface feature representations. In general, confusion matrix analysis assures that transformer-based models have a greater effect on reducing error rates. The findings also suggest that linguistic complexity and data characteristics are the primary causes of residual errors, rather than architectural inadequacies.
+Fig. 8 [Images not available. See PDF.]
+Confusion Matrix for each Models ( a ) Burmese RoBERTa ( b ) Hybrid XLM-RoBERTa + CNN ( c ) mBERT ( d ) XLM-RoBERTa ( e ) BiLSTM ( f ) CNN-Attention ( g ) TF-IDF + SVM.
+
+The hybrid model of XLM-RoBERTa + CNN architecture achieved improvements in the classification stability and false positive reduction, indicating that CNN-based local feature extraction can provide complementary contextual information. The improvements, however, were not statistically significant and thus do not give a clear supportive advantage of hybridization in low-resource environments.
+Cross-validation analysis Table 9 reports the results of the 5-fold cross-validation, which evaluates the model robustness and stability. The hybrid XLM-RoBERTa + CNN model achieved the highest mean accuracy (0.988 ± 0.0037), indicating strong stability. The performances of Burmese RoBERTa and mBERT were similar, with mean accuracies of 0.966 ± 0.0065 and 0.964 ± 0.0063, respectively, indicating consistency in generalization. XLM-RoBERTa showed the lowest mean accuracy (0.943) and highest variance, indicating its sensitivity to data splits. Despite these differences, the performance variation across the folds remained small, confirming the overall model stability.
+Table 9. 5-fold cross-validation accuracy of transformer-based models, showing fold-wise results and mean performance with standard deviation.
+Models
+Fold-1
+Fold-2
+Fold-3
+Fold-4
+Fold-5
+Mean ± Std
+
+XLM-RoBERTa
+0.959
+0.947
+0.927
+0.937
+0.948
+0.943 ± 0.0118
+
+mBERT
+0.971
+0.966
+0.954
+0.962
+0.966
+0.964 ± 0.0063
+
+Burmese RoBERTa
+0.970
+0.974
+0.957
+0.961
+0.966
+0.966 ± 0.0065
+
+Hybrid XLM-RoBERTa + CNN
+0.986
+0.991
+0.983
+0.992
+0.986
+0.988 ± 0.0037
+
+
+All transformer-based architectures show good generalization ability and consistent performance on various partitions of the data, as suggested by the results of the cross validation. The hybrid model of XLM-RoBERTa + CNN model did not have the highest variance during the cross-validation analysis, but the results from the McNemar significance testing were seen to be statistically similar for all architectures. These results indicate that multilingual, language-specific, and hybrid transformer models are equally robust in low resource scenarios.
+Statistical significance analysis The results of the pairwise McNemar tests applied to the model prediction using the same test set are presented in Table 10. The p-values of all model comparisons were greater than 0.05, indicating that none of the differences were significant. There were a few small differences in the measurement metrics, but they were not statistically significant.
+Table 10. Pairwise model comparison using McNemar’s test.
+Model 1
+Model 2
+McNemar statistic
+p -value
+
+Burmese RoBERTa
+Hybrid XLM-RoBERTa + CNN
+0.409091
+0.522431
+
+Burmese RoBERTa
+mBERT
+0.235294
+0.627626
+
+Burmese RoBERTa
+XLM-RoBERTa
+2.450000
+0.117525
+
+Hybrid XLM-RoBERTa + CNN
+mBERT
+0.000000
+1.000000
+
+Hybrid XLM-RoBERTa + CNN
+XLM-RoBERTa
+0.562500
+0.453255
+
+mBERT
+XLM-RoBERTa
+0.551724
+0.457614
+
+
+However, in the context of fake news detection, any marginal increase in recall and error rates may have practical implications, as it will reduce the likelihood of misinformation misclassification. The non-significance of architectural differences suggests that common contextual representation learning in transformer models is not strongly influenced by these architectural differences. This means that models in low-resource environments should be chosen based on factors such as computational efficiency, deployment constraints, and resource availability, rather than marginal differences in performance. This indicates that the quality of the data and training plan could be more significant than architectural complexity in sparse resources.
+Extended error analysis Table 11; Fig. 8 provide a clear picture of the errors in classification. Most of the errors are in headlines where the fake news is comparable to the real reporting in both lexical and structural aspects. Many fake news titles include factual descriptions of events, figures, or locations and are difficult to notice as fake news. Because the models are grammatically correct and written in the style of journalism, they can be mistakenly defined as real.
+Table 11. Error analysis with representative misclassification examples.
+
+The other typical pattern is numerical manipulation or context ambiguity, in which factual meanings change with a few minor semantic alterations, although they are expressed in similar terms. Mistakes are also committed by using emotional headlines that appear to be misinformation and at the same time valid kinds of reporting.
+Confusion matrix analysis showed that transformer-based models exhibited fewer false positives and false negatives than the baseline model. This shows that learning contextual representations is better for discriminating between genuine and counterfeit content. However, the other mistakes reveal the difficulty of disentangling semantically similar real and fake headlines based on textual features. These patterns are shown in Table 11 with qualitative examples and provide real evidence of the types of headlines that contribute to the errors of predictions.
+State-of-the-art positioning and comparative discussion To the best of our knowledge, no publicly available benchmark dataset exists for detecting fake news in Burmese. The extant body of research on Burmese misinformation is based on translated corpora, proprietary collections, or other formulations of the task, such as claim-level fact-checking, and has varying label definitions, dataset sizes, and evaluation protocols. Therefore, a direct numerical comparison with prior studies is not methodologically valid.
+Table 12 summarizes existing studies on fake news and misinformation detection in low-resource languages, noting the differences in language focus, strategy for creating a dataset, task definition, and evaluation environment. As shown in Table 12, most current studies use heterogeneous data or translated materials, making it impossible to compare the performance of the current work fairly and directly.
+Table 12. Qualitative state-of-the-art comparison for fake news detection in low-resource languages.
+Study
+Language
+Dataset type
+Model architecture
+Task level
+Evaluation scope
+Key limitations
+
+14
+Hindi
+Manually curated
+ML ensemble + linguistic features
+Headline/Text
+Single dataset
+Relies on handcrafted features
+
+15
+Slovak
+Proprietary
+CNN, LSTM
+Text-level
+Single dataset
+Limited contextual modelling
+
+18
+English
+Public benchmarks
+Transformer-based
+Article-level
+Cross-domain
+High-resource language
+
+19
+English
+Public benchmarks
+RoBERTa variants
+Article-level
+Multi-dataset
+Not applicable to low-resource languages
+
+20
+English
+ISOT, TI-CNN
+Transformer + Gradient Boosted Decision Trees (GBDTs)
+Article-level
+Cross-dataset
+High computational cost
+
+21
+English
+Proprietary
+BERT + GPT
+Article-level
+Real-time focus
+Proprietary data
+
+23
+Bengali
+Public benchmark
+BERT, LLMs (QLoRA)
+Article-level
+Multi-model
+Language-specific
+
+25
+Thai
+Proprietary
+ML + feature selection
+Text-level
+Single dataset
+Feature engineering dependent
+
+27
+Burmese
+Translated + manual
+BERT-based
+Claim-level
+Limited scale
+–
+
+This work
+Burmese
+New balanced benchmark
+Multilingual, monolingual & hybrid transformers
+Headline-level
+Controlled internal comparison
+No external benchmark
+
+
+Accordingly, the results should be interpreted as upper-bound performance estimates under controlled conditions. Instead of comparing it with heterogeneous previous studies, this study focuses on controlled internal comparisons of multilingual, language-specific, and hybrid transformer architectures trained and evaluated using the same preprocessing pipelines, datasets, and evaluation metrics. This design enables a fair evaluation of multilingual transfer learning, language-specific pretraining, and hybrid architectures. Although the performance is comparable to that of prior low-resource studies, the primary contribution lies in providing a reproducible benchmark and controlled evaluation framework in the domain of Burmese fake news detection.
+Conclusion and future work This study introduces a systematic and controlled analysis of transformer-based architectures for fake news detection in the low-resource Burmese language. Compared with previous studies that have used heterogeneous data or unequal testing conditions, this study provides a common experimental platform that enables a fair and consistent comparison between multilingual, language-specific, and hybrid transformer models. The experimental findings indicate that all transformer-based models have strong and consistent performance in low-resource environments, with an accuracy of between 0.973 and 0.979 and F1-scores up to 0.979. Although the Burmese-specific language RoBERTa model has the best overall performance, the hybrid XLM-RoBERTa + CNN architecture demonstrates better stability in cross-validation. However, the analysis of statistical significance established that the differences in performance were not significant. This demonstrates that the power of learning contextual representation is more similar to the architectural differences in low-resource conditions.
+Among the essential contributions of this study, one can mention the fact that the quality of the data, the procedure of the controlled construction, and the regularity of the evaluation procedures have a greater impact than the development of the model complexity during the process of fake news detection with limited resources. Comparative analysis shows that even the models based on the transformer are also effective in generalizing both synthetically generated and socially collected misinformation, but in practice, the performance is worse owing to linguistic diversity and noise. This underscores the importance of dataset diversity in evaluating applicability in practice.
+Despite these contributions, this study has several limitations. First, the dataset is limited to headline-level classification, which makes the task easier and fails to represent discourse-level dependencies that can be found in full-length news articles. Second, synthetic and manually created fake news, despite increasing the availability of the dataset, can also come with controlled patterns that are not entirely reflective of the dynamics of organic misinformation. Consequently, the results reported must be viewed as upper-bound performance estimates in a controlled experimental setting, and not what the performance would be in a real-world deployment environment.
+Several key ways in which this work can be further developed in the future are as follows. It would be possible to analyze discourse-level misinformation and long-term semantic relationships by expanding the dataset to full-length news articles. Multimodal data (such as images and videos) can be added to enhance the applicability in reality. Furthermore, developing Explainable AI (XAI) methods, such as attention visualization and feature attribution, can improve the transparency of the model and user trust. Finally, cross-domain and cross-platform testing should be conducted to understand robustness and develop scalable misinformation detectors for Burmese digital ecosystems.
+Acknowledgements The authors would like to express their sincere gratitude to Prof. Diksha Jadeja, Training Executive, Department of Career and Development Centre, Marwadi University, Rajkot, for her valuable support and assistance in proofreading the manuscript.
+Author contributions C.: conceptualization, formal analysis, methodology, validation, visualization, writing—original draft, writing—review & editing. K.K.: conceptualization, formal analysis, methodology, validation, visualization, writing—original draft, writing—review & editing. R.J.: conceptualization, formal analysis, methodology, validation, visualization, writing—original draft, writing—review & editing. T.A.: conceptualization, formal analysis, methodology, validation, visualization, writing—original draft, writing—review & editing.
+Funding This research received no external funding, and there are no funding sources to report.
+Data availability The datasets generated and/or analyzed during the current study are available from the authors upon reasonable request.
+Declarations Ethics approval and consent to participate No human participation was involved in the implementation process.
+Consent for publication All authors consented to publish this paper.
+Competing interests The authors declare no competing interests.
+Glossary Abbreviations
+BERT Bidirectional Encoder Representations from Transformers
+BiLSTM Bidirectional long short-term memory
+CNN Convolutional neural network
+CRITIC Criteria importance through intercriteria correlation
+DVB Democratic Voice of Burma
+FNC-1B Fake news challenge dataset
+GBDTs Gradient Boosted Decision Trees
+GPT Generative pre-trained transformer
+GPU Graphics processing unit
+ISOT Information, Security, and Object Technology
+KNN K-nearest neighbours
+LFWE Linguistic Feature-based Word Embedding
+LightGBM Light gradient boosting machine
+LSTM Long short-term memory
+mBERT Multilingual Bidirectional Encoder Representations from Transformers
+NLP Natural language processing
+QLoRA Quantized low-rank adaptation
+RNNs Recurrent neural networks
+ROC-AUC Receiver operating characteristic area under the curve
+SVM Support Vector Machine
+TF-IDF Term frequency-inverse document frequency
+TI-CNN Text and Image information based Convolutional Neural Network
+XAI Explainable AI
+XLM-RoBERTa Cross-Lingual Robustly Optimized Bidirectional Encoder Representations from Transformers
+Publisher’s note Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References 1. Kalsnes, B. Fake news. Oxford Research Encyclopedia of Communication ; 2018; Oxford University Press:
+2. Vosoughi, S; Roy, D; Aral, S. The spread of true and false news online. Sci. (1979) ; 2018; 359 , pp. 1146-1151.1:CAS:528:DC%2BC1cXjvFGrsb0%3D [DOI: https://dx.doi.org/10.1126/science.aap9559]
+3. Likha, OV; Kumar, SS; Mohan, N; Sikha, OK. Fake news and offensive content detection in malayalam using machine learning, deep learning, and transformer based methods with XAI. IEEE Access. ; 2025; 13 , pp. 186633-186664. [DOI: https://dx.doi.org/10.1109/ACCESS.2025.3623172]
+4. Erdaği, E. Comparative performance of monolingual and multilingual transformers models in Turkish text classification. In: 2025 9th international artificial intelligence and data processing symposium (IDAP). IEEE, pp 1–5 (2025).
+5. Prytula, M. Fine-tuning BERT, DistilBERT, XLM-RoBERTa and Ukr-RoBERTa models for sentiment analysis of ukrainian language reviews. Artif. Intell. ; 2024; 29 , pp. 85-97. [DOI: https://dx.doi.org/10.15407/jai2024.02.085]
+6. Ragab, M. I., Mohamed, E. H. & Medhat, W. Multilingual propaganda detection:exploring transformer-based models mBERT, XLM-RoBERTa, and mT5. In: Proceedings of the first International Workshop on Nakba Narratives as Language Resources. Association for Computational Linguistics, pp 75–82 (2025).
+7. Conneau, A. et al. Unsupervised cross-lingual representation learning at scale. In: Proceedings of the 58th annual meeting of the association for computational linguistics. Association for Computational Linguistics, Stroudsburg, PA, USA, pp 8440–8451 (2020).
+8. Myakala, P. K. & Naayini, P. Bridging the gap: leveraging transfer learning for low-resource NLP tasks. Int. J. Comput. Techniques 10 . (2023).
+9. San, ME; Usanavasin, S; Thu, YK; Okumura, M. A study for enhancing low-resource Thai-Myanmar-English neural machine translation. ACM transactions on Asian and low-resource. Lang. Inform. Process. ; 2024; 23 , pp. 1-24. [DOI: https://dx.doi.org/10.1145/3645111]
+10. Garg, S; Sharma, DK. Fake news detection in the Hindi language using multi-modality via transfer and ensemble learning. Internet Technol. Lett. ; 2025; [DOI: https://dx.doi.org/10.1002/itl2.523]
+11. Al-Zahrani, L; Al-Yahya, M. Pre-trained language model ensemble for Arabic fake news detection. Mathematics ; 2024; 12 , 2941. [DOI: https://dx.doi.org/10.3390/math12182941]
+12. Horne, B; Adali, S. This just in: fake news packs a lot in title, uses simpler, repetitive content in text body, more similar to satire than real news. Proc. Int. AAAI Conf. Web Social Media ; 2017; 11 , pp. 759-766. [DOI: https://dx.doi.org/10.1609/icwsm.v11i1.14976]
+13. Gemeda yigezu, M et al. Ethio-fake: cutting-edge approaches to combat fake news in under-resourced languages using explainable AI. Procedia Comput. Sci. ; 2024; 244 , pp. 133-142. [DOI: https://dx.doi.org/10.1016/j.procs.2024.10.186]
+14. Sharma, R; Arya, A. LFWE: linguistic feature based word embedding for Hindi fake news detection. ACM transactions on asian and low-resource. Lang. Inform. Process. ; 2023; 22 , pp. 1-24. [DOI: https://dx.doi.org/10.1145/3589764]
+15. Ivancova, K., Sarnovski, M. & Maslej-Krcsnakova, V. Fake news detection in Slovak language using deep learning techniques. In: 2021 IEEE 19th world symposium on applied machine intelligence and informatics (SAMI). IEEE, pp 000255–000260 (2021).
+16. Mukwevho, M. et al. Building a dataset for misinformation detection in the low-resource language. In: 2024 IST-Africa Conference (IST-Africa). IEEE, pp 01–09 (2024).
+17. Raza, N et al. Enhancing fake news detection with transformer-based deep learning: a multidisciplinary approach. PLoS One ; 2025; 20 , e0330954.1:CAS:528:DC%2BB2MXisVSktL3I [DOI: https://dx.doi.org/10.1371/journal.pone.0330954] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/40924789][PubMedCentral: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12419611]
+18. Elkhalik, WA. Applying transformer networks for accurate fake news classification. Int. J. Adv. Appl. Comput. Intell. ; 2022; 2 , pp. 29-35. [DOI: https://dx.doi.org/10.54216/IJAACI.020104]
+19. Truică, C-O; Apostol, E-S. MisRoBÆRTa: transformers versus misinformation. Mathematics ; 2022; 10 , 569. [DOI: https://dx.doi.org/10.3390/math10040569]
+20. Essa, E; Omar, K; Alqahtani, A. Fake news detection based on a hybrid BERT and LightGBM models. Complex. Intell. Syst. ; 2023; 9 , pp. 6581-6592. [DOI: https://dx.doi.org/10.1007/s40747-023-01098-0]
+21. B SK, J. R. et al. Leveraging BERT and GPT for enhanced fake news detection and analysis. In: 2025 5th international conference on soft computing for security applications (ICSCSA). IEEE, pp 1341–1347 (2025).
+22. Alghamdi, J; Lin, Y; Luo, S. Fake news detection in low-resource languages: a novel hybrid summarization approach. Knowl. Based Syst. ; 2024; 296 , 111884. [DOI: https://dx.doi.org/10.1016/j.knosys.2024.111884]
+23. Shibu, H. M. et al. MdS, From scarcity to capability: empowering fake news detection in low-resource languages with LLMs. In: Weerasinghe R, Anuradha I, Sumanathilaka D (eds) Proceedings of the first workshop on natural language processing for Indo-Aryan and Dravidian languages. Association for Computational Linguistics, Abu Dhabi, pp 100–107 (2025).
+24. Hasan, M. M. et al. Bangla BERT for hyperpartisan news detection: a semi-supervised and explainable AI approach. In: 2025 2nd international conference on next-generation computing, IoT and Machine Learning (NCIM). IEEE, pp 1–6 (2025).
+25. Saensuk, M; Witchakool, S; Choompol, A. A hybrid method based on CRITIC method and machine learning models for effective fake news detection in Thai language. J. Curr. Sci. Technol. ; 2024; [DOI: https://dx.doi.org/10.59796/jcst.V14N2.2024.24]
+26. Raza, S; Ding, C. Fake news detection based on news content and social contexts: a transformer-based approach. Int. J. Data Sci. Anal. ; 2022; 13 , pp. 335-362. [DOI: https://dx.doi.org/10.1007/s41060-021-00302-z] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/35128038][PubMedCentral: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8800852]
+27. Moe, L. Fact Checking in Low-Resource Languages: A New Dataset and Transformer Model for the Burmese Language. In: Presentation. (2024). https://www.yorku.ca/research/ycar/events/fact-checking-dataset-transformer-model-burmese-language-lwin-moe-13112024/. Accessed 17 Nov 2025.
+28. Htet, K. M. Burmese News Category Dataset. In: Kaggle.com. (2024). https://www.kaggle.com/datasets/kaungmyathtet/burmese-news-category-dataset. Accessed 10 Nov 2025.
+29. X R Fine-Tuning With AdamW: Why Weight Decay Matters. In: AICompetence. (2024). https://aicompetence.org/fine-tuning-with-adamw/. Accessed 15 Nov 2025.
+30. Verma, S et al. VeriNews—fake news detection using transformer models. J. Adv. Future Res. ; 2025; 3 , pp. 410-412.
+31. Pires, T., Schlinger, E. & Garrette, D. How Multilingual is Multilingual BERT? In: Proceedings of the 57th annual meeting of the association for computational linguistics. Association for Computational Linguistics, Stroudsburg, PA, USA, pp 4996–5001 (2019).
+32. Saihtaungkham BurmeseRoBERTa. In: Dataloop. (2024). https://dataloop.ai/library/model/saihtaungkham_burmeseroberta/. Accessed 11 Nov 2025.

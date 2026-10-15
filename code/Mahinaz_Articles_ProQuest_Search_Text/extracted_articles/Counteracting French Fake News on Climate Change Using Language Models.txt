@@ -1,0 +1,284 @@
+1. Introduction
+Fighting for sustainable development involve adopting certain policies and investing resources to support them as well as raising people’s awareness of this process and its consequences. To this end, sustainable education regarding climate change is a key issue that needs to be spread by both formal and informal channels. However, in recent years fake news and its growing presence in the public sphere has posed a major challenge to the resilience of societies to climate change. In particular, while information on climate issues is nowadays concentrated on the internet, a large quantity of fake news is as well.
+As hypothesized by various studies in the field, fake news on climate change does not seem to have a major impact per se on public opinion in societies with a higher degree of literacy, given the audience’s scientific culture [1]. However, the situation is far more complex in reality, as the presumed effect of fake news depends on various cultural constructs such as individualism, collectivism, and uncertainty avoidance [2]. In addition, misleading messages have been proven to have a viral effect when defended and disseminated by prominent figures from politics, media, and the entertainment industry [3]. In these cases, public appeals have had various purposes and meanings, from the lack of individual responsibility for climate change to the open denial of the usefulness and legitimacy of the Paris Agreements.
+It is therefore essential to fight against the spread of fake news, especially as concerns climate change. Thus, scholars have been paying more attention to this phenomenon, and the number of publications related to the detection of fake news has increased in the last five years. Choraś et al. [4] have shown this evolution by looking at the number of publications on Google Scholar containing the keyword “fake news”. In 2014, this number was 504; five years later, it had reached 24,300. On the other hand, platforms such as Google and its subsidiary YouTube have been systematically demonetizing climate-skeptical content on their platforms starting with 2021 ( https://support.google.com/google-ads/answer/11221321 , accessed on 18 August 2022). However, the task of detecting fake news has become increasingly more difficult recently, mainly due to the extensive use of social bots [5,6]. Therefore, it is necessary to periodically update detection tools in order to properly identify text which falls under the category of fake news. Motivated by the exponential increase in fake news in the public sphere over the last several years as well as by the fact that the existing research meant to counteract the phenomenon has focused mainly on English-language content, the main aim of this article is to provide both an efficient model for automated detection of fake news and a set of properties meant to support individuals to better discern this kind of news in French.
+In our work, we introduce and make publicly available a novel dataset of French news articles on climate change [7] as well as a complete toolset that helps predict whether an article is fake, biased, or truthful; the corresponding code is open-sourced on GitHub [8]. All the components mentioned above are in line with the latest recommendations regarding digital transparency and the administration of open data [9]. We use a CamemBERT Transformer-based model [10] and integrate it into an architecture that considers additional features. We rely on a dataset created from scratch, which contains 2300 articles annotated by two experts. To our knowledge, there are no other French fake news datasets on climate change, as most of the existing studies concerning fake news in French have focused on satire and social media [11,12,13]. In this study, we classify articles according to three labels by adding a class of biased articles which are neither fake nor real news. Moreover, we consider annotations on text fragments in order to obtain fine-grained information on whether a sentence is potentially biased, fake, or irrelevant. Finally, we suggest an interpretation of the results provided by our best model thanks to the LIME tool. Finally, we discuss the need to diversify the sources of articles to further reduce bias in the dataset.
+1.1. Fake News Classification Task
+The state-of-the-art in fake news detection is mainly built around social networks, the main platforms for their transmission. As each social network has its own specificities, we identified various datasets and classification methods that vary accordingly. For example, Jain and Kasbe [14] focus on Facebook with publications of variable length and dealing with various subjects. For a given topic, their method consisted of fetching information from reliable sources, news agencies in particular, and considering them as true in the training of their model. They challenged their model with publications from Facebook and classified them according to the proximity between the comments made on the social network with information from reliable sources.
+A classification model is usually preceded by a word embedding model such as GloVe, as in the case of Kaliyar et al. [15]. Other solutions rely on bag-of-words approaches to represent texts [14]. Regarding the most commonly used classifiers, Naive Bayes is reported to achieve an 90% F1-score of around on the Facebook dataset [14]. SVMs or boosting methods such as Adaboost are used for this kind of task as well, as are Convolutional Neural Networks (CNN) on top of embedding layers [15]. Nevertheless, the current state-of-the-art prefers the use of CNNs when the embedding is coupled with other additional features, such as publication metadata or linguistic features; this is further detailed later in the paper.
+Lai et al. [16] compared different machine learning and neural network models based on content-only features and discovered that neural network models outperform traditional models in terms of precision by an average of 6%. However, it is worth noting that the model accuracy is dependent on the difficulty of the task, being influenced by the number of classes and the degree of granularity of the data. Overall, performance is highly susceptible to bias in the dataset, and it is unfair to directly compare performance across datasets.
+Recent BERT-based models are frequently employed in text classification tasks. In particular, Palani et al. [17] used BERT [18] to process textual information in its context. Transformer models are one of the most efficient ways of representing semantic relations within a sentence or text. This achievement represented a major advance in Natural Language Processing (NLP).
+Upstream of these processes that transform content into machine intelligible representations, it is possible to identify an approach for processing the input text. Zhang et al. [19] relied on the verbs and their context to build “events”, which they then classified. In our case, while we decided to keep more than just the verbs and their context, we removed redundant and meaningless terms in the vocabulary (i.e., stopwords) and sought to keep only those grammatical functions that carry meaning.
+1.2. Existing Datasets and Research Topics
+The state-of-the-art thus builds its classification approaches according to the nature of the content in the considered datasets. However, because the used datasets are mostly constructed from social networks or encyclopedias such as Wikipedia, we found content dealing with different subjects as well. One of the difficulties in the current literature is to precisely define what represents “fake news”, which poses problems concerning the intelligibility of the model outputs and dataset labeling.
+Our work is different due to its focus on a specific topic, namely, climate change. We can thus define “fake news” in a practical manner for our classification task. This allows us to gain precision when performing labeling of articles by human annotators. The topics discussed in the literature are often political or health-related. In particular, social networks have been subject to unprecedented waves of misinformation in terms of the COVID-19 crisis (see [20]). Most of the related work consists of the formulation of new classification methods, and it is necessary to compare them with the existing state-of-the-art, hence the widespread use of public datasets such as Politifact and Gossipcop in Palani et al. [17]. However, our approach considers the classification of a new kind of dataset, namely, articles written in French on climate change from various French websites. Moreover, there are only a few datasets in languages other than English [21].
+Works on dataset creation are present in the literature, either for public general corpora or datasets used in specific cases such as ours, and include similar scraping algorithms to ours [19].
+1.3. Linguistic and Non-Linguistic Additional Features
+Taking into account additional linguistic or non-linguistic features other than textual analysis that considers the encoding of the content can further improve model performance.
+Specific linguistic features, such as the number of adverbs and punctuation signs, can be extracted from articles and used for classification without the need to analyze the actual underlying language. This approach plays an important role in the literature, especially for topics centered on text classification. A recurrent question concerns the choice of these features, namely, which features are most predictive. Gravanis et al. [22] first reviewed features listed by other authors. Following up, Burgoon et al. [23] suggested four main groups of linguistic features:
+- Quantity: number of syllables, words, and sentences;
+
+- Vocabulary complexity: number of syllables per word, infrequent words;
+
+- Grammatical complexity: sentence length, Flesh–Kincaid readability criterion, average number of words per sentence, number of conjunctions;
+
+- Specificity and expressiveness: emotional indicators, ratio of adjectives and adverbs, number of affective terms.
+
+
+
+Based on Gravanis et al. [22], the most relevant features are from the first three groups, and are related to the construction of sentences and the overall text comprehensibility. Moreover, they reported a performance gain after the addition of these features, namely:
+- Accuracy based only on linguistic features: 0.861;
+
+- Accuracy using word embeddings: 0.937;
+
+- Accuracy when combining the two approaches: 0.949.
+
+
+
+Our work uses such linguistic features to complement the contextualized embeddings extracted by NLP models such as BERT [18]. Other works encourage pursuing this approach. For example, Palani et al. [17] exploited images matched to Facebook posts. The authors built their CB-Fake multimodal model by extracting features from these images and concatenating them with the output of the BERT textual classifier (the same one used in our work), with encouraging results.
+In addition to linguistic features, Aslam et al. [24] used non-linguistic features such as the metadata of an article, i.e., the political party, profession, or origin of the author. This information was then passed as input to a classifier, similar to the linguistic features. During the constitution of our dataset, we retrieved the metadata of the article, such as the date and author’s name. However, this information is not used in our classification.
+2. Method
+2.1. Corpora
+2.1.1. Extraction
+The first step in building a dataset of articles on climate change was to select websites containing such articles and then extract the articles from these websites using web scraping methods.
+Diversity and Plurality of Sources
+One of the main challenges in building our database was to have diverse sources in terms of the processing and rendering of information. To this end, we distinguished five main categories of information websites dealing with climate change:
+- Websites of scientific research organizations;
+
+- Mainstream media;
+
+- Popular science websites;
+
+- Activist websites;
+
+- Conspiracy and climate-skeptical websites.
+
+
+
+We initially selected 90 websites covering these five categories, while trying to represent as much as possible the diversity of sources present on the internet and to maintain a balanced distribution between the number of reliable articles and fake news.
+Content Filtering and Website Selection
+As several of the aforementioned categories of websites discuss climate change almost exclusively, it was sufficient to extract all the articles from them. However, in other cases it was necessary to filter and keep only those articles dealing with climate change, especially for traditional media with multiple topics. Two types of filters were used:
+- If the website had topics or labels, our selection considered the “Climate” category or any similar category;
+
+- If not, the search functionality present on all websites was used, with “Climate” or “Climate Change” as keywords.
+
+
+
+After the previous filters were applied, the URL of each page was retrieved and used as the entry point for our scrapping tool. It was necessary to estimate the a priori distribution of articles in order to ensure a balanced dataset at the end of the scraping process. We then reshaped the initial five website categories into three:
+- Popularization websites, scientific publications, mainstream media (Group A);
+
+- Activist websites (Group B);
+
+- Websites with a climate-skeptic bias (Group C).
+
+
+
+Out of the 90 selected websites, 27 were chosen in the first scraping phase, with an even distribution among these three groups. We chose websites with a common scrapping pattern as well: Links ⇒ HTML.
+Meta-Information Selection
+In addition to the content of the article, we kept meta-information that enabled better contextualization. For example, the author’s name may be relevant, as several articles may be written by the same person. The date can be used to place the information on a timeline and to group articles appearing in a specific timeframe. Finally, the title generally consists of a summary of the article, and sometimes influences human decisions at first glance.
+For each website, we associated the corresponding CSS selectors with the content of the article, its title, publication date, and author. Similarly, the CSS selector corresponding to the links leading from the list of articles on the initial page to a given article was gathered. These CSS selectors precisely indicate the position of an element within a web page, and thus allow the extractor to interact with them as a user would, such as by clicking on a link or copying content.
+For each website, we identified common patterns in the articles that could bias the dataset, for example, an invitation to share the article at the beginning or end of the page, the name of the source, or a message from the editor that is displayed on every page of the website. It is crucial to remove these patterns in the final dataset in order to reduce bias in the classification models; thus, the different CSS selectors were tweaked to disregard such common patterns for each website. In addition, when common patterns could not be ignored by the CSS selectors, we removed them by labeling them as stop words in the scraping algorithm. Finally, we added an “irrelevant” annotation label during the labeling phase in order to manually highlighting additional patterns for removal, thus decreasing potential bias even further.
+Extraction and Processing of Articles
+After the scrapping was performed and the articles were retrieved, the following normalization operations were applied to each entry in our dataset:
+- Date: transformation to the ISO 8601 standard, keeping only the year, month, and day if this information was available (YYYY-MM-DD);
+
+- Author: isolation of first and last names while removing all unnecessary syntax (e.g., “written by”);
+
+- Content: line breaks were kept, with only one newline character preserved for each new paragraph.
+
+
+
+After extraction, the articles were anonymized to avoid bias as much as possible in the subsequent labeling stage. At the end of this process, we extracted 6050 articles from 27 websites, distributed as follows considering the underlying website preliminary labeling: 2308 from group A, 1487 from group B, and 2255 from group C.
+2.1.2. Labeling
+The issue of fake news labeling is delicate; thus, it becomes essential that the attribution of a label to each article is based on objective criteria. After creating our article database, we established the following labeling criteria.
+Labeling Rules
+First, an article was classified as “true” or “fake” solely based on whether or not it was consistent with the currently established scientific consensus on climate change that is reflected in IPCC reports. As such, our aim was not to reveal the truth; rather, it was to identify articles that are not in line with current knowledge on climate change. Fake news does not necessarily consist of explicit false assertions; implicit, ironic, or subjective presentations of the facts can mislead the reader as well. Therefore, it is necessary to take into account what a rational and educated reader would deduce when reading each article, then compare these deductions with the knowledge of the current IPCC consensus.
+Definition   1. An article was classified as “fake” when it contained at least one piece of misleading or explicitly false information.
+We realized that certain articles that do not fit into this definition of fake news are hardly identifiable as “real news” at all. For example, many authors express their opinion on political issues that cannot always be directly linked to established scientific facts. For this reason, a third label, “biased”, was introduced.
+Definition   2. An article was classified as “biased” when it contained at least one biased text fragment in which the author explicitly or implicitly put forward personal opinions.
+Definition   3. Finally, an article was classified as “true” when all the stated facts were consistent with the IPCC scientific consensus, there was no misleading information, and the author remained neutral.
+In practice, we introduced a fourth label, “irrelevant”, to the articles. Indeed, the scraping was not perfect, and portions of the extracted articles did not deal with climate change. This was due to the poor keyword classification of several websites, especially those containing conspiracy bias. In order to keep only articles explicitly dealing with climate change, we assigned the label “irrelevant” in order to disregard said articles from our dataset after the labeling process was complete. Out of 3268 labeled articles, 730 were labeled as “irrelevant”, leaving us with a final dataset of 2538 entries (see Table 1).
+The final distribution of labels had a higher density of true articles, despite our efforts to fairly balance the selection of websites during the extraction phase. This label imbalance was due to two main causes:
+- A large proportion of the a priori “fake” articles (i.e., from climate-skeptical sources) turned out to be irrelevant due to poor referencing of articles by category and assigned keywords on the fake news websites;
+
+- Not all articles extracted from climate-skeptical websites were fake. This shows the importance of having manually labeled articles, compared to the approach in which the label is automatically assigned according to the source of the article.
+
+
+
+Agreement between Annotators
+Establishing consistent labeling rules and high agreement among rates is essential for creating robust corpora. As such, a random sample of more than 100 articles (i.e., 114) was first labeled by both raters, with a Cronbach’s alpha between them of 95.52%, which denotes very good agreement. The rows from Table 2 indicate the labels assigned by the first annotator, while the columns reflect the second annotator. We note that the majority of errors concern the irrelevant label, which is nearly inconsequential because articles with this label were disregarded in the final dataset. Moreover, there is no disagreement regarding the distinction between fake and true articles, only in terms of biased articles, which are considerably more difficult to identify.
+Text Fragment Annotations
+The TagTog online interface enabled the annotation of text sequences from the articles in addition to the overarching labeling into one of the four previously mentioned classes. Thus, we annotated specific text fragments from each article with three labels:
+- Irrelevant: Text fragments annotated in this manner should be removed from the text when the articles are processed, after labeling is complete. This annotation marks irrelevant text that was not automatically eliminated during the scraping phase and which should be removed in order to reduce bias.
+
+- Biased: The text fragment contains biased information.
+
+- Fake: The text fragment includes fake information, thus resulting in the corresponding labeling of the entire article.
+
+
+
+The annotation of each article in parallel with its overarching label has a double advantage. First, it considerably enriches the dataset. For example, it is possible to teach the model to return fake or biased text fragments in order to make it more interpretable. Second, it ensures more rigorous and conscientious labeling of articles. Indeed, we set the rule that each article labeled as fake or biased must contain at least one such annotation. Thus, the rater was obliged to justify his/her choice of label on the basis of specific elements of the text that need to be highlighted. Moreover, these annotations enabled the creation of a dataset of labeled sentences, which is discussed later in further detail.
+2.2. Linguistic Features
+Many features were computed on the training set, and we searched for the ones with the highest discriminative power. We present part of these features in Table 3, with corresponding descriptives (mean—M and standard deviation—SD) for the three classes. Because most features were non-normally distributed, we employed non-parametric Kruskal–Walis H tests to observe which features exhibited statistically significant differences in their scores between different classes.
+The distribution of the features, their complementarity, and their power to differentiate between classes led us to select six features for the rest of our work:
+- Length of the content (number of tokens);
+
+- Ratio of adverbs;
+
+- Ratio of tokens that represent numbers;
+
+- Ratio of terms expressing the modality;
+
+- Flesch–Kincaid Reading Ease (FKRE);
+
+- Number of expressive punctuation marks (question marks and exclamation marks) and parentheses.
+
+
+
+2.3. Classification Models
+We developed a series of classification models aiming at the maximization of recall, as we did not want to ignore potential fake news. The dataset was randomly divided into training, test, and validation sets according to the proportions 70%, 15%, and 15%, respectively.
+2.3.1. SVM and MNB Classifiers
+A first SVM was tested on the selected linguistic features by themselves in order to evaluate their power. A second SVM and a Multinomial Naive Bayes (MNB) classifier were tested on the bag-of-words representations of texts, whereas a third SVM considered the combination of bag-of-words representations and the six linguistic features.
+2.3.2. Bert Encoding Applied at Different Granularities
+In this study, we used CamemBERT [10], a pre-trained BERT-based model on the French OSCAR corpus, and applied it to different article granularities.
+Article Level
+The training was performed on the entire article, which was then truncated to 512 tokens without any loss of context.
+Paragraph Level
+Using paragraphs instead of articles increases the size of the dataset considerably, from 2300 articles to 35,000 paragraphs. However, there are two drawbacks. First, the label attributed to each paragraph (i.e., the one assigned to the entire article) is less precise due to the fact that not all paragraphs in a fake article are necessarily fake. Second, a significant amount of context is lost when paragraphs are treated independently.
+Sentence Level
+Next, we experimented with a sentence-level approach. In order to obtain meaningful labels, we built a dataset of sentences from the 2000 fake annotations, 1500 biased annotations, and sentences containing predefined keywords from the articles labeled as true. While the problem of the relevance of labels is solved thanks to the annotations made by hand during the labeling, the issue of content loss increases, as at the level of sentences there is almost no context left. Fake news, especially about climate change, is often part of a very specific context.
+2.3.3. Text Fragment Annotation
+For the text annotations in the dataset, we build additional baseline models in order to obtain a better understanding of the difficulty of the task. Considering the freedom of the raters in annotating these specific text sequences, we slightly simplified the task by limiting the text fragments to sentences. For each sentence in the text, if it overlapped with an annotated fragment, then it was given the label of the fragment; otherwise, the sentence was labeled with “Other”. The distribution of labels in this transformed dataset is presented in Table 4.
+The proposed classification model used CamemBERT for computing contextualized token embeddings, which were averaged to produce representations of each sentence. The class probabilities were then obtained by passing the sentence representations through two dense layers, the final one having a softmax activation. The full model was fine-tuned on this dataset.
+This additional annotation and corresponding model is particularly useful for processing new articles, as it enables the automated highlighting of biased or fake sentences which need to be further checked by the reader.
+3. Results
+Table 5 presents the results of different models. As expected, the Transformer architecture outperformed the SVM and the MNB models. The best performance when considering the various granularities was obtained with CamemBERT at the paragraph level, arguably due to the significant increase in sample size; in contrast, the sentence classification performed poorly. The addition of linguistic features slightly increased the performance of both the SVM and CamemBERT models on the classification of entire articles.
+Figure 1 introduces the normalized confusion matrix of the best model (i.e., BERT on articles with six linguistic features), as well as the distribution of classes across articles. As expected, the model struggles most with articles labeled as “biased”, as these are the most difficult to identify, correctly labeling only 65% of test samples. The overall tendency of the model is to be more gullible and consider part of the biased and fake news as being true. Nevertheless, the distribution of the predicted labels is comparable to that of human annotation.
+For the sentence classification task corresponding to the text fragment annotation task, the hyperparameters of the model were selected using Ray Tuning [26]. The training was performed for a maximum of ten epochs with early stopping. The loss function was weighted using the distribution of sentence labels to tackle the high class imbalance.
+Two separate hyperparameter searches were performed. In the first, the best configurations were selected based on the unweighted validation loss, while in the second the weighted loss was used. Table 6 includes a selection of the best performing configurations in both runs, which were then evaluated on the test partition.
+Figure 2 presents the normalized confusion matrix of the best model for sentence classification coupled with the distribution of classes across sentences. The model performs best at identifying the “Other” and “Irrelevant” labels, while it has problems with discriminating between “fake”, “biased”, and unlabeled sentences. However, an important finding is that the model spots potentially problematic sentences, which in return ensures interpretability and can be used to flag biased or fake news articles. These results are promising when considering the difficulty of the sentence labeling task and the highly imbalanced dataset.
+4. Discussion
+Our BERT-based results are encouraging in terms of F1-scores, and 50 articles out of 59 fake entries from the test set were predicted as biased or fake. Our performance is comparable to other datasets and BERT-based baseline models for text classification; however, we must emphasize that the main goal of this paper is to introduce our dataset and establish a strong baseline that helps to assess the difficulty of the task and the quality of the dataset.
+As we wanted to explore the limits of our dataset in terms of its bias, we first selected the most important words from the SVM support vectors for each class. Among the 200 most important words on average, none were specific to a single source. These words were consistent with the theme of the article, which denotes a low directly observable bias in our dataset.
+Second, we applied cross-domain classification by training and testing a Naive Bayes Classifier on articles from different sources. We split the websites in two to create a training set and a test set with articles having no common sources. The difference in performance was considerable (see Table 7), indicating potential bias that is probably subtle and beyond the scope of human bias reduction. One way to reduce this bias further is to increase the number of annotated articles; another is to add new websites in order to diversify the sources.
+In addition, we explored the interpretability of our BERT-based model trained at the article level using LIME [27], which is a technique that approximates any black-box machine learning model to a local interpretable model in order to explain individual predictions. The words with the highest weights in the decision are marked as relevant. For example, pejorative vocabulary often influences the algorithm in favor of a “fake” prediction. Scientific vocabulary is often associated with positive weights for a “true” prediction.
+Figure 3 is an example of BERT-based misclassification predicting that this biased article is fake. We can see how difficult it can be for the model to clearly distinguish between a biased article and a fake one, especially because the lexical fields used are often the same between these two labels (e.g., words such as “ideological” or “lobby” in this specific case). Moreover, BERT-based models are more likely to recognize the linguistic characteristics of fake news than to capture their argumentative structure.
+However, this drawback does not lack utility, especially as it is consistent with findings made in the analysis of fake news in other languages; there, NLP models have difficulties in identifying the argumentative structure of fake news precisely because fake news is designed to mimic the argumentative structure of true news. Moreover, fake news imitates these properties in excess in order to appear “truer than the truth” and to hide its deceptive purposes [28].
+For these reasons, even if NLP models cannot delineate the argumentative structure of fake news with satisfactory precision, they nevertheless reveal a series of its properties that readers cannot deduce by simply reading the text; when identified as such by NLP models, this can constitute triggers for more effective identification of fake news about climate change, which in turn indicates that our models can support better sustainable education. In addition, returning to the values from Table 3 that correspond to the six features integrated into the prediction models, we note that:
+- Fake news is, in general, longer than other types of news, and has a tendency to excessively describe or demonstrate the phenomena and ideas at issue;
+
+- Fake news frequently uses special punctuation marks and an excess of rhetoricity;
+
+- Fake news usually resorts to adverbs and modal verbs in an attempt to conceal unsubstantiated claims;
+
+- Fake news refrains from providing numbers, as these are harder to counterfeit;
+
+- Fake news has a more opaque discourse meant to hide its argumentative cracks.
+
+
+
+Even if these triggers do not guarantee the flawless identification of fake news, they can at least contribute to the education of readers by advising them to take a critical stance towards texts about climate change that manifest such properties.
+5. Conclusions and Future Work
+In this work, we introduced a novel publicly available dataset [7] and provided a comprehensive study to build a pipeline for predicting fake news in French on climate change. The data were collected from scratch through a first extraction step that allowed us to collect more than 11,000 articles on climate change from an initial list of 27 websites. We selected 6000 of these articles, then hand-labeled and annotated 3500 articles to create a robust corpus.
+Afterwards, a strong baseline with various classification methods was created. First, we considered classical machine learning models such as SVM and Multinomial Naive Bayes as applied to both handcrafted linguistic features and bag-of-words representations. In the second step, we built and tested several prediction models based on the CamemBERT Transformer applied at various granularities, namely, entire articles, paragraphs, and sentences. The best performing model was the one operating at the paragraph level due to the larger number of samples, which reached 86.79% recall (the most important measure for our project) and 83% accuracy. Nevertheless, the difference with the BERT-based model when applied to entire articles while integrating the six most predictive linguistic features is negligible (i.e., R = 85.18%, and an F1-score of 84.75% instead of 84.96% due to a higher precision). In addition, we introduced a model for identifying biased, fake, or irrelevant sentences in articles that exhibited promising results (i.e., a Macro F1 of 45.01% and Micro F1 of 78.11%); this model is particularly useful for processing new articles, as it enables the automated highlighting of problematic sentences which need to be further checked by the reader.
+Attempts at interpretation, in particular with LIME, show that NLP models are not capable of understanding the argumentative structure of an article. The models seem to rely mainly on linguistic criteria, which nevertheless enables them to identify fake news remarkably well. In addition, NLP models highlight certain properties of fake news that can be identified perceptually (by mere reading), and can thus contribute to more sustainable education of the public. We are convinced that a larger collection of annotated articles and even greater diversification of sources in the training set would allow for even better generalization. In addition to the dataset, the open-source code used for crawling the news articles and building the classification models is available at [8].
+Author Contributions Conceptualization, M.D., S.-M.T. and S.T.; methodology, M.D., S.R. and S.T.; software, P.M. and S.R.; validation, P.M., S.R. and M.D.; formal analysis, S.R.; investigation, P.M. and S.R.; resources, P.M.; data curation, P.M.; writing—original draft preparation, P.M. and S.R.; writing—review and editing, M.D., S.-M.T. and S.R.; visualization, P.M.; supervision, M.D. and S.T.; project administration, M.D.; funding acquisition, S.-M.T. All authors have read and agreed to the published version of the manuscript.
+Institutional Review Board Statement Not applicable.
+Informed Consent Statement Not applicable.
+Data Availability Statement The dataset is freely available on Tagtog [ 7 ], whereas the code is available on Github [ 8 ].
+Acknowledgments We would like to thank Louis Delmas for his invaluable help in creating the novel corpus, as well as running the first experiments with the dataset.
+Conflicts of Interest The authors declare no conflict of interest.
+Abbreviations The following abbreviations are used in this manuscript: BERT Bidirectional Encoder Representations from Transformers
+CNN Convolutional Neural Network
+CSS Cascading Style Sheets
+IPCC Intergovernmental Panel on Climate Change
+ISO International Organization for Standardization
+LIME Tool for Local Interpretable Model-Agnostic Explanations
+MNB Multinomial Naive Bayes
+NLP Natural Language Processing
+SVM Support Vector Machines
+
+Publisher’s Note: MDPI stays neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+Figures and Tables Generate image description Figure 1. Comparison of true versus predicted article labels.
+Generate image description Figure 2. Comparison of true versus predicted sentence labels.
+Generate image description Figure 3. LIME interpretation of an article labeled as “biased” but predicted as “fake” by our best BERT-based model.
+Table 1 Distribution of labels.
+True Biased Fake Irrelevant
+Articles 1485 314 635 730
+Proportion 47% 10% 20% 23%
+Table 2 Inter-annotator agreement.
+True Biased Fake Irrelevant
+True 31 1 0 7
+Biased 2 13 3 0
+Fake 0 5 27 2
+Irrelevant 8 0 0 15
+Table 3 Relevance of linguistic features in descending order of the Kruskal–Walis H test.
+Feature Biased Fake True χ 2 ( 2 ) p
+M SD M SD M SD
+Tokens from spaCy [ 25 ] 1095.068 1442.272 1374.710 1184.173 736.994 824.476 303.55 <0.001
+Special punctuation marks 13.181 22.103 20.061 23.160 9.454 21.060 274.80 <0.001
+Adverb ratio 0.052 0.016 0.059 0.018 0.043 0.017 266.56 <0.001
+Modal verbs ratio 0.061 0.014 0.067 0.013 0.058 0.013 168.20 <0.001
+Quotation marks 13.503 27.551 19.886 24.631 10.547 13.839 135.45 <0.001
+First person pronouns ratio 0.008 0.012 0.008 0.009 0.005 0.008 114.48 <0.001
+Conditional conjunctions ratio 0.003 0.003 0.003 0.002 0.003 0.004 61.51 <0.001
+Sentence length 21.570 5.426 24.300 6.151 22.527 5.280 56.61 <0.001
+Punctuation ratio 0.106 0.023 0.113 0.022 0.115 0.024 33.86 <0.001
+Number ratio 0.027 0.012 0.028 0.014 0.032 0.017 23.73 <0.001
+Parsing density 3.818 0.461 3.833 0.425 3.797 0.389 9.32 0.009
+FKRE 55.748 10.435 53.837 9.787 55.214 9.836 7.24 0.026
+Table 4 Distribution of sentence labels.
+Label Number of Sentences
+Fake 2853
+Biased 2151
+Irrelevant 4657
+Other 63,291
+Table 5 Comparison between different models (bold denotes the best performance in each category of experiments, i.e., classical machine learning models, BERT-based architectures at various granularities, and the concatenation of linguistic features to the BERT-based model at article level).
+Precision (%) Recall (%) F1-Score (%)
+SVM—6 linguistic features 68.40 50.62 58.18
+MNB—bag of words (k = 300) 76.42 78.36 77.38
+SVM—bag of words (k = 300) 76.92 76.74 76.83
+SVM—bag of words + 6 linguistic features 77.16 76.89 77.02
+BERT on articles 83.36 84.45 83.90
+BERT on paragraphs 83.21 86.79 84.96
+BERT on sentences 64.31 64.19 64.24
+BERT on articles + 6 linguistic features 84.35 85.16 84.75
+Table 6 Sentence classification results (bold denotes the best model).
+Hidden Activation Learning Rate Epochs Macro F1 (%) Micro F1 (%)
+32 tanh 1.8 × 10 − 5 8 42.78 71.12
+64 tanh 2.1 × 10 − 5 7 42.96 68.98
+128 tanh 2.1 × 10 − 5 10 45.01 78.11
+256 gelu 5.6 × 10 − 5 7 40.45 73.22
+Table 7 Cross-domain classification.
+F1-Score (%)
+Regular dataset 76.83
+Disjointed dataset 69.92
+References
+1. Drummond, C.; Siegrist, M.; Árvai, J. Limited effects of exposure to fake news about climate change. Environ. Res. Commun. ; 2020; 2 , 081003. [DOI: https://dx.doi.org/10.1088/2515-7620/abae77]
+2. Hong, S.C. Presumed effects of “fake news” on the global warming discussion in a cross-cultural context. Sustainability ; 2020; 12 , 2123. [DOI: https://dx.doi.org/10.3390/su12052123]
+3. Prasad, A. Denying anthropogenic climate change: Or, how our rejection of objective reality gave intellectual legitimacy to fake news. Sociol. Forum ; 2019; 34 , pp. 1217-1234. [DOI: https://dx.doi.org/10.1111/socf.12546]
+4. Choraś, M.; Demestichas, K.; Giełczyk, A.; Herrero, Á.; Ksieniewicz, P.; Remoundou, K.; Urda, D.; Woźniak, M. Advanced Machine Learning techniques for fake news (online disinformation) detection: A systematic mapping study. Appl. Soft Comput. ; 2021; 101 , 107050. [DOI: https://dx.doi.org/10.1016/j.asoc.2020.107050]
+5. Shao, C.; Ciampaglia, G.L.; Varol, O.; Flammini, A.; Menczer, F. The spread of fake news by social bots. arXiv ; 2017; arXiv: 1707.075924
+6. Wang, P.; Angarita, R.; Renna, I. Is this the era of misinformation yet: Combining social bots and fake news to deceive the masses. Proceedings of the World Web Conference 2018 ; Lyon, France, 23–27 April 2018; pp. 1557-1561.
+7. TagTog. Dataset of French Fake News on Climate Change. 2022; Available online: https://www.tagtog.com/LouisDlms/fake_news (accessed on 19 August 2022).
+8. Github. Codebase for Crawling News Articles and Building Classifiers for French fake News on Climate Change. 2022; Available online: https://github.com/delmaass/fake-news-climate, (accessed on 19 August 2022).
+9. Moreno, C.; Verma, V.K.; Simon, J.Y. Digital Transparency and Open Data. Global Encyclopedia of Public Administration, Public Policy, and Governance ; Farazmand, A. Springer International Publishing: Cham, Switzerland, 2020; pp. 1-14. [DOI: https://dx.doi.org/10.1007/978-3-319-31816-5_3957-1]
+10. Martin, L.; Muller, B.; Ortiz Suárez, P.J.; Dupont, Y.; Romary, L.; de la Clergerie, É.; Seddah, D.; Sagot, B. CamemBERT: A Tasty French Language Model. Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics (ACL2020) ; Online, 5–10 July 2020; pp. 7203-7219.
+11. Fraisier, O.; Cabanac, G.; Pitarch, Y.; Besançon, R.; Boughanem, M. The 2017 French Presidential Campaign on Twitter. Proceedings of the Twelfth International AAAI Conference on Web and Social Media (ICWSM) ; Palo Alto, CA, USA, 25–28 June 2018; Volume 12 , pp. 501-510.
+12. Guibon, G.; Ermakova, L.; Seffih, H.; Firsov, A.; Le Noé-Bienvenu, G. Multilingual fake news detection with satire. Proceedings of the CICLing: International Conference on Computational Linguistics and Intelligent Text Processing ; La Rochelle, France, 7–13 April 2019.
+13. Liu, Z.; Shabani, S.; Balet, N.G.; Sokhn, M. Detection of satiric news on social media: Analysis of the phenomenon with a French dataset. Proceedings of the 28th International Conference on Computer Communication and Networks (ICCCN) ; Valencia, Spain, 29 July–1 August 2019; pp. 1-6.
+14. Jain, A.; Kasbe, A. Fake News Detection. Proceedings of the 2018 IEEE International Students’ Conference on Electrical, Electronics and Computer Science (SCEECS) ; Bhopal, India, 24–25 February 2018; pp. 1-5. [DOI: https://dx.doi.org/10.1109/SCEECS.2018.8546944]
+15. Kaliyar, R.K.; Goswami, A.; Narang, P.; Sinha, S. FNDNet—A deep convolutional neural network for fake news detection. Cogn. Syst. Res. ; 2020; 61 , pp. 32-44. [DOI: https://dx.doi.org/10.1016/j.cogsys.2019.12.005]
+16. Lai, C.M.; Chen, M.H.; Kristiani, E.; Verma, V.K.; Yang, C.T. Fake News Classification Based on Content Level Features. Appl. Sci. ; 2022; 12 , 1116. [DOI: https://dx.doi.org/10.3390/app12031116]
+17. Palani, B.; Elango, S.; Viswanathan, K.V. CB-Fake: A multimodal deep learning framework for automatic fake news detection using capsule neural network and BERT. Multimed. Tools Appl. ; 2022; 81 , pp. 5587-5620. [DOI: https://dx.doi.org/10.1007/s11042-021-11782-3] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/34975284]
+18. Devlin, J.; Chang, M.W.; Lee, K.; Toutanova, K. BERT: Pre-training of deep bidirectional transformers for language understanding. Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies ; Minneapolis, MN, USA, 2–7 June 2019; Volume 1 (Long and Short Papers) , pp. 4171-4186.
+19. Zhang, C.; Gupta, A.; Kauten, C.; Deokar, A.V.; Qin, X. Detecting fake news for reducing misinformation risks using analytics approaches. Eur. J. Oper. Res. ; 2019; 279 , pp. 1036-1052. [DOI: https://dx.doi.org/10.1016/j.ejor.2019.06.022]
+20. Kouzy, R.; Abi Jaoude, J.; Kraitem, A.; El Alam, M.B.; Karam, B.; Adib, E.; Zarka, J.; Traboulsi, C.; Akl, E.W.; Baddour, K. Coronavirus Goes Viral: Quantifying the COVID-19 Misinformation Epidemic on Twitter. Cureus ; 2020; 12 , e7255. [DOI: https://dx.doi.org/10.7759/cureus.7255] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/32292669]
+21. Faustini, P.H.A.; Covões, T.F. Fake news detection in multiple platforms and languages. Expert Syst. Appl. ; 2020; 158 , 113503. [DOI: https://dx.doi.org/10.1016/j.eswa.2020.113503]
+22. Gravanis, G.; Vakali, A.; Diamantaras, K.; Karadais, P. Behind the cues: A benchmarking study for fake news detection. Expert Syst. Appl. ; 2019; 128 , pp. 201-213. [DOI: https://dx.doi.org/10.1016/j.eswa.2019.03.036]
+23. Burgoon, J.K.; Blair, J.P.; Qin, T.; Nunamaker, J.F. Detecting Deception through Linguistic Analysis. Proceedings of the Intelligence and Security Informatics ; Tucson, AZ, USA, 2–3 June 2003; Chen, H.; Miranda, R.; Zeng, D.D.; Demchak, C.; Schroeder, J.; Madhusudan, T. Springer: Berlin/Heidelberg, Germany, 2003; pp. 91-101.
+24. Aslam, N.; Ullah Khan, I.; Alotaibi, F.S.; Aldaej, L.A.; Aldubaikil, A.K. Fake Detect: A Deep Learning Ensemble Model for Fake News Detection. Complexity ; 2021; 2021 , 5557784. [DOI: https://dx.doi.org/10.1155/2021/5557784]
+25. spaCy. Industrial-strength Natural Language Processing. Available online: https://spacy.io/ (accessed on 8 August 2022).
+26. Liaw, R.; Liang, E.; Nishihara, R.; Moritz, P.; Gonzalez, J.E.; Stoica, I. Tune: A Research Platform for Distributed Model Selection and Training. arXiv ; 2018; arXiv: 1807.05118
+27. Ribeiro, M.T.; Singh, S.; Guestrin, C. “Why Should I Trust You?”: Explaining the Predictions of Any Classifier. Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining (KDD ’16) ; San Francisco, CA, USA, 13–17 August 2016; Association for Computing Machinery: New York, NY, USA, 2016; pp. 1135-1144.
+28. Terian, S.M.; Neagu, L.M.; Martin, A.S.; Ruseti, S.; Dascalu, M. Discerning Fake News: An Automated Analysis Using the ReaderBench Framework. Transylv. Rev. ; 2022; 31 , pp. 270-278.

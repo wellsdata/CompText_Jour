@@ -1,0 +1,723 @@
+Introduction
+In the contemporary digital era, characterized by the rapid rise of social media and mobile devices, traditional media is increasingly being replaced by new media platforms. This shift has led to an exponential growth in content dissemination, transforming the media landscape from a one-time broadcast model to a model of multiple, widespread transmission. With the acceleration of information flow, the spread of low-quality content, particularly fake news, has become increasingly difficult to control, posing significant challenges to content regulation and the integrity of public information [1, 2, 3–4]. Consequently, researchers have focused on designing various classifiers to accurately assess the authenticity of news content and prevent the spread of misinformation [5, 6, 7–8]. Existing studies primarily focus on two key areas: (1) Extracting semantic features from news content. While semantic features can reveal critical information such as viewpoints, emotions, and contexts, semantic analysis methods face challenges due to the complexity and diversity of language, particularly when semantics are highly context-dependent. (2) Extracting propagation features of news content. Propagation features typically include the source of information, diffusion patterns, and the social networks of propagators. While fake news detection methods based on propagation features can identify anomalies that many traditional content-based detection methods fail to detect, these methods often rely on large amounts of propagation data and must process complex network structures and user behaviors, leading to high computational costs. To address this challenge, researchers have increasingly shifted their focus from the news itself to the mining of external information, adding more available auxiliary discriminative data to enhance fake news detection [9, 10]. As shown in Fig. 1, fake news often exhibits inconsistencies and illogicality in content, which can be more easily identified when external information is incorporated. For instance, the knowledge that sharks cannot appear in subway stations effectively verifies the fake news shown in Fig. 1(left). Furthermore, discrepancies between the news content and authoritative reports help identify the fake news shown in Fig. 1 (right). Additionally, statistical analysis of the information gap between news content and external information, as discussed in Sect. 4.1, reveals significant statistical differences between news categories and their corresponding external information, further demonstrating the utility of external information in identifying fake news.
+[See PDF for image]
+Fig. 1 Examples of identifying fake news from two perspectives
+
+
+In contrast to previous methods based on consistency feature extraction, we employ a distance-aware signed attention mechanism to capture the complex relationships between news content and external information from both positive and negative perspectives [11, 12–13]. This mechanism constructs a comprehensive external information set for each target news item, addressing the insufficiency of features extracted solely from the news content itself. By extracting features that align with both external knowledge and external news consistency, the two submodules are tightly coupled, enabling them to complement each other’s features from different information sources, thereby significantly improving fake news detection performance. In the task of fake news detection, we utilize contrastive learning methods, constructing positive and negative sample pairs to learn the intrinsic associations between news content and consistency features. Unlike traditional contrastive learning frameworks, we extend the guiding conditions of contrastive learning to multiple dimensions, tailored to our task requirements. When processing fake news, we treat the news content paired with its corresponding external consistency information (i.e., external knowledge consistency and external news consistency) as positive samples, and news content paired with unrelated external consistency information as negative samples. This multi-dimensional extension of contrastive learning enables a more comprehensive capture of the complex relationships between news content and external information. The main objectives are as follows:
+
+- Based on our statistical analysis experiments, we demonstrate that external information plays a crucial role in the identification of fake news and significantly enhances detection performance.
+
+- A distance-aware signed attention mechanism is introduced to capture fine-grained, multi-perspective interactive features between news content and external information, with tightly coupled consistency features resulting in enriched information for fake news detection.
+
+- A multi-dimensional contrastive learning approach is proposed, where positive and negative sample pairs are constructed from multiple angles to more precisely guide the identification of fake news patterns.
+
+
+
+Related work
+With the proliferation of information channels, the spread of fake news has become a significant challenge. Current research has expanded the focus from solely analyzing news content to integrating external information for determining the authenticity of news [14, 15, 16, 17–18]. In this context, we categorize these detection methods into two types: (1) content-based methods and (2) external information-based methods.
+Content-based methods
+With increasing attention on fake news, research has primarily focused on various aspects of news content, including text, images, and multimodal features. Horne and Adalı [19] observed that fake news headlines often contain more proper nouns and verb phrases but fewer stop words and common nouns. However, traditional natural language processing methods are typically designed for formal, structured language and often rely on manually crafted features that may be inadequate and require extensive tuning. As a result, these approaches struggle to effectively extract content-based features. Recent work has shifted from handcrafted features, such as part-of-speech ratios and symbol counts, to deep learning techniques known for their strong representation learning capabilities. Notably, Ma et al. [20] were pioneers in applying deep learning to fake news detection, using recurrent neural networks (RNNs) to model the dynamic social context of Weibo posts. Yu et al. [21] developed CAMI, a convolution-based approach that effectively captures key textual elements and their interactions to support early misinformation detection. Other studies have focused on analyzing writing style and emotional cues to identify fake news [22, 23, 24–25]. Ma et al. [26] proposed ESODE, which combines entity recognition, phrase reconstruction, and a differential equation network to enhance semantic understanding and improve rumor detection on social media. In the age of information overload, social media posts often combine text and images, giving rise to multimodal fake news detection methods. For example, Xue et al. [7] developed a module to extract visual tampering features, employing pretrained models to jointly model textual and visual information while assessing their semantic consistency. Wang et al. [27] introduced EANN, an end-to-end framework inspired by generative adversarial networks (GANs) that uses an auxiliary event discriminator to capture event generalization. Jing et al. [28] proposed MPFN, which integrates deep and shallow features across multiple levels to assess news veracity. Meel and Vishwakarma [6] designed a multimodal detection framework that uses a hierarchical attention network to extract implicit features from image captions and content evidence. Giachanou et al. [29] combined textual and visual information to leverage their complementary patterns, while Wu et al. [30] designed MCAN, which stacks multiple co-attention layers to extract joint image-text features. Other approaches include using multi-channel CNNs and neuron-level attention mechanisms to integrate multimodal information [31], employing GCNs to represent relationships between words and object labels, adopting metapath-based global interaction learning for improved global semantic relations [53], integrating multimodal learning with automated machine learning to extract useful information from raw text for forgery detection [54], and applying feature-based knowledge distillation to derive rich representations from input data [55].
+However, these methods primarily rely on “within-content” learning and cannot determine whether news content aligns with real-world knowledge or event context. In the highly diverse and information-saturated environment of social media, fake news can often evade content-consistency checks by mimicking authentic writing styles or cleverly combining images and text. This makes it difficult to distinguish between true and false news based on content alone. Therefore, incorporating external information is a necessary complement. By modeling diverse relationships between news content and external knowledge sources, systems can significantly improve their ability to detect misleading information, cherry-picked quotes, and background manipulation, thereby enhancing both the accuracy of fake news detection.
+External information-based methods
+Relying solely on news content features is often insufficient for effective fake news detection, motivating researchers to incorporate additional external information sources such as user comments [22, 32], user profiles [33, 34–35], news propagation patterns [36, 37], and knowledge graphs [11, 38]. Integrating these supplementary features has shown promise in improving model performance. For example, Castillo et al. [39] manually extracted user, topic, propagation, and content features from external information. However, the massive scale and complexity of social media data pose significant challenges for feature engineering-based approaches. Similar to the evolution of content-based methods, approaches leveraging external information have transitioned toward deep learning techniques. Some studies focus on capturing specific patterns between news content and its context [40, 41, 42–43]. For instance, Qi et al. [31] proposed the MVNN model, which uses attention mechanisms to fuse frequency and pixel domain visual information for image tampering detection. Sheng et al. [16] developed a module that emphasizes novelty and popularity, employing kernel methods to model the relationship between posts and their publishing environment. Sun et al. [10] introduced KDCN, a knowledge-guided dual consistency network designed to capture inconsistencies between pattern-level and content-level knowledge. Xiao et al. [56] proposed the self-bidirectional decoupled distillation approach to facilitate mutual learning between low-level and high-level semantic information, enabling the extraction of knowledge hidden across target and non-target classes. Gupta et al. [57] designed the evidence-based AMR attention network to enable cross-referencing of claims with established knowledge. Other researchers have expanded verifiable data sources such as user profiles and social context to improve detection accuracy [44, 45]. Dou et al. and Zhu et al. highlighted the importance of integrating social contextual information (e.g., textual content and sentiment expressions) to reveal latent differences between article content and social interactions [5, 46].
+Although existing methods have attempted to incorporate external information such as user comments, user profiles, propagation paths, and knowledge graphs to improve fake news detection performance, these social-context features are often noisy, structurally complex, and difficult to verify, which reduces the reliability of detection. While deep learning approaches have advanced beyond manual feature engineering to model interactions between news content and its context, most existing methods still lack mechanisms to ensure alignment with reliable factual sources. Prior studies often focus on features such as novelty/popularity signals or social sentiment expressions, but these cues are susceptible to manipulation and can be semantically ambiguous. In contrast, structured and standardized external information sources such as Wikipedia and authoritative media reports can provide verifiable factual support for detection. However, existing models rarely fully exploit such high-quality information to enforce alignment between content and objective facts. Furthermore, current approaches often handle external information in a coarse or generic manner, lacking dedicated mechanisms to model the consistency between news content and external information in a fine-grained and context-sensitive way. Addressing these research gaps, our proposed method introduces specialized attention mechanisms and contrastive learning strategies, and thoroughly mines external information sources from multiple perspectives to model content consistency between news and external information more precisely and efficiently. By systematically integrating structured, verifiable external knowledge with these tailored modeling components, our approach aims to enhance factual alignment and improve detection accuracy (Table 1).
+Table 1. Recent studies in external information-based fake news detection methods
+Category
+Representative Methods
+Advantages
+Limitations
+
+Feature-engineering-based
+Twitter Monitor [39];
+Can incorporate diverse user and propagation signals
+Labor-intensive, hard to scale; Social media data is noisy, complex, and hard to verify
+
+User Comments/Profiles
+UPFD [5]; TCS [34]; UbCadet [35]
+Rich social context; Incorporating user metadata can identify habitual spreaders of misinformation
+Comments and profiles are often noisy, unstructured, hard to verify; Vulnerable to manipulation
+
+Propagation Patterns
+MVAN [36]; link2vec [37]
+Captures dynamic diffusion characteristics that content features alone cannot model
+May not capture content veracity directly; Complex, often user-dependent, noisy
+
+Knowledge Graphs
+KG-MFEND [11]; KDCN [10];
+Adds structured external factual knowledge
+A single knowledge source is unreliable; Lack of fine-grained consistency modeling
+
+Exploring external information sources
+NSEP [14]; NEP [16]; MAC [45]
+Introduces diverse signals beyond knowledge graphs; Can capture subtle cues that content-only models often fail to detect
+External signals often noisy, incomplete, and hard to verify; Existing methods often use coarse or generic fusion lacking fine-grained consistency modeling
+
+Integration multiple information sources and fine-grained modeling
+EACL(ours)
+Systematically integrates structured, verifiable sources (e.g., Wikipedia, authoritative news); Fine-grained, context-sensitive consistency modeling
+Additional computational cost for improved accuracy
+
+
+Contrastive learning
+Contrastive learning enhances a model’s ability to discern the authenticity of news by constructing positive and negative sample pairs, allowing the model to learn the similarities and differences between samples. In the context of fake news detection, the core challenge of contrastive learning lies in how to design effective positive and negative sample pairs and leverage the contrastive learning framework to improve the model’s feature representation capability. The MFCL method [47] addresses this by designing a cross-modal contrastive learning module that minimizes the semantic discrepancies between text and images, ensuring that MFCL maintains high detection performance even in scenarios where text and image content may not align. Sun et al. [48] proposed a cross-modal contrastive learning framework that aligns visual and textual representations through an image-text contrastive learning objective, significantly improving performance in multimodal fake news detection. Additionally, FCLFD [58] integrates contrastive learning and feature-level distillation within a federated learning framework, reinforcing global-local consistency through contrastive objectives and effectively improving human activity recognition performance on wearable devices. HMKD [59] is a heterogeneous mutual knowledge distillation framework that employs contrastive learning to enable effective bidirectional knowledge transfer between teacher and student models, significantly boosting wearable human activity recognition performance. Building on this concept, the External Information-Augmented Contrastive Learning (EACL) framework was introduced, which utilizes knowledge graphs and retrieval tools to analyze news from both factual and public opinion perspectives. This approach creates an external information for analysis, and then employs a distance-aware signed attention mechanism to capture, with fine granularity, the consistency between the external information and the news content. Finally, the EACL framework constructs positive and negative sample pairs from multiple angles, enabling the model to capture the complex relationships between fake news and external information more comprehensively. These advancements in contrastive learning demonstrate its significant potential in enhancing fake news detection, particularly by improving the model’s ability to integrate content data and multi-source external information.
+Methodology
+The overall structure of the EACL framework is illustrated in Fig. 2. The EACL framework generates external information for each target news item and simultaneously extracts consistency features from both external knowledge information and external news information. Finally, it utilizes contrastive learning techniques to capture deep patterns between news content and consistency features for fake news detection. Essentially, EACL learns a mapping function ⨍, which extracts useful signals from external information to assess the authenticity of the target news, where represents external knowledge information, represents external news information, and y∈[0, 1] indicates the authenticity of the news. The EACL framework consists of three main modules: (1) External Information Construction Module, which uses entity linking, embedding, and retrieval tools to analyze news from both factual and public opinion perspectives, creating a suitable environment for analysis; (2) Consistency Feature Extraction Module, which employs a distance-aware signed attention mechanism to model the consistency between news content and external information, while filtering out irrelevant data; and (3) Contrastive Learning Enhancement Module, which constructs multi-dimensional positive and negative sample pairs to further learn the semantic differences between fake and real news. These modules work collaboratively to enhance the stability and effectiveness of fake news detection.
+[See PDF for image]
+Fig. 2 The architecture of EACL framework
+
+
+External information construction module
+Guided by the statistical analysis results presented in Sect. 4.1, constructing reasonable and effective external information is crucial for the success of the EACL framework. In this section, we provide a detailed description of the processes involved in constructing both external knowledge information and external news information. The construction of external knowledge information involves utilizing established knowledge graphs, publicly available databases, and reliable reference sources to extract facts and context that can supplement the news content. This external knowledge acts as a foundation for validating the claims made within the news, offering a comparative backdrop that aids in detecting inconsistencies or inaccuracies. By linking entities mentioned in the news to external databases, such as Wikipedia or specialized domain knowledge bases, the framework can leverage up-to-date factual information to assess the veracity of the news. On the other hand, external news information construction focuses on analyzing the broader media landscape to capture trends, public sentiment, and relevant news articles that may provide additional context for the target news item. This process involves retrieving and processing relevant news content from diverse sources, which may include news websites, social media, and other platforms. By comparing the target news with similar stories or contrasting information, the framework gains insights into how the news is positioned within the wider media narrative. This helps to identify potential bias, manipulation, or divergence from verified information. Together, the construction of both external knowledge and external news information creates a comprehensive external environment for analyzing news authenticity. These processes are designed to enhance the EACL framework’s ability to capture complex relationships and inconsistencies, which is essential for reliable fake news detection. Through this dual approach, the framework not only validates the content of the news but also situates it within a broader informational context, thus improving detection accuracy.
+External knowledge information construction
+The external knowledge information extracted from knowledge graphs serves as a critical supplement to the semantic representation of news content, providing valuable evidence to improve the detection of fake news. The goal of external knowledge construction is to extract relevant factual knowledge from the knowledge graph, enabling the verification of whether the news aligns with objective facts through the obtained entity pair representations. This process helps to establish a factual foundation that supports the detection of inconsistencies or inaccuracies within the news content. Specifically, the construction of external knowledge information follows a systematic approach, which includes the following three key steps: Entity Linking: In this step, vague or ambiguous entity mentions within the news text are mapped to their corresponding concepts in a knowledge base, such as Wikipedia. Entity linking tools like TAGME [49] are used for English texts, while tools like shuyantech [50] are employed for Chinese texts. Entity Embedding: After entity linking, each identified entity is embedded into a low-dimensional continuous vector space using the OpenKE package1. This embedding process converts the discrete entities into continuous vectors that capture semantic relationships, enabling the model to understand the contextual meaning of the entities in relation to other words in the text. Entity Pair Representation: The top- k entity pairs with the largest distances are selected, and their related distance values are retained. By combining the representations of entity pairs and calculating the cosine distance between them, we can assess the semantic closeness between the entities. This step allows for the identification of significant entity pairs that are relevant for determining the factual consistency of the news content. By following these steps, the construction process produces external knowledge information that provides a factual basis for assessing the consistency between the news content and the knowledge embedded in external databases. 1
+2
+3
+
+where represents the low-dimensional entity embedding vector, and denotes the constructed entity pair representation, which is formed by concatenating the entity embeddings in pairs. To construct reliable external knowledge information , the most representative entity pair samples are selected based on their distance relationships.
+External news information construction
+The external news information reflects the current mainstream focus and shares a common thematic connection with the target news. For instance, during the Syria-China World Cup qualifier, a fake news article claimed that “Syria announced a 48-hour ceasefire to celebrate the win over the China Men’s National Football Team.” However, authoritative media on social platforms did not mention any “ceasefire”, indicating that the news was false. In this context, the external news information serves as a benchmark to assess the authenticity of the target news. Given the target news and the authoritative media information collection = {, , …, }, the external news information construction process adheres to the following constraints: 4
+
+where denote the release date of the target news. The time span between the external news information and the target news is constrained to a 3-day window. This temporal constraint ensures that the external news remains relevant and aligned with current events. To meticulously construct the external news information, we use target news to query the external news sources and collect the top- n news items that are semantically most relevant to the target news. These items are selected based on their similarity to the target news content, measured here by cosine similarity. It is important to note that the semantic vector representation of each news item is obtained through a simple fusion network, which combines the outputs of the pre-trained BERT and CLIP models. This method ensures that the external news information is not only temporally relevant but also contextually aligned with the target news, which enhances the detection of discrepancies and helps improve the accuracy of fake news identification. The process provides a more robust framework for validating news authenticity by comparing the target news against a backdrop of authoritative, up-to-date external information.
+Consistency feature extraction module
+The consistency feature extraction module is a critical component of the EACL framework. This section provides an overview of the modeling process for external knowledge information features and external news information features. Unlike previous studies [16], the EACL framework introduces a novel distance-aware signed attention mechanism to capture the intricate patterns between the news and external information. This mechanism is designed to effectively account for the varying relevance and proximity of external knowledge sources to the target news, enhancing the model’s ability to identify significant relationships and discrepancies. By incorporating this advanced attention mechanism, EACL is able to improve the accuracy and robustness of the feature extraction process, making it more adept at discerning subtle semantic correlations that are often overlooked by traditional models.
+Distance-aware signed attention mechanism
+Traditional attention mechanisms primarily focus on the magnitude of relevance scores, prioritizing elements with higher values. However, inspired by the work of [13], the distance-aware signed attention mechanism considers both the magnitude and the direction of the attention scores. Specifically, when evaluating the authenticity of a post based on external information, readers not only observe significant evidence but also analyze the influence of less obvious or less significant evidence on the post’s credibility. This evaluative process is crucial in determining the trustworthiness of news content. Building upon this process, the distance-aware signed attention mechanism is designed to use the “-softmax” operation to amplify negative relevance scores, ensuring that negative associations are adequately prioritized. As shown in Fig. 3, this design enables the attention mechanism to capture both positive and negative relationships through two distinct channels: the “+softmax” channel, which emphasizes positive relevance, and the “-softmax” channel, which enhances negative relevance as demonstrated in Eq. 5. By considering both supporting and opposing perspectives, this mechanism is better equipped to identify discrepancies and inconsistencies, ultimately enhancing the robustness of the model in evaluating the authenticity of news. 5
+[See PDF for image]
+Fig. 3 Diagram of Distance-aware signed attention mechanism
+
+
+External knowledge information feature modeling
+After constructing the external knowledge environment, the entity pair representations and their corresponding distance values are obtained. This section delves into the specific patterns that emerge between the news content and the entity pairs, such as the observation that larger entity pair distances are often associated with fake news, while more obvious semantic consistency relationships tend to characterize genuine news. These patterns are essential in identifying subtle differences between authentic and fabricated content. To effectively capture these patterns, the distance-aware signed attention mechanism fuses the top- k entity pair representations, which exhibit the largest distance values, with the news content features. In this framework, the news content is treated as the query , while the entity pair representations serve as both the keys and values . The distance-aware signed attention mechanism, as formulated in Eq. 6, then learns the feature patterns between the inputs by considering both the magnitudes and the directional relationships of the entity pair distances. 6
+7
+
+After undergoing the distance-aware operation as shown in Eq. 6, obtain dual channel attention weights. By incorporating both positive and negative associations through distance-aware mechanisms, the model gains a more nuanced understanding of the relationships between entity pairs and the news content, ultimately improving the accuracy and reliability of news authenticity assessments.
+External news information feature modeling
+Each target news is supplemented by a set of external news information, where each news item is considered an integral part of the external news information. These external news items reflect the current distribution of mainstream focus and share a common theme with the target news. To capture the consistency between the news content and the external news information, a method similar to the external knowledge information features modeling is employed. Specifically, the news content serves as the query, while the external news information functions as both the key and value for modeling the consistency issue. A key difference in this approach is that it computes the distance-related relevance between the target news and each individual news item within the external news information. This allows for the calculation of distance-aware attention weights, which help to emphasize the most semantically relevant external news content in relation to the target news. By considering the relative distances between the target news and external news items, this method effectively captures both the magnitude and the direction of the relevance between them. 8
+9
+10
+
+This distance-aware attention mechanism not only enhances the alignment of the target news with external information but also ensures that the external news items most relevant to the target’s themes and context are given greater attention. In turn, this contributes to a more precise and nuanced modeling of news content consistency, facilitating a more accurate assessment of news authenticity.
+Comparative learning enhancement module
+Contrastive learning enhances the inter-class feature disparity by defining samples from different categories as negative samples and encouraging the model to distinguish these negative samples from positive samples during the training process. This approach facilitates clearer identification of boundaries between different classes, ultimately improving the accuracy of classification. In our task, for each news, we construct two positive sample pairs. Specifically, the news content features are paired with the corresponding external knowledge consistency features and external news consistency features to form two positive sample pairs: and , where represents the news content and and represent the corresponding consistency features of external knowledge and external news, respectively. Additionally, we randomly select non-corresponding external knowledge consistency features and external news consistency features from other news items to form negative sample pairs with the content features of the target news. These negative sample pairs are denoted as and , where and represent the non-matching consistency features. To measure the similarity difference between positive and negative sample pairs, we use the InfoNCE contrastive loss function, which helps to learn the enhanced feature representations. The definition of the contrastive loss function is as follows: 11
+
+where ∈ and ∈, representing the positive and negative samples, respectively. The function sim (.) denotes the similarity calculation function, and is the temperature coefficient that controls the sharpness of the similarity scores. It is important to note that, when observing the impact of different sample pair construction methods on the contrastive learning strategy in Sect. 4.6, we focus solely on positive sample pairs and negative sample pairs. The influence of these pairs is analyzed by minimizing and maximizing the distance between samples, respectively, to refine the learned feature representations.
+Prediction module
+The enhanced external knowledge information features and external news information features are connected and fed into a fully connected layer with ReLU activation function. The EACL framework is trained using the Adam optimizer to determine the authenticity of the target news. 12
+13
+14
+15
+
+where and denotes the predicted value and ground truth label for the target news, with 1 indicating fake news. is the target news semantic representation, and represents the sigmoid function. By jointly optimizing both contrastive loss and cross-entropy loss, the framework benefits from a dual approach that improves its ability to both learn meaningful feature representations and make precise authenticity predictions. This combined training strategy leads to more robust performance, particularly in scenarios where the model needs to handle complex and nuanced patterns in news content.
+Experiments
+In Sect. 4.1, the feasibility of EACL is validated using an independent samples t-test with SPSS. Section 4.2, 4.3, and 4.4 provide detailed descriptions of the datasets, experimental settings, and baseline methods. Section 4.5, 4.6, 4.7, 4.8, 4.9 and 4.10 present detailed experiments to comprehensively evaluate the performance of the EACL framework.
+Statistical analysis
+This section investigates whether external information can effectively guide fake news detection. To validate the feasibility of the proposed EACL framework, we performed statistical analysis using SPSS. We randomly selected 200 samples, consisting of 100 real and 100 fabricated news items, for independent sample t-tests. Entity pairs were extracted from the target news, and the distance between each pair was calculated. The top-5 entity pairs with the largest distances were selected to represent the external knowledge information of the target news. Following the method outlined in Sect. 3.3.3, spatiotemporal constraints were applied to retrieve the top-6 news articles from authoritative sources (e.g., Xinhua News Agency) that reflect current mainstream focus and share common themes with the target news. Five undergraduate students rated the samples on a scale of [0, 10] to quantify the extent to which external information aids in correctly classifying the target news. The scores were averaged to account for individual deviations, resulting in final scores for the external knowledge information and external news information. The problem was framed as determining whether significant differences exist in the dual external information scores between real and fake news. The results, summarized in Table 2, showed that the scores followed a normal distribution ( P  > 0.05 for normality tests) and had homogeneous variances ( P  > 0.05 for Levene’s test). The average scores for external news information were 6.231 for real news and 4.907 for fake news, while for external knowledge information, the averages were 7.522 for real news and 4.346 for fake news. The significant results ( P  < 0.01) demonstrate that there are notable differences in the dual external information features between real and fake news, highlighting the impact of external knowledge and news information on fake news detection (Table 2).
+Table 2. Comparison of the differences in the scores of the external information features between real and fake news
+Variable name
+Variable value
+Mean ± Std.Deviation
+t
+P
+
+External knowledge information scores
+Real news
+7.522 ± 1.084
+17.473
+***
+
+Fake news
+4.346 ± 1.127
+
+External news information scores
+Real news
+6.231 ± 0.948
+16.618
+***
+
+Fake news
+4.907 ± 1.021
+
+*** represents a significance level of 1%
+
+Datasets
+This study utilizes two publicly available real-world datasets in both Chinese and English [16] as shown in Table 3. A verified Chinese dataset, comprising 39,066 items from 2010 to 2021, was constructed by combining non-overlapping Weibo platform datasets. Similarly, a verified English dataset, consisting of 6,483 items from 2014 to 2018, was formed by integrating data from fact-checking websites. The external news information was constructed using data retrieved from representative mainstream news media. Table 3. Statistics of the datasets
+Dataset
+Chinese
+English
+
+Train
+Val
+Test
+Train
+Val
+Test
+
+#Real
+8,787
+5,131
+5,625
+1,976
+656
+661
+
+#Fake
+8,992
+4,923
+5,608
+1,924
+638
+628
+
+Total
+17,779
+10,054
+11,233
+3,900
+1294
+1289
+
+#News Items
+583,208
+1,003,646
+
+
+Experimental settings
+In this experiment, several evaluation metrics were employed to assess model performance, including accuracy, macF1 score, precision, and recall. Accuracy, the most intuitive metric, reflects the percentage of samples correctly predicted by the model. However, accuracy can underrepresent model performance in the presence of class distribution imbalances, where a significant disparity exists between the numbers of real and fake news items. Recall evaluates the model’s ability to correctly identify all positive instances, while precision measures the accuracy of predicted positive instances. Both precision and recall are crucial metrics in binary classification tasks. The macro F1 score, which is the harmonic mean of precision and recall, provides a more comprehensive assessment of model performance, particularly in cases of class imbalance. These evaluation metrics offer a detailed understanding of model performance by considering multiple perspectives. BERT and CLIP were used to encode the news content, generating semantic representations that were subsequently transformed into 128-dimensional vectors through a simple Fusion network. The external knowledge consisted of six entity pairs, with the embedding dimension of each entity pair linearly transformed to 128 dimensions to facilitate compatibility with the attention layer. The number of verified external news items in the Chinese and English datasets was 48 and 72, respectively. The semantic representations of these external news items were also encoded using BERT and CLIP. In cases where the external news environment of the target news was insufficient, the data was supplemented through a resampling process. The model parameters were optimized using the Adam optimizer with a learning rate of 5e-05 and a batch size of 64.
+Baseline methods
+Bi-LSTM [51]: A variant of RNNs, Bi-LSTM excels in processing sequential data like text and is commonly used in fake news detection.
+EANN [27]: A successful model for fake news detection, EANN extracts various aspects of event generalizability through a max-min game. Note: since the proposed EACL method does not involve image modalities and the dataset lacks event labels, we used TextCNN to obtain text features and removed the event discriminator part. This variant is referred to as EANNt.
+BERT [52]: Widely adopted in natural language processing due to its superior performance in semantic understanding, BERT is a popular method for extracting text features in many fake news detection tasks.
+BERT-Emo [8]: This framework enhances the original detector by mining dual emotional relationships. Since EACL does not involve user comments or emotional features, we omitted social emotional features and dual emotional features. This variant is referred to as BERT-Emo.
+QSAN [13]: A quantum-probability based fake information detection network that leverages refutation opinions in comments to improve fake news detection. Since this method involves social context information, only news content information was considered in the experiment.
+DeClarE [44]: This method evaluates news content by considering external resources related to the news. It aggregates signals from external evidence articles, the language of these articles, and the credibility of their sources for fake news detection. This is a method based on external environmental features.
+MAC [45]: A hierarchical multi-attention network combining multi-head word-level attention with multi-head document-level attention, MAC provides efficient word-level and evidence-level explanations for fact-checking text claims. Since this method uses external evidence sources, it is also a detection method based on external environmental features.
+NEP [16]: A news environment perception framework that captures environmental signals of news postings. It focuses on the external news environment where fake news posts are made and shared. A popularity and novelty-oriented module was designed to perceive useful signals and assist in final predictions. This method is also a detection method based on external environmental features.
+NSEP [14]: This method emphasizes the external mainstream atmosphere and uses GCN and carefully designed attention mechanisms to capture implicit and explicit evidence for early fake news detection. This is also a detection method based on external environmental features.
+KDCN [10]: A knowledge-guided dual consistency network that captures inconsistencies between content and knowledge. Since this method does not consider a multi-modal scenario, only the content-knowledge consistency detection sub-network is used here. This method is also a detection method based on external environmental features.
+Comparative experiments and analysis
+The performance comparison between EACL and all baseline methods on the Chinese and English datasets is presented in Table 4. It is clear that EACL outperforms all baseline methods across most evaluation metrics, highlighting that incorporating the consistency between news content and external information significantly improves the performance of fake news detection tasks. Firstly, methods that integrate external information features, such as MAC, DeClare, and NEP, consistently outperform those relying solely on text features, such as Bi-LSTM and EANN, in terms of accuracy and F1 score. This finding suggests that incorporating external information features into the modeling process enables the model to capture more discriminative features, thereby enhancing the fake news detection. It also implies that methods like Bi-LSTM and TextCNN, which primarily process sequential sentence data, may have limitations in extracting semantic features from news content. However, Transformer-based models like BERT, BERT-Emo, and QSAN outperform both news content-based methods and even some external feature-based methods. This suggests that the BERT model, which is specifically designed for tasks such as masked language modeling and next-sentence prediction, is highly effective for learning rich word-level and sentence-level representations. Moreover, QSAN, with its dual-channel attention mechanism that leverages the “softmax” channel, effectively focuses on the key parts of the input data, enhancing the model’s ability to express content information. Secondly, while methods incorporating external information generally outperform those based solely on news content features, there is a notable distinction in the performance of models utilizing external information. MAC and DeClare, despite being based on external knowledge, lag behind other baseline methods. This may be attributed to their limited ability to capture sufficient external evidence signals necessary for the complex fake news detection task. For example, DeClare aggregates related articles to assess news authenticity, but the challenge of verifying the credibility of these external sources can hinder its effectiveness. On the other hand, methods like NEP and NSEP, which extract external news information by observing real-time updates from authoritative media outlets, can better identify credible external signals, enabling more accurate fake news detection. KDCN, utilizing knowledge graphs such as Wikipedia and Freebase, leverages high-quality external knowledge to detect content-knowledge inconsistencies, facilitating efficient fake news detection. These observations suggest that EACL achieves optimal performance by mining the inherent consistency between news content and external news and knowledge, effectively addressing the challenges posed by fake news detection. Thirdly, an interesting trend was observed in the F1real and F1fake scores. For methods that integrate external news information, such as NEP and NSEP, the F1real score is higher than the F1fake score. This suggests that external news features are more effective for detecting real news, likely because real news is more prominent in external sources, while fake news tends to be overlooked or less represented in external environments. In contrast, methods like KDCN, which rely on external knowledge information, exhibit a lower F1real score compared to F1fake. This may be due to the fact that fake news often contains easily identifiable contradictions, which can be detected through factual representations from knowledge graphs. The KDCN model, by focusing on content-knowledge consistency, can more effectively pinpoint these contradictions to detect fake news. Most importantly, the proposed EACL method demonstrates a balanced F1real and F1fake score, effectively identifying both real and fake news. This result emphasizes the complementary nature of the dual external information features used in EACL, with each feature contributing meaningfully to the fake news detection task. In summary, the comprehensive analysis of the experimental results confirms that the EACL framework outperforms all baseline methods, offering a robust and effective approach to fake news detection.
+Table 4. The results of the comparative experiment between EACL and baseline methods, with the best results highlighted in bold
+Datasets
+Model
+Acc
+macF1
+Fake news
+Real news
+
+Precision
+Recall
+F1
+Precision
+Recall
+F1
+
+Chinese
+Bi-LSTM
+0.727
+0.713
+0.751
+0.576
+0.652
+0.714
+0.847
+0.775
+
+EANNt
+0.732
+0.718
+0.848
+0.536
+0.657
+0.656
+0.962
+0.780
+
+BERT
+0.792
+0.785
+0.781
+0.710
+0.744
+0.799
+0.853
+0.825
+
+BERT-Emo
+0.812
+0.807
+0.783
+0.769
+0.776
+0.804
+0.875
+0.838
+
+QSAN
+0.814
+0.809
+0.779
+0.778
+0.778
+0.837
+0.843
+0.840
+
+DeClare
+0.764
+0.758
+0.761
+0.683
+0.720
+0.786
+0.804
+0.795
+
+MAC
+0.755
+0.751
+0.728
+0.706
+0.717
+0.695
+0.899
+0.784
+
+NEP
+0.810
+0.805
+0.724
+0.720
+0.722
+0.831
+0.843
+0.837
+
+NSEP
+0.842
+0.840
+0.830
+0.818
+0.824
+0.841
+0.872
+0.856
+
+KDCN
+0.841
+0.828
+0.829
+0.839
+0.834
+0.826
+0.818
+0.822
+
+EACL (ours)
+0.852
+0.848
+0.844
+0.848
+0.846
+0.851
+0.849
+0.850
+
+English
+Bi-LSTM
+0.705
+0.704
+0.700
+0.678
+0.689
+0.693
+0.747
+0.719
+
+EANNt
+0.700
+0.699
+0.707
+0.661
+0.683
+0.688
+0.742
+0.714
+
+BERT
+0.709
+0.709
+0.706
+0.696
+0.701
+0.707
+0.725
+0.716
+
+BERT-Emo
+0.718
+0.718
+0.715
+0.723
+0.719
+0.721
+0.715
+0.718
+
+QSAN
+0.720
+0.725
+0.728
+0.720
+0.724
+0.729
+0.723
+0.726
+
+DeClare
+0.714
+0.714
+0.725
+0.694
+0.709
+0.658
+0.790
+0.718
+
+MAC
+0.706
+0.705
+0.734
+0.684
+0.708
+0.646
+0.769
+0.702
+
+NEP
+0.718
+0.718
+0.737
+0.704
+0.720
+0.698
+0.733
+0.715
+
+NSEP
+0.729
+0.729
+0.713
+0.721
+0.717
+0.744
+0.736
+0.740
+
+KDCN
+0.725
+0.721
+0.720
+0.716
+0.724
+0.716
+0.720
+0.718
+
+EACL (ours)
+0.829
+0.830
+0.830
+0.828
+0.829
+0.830
+0.832
+0.831
+
+
+In addition, we further analyze the underlying reasons behind the superior performance of EACL. At the structural level, EACL does not merely incorporate external features, as methods like MAC and DeClare do, but instead conducts a deep modeling of the consistency relationships between external knowledge/news and the target news content. Specifically, at the knowledge level (e.g., Wikipedia), EACL identifies entities within the text and compares them with factual semantics to uncover content-knowledge contradictions. At the news reporting level, it leverages temporally adjacent external reports to perform semantic verification, capturing event-context deviation signals. This dual-layer semantic verification enables EACL to overcome the limitations of relying on a single source of information. For example, while DeClare aggregates related articles, it struggles to assess their credibility; MAC utilizes a graph attention mechanism but lacks a mechanism for content alignment. In contrast, EACL explicitly models both positive and negative consistencies through its distance-aware signed attention mechanism, significantly enhancing the model’s reasoning ability in complex scenarios. At the feature extraction level, the distance-aware signed attention mechanism plays a critical role. Unlike traditional attention mechanisms that focus on weighted integration, EACL recognizes that negative correlations are equally valuable cues in fake news detection. By evaluating attention scores in both supportive and contradictory directions, EACL effectively identifies information that appears plausible yet contradicts factual knowledge-a common trait of mixed-type fake news. This bidirectional modeling is particularly advantageous for detecting such subtle inconsistencies. Finally, at the learning paradigm level, EACL adopts a contrastive learning strategy by constructing positive and negative pairs. This enables the model not only to learn the characteristic patterns of consistency typically associated with real news but also to capture the inconsistency patterns frequently found in fake news. Such a strategy enhances the model’s ability to detect implicit falsity, especially in cases where deceptive intent is masked by surface-level coherence. In summary, by leveraging the synergistic effects of the distance-aware signed attention mechanism and contrastive learning framework, EACL achieves deep integration and discrimination of external information. This significantly boosts the model’s semantic sensitivity and discriminative power, making it particularly well-suited for the nuanced task of fake news detection.
+Ablation experiments and analysis
+To further assess the contribution of each core component within the EACL framework, we conducted a series of ablation experiments using four model variants on both Chinese and English datasets, as shown in Table 5. The results consistently demonstrate that the complete EACL model outperforms its ablated counterparts, confirming the unique value and synergistic effect of each module. First, removing the external knowledge feature (Variant 1) led to a substantial decline in the F1fake score, 2.1% on the Chinese dataset and 9.0% on the English dataset, highlighting its pivotal role in fake news detection. This performance drop can be attributed to the structured factual information encoded in entity embeddings derived from knowledge graphs such as Wikipedia. These embeddings help the model uncover inconsistencies in entity relationships or factual claims-manipulations commonly found in fabricated news (e.g., altered timestamps or fictitious titles). Functionally, this module endows EACL with a form of fact-checking capability, making it a key component for identifying semantically biased or manipulated content. Second, eliminating the external news feature (Variant 2) resulted in a marked drop in the F1real score, by 5.6% on the Chinese dataset and 1.19% on the English dataset, along with a more pronounced reduction in overall accuracy. This demonstrates the effectiveness of EACL’s temporal context modeling approach, where similar news items are sampled within a defined time window to evaluate semantic alignment with mainstream narratives. External news thus serves as a robust semantic backdrop for real news, enhancing the model’s ability to distinguish authentic information from misinformation. Third, replacing the distance-aware signed attention mechanism with a traditional attention mechanism (Variant 3) led to an approximate 2–3% drop in accuracy. Although the overall performance impact is moderate, this confirms the structural refinement introduced by the distance-aware signed attention design. Unlike traditional attention that treats supporting and contradicting information equally, distance-aware signed attention explicitly models positive and negative correlations and dynamically weights inputs based on semantic distance. This allows the model to capture subtle logical conflicts and semantic deviations, which are essential for fine-grained classification. Finally, removing the contrastive learning enhancement module (Variant 4) resulted in significant degradation across all performance metrics, indicating that this module is a key driver of EACL’s discriminative capabilities. By constructing diverse, multi-granularity positive and negative sample pairs, contrastive learning enables the model to capture consistency patterns across sources. This is especially beneficial for fake news detection, as fake content often exhibits semantic or logical divergence from trusted external sources. Contrastive learning enhances the separation between aligned (truthful) and misaligned (deceptive) representations, thereby sharpening the model’s decision boundary. This module thus plays a vital role in structuring the latent representation space and improving generalizability under complex data distributions.
+Table 5. The results of the ablation experiments between EACL and its variants, with the best results highlighted in bold
+Model
+Chinese
+English
+
+Acc
+macF1
+F1fake
+F1real
+Acc
+macF1
+F1fake
+F1real
+
+w/o external knowledge information feature
+0.832
+0.832
+0.825
+0.839
+0.776
+0.771
+0.739
+0.803
+
+w/o external news information feature
+0.817
+0.815
+0.836
+0.794
+0.723
+0.723
+0.733
+0.712
+
+w/o distance-aware signed attention
+0.832
+0.832
+0.825
+0.839
+0.802
+0.800
+0.783
+0.817
+
+w/o comparative learning enhancement
+0.768
+0.750
+0.756
+0.754
+0.701
+0.703
+0.701
+0.705
+
+EACL
+0.852
+0.848
+0.846
+0.850
+0.829
+0.830
+0.829
+0.831
+
+
+Figure 4 illustrates the impact of different sample pair construction methods in the contrastive learning enhancement module on the performance of our framework, evaluated on the Chinese and English datasets. The performance changes are measured using the macF1 score. Positive and negative sample pairs are carefully constructed across two category dimensions, with the construction process achieved by modifying the contrastive loss function. Specifically, sample pairs are created at three levels: real news, fake news, and all news, based on the object categories. We then observe the impact of constructing positive, negative, and all sample pairs at each level of categorization. Similar results were obtained on both datasets. We found that constructing comprehensive sample pairs for all object categories significantly improves macF1 scores, as expected. Interestingly, constructing only positive sample pairs at the fake news level yields performance comparable to that of the comprehensive approach. This suggests that focusing on narrowing the distance between fake news and its external information can lead to effective detection. The likely reason for this is that fake news often exhibits significant semantic and logical discrepancies from real information, making it easier for the model to learn these differences by constructing positive sample pairs. Furthermore, this approach reduces computational complexity by eliminating the need to process a large number of negative sample pairs.
+[See PDF for image]
+Fig. 4 The impact of different construction methods for sample pairs on the performance of EACL framework
+
+
+Computational complexity analysis
+As shown in Table 6, when comparing eleven representative fake news detection models, their computational complexity reveals important trade-offs. Models such as BERT-Emo and Bi-LSTM have the lowest complexity, linear or quadratic in text length, making them lightweight and efficient, but they lack sophisticated mechanisms for modeling external information or user signals. QSAN, DeClarE, EANN, and NEP introduce advanced attention or external information retrieval modules. While their complexity is higher (e.g., QSAN’s quantum attention is cubic in feature dimension for affinity computation), their overall scale remains moderate due to manageable constant factors (limited sentences counts, projection operators, and pre-extracted CNN features). At the highest end, NSEP and MAC show the most substantial complexity. NSEP, for example, combines macro-environment GCN layers and micro-environment multi-head attention, resulting in terms like O ( LN 2   + hm 2 d + d 2 ). Such quadratic dependence on environment size makes it truly heavy for large-scale deployment. Similarly, MAC’s hierarchical multi-head attention over long evidence documents yields O ( h 1 n 2 d + h 2 M 2 d + d 2 ), with complexity scaling in both document length and number. EACL sits in between these extremes. Its main cost comes from retrieving external knowledge and news and signed attention mechanisms. While more expensive than simpler text-only baselines, EACL’s complexity is notably lower than the graph-based, multi-document models like NSEP or MAC. Crucially, EACL delivers consistently superior detection accuracy in experiments. Its signed attention and contrastive learning integrate external structured knowledge and authoritative news signals effectively, reducing both false positives and false negatives. In practice, this trade-off, moderate extra computational overhead for significant accuracy gains, makes EACL a highly appealing choice. In summary, EACL is not the most computationally expensive model among the eleven, but it stands out for its optimal balance between complexity and performance. Investing additional resources for its richer external integration is justified by the substantial boost in detection accuracy it achieves.
+Table 6. Computational complexity of fake news detection models
+Model
+Main Complexity Source
+Computational Complexity
+Relative
+
+Bi-LSTM
+Gated state update
+O ( nd² ) ( n : text length; d : feature dim)
+Low
+
+EANNt
+Text CNN extraction; event discriminator
+O ( nd + d² ) ( n : text length; d : feature dim)
+Medium
+
+BERT
+Self-attention mechanism
+O ( n²d ) ( n : text length; d : hidden dim)
+Low
+
+BERT-Emo
+Emotion feature extraction (classifier, lexicon); difference calculation; MLP fusion
+O ( n  +  d² ) ( n : text length; d : feature dim)
+Low
+
+QSAN
+GRU sequence encoding; quantum measurement projection
+O ( nd  +  mkd  +  kd² ) ( n : text length; m : number of sentences; k : projections; d : feature dim)
+Medium
+
+DeClarE
+Bi-LSTM encoding; claim-evidence attention; evidence scoring; multi-evidence fusion
+O ( nd  +  n claim n article d ) ( n : text length; n claim : claim length; n article : evidence length; d : hidden dim)
+Medium
+
+MAC
+Bi-LSTM encoding; multi-head word/doc attention; MLP fusion
+O ( h₁n²d  +  h₂M²d  +  d² ) ( h₁ , h₂ : attention heads; n : text length; M : number of docs; d : feature dim)
+High
+
+NEP
+Environment set (macro + micro); kernel pooling; gated fusion
+O ( n²d  +  N  +  d² ) ( n : text length; N : macro news; d : feature dim)
+Medium
+
+NSEP
+Evidence division; GCN; attention; MLP fusion
+O ( LN² + hm²d  +  d² ) ( L : GCN layers; N : number of macro news; h : heads; m : number of micro news; d : feature dim)
+High
+
+KDCN
+BERT and Bi-LSTM encoding; orthogonal constraint; KG distances; attention fusion
+O ( n²d  +  nmd ) ( n : text length; m : entity pairs; d : feature dim)
+Medium
+
+EACL
+External retrieval; signed attention; contrastive training
+O ( n ( m 1   + m 2 ) d  +  Nd ) ( n : text length; m 1 , m 2 : dual external info length; N : number of contrastive samples; d : feature dim)
+Medium
+
+
+Parameter analysis
+This section thoroughly investigates the impact of various parameter settings on the performance of the EACL framework. When evaluating the influence of specific parameters, other unexamined parameters are held constant at their default values, which align with those of the original framework. For clarity and simplicity, accuracy and macro F1 score are used as the evaluation metrics.
+Figure 5 demonstrates the impact of the number of entity pairs, denoted as k , in the external knowledge information on the framework’s performance. The model, with the external knowledge feature module removed, is used as the baseline. The results show a similar trend across both datasets: as the number of entity pairs increases, the framework’s performance improves, peaking when k  = 6. This indicates that the number of entity pairs in the external knowledge significantly influences performance. An increase in k helps the framework avoid redundant knowledge while better capturing the complex relationships between entities, thereby enhancing overall performance. [See PDF for image]
+Fig. 5 The impact of the number of entity pairs k in external knowledge information on the performance of the EACL framework
+
+
+Figure 6 illustrates the impact of the time span t of external news information on the framework’s performance. We limited the time span to 5 days, as news beyond this period loses timeliness and no longer reflects current events. For ease of comparison, the model without the external news information feature is treated as the baseline. The results show a consistent trend across both datasets: performance initially increases, then decreases as the time span expands. Notably, the performance peak occurs at a shorter time span on the Chinese dataset compared to the English dataset. This could be due to the faster spread of news on social media platforms in China, allowing the model to capture key information within a shorter time window. In contrast, the English dataset, with a broader range of news sources and longer news cycles, likely requires a longer time span to capture comprehensive information. Figure 7 displays the impact of the number of entity pairs n in the external news information on performance. The number of external news articles varied between [12, 24, 36, 48, 60, 72, 84, 96]. Similar to the external knowledge feature analysis, the performance improves initially and then declines as n increases. Peak performance is achieved when n  = 48 and n  = 72 for the Chinese and English datasets, respectively. This suggests that a moderate number of external news sources is most effective for the framework’s performance, with diminishing returns observed when more sources are added. [See PDF for image]
+Fig. 6 The impact of time span t in external news information on the performance of the EACL framework
+
+[See PDF for image]
+Fig. 7 The impact of the number of news n in the external news information on the performance of the EACL framework
+
+
+For a comprehensive parameter analysis, we also conducted additional experiments. Figure 8 explores the effect of the temperature coefficient in the contrastive learning enhancement module on framework performance. The temperature coefficient, which appears in the denominator of the contrastive loss function, directly affects the degree of similarity between positive and negative samples. The results indicate that = 0.07 is the optimal value, as it enables the model to focus more effectively on difficult samples and produce a more uniform representation space, while avoiding excessive disruption of the semantic structure. Moreover, the semantic representations of news and external information need to be projected to the same dimensional space to be input into the distance-aware signed attention mechanism for consistency computation. As shown in Figure 9, we further investigate the impact of the shared dimensionality of these semantic vectors on the framework’s performance. By projecting features from various information sources into a shared 128-dimensional space, we align the semantics across different sources, thus improving the framework’s ability to learn cross-source semantic consistency (Fig. 9).
+[See PDF for image]
+Fig. 8 The impact of temperature coefficient on the performance of EACL framework
+
+
+[See PDF for image]
+Fig. 9 The impact of shared space dimensions on the performance of EACL framework
+
+
+Evaluation on multimodal dataset
+In real-world social media environments, misinformation is increasingly disseminated through a combination of text, images, and other modalities. Compared to text-only content, multimodal information carries stronger persuasive power and emotional appeal, making it more effective for spreading false narratives and manipulating public opinion. However, this also introduces unique challenges for fake news detection systems, which must not only analyze linguistic cues but also understand and align the associated visual information.
+To comprehensively evaluate the capability of our proposed EACL framework, we conduct experiments on the multimodal Weibo dataset. It is important to note that the primary motivation of this study is to construct external knowledge and news information and achieve efficient consistency modeling. Our main experiments are performed on publicly available Chinese and English datasets, both of which include external news articles that can be retrieved and used as authoritative references. In contrast, the multimodal Weibo dataset does not contain external news information from authoritative sources, and building such an external news dataset by retrieving content from representative mainstream media would require substantial additional effort. Therefore, in this section, we do not include the external news feature modeling component of our framework. Instead, we introduce a distance-aware signed attention module to model text-image consistency. Correspondingly, some baseline methods such as MAC and NSEP, which rely heavily on external information sources, become less meaningful for comparison in this setting and are thus omitted. For detection methods originally designed for text only, we ensure fair comparison by encoding both text and image representations using BERT and ResNet, respectively, and fusing them as the post representation. As shown in Table 7, experimental results demonstrate that EACL achieves the best overall performance on the Weibo dataset, with an accuracy of 0.907 and an F1 score of 0.908, outperforming all baseline models. This superior performance underscores the effectiveness of integrating external knowledge and the proposed distance-aware signed attention and contrastive learning strategies in capturing fine-grained consistency relationships, enabling EACL to model semantic consistency both within news content and between news content and external knowledge more precisely. It is also noteworthy that all models achieve relatively high scores on the Weibo dataset compared to the original Chinese dataset, suggesting that Weibo represents a relatively easier detection task. A likely reason is that the original Chinese dataset is purely text-based and may lack sufficient contextual cues, making detection more challenging. In contrast, the Weibo dataset includes both text and images, providing richer multimodal information that can make fake news signals more explicit and easier to identify. Despite the overall improvement in baseline performance, EACL consistently delivers the highest scores, confirming its robustness, its ability to effectively leverage external information to enhance detection, and its strong capacity to model consistency relationships-even in settings with abundant available cues.
+Table 7. The results of the comparative experiment between EACL and baseline methods on the Weibo multimodal dataset, with the best results highlighted in bold
+Datasets
+Metric
+Bi-LSTM
+EANN
+BERT
+BERT-Emo
+QSAN
+EACL
+
+Weibo
+Accuracy
+0.799
+0.788
+0.881
+0.895
+0.905
+0.907
+
+Precision
+0.818
+0.786
+0.886
+0.910
+0.922
+0.917
+
+Recall
+0.721
+0.791
+0.881
+0.890
+0.892
+0.901
+
+F1
+0.766
+0.786
+0.884
+0.899
+0.906
+0.908
+
+
+Robustness analysis
+To enhance the reliability of fake news detection in the presence of potentially corrupted external data, the EACL framework incorporates several structural mechanisms specifically designed to improve its robustness against tampered or poisoned knowledge sources. EACL jointly leverages two semantically independent and functionally complementary types of external information: external knowledge information (e.g., from structured databases such as Wikipedia, Freebase, or domain-specific knowledge graphs) and external news information (e.g., from temporally proximate and contextually aligned mainstream media). This dual-source strategy allows for cross-validation of facts, thereby mitigating the risk of manipulation from any single source. The consistency feature extraction module further reinforces robustness by aligning the target news content with both external sources in parallel. Even if one source is corrupted, for example, when factual knowledge graphs are manipulated, accurate narratives from reputable news sources can still serve as corrective signals. Ablation studies support this claim: even with external knowledge features removed, EACL achieves 0.832 accuracy on the Chinese dataset and 0.776 on the English dataset, outperforming most baseline models and demonstrating resilience under partial information loss. In addition, EACL introduces a distance-aware signed attention mechanism that adaptively assigns weights to external information based on semantic proximity and the direction of relevance (positive or negative). This mechanism acts as a semantic filter, down-weighting inconsistent or irrelevant external entries to reduce their negative influence on final predictions, thereby enabling real-time modulation of external input reliability.
+At the data construction level, EACL utilizes a structured pipeline comprising entity linking, entity embedding, and entity pair representation to extract factual knowledge. The entity embedding process, implemented using the open-source OpenKE toolkit, employs the TransE model to embed entities and relations into a continuous vector space based on translation operations. While TransE performs well on many benchmarks, it is known to be sensitive to data quality. Poisoned inputs (e.g., fabricated entities or tampered relations) can lead to shifted entity vectors, misleading proximity metrics, and ultimately, propagation of false signals through the alignment process. To mitigate this, we rely on pre-trained models within OpenKE that have been benchmarked and community-maintained, ensuring consistent and high-quality entity representations throughout our experiments.
+In summary, EACL combines robust knowledge embeddings, semantic filtering, and redundant validation mechanisms to deliver consistent and stable performance, even under adversarial or noisy conditions. Nevertheless, the concern regarding malicious manipulation of dynamic external knowledge sources, particularly open, collaborative platforms like Wikipedia, remains a critical challenge. Over-reliance on static snapshots of such sources may increase the model’s vulnerability over time. In future work, we aim to address this issue by enhancing model architecture and data augmentation strategies, with the goal of making model more adaptable to real-time knowledge dynamics and more resilient to adversarial noise.
+Case analysis
+Through statistical analysis of the external knowledge and external news information extracted from news content, it has been found that both types of external information exhibit a significant correlation with the authenticity of news. This observation led to the development of the EACL framework, which aims to accurately identify fake news by modeling the consistency between news content and dual external information sources. Although the EACL framework has demonstrated excellent experimental results, it raises further questions regarding its ability to capture and utilize external information more effectively compared to other methods. To address this, we conducted a qualitative analysis, as shown in Fig. 10, using two representative fake news detection methods, NSEP and KDCN. We selected three fake news articles and assessed their authenticity in conjunction with external information. The results revealed that when the target news (articles a and b) contains clear external news information features, both NSEP and EACL accurately identified the fake news, whereas KDCN struggled to detect the fake news. In contrast, when the target news (article c) contained clear external knowledge information features, such as entity contradictions, but lacked effective external news information, NSEP found it difficult to identify the fake news. Thus, the introduction of the EACL framework provides a novel perspective and approach to the field of news authenticity detection. By integrating both external knowledge and external news information, the framework overcomes the limitations of traditional methods that rely solely on news content or a single type of external information. This dual information integration enables a more comprehensive evaluation of news authenticity. The incorporation of both external knowledge and news features not only enhances the accuracy of fake news detection but also opens up new research avenues. Future studies could explore how to more effectively utilize multiple external information sources to further improve the model’s robustness and generalization capabilities.
+[See PDF for image]
+Fig. 10 Case analysis. The external knowledge information of article(a) and article(b) is relatively lacking, making it difficult for KDCN to detect correctly, while the external news information of article(c) is relatively lacking, making it difficult for NSEP to detect correctly. And EACL integrates two sources of information, so it can detect correctly
+
+
+Conclusion
+This paper presents a novel framework, EACL, designed to detect fake news in social networks by analyzing the consistency between news content and external information. The framework integrates modules for external information construction, consistency feature extraction, and comparative learning enhancement, offering a comprehensive approach to identifying false information. Through extensive experimentation, EACL outperforms ten baseline methods, demonstrating its effectiveness in addressing the complex challenges associated with fake news detection. Ablation studies further substantiate the critical role of each component within the EACL framework, confirming that all modules contribute significantly to its overall performance.
+However, fake news is rapidly evolving, with increasingly diverse and sophisticated forms such as deepfakes, manipulated images, audio forgeries, and multimodal content, all of which make detection significantly more challenging. This ongoing evolution underscores the urgent need to develop more generalizable and adaptable detection models capable of addressing not only text-based misinformation but also these emerging forms of deceptive content. Moreover, as demonstrated by our proposed EACL framework, while integrating external information sources remains a highly promising strategy, it also introduces critical challenges that must be addressed. External data can be noisy, incomplete, inconsistent, or even deliberately misleading. Without careful filtering and verification, integrating such information risks amplifying errors rather than improving detection accuracy. Building on this work, our future research will focus on developing robust external information validation methods to ensure that models can reliably leverage these sources, while also advancing approaches to identify various new forms of deceptive content. This will help drive the field toward more resilient and effective fake news detection systems.
+Funding
+This work is supported in part by the Taishan Scholar Project of ShandongProvince under Grant ts20190924, in part by the National Natural Science Foundation of China under Grant 61702312, in part by the Key Research and Development Plan of Shandong Province under Grant 2019GGX101075, and in part by the National Natural Science Foundation of China under Grant 62076153.
+Data availability
+Data openly available in a public repository.
+1 https://github.com/thunlp/OpenKE.
+Publisher’s note
+Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References
+1. Chung, M; Kim, N. When i learn the news is false: how fact-checking information stems the spread of fake news via third-person perception. Hum Commun Res ; 2021; 47 , 1 pp. 1-24. [DOI: https://dx.doi.org/10.1093/hcr/hqaa010]
+2. Capuano, N; Fenza, G; Loia, V; Nota, FD. Content-based fake news detection with machine and deep learning: a systematic review. Neurocomputing ; 2023; 530 , pp. 91-103. [DOI: https://dx.doi.org/10.1016/j.neucom.2023.02.005]
+3. Chakraborty, T; La Gatta, V; Moscato, V; Sperlì, G. Information retrieval algorithms and neural ranking models to detect previously fact-checked information. Neurocomputing ; 2023; 557 , [DOI: https://dx.doi.org/10.1016/j.neucom.2023.126680] 126680.
+4. Zhang, W; Zhang, M; Bao, Z; Wang, Z. Cross-attention multi-perspective fusion network based fake news censorship. Neurocomputing ; 2025; 611 , [DOI: https://dx.doi.org/10.1016/j.neucom.2024.128695] 128695.
+5. Dou Y, Shu K, Xia C, Yu PS, Sun L User preference-aware fake news detection. in: Proceedings of the 44th international ACM SIGIR conference on research and development in information retrieval, pp. 2051–2055
+6. Meel, P; Vishwakarma, DK. Han, image captioning, and forensics ensemble multimodal fake news detection. Inf Sci ; 2025; 567 , pp. 23-41.4238967 [DOI: https://dx.doi.org/10.1016/j.ins.2021.03.037]
+7. Xue J, Wang Y, Tian Y, Li Y, Shi L, Wei L HAN, image captioning, and forensics ensemble multimodal fake news detection. Inform Process Manage 58(5):102610
+8. Zhang X, Cao J, Li X, Sheng Q, Zhong L, Shu K Mining dual emotion for fake news detection. in: Proceedings of the web conference, pp. 3465–3476
+9. Koloski, B; Perdih, TS; Robnik-Šikonja, M; Pollak, S; Škrlj, B. Content-based fake news detection with machine and deep learning: a systematic review. Neurocomputing ; 2022; 496 , pp. 208-226. [DOI: https://dx.doi.org/10.1016/j.neucom.2022.01.096]
+10. Sun, M; Zhang, X; Ma, J; Xie, S; Liu, Y; Philip, SY. Inconsistent matters: a knowledge-guided dual-consistency network for multi-modal rumor detection. IEEE Trans Knowl Data Eng ; 2023; 35 , 12 pp. 12736-12749. [DOI: https://dx.doi.org/10.1109/TKDE.2023.3275586]
+11. Fu, L; Peng, H; Liu, S. Kg-mfend: an efficient knowledge graph-based model for multi-domain fake news detection. J Supercomput ; 2023; 79 , 16 pp. 18417-18444. [DOI: https://dx.doi.org/10.1007/s11227-023-05381-2]
+12. Cong, M; Liu, L; Han, J; Zhu, B; Yuan, X; Peng, T. An adjustable parallel architecture based on evidence awareness for fake news detection. Expert Syst Appl ; 2025; 266 , [DOI: https://dx.doi.org/10.1016/j.eswa.2024.126043] 126043.
+13. Tian T, Liu Y, Yang X, Lyu Y, Zhang X, Fang B QSAN: A quantum-probability based signed attention network for explainable false information detection. in: Proceedings of the 29th ACM international conference on information knowledge management, pp. 1445–1454
+14. Fang, X; Wu, H; Jing, J; Meng, Y; Yu, B; Yu, H; Zhang, H. Early fake news detection via news semantic environment perception. Inf Process Manage ; 2024; 61 , 2 [DOI: https://dx.doi.org/10.1016/j.ipm.2023.103594] 103594.
+15. Jiang, G; Liu, S; Zhao, Y; Sun, Y; Zhang, M. Fake news detection via knowledgeable prompt learning. Inf Process Manag ; 2022; 59 , 5 [DOI: https://dx.doi.org/10.1016/j.ipm.2022.103029] 103029.
+16. Sheng Q, Cao J, Zhang X, Li R, Wang D, Zhu Y Zoom out and observe: News environment perception for fake news detection. in: Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics, pp. 4543–4556
+17. Yu, W; Ge, J; Chen, Z; Liu, H; Ouyang, M; Zheng, Y; Kong, W. Research on fake news detection based on dual evidence perception. Eng Appl Artif Intell ; 2024; 133 , [DOI: https://dx.doi.org/10.1016/j.engappai.2024.108271] 108271.
+18. Bondielli, A; Marcelloni, F. A survey on fake news and rumour detection techniques. Inf Sci ; 2019; 497 , pp. 38-55. [DOI: https://dx.doi.org/10.1016/j.ins.2019.05.035]
+19. Horne, B; Adali, S. This just in: fake news packs a lot in title, uses simpler, repetitive content in text body, more similar to satire than real news. Proceedings of the international AAAI conference on web and social media ; 2017; [DOI: https://dx.doi.org/10.1609/icwsm.v11i1.14976]
+20. Ma J, Gao W, Mitra P, Kwon S, Jansen BJ, Wong KF, Cha M Detecting rumors from microblogs with recurrent neural networks. in: Proceedings of the 25th International Joint Conference on Artificial Intelligence, pp. 3818–3824
+21. Yu F, Liu Q, Wu S, Wang L, Tan T A Convolutional Approach for Misinformation Identification. in: Proceedings of the 26th International Joint Conference on Artificial Intelligence, pp. 3901–3907
+22. Hamed, SK; Ab Aziz, MJ; Yaakub, MR. Fake news detection model on social media by leveraging sentiment analysis of news content and emotion analysis of users’ comments. Sensors (Basel) ; 2023; 23 , 4 1748. [DOI: https://dx.doi.org/10.3390/s23041748]
+23. Lv, J; Wang, X; Shao, C. TMIF: transformer-based multi-modal interactive fusion for automatic rumor detection. Multimedia Syst ; 2023; 29 , 5 pp. 2979-2989. [DOI: https://dx.doi.org/10.1007/s00530-022-00916-8]
+24. Sheikhi, S. An effective fake news detection method using WOA-xgbTree algorithm and content-based features. Appl Soft Comput ; 2021; 109 , [DOI: https://dx.doi.org/10.1016/j.asoc.2021.107559] 107559.
+25. Samadi, M; Mousavian, M; Momtazi, S. Deep contextualized text representation and learning for fake news detection. Inf Process Manage ; 2021; 58 , 6 [DOI: https://dx.doi.org/10.1016/j.ipm.2021.102723] 102723.
+26. Ma, T; Zhou, H; Tian, Y. N. a novel rumor detection algorithm based on entity recognition, sentence reconfiguration, and ordinary differential equation network. Neurocomputing ; 2021; 447 , pp. 224-234. [DOI: https://dx.doi.org/10.1016/j.neucom.2021.03.055]
+27. Wang Y, Ma F, Jin Z, Yuan Y, Xun G, Jha K, Gao J Eann: Event adversarial neural networks for multi-modal fake news detection. in: Proceedings of the 24th acm sigkdd international conference on knowledge discovery data mining, pp. 849–857
+28. Jing, J; Wu, H; Sun, J; Fang, X; Zhang, H. Multimodal fake news detection via progressive fusion networks. Inf Process Manag ; 2023; 60 , 1 [DOI: https://dx.doi.org/10.1016/j.ipm.2022.103120] 103120.
+29. Giachanou A, Zhang G, Rosso P Multimodal multi-image fake news detection. in: 2020 IEEE 7th international conference on data science and advanced analytics (DSAA), pp. 647–654
+30. Wu Y, Zhan P, Zhang Y, Wang L, Xu Z Multimodal fusion with co-attention networks for fake news detection. in: Findings of the association for computational linguistics: ACL-IJCNLP, pp. 2560–2569
+31. Qi P, Cao J, Yang T, Guo J, Li J Exploiting multi-domain visual information for fake news detection. in: 2019 IEEE international conference on data mining (ICDM), pp. 518–527
+32. Petit, J; Li, C; Millet, B; Ali, K; Sun, R. Can we stop the spread of false information on vaccination? How online comments on vaccination news affect readers’ credibility assessments and sharing behaviors. Sci Commun ; 2021; 43 , 4 pp. 407-434. [DOI: https://dx.doi.org/10.1177/10755470211009887]
+33. Baracchi, D; Shullani, D; Iuliani, M; Giani, D; Piva, A. Uncovering the authorship: linking media content to social user profiles. Pattern Recognit Lett ; 2024; 181 , pp. 9-15. [DOI: https://dx.doi.org/10.1016/j.patrec.2024.03.008]
+34. Cavalcante, AAB; Freire, PMS; Goldschmidt, RR; Justel, CM. Early detection of fake news on virtual social networks: a time-aware approach based on crowd signals. Expert Syst Appl ; 2024; 247 , [DOI: https://dx.doi.org/10.1016/j.eswa.2024.123350] 123350.
+35. Pv, S; Bhanu, SMS. Ubcadet: detection of compromised accounts in Twitter based on user behavioural profiling. Multimedia Tools Appl ; 2020; 79 , 27 pp. 19349-19385. [DOI: https://dx.doi.org/10.1007/s11042-020-08721-z]
+36. Ni, S; Li, J; Kao, HY. Multi-view attention networks for fake news detection on social media. IEEE Access ; 2021; 9 , pp. 106907-106917. [DOI: https://dx.doi.org/10.1109/ACCESS.2021.3100245]
+37. Shim, JS; Lee, Y; Ahn, H. A link2vec-based fake news detection model using web search results. Expert Syst Appl ; 2021; 184 , [DOI: https://dx.doi.org/10.1016/j.eswa.2021.115491] 115491.
+38. Zhao, W; He, P; Zeng, Z; Xu, X. Fake news detection based on knowledge-guided semantic analysis. Electronics ; 2024; 13 , 2 [DOI: https://dx.doi.org/10.3390/electronics13020259] 259.
+39. Castillo C, Mendoza M, Poblete B Information credibility on twitter. in: Proceedings of the 20th international conference on World wide web, pp. 675–684
+40. Cui, B; Ma, K; Li, L; Zhang, W; Ji, K; Chen, Z; Abraham, A. Intra-graph and Inter-graph joint information propagation network with third-order text graph tensor for fake news detection. Appl Intell ; 2023; 53 , 16 pp. 18971-11898. [DOI: https://dx.doi.org/10.1007/s10489-023-04455-1]
+41. Kaliyar, RK; Goswami, A; Narang, P. Echofaked: improving fake news detection in social media with an efficient deep neural network. Neural Comput Appl ; 2021; 33 , pp. 8597-8613. [DOI: https://dx.doi.org/10.1007/s00521-020-05611-1]
+42. Raponi, S; Khalifa, Z; Oligeri, G; Di Pietro, R. Fake news propagation: a review of epidemic models, datasets, and insights. ACM Trans Web ; 2022; 16 , 3 pp. 1-34. [DOI: https://dx.doi.org/10.1145/3522756]
+43. Sivasankari, S; Vadivu, G. Tracing the fake news propagation path using social network analysis. Soft Comput ; 2022; 26 , 23 pp. 12883-12891. [DOI: https://dx.doi.org/10.1007/s00500-021-06043-2]
+44. Popat K, Mukherjee S, Yates A, Weikum G DeClarE: Debunking Fake News and False Claims using Evidence-Aware Deep Learning. in: Proceedings of the 2018 Conference on Empirical Methods in Natural Language Processing, pp. 22–32
+45. Vo N, Lee K Hierarchical Multi-head Attentive Network for Evidence-aware Fake News Detection. in: Proceedings of the 16th Conference of the European Chapter of the Association for Computational Linguistics, pp. 965–975
+46. Zhu Y, Sheng Q, Cao J, Li S, Wang D, Zhuang F Generalizing to the future: Mitigating entity bias in fake news detection. in: Proceedings of the 45th International ACM SIGIR Conference on Research and Development in Information Retrieval, pp. 2120–2125
+47. Chen, H; Wang, H; Liu, Z; Li, Y; Hu, Y; Philip, S. Multi-modal robustness fake news detection with cross-modal and propagation network contrastive learning. Knowl Based Syst ; 2020; 309 , [DOI: https://dx.doi.org/10.1016/j.knosys.2024.112800] 112800.
+48. Sun, R; Huang, G; Wang, X; Du, Y; Zhang, X. Text-augmented multi-modality contrastive learning for unsupervised visible-infrared person re-identification. Image Vis Comput ; 2024; 152 , [DOI: https://dx.doi.org/10.1016/j.imavis.2024.105310] 105310.
+49. Assante, M; Candela, L; Castelli, D; Cirillo, R; Coro, G; Frosini, L; Sinibaldi, F. Enacting open science by D4Science. Future Gener Comput Syst ; 2019; 101 , pp. 555-563. [DOI: https://dx.doi.org/10.1016/j.future.2019.05.063]
+50. Chen L, Liang J, Xie C, Xiao Y Short text entity linking with fine-grained topics. in: Proceedings of the 27th ACM International conference on Information and Knowledge Management, pp. 457–466
+51. Graves, A; Schmidhuber, J. Framewise phoneme classification with bidirectional LSTM and other neural network architectures. Neural Netw ; 2005; 18 , 5–6 pp. 602-610. [DOI: https://dx.doi.org/10.1016/j.neunet.2005.06.042]
+52. Kenton JDMWC, Toutanova LK Bert: Pre-training of deep bidirectional transformers for language understanding. in: Proceedings of naacL-HLT (Vol. 1, No. 2)
+53. Lee, B; Cao, D; Zhang, T. Multi-granularity semantic relation learning and meta-path structure interaction learning for fake news detection. Appl Intell ; 2025; 55 , 655. [DOI: https://dx.doi.org/10.1007/s10489-025-06560-9]
+54. Nguyen, D; Nguyen, TT; Nguyen, CV. Fake advertisements detection using automated multimodal learning: a case study for Vietnamese real estate data. Appl Intell ; 2025; 55 , 367. [DOI: https://dx.doi.org/10.1007/s10489-025-06238-2]
+55. Xiao, Z; Tong, H; Qu, R; Xing, H; Luo, S; Zhu, Z; Song, F; Feng, L. Capmatch: semi-supervised contrastive transformer capsule with feature-based knowledge distillation for human activity recognition. IEEE Trans Neural Networks Learn Syst ; 2025; 36 , pp. 2690-2704. [DOI: https://dx.doi.org/10.1109/TNNLS.2023.3344294]
+56. Xiao, Z; Xing, H; Qu, R; Li, H; Feng, L; Zhao, B; Yang, J. Self-bidirectional decoupled distillation for time series classification. IEEE Trans Artif Intell ; 2024; 5 , pp. 4101-4110. [DOI: https://dx.doi.org/10.1109/TAI.2024.3360180]
+57. Gupta, S; Rajora, A; Kundu, S. Evidence-based AMR attention network for fake news detection. IEEE Trans Knowl Data Eng ; 2025; 37 , pp. 1742-1752. [DOI: https://dx.doi.org/10.1109/TKDE.2025.3529707]
+58. Xiao Z, Tong H (2025) Federated contrastive learning with Feature-Based distillation for human activity recognition. IEEE Trans Comput Social Syst 1–14
+59. Xiao Z, Xing H, Qu R, Li H, Cheng X, Xu L, Feng L, Wan Q (2025) Heterogeneous mutual knowledge distillation for wearable human activity recognition, IEEE transactions on neural networks and learning systems. 1–15

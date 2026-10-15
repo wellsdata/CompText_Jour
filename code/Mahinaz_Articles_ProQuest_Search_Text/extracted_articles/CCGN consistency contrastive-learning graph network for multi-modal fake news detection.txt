@@ -1,0 +1,760 @@
+Introduction
+Nowadays, people’s lives are inseparable from social media, which has become a crucial platform for information dissemination. However, this has also led to the proliferation of fake news [1]. Fake news often uses text, images, and other information to spread through social media and other channels. Detecting multimodal fake news on social media has become urgent and important.
+Previous studies have demonstrated that combining complementary information from different modalities can enhance the generation of valuable joint multimodal representations. In the context of multimodal fake news detection, the fusion of textual and visual features has yielded significant results.Early studies identified fake news through simple text-visual integration [2, 3–4], but there were certain limitations on whether text and vision were fully integrated. Some studies have enhanced visual representation by using attention mechanisms [5]. To better capture the correlation between modalities, some studies [6] have explored the similarity between the input image and text to enhance the alignment between visual and textual information. Although these studies have preliminarily explored the image relationship between modalities, there are still some challenges. Firstly, the impact of image-text consistency on multimodal feature learning itself has not been fully explored. Secondly, there is no consideration of how to suppress irrelevant information in images in social networks. Thirdly, there is a lack of research on how to capture the relationship between irregular or complex objects in images.
+To address these limitations, we propose the Consistency Contrastive-Learning Graph Network (CCGN, as shown in Fig. 1) to improve multimodal fake news detection. We use consistency contrastive learning, which uses instance-level contrastive loss to shorten the similarity distance between text and images. For image irrelevant information, we use vision GNN (Graph Neural Network) to map the image suppress irrelevant background information, and build a relationship network between complex objects in the image. We also use cross-attention to achieve the mutual fusion of image and text to improve fake news detection.
+The main contributions of this work are as follows:
+- We propose a novel multimodal fake news network and adopt cross-attention to fuse multimodal features.
+
+- We use visual GNN to build graph relationships of image features to suppress irrelevant background features and build complex object relationship networks.
+
+- We use consistency contrastive learning to shorten the similarity distance between images and texts, thereby improving the consistency between images and texts.
+
+
+The rest of this paper is structured as follows. Section 2 presents related work on multimodal machine translation. Section 3 describes the method used in this work, then Sect. 4 presents the experiments and their results to verify the effectiveness of the multimodal model. Section 5 summarizes our current work and looks forward to future directions.
+Related work
+Existing fake news detection can be divided into unimodal methods and multimodal methods.
+Text-based unimodal fake news detection
+Unimodal fake news detection focuses on the news’s thematic content, headlines, user profiles, and social metadata. In the beginning, researchers used recurrent neural networks to analyze variable-length sequence data, allowing for the extraction of more comprehensive fake news features [7, 8]. However, because recurrent neural networks often face issues like vanishing and exploding gradients when processing long sequences, researchers have adopted attention mechanisms to focus on important parts of the input selectively [9]. Attention-based convolutional bidirectional long short-term memory networks are used for fake news detection, with the attention mechanism playing a crucial role in identifying the most relevant information in sentences [10].
+Leveraging the outstanding performance of transformers in natural language processing tasks, researchers have classified news using the transformer architecture [11, 12]. Guo et al. extended the transformer to a multi-scale format and fully captured the semantic information of news text through the multi-scale transformer [13]. Li et al. proposed HetTransformer to capture the local heterogeneous semantics of news, posts, and user entities in social networks for fake news detection [14].
+News usually contains much unstructured data, which challenges building data relationships. Many researchers use graph neural networks [15] to model the unstructured data in the news as graph-structured data and reduce information redundancy by performing graph structure learning [16]. Hu, Linmei, et al. construct a directed heterogeneous document graph that includes topics and entities for each news item, and they utilize attention mechanisms to learn rich topic representations and contextual entity representations for the news [17]. To address the problem of model domain transfer, the entity-centric multi-domain transformer (EMT) model uses entities in news as the key component for learning domain-invariant and domain-specific news representations [18].
+Image-based multimodal fake news detection
+Multimodal models to integrate images and text in fake news detection is now an effective approach. To identify fake news in new events, the event adversarial neural network (EANN) detects fake news in newly arrived events by extracting event-invariant features [3]. The multimodal knowledge aware event memory network (MKEMN) employs a multimodal knowledge aware network and an event memory network as building blocks for social media rumor detection. The multimodal knowledge aware network extracts multimodal representations of news, while the event memory network extracts event-invariant features [4]. Aiming at the similarity between text and visual information, Similarity-Aware FakE news detection method (SAFE) jointly learns the association between news text and visual information. This approach identifies the falsity of news based on the “mismatch” between the news text and the accompanying image [6]. Khattar et al. proposed a multimodal variational autoencoder (MVAE), which combines a bimodal variational autoencoder with a binary classifier to perform fake news detection tasks [19].
+To solve the problem of image-text mismatch, multimodal consistency neural network (MCNN) uses a similarity measurement module to measure the similarity of multimodal data to solve the problem of image-text mismatch [20]. Hu et al. proposed a causal inference method to remove the confounding effect of image-text matching bias [21]. Hu et al. proposed a multimodal matching-aware co-attention network with mutual knowledge distillation to improve fake news detection. They used a text-image matching-aware co-attention mechanism to align text and images to improve fake news detection [22].
+In response to the ambiguity of different modalities, Chen et al. proposed CAFE for fuzzy perception. When the cross-modal ambiguity is weak, it relies on unimodal features, and when the cross-modal ambiguity is strong, it refers to the cross-modal correlation [23]. Li et al. proposed consistency-learning fine-grained fusion network (CFFN) to explore the consistency and inconsistency of high-correlation and low-correlation word region pairs. For the high-correlation part, a cross-modal attention mechanism is used to analyze the consistency. For the low-correlation part, an inconsistency score is calculated to capture the inconsistency points [24].
+In summary, previous methods have not simultaneously considered the consistent relationship between text and complex objects in images. However, both complex objects in images and key textual information play a crucial role in feature representation. To address this, we leverage Vision GNN to capture relationships among complex objects within images and employ consistency contrast learning to enhance the extraction of coherent features. Furthermore, to enable the model to utilize textual sequences for selecting key regions in images, we introduce a cross-attention mechanism, facilitating more effective multimodal feature fusion. Table 1. Main notations and descriptions
+G
+The graph construction
+G ′
+The graph convolution
+
+γ
+L CE punishment parameter
+β
+L CL punishment parameter
+
+σ
+The activation function
+N
+The neighbor node set
+
+X
+The input feature
+A
+An anchor instance
+
+K
+The key
+V
+The value
+
+Q
+The query
+N
+The number of samples
+
+τ
+The temperature parameter
+ψ
+The softmax activation function
+
+
+Methodology
+We propose a consistency contrastive-learning Graph Network to improve the performance of fake news detection tasks. In CCGN, consistency contrastive learning calculates the alignment between images and text, improving multimodal consistency. Based on vision GNN, images are transformed into graph structures to suppress irrelevant information. For multimodal fusion, cross-attention is used to enhance the performance of fake news detection. To explain our method, we first define the main notations as shown in Table 1. [See PDF for image]
+Fig. 1 General architecture of CCGN: Consistency Contrastive Learning is used to improve the consistency between images and texts
+
+
+Vision GNN
+Convolutional neural networks and transformers treat images as grid or sequence structures, making it difficult to capture relationships between irregular or complex objects. The subjects within an image can be viewed as composed of multiple parts; for instance, a person can be roughly divided into the head, torso, arms, and legs. Human joints can be seen as forming a graph structure, and by analyzing the graph, we can recognize a person. Graphs are a generalized data structure that make visual perception more flexible and effective when images are viewed as graphs, while also effectively suppressing irrelevant information [25]. The graph convolutional neural network [26] is the first to apply the convolution operation in image processing to graph structured data processing, allowing the neural network to learn and extract features of images directly on graph structured data. Han et al. proposed a novel vision GNN [27] for extracting image features. This vision GNN segments an image into multiple patches, treating them as nodes, and constructs a graph by connecting each patch to its nearest neighbors. The network effectively captures irregular and complex objects within images, enhancing feature representation. Inspired by vision GNN, we apply it to multimodal fake news detection to explore image graph structure and enhance visual features.
+The graph is a generalized data structure that can more flexibly represent complex text relationships. For the input image, divide it into N patches. Each patch is transformed into a feature vector x i ∈ R D , and X = [ x 1 , x 2 , … , x N ] is obtained, where D is the feature dimension, R is the feature of the current patch. These features can be expressed as V = v 1 , v 2 , … , v N . For each v i , find its K nearest neighbors N ( v i ) . Add an edge e ij from v j to v i for all v J ∈ N ( v i ) . Finally, a graph G = ( V , E ) is obtained.
+Given feature X ∈ R N × D , construct a feature-based graph G = G ( X ) . Graph convolutional layers can exchange information between nodes by aggregating features from their neighboring nodes. The graph convolution can be represented mathematically as: 1
+G ′ = Update Aggregate G , W agg , W update where W agg is aggregate learnable weights. W update is update operation learnable weights. More specifically, the aggregation operation computes the representation of a node by aggregating the features of neighboring nodes, and the update operation further merges the aggregated features. The maximum relative graph convolution is used here, which can be expressed mathematically as: 2
+x i ′ = x i , max x j - x i ∣ j ∈ N x i W update where N ( x i ) is the set of neighbor nodes of x i . N is the neighbor node set.
+To increase feature diversity, apply linear layers before and after graph convolution to project node features into the same domain. A feedforward network is applied to each node to improve the feature conversion ability further and alleviate the over-smoothing phenomenon. Insert nonlinear activation functions such as ReLU after graph convolution to avoid layer collapse. Given the input feature X ∈ R N × D which can be expressed mathematically as: 3
+Z = σ σ GC X W in W out W 1 + X W 1 W 2 + X W 1 W 2 + σ GC X W in W out + X where W in and W out are the weights of the fully connected layer. σ is the activation function. W 1 and W 2 are the weights of the fully connected layer. GC represents a graph convolutional neural network.
+Cross-attention
+The core goal of the attention mechanism is to select the information that is more critical to the current task goal from a large amount of information and pay attention to it. Self-attention focuses on the relationships between elements within the input sequence, where each element has its query Q , key K , and value V . After applying self-attention, the word vectors are reconstructed to include their information and contextual semantic information. Self-attention mechanism can be represented mathematically as: 4
+Attention ( Q , K , V ) = ψ Q K T d k · V where d k is the key dimensionality. Q , K , and V represent query, key, and value, respectively. ψ is the softmax activation function.
+The cross-attention uses the query vector Q from the image, the key vector K from the text, and the value vector V from the text to select local regions of the image based on the information from the text sequence. For each word in the text, the similarity score between it and all positions in the image is calculated, then normalized. Finally, these scores compute a weighted sum to obtain the final image representation conditioned on the text. Cross-attention can be represented mathematically as: 5
+Attention ( Q img , K text , V text ) = ψ W Q img ( i ) φ i z t W K text ( i ) τ θ ( y ) T d k W V text ( i ) τ θ ( y ) where W Q img ( i ) ∈ R d × d τ , W K text ( i ) ∈ R d × d τ , W V text ( i ) ∈ R d × d ϵ i are learnable projection matrices. a text encoder τ θ is introduced, which projects y to an intermediate representation τ θ ( y ) ∈ R M × d τ . φ i z t ∈ R N × d ϵ i represents the intermediate representation of image encoding.
+Multi-head self-attention enhances feature representation by computing multiple attention distributions in parallel. This mechanism allows the integration of encoded information from different subspaces into the attention layer’s output, thereby improving the model’s expressive power. The multi-head self-attention mechanism can be represented mathematically as: 6
+head i = Attention Q W i Q , K W i K , V W i V MultiHead ( Q , K , V ) = Concat i head i W O where Concat is the vector splicing operation. W i is the parameter matrix. W O is a linear mapping function.
+Consistency contrastive learning
+We introduce a consistency contrastive loss in the network to reduce the semantic distance between similar parts of text and image in the feature space and achieve consistent representation learning across modalities. Considering that text and images from the same sample have similar semantic representations, consistency contrastive learning is introduced to help extract more consistent features. First, the features extracted by the text encoder are recorded as c i ( t ) ∈ R d , where d is the feature dimension. c i ( t ) ∈ R d is called the instance of sample i in text t . The features extracted by the visual encoder are recorded as c i ( v ) ∈ R d . c i ( v ) ∈ R d is called the instance of sample i in image v . All instances are divided into three categories: anchor instance A = c i ( t ) , matching instance A + = c i ( v ) t ≠ v , Not matching instance A - = c j ( v ) j ≠ i . The matching instances and non-matching instances here are relative to the anchor instance. It should be noted that each instance can be selected as an anchor instance, and the anchor instance is combined with the matching instance or the non-matching instance. We can get n - 1 matching instance pairs and n × l - n non-matching instance pairs.
+Cosine similarity is used to measure the distance between instance pairs, which can be represented mathematically as: 7
+S i m i l a r i t y c i ( t ) , c j ( v ) = c i ( t ) · c j ( v ) c i ( t ) c j ( v ) where ⟨ · ⟩ is the dot product operation. Our optimization goal is S A , A + ≫ S A , A - . It maximizes the consistency between image and text, and the cosine similarity between the anchor instance and the matching instance is much greater than the cosine similarity between the anchor instance and the non-matching instance. The instance-level contrastive loss for all text-image pairs can be represented mathematically as: 8
+L CL = - 1 2 n ∑ v = 1 l ∑ t ≠ v ∑ i = 1 n log e S z i ( v ) , z i ( t ) / τ e S z i ( v ) , z i ( t ) / τ + ∑ r = t , v ∑ j = 1 , j ≠ i e S z i ( v ) , z j ( r ) / τ where τ is the temperature parameter, indicating the distribution concentration degree [28]. The temperature parameter τ is used to control the distribution concentration level, which controls the smoothness of the soft labels and the weights of hard and soft labels in the loss function.
+Cross entropy measures the difference between two probability distributions and is mainly used in classification tasks. The cross-entropy loss function can be represented mathematically as: 9
+L CE = - 1 N ∑ i = 1 N y i log y ^ i + 1 - y i log 1 - y ^ i where N is the number of samples. y i represents the true label of the ith sample. y ^ i represents the predicted probability of the ith sample.
+The overall training loss of our CCGN is represented mathematically as: 10
+L = γ L CE + β L CL where γ and β are the punishment parameters of L CE and L CL respectively. These losses are only calculated during the training phase and are used to update the weight parameters of CCGN via back-propagation.
+Experiment
+Dataset
+To evaluate the performance of the proposed CCGN, we conduct experiments on Weibo and Twitter datasets. The Weibo dataset [29] is collected and verified by Xinhua News Agency and Weibo. Each piece of data contains text, pictures, and social information. The Twitter [30] dataset is derived from the MediaEval 2015 dataset and includes a training set and a test set. Each news item in the dataset consists of text, an image, and a corresponding label. Table 2 shows the detailed statistics of the Weibo and Twitter datasets. Table 2. The Weibo and Twitter datasets statistics
+Dataset
+Category
+Rumor
+Non-rumor
+
+Weibo
+Train
+3749
+3783
+
+Test
+1000
+996
+
+Twitter
+Train
+7618
+5043
+
+Test
+846
+560
+
+
+Implementation details
+In this experiment, accuracy, precision, recall, and F1 score are used as evaluation metrics. For text, we use the pre-trained BERT [31] to extract features. For images, we use the SwinTransformer [32] pre-trained on ImageNet to extract image features. We set the text length to 200 and the encoding size to 256. The training batch size is set to 64. The initial learning rate is set to 0.0001. AdamW is adopted as the optimizer, and the machine epsilon is set to 1 × 10 - 4 . During training, the epoch is set to 80. For the text encoder and image encoder, parameter freezing is set to exclude them from training. We conduct all experiments on the NVIDIA RTX 3090 GPU.
+Baselines
+We compare our CCGN model with multimodal content based models as follows. - MKEMN [4], which Utilizes multimodal knowledge aware networks and event memory networks as building blocks for social media rumor detection.
+
+- MVAE [19] which uses a bimodal variational autoencoder combined with a binary classifier to detect fake news.
+
+- AMFB [33] which uses an attention-based stacked bidirectional long short-term memory network to extract text features and an attention-based multi-layer convolutional neural network-recurrent neural network to extract visual features.
+
+- CAFE [23] which learns cross-modal ambiguity and leverages it to adaptively aggregate single-modal features and cross-modal correlations to improve fake news detection accuracy.
+
+- SpotFake [2] which uses transfer learning to capture semantic and contextual information to improve the accuracy of fake news detection.
+
+- SEMI-FND [34] which uses NasNet Mobile to build features for images. For text, it uses an integration of BERT and ELECTRA.
+
+- HMCAN [35] which adopts a hierarchical multimodal contextual attention network to model multimodal contextual information and hierarchical semantics of text jointly.
+
+- MCAN [36] which adopts multiple co-attention layers to fuse multimodal features for fake news detection.
+
+- RaSa [37] which offsets the risk of overfitting and improves the robustness of representation through relationship-aware learning and sensitivity-aware learning.
+
+- CLIMB [38] which exploits causal Inference of image-text matching bias for fake news detection.
+
+
+Results and analysis
+[See PDF for image]
+Fig. 2 Radar chart of our model and other models on Weibo dataset
+
+[See PDF for image]
+Fig. 3 Radar chart of our model and other models on Twitter dataset
+
+[See PDF for image]
+Fig. 4 Our model ROC curve on the Weibo dataset
+
+[See PDF for image]
+Fig. 5 Our model ROC curve on the Twitter dataset
+
+Table 3. Performance comparison of different models on Weibo and Twitter datasets
+Method
+Acc
+Fake news
+Real news
+
+Pre
+Recall
+F1
+Pre
+Recall
+F1
+
+MKEMN [4]
+0.814
+0.823
+0.799
+0.812
+0.723
+0.819
+0.798
+
+MVAE [19]
+0.824
+0.854
+0.769
+0.809
+0.802
+0.875
+0.837
+
+AMFB [33]
+0.832
+0.820
+0.860
+0.840
+0.850
+0.810
+0.830
+
+CAFE [23]
+0.840
+0.855
+0.830
+0.842
+0.825
+0.851
+0.837
+
+Weibo
+SpotFake [2]
+0.869
+0.877
+0.859
+0.868
+0.861
+0.879
+0.870
+
+SEMI-FND [34]
+0.868
+0.873
+0.802
+0.836
+0.862
+0.871
+0.867
+
+HMCAN [35]
+0.885
+0.920
+0.845
+0.881
+0.856
+0.926
+0.890
+
+MCAN [36]
+0.899
+0.913
+0.889
+0.901
+0.884
+0.909
+0.897
+
+RaSa [37]
+0.898
+0.915
+0.880
+0.897
+0.883
+0.917
+0.900
+
+CCGN(Ours)
+0.908
+0.922
+0.894
+0.908
+0.894
+0.922
+0.908
+
+MKEMN [4]
+0.715
+0.814
+0.756
+0.708
+0.634
+0.774
+0.660
+
+MVAE [19]
+0.745
+0.801
+0.719
+0.758
+0.689
+0.777
+0.730
+
+SpotFake [2]
+0.770
+0.751
+0.900
+0.820
+0.832
+0.600
+0.701
+
+AMFB [33]
+0.883
+0.890
+0.950
+0.920
+0.870
+0.760
+0.810
+
+Twitter
+CAFE [23]
+0.806
+0.807
+0.799
+0.803
+0.805
+0.813
+0.809
+
+MCAN [36]
+0.809
+0.889
+0.765
+0.822
+0.732
+0.871
+0.795
+
+SEMI-FND [34]
+0.858
+0.737
+0.955
+0.832
+0.953
+0.729
+0.826
+
+HMCAN [35]
+0.897
+0.971
+0.801
+0.878
+0.853
+0.979
+0.912
+
+CLIMB [38]
+0.901
+0.970
+0.724
+0.829
+0.878
+0.989
+0.930
+
+CCGN (Ours)
+0.906
+0.961
+0.748
+0.841
+0.886
+0.984
+0.933
+
+Table 4. The impact of temperature parameters on model performance in consistency contrast loss on Weibo and Twitter datasets
+Temperature
+Acc
+Fake news
+Real news
+
+Pre
+Recall
+F1
+Pre
+Recall
+F1
+
+0.1
+0.880
+0.893
+0.869
+0.880
+0.868
+0.892
+0.880
+
+0.2
+0.884
+0.921
+0.843
+0.881
+0.851
+0.925
+0.887
+
+0.3
+0.881
+0.935
+0.822
+0.875
+0.837
+0.941
+0.886
+
+0.4
+0.888
+0.895
+0.883
+0.889
+0.880
+0.893
+0.887
+
+Weibo
+0.5
+0.908
+0.922
+0.894
+0.908
+0.894
+0.922
+0.908
+
+0.6
+0.894
+0.922
+0.864
+0.892
+0.868
+0.924
+0.895
+
+0.7
+0.892
+0.930
+0.853
+0.890
+0.860
+0.934
+0.895
+
+0.8
+0.883
+0.892
+0.876
+0.884
+0.874
+0.891
+0.882
+
+0.9
+0.875
+0.950
+0.796
+0.866
+0.819
+0.956
+0.882
+
+0.1
+0.874
+0.937
+0.749
+0.803
+0.870
+0.984
+0.908
+
+0.2
+0.852
+0.901
+0.612
+0.786
+0.850
+0.963
+0.892
+
+0.3
+0.865
+0.938
+0.624
+0.737
+0.842
+0.980
+0.900
+
+0.4
+0.861
+0.967
+0.604
+0.744
+0.833
+0.989
+0.905
+
+Twitter
+0.5
+0.906
+0.961
+0.748
+0.841
+0.886
+0.984
+0.933
+
+0.6
+0.891
+0.994
+0.679
+0.807
+0.861
+0.998
+0.924
+
+0.7
+0.877
+0.910
+0.700
+0.815
+0.853
+0.982
+0.910
+
+0.8
+0.886
+0.926
+0.715
+0.807
+0.872
+0.971
+0.919
+
+0.9
+0.889
+0.936
+0.715
+0.811
+0.873
+0.975
+0.921
+
+Table 5. Results of ablation experiments in each module of the CCGN model
+Method
+Acc
+Fake news
+Real news
+
+Pre
+Recall
+F1
+Pre
+Recall
+F1
+
+CCGN
+0.908
+0.922
+0.894
+0.908
+0.894
+0.922
+0.908
+
+CCGN w/o GNN
+0.894
+0.922
+0.864
+0.892
+0.868
+0.924
+0.895
+
+CCGN w/o att
+0.888
+0.898
+0.880
+0.889
+0.879
+0.897
+0.888
+
+Weibo
+CCGN w/o CL
+0.877
+0.913
+0.839
+0.874
+0.846
+0.917
+0.880
+
+CCGN w/o GNN, att
+0.880
+0.893
+0.869
+0.880
+0.868
+0.892
+0.880
+
+CCGN w/o GNN, CL
+0.862
+0.923
+0.796
+0.855
+0.815
+0.931
+0.869
+
+CCGN w/o att, CL
+0.871
+0.904
+0.835
+0.868
+0.842
+0.909
+0.874
+
+CCGN w/o GNN, att, CL
+0.850
+0.916
+0.776
+0.840
+0.800
+0.926
+0.859
+
+CCGN
+0.906
+0.961
+0.748
+0.841
+0.886
+0.984
+0.933
+
+CCGN w/o GNN
+0.854
+0.740
+0.866
+0.798
+0.927
+0.848
+0.886
+
+CCGN w/o att
+0.889
+0.917
+0.766
+0.835
+0.892
+0.965
+0.927
+
+Twitter
+CCGN w/o CL
+0.863
+0.726
+0.891
+0.777
+0.918
+0.849
+0.920
+
+CCGN w/o GNN, att
+0.831
+0.769
+0.756
+0.748
+0.890
+0.790
+0.824
+
+CCGN w/o GNN, CL
+0.839
+0.712
+0.879
+0.787
+0.930
+0.805
+0.854
+
+CCGN w/o att, CL
+0.840
+0.762
+0.758
+0.760
+0.879
+0.882
+0.881
+
+CCGN w/o GNN, att, CL
+0.816
+0.726
+0.742
+0.719
+0.745
+0.774
+0.714
+
+
+Table 3 presents a comparative experiment between different models and our model on the Weibo and Twitter datasets. On the Weibo dataset, the accuracy of our model is improved by 0.01 compared with the baseline model RaSa. In terms of fake news detection, our model’s accuracy, recall and F1 value are better than those of the RaSa model, indicating that our model mainly improves the detection of fake news. When detecting real news, our model’s accuracy, recall and F1 value are higher than those of the RaSa model, indicating that our model mainly improves false positive detection. Our model outperforms the MCAN model which only uses co-attention. The accuracy, precision, recall, and F1 score on the Weibo dataset are all higher than the MCAN model. Our model performs well on the Weibo dataset because we explore the consistency learning of text and images, and build graphs and joint co-attention for feature fusion.
+CCGN demonstrates strong performance on the Twitter dataset, achieving a precision of 0.906, which indicates its overall superiority over other models. However, its relatively low recall rate for fake news suggests that the model adopts a conservative approach in detecting fake news, leading to a higher likelihood of missing some false information. Compared to CLIMB, CCGN exhibits a 0.005 higher precision while maintaining comparable performance across other metrics. However, similar to CLIMB, CCGN also suffers from low recall when identifying fake news, which further highlights its tendency to prioritize reducing false positives at the expense of potentially overlooking some fake news instances.
+Table 4 shows the impact of temperature parameters on model performance in consistency contrast loss on Weibo and Twitter datasets. It can be seen that when the temperature is set to 0.5, the model has the highest accuracy and best performance in detecting fake news. When the temperature is set to 0.1, the model performs relatively well, but does not reach the best performance. When the temperature is set to 0.9, the model is more inclined to detect news as false, which greatly reduces the detection effect of real news.
+Figure 2 is a radar chart comparing our model with the models in Table 3 on the Weibo dataset. Our model has better precision, recall and F1 value than the model in the figure when facing fake news. This shows that a fairly high proportion of negative predictions are correct. When facing real news, the precision and F1 value are better than the model in the figure, while the recall rate is slightly lower. This shows that the model avoids mistakenly predicting negative samples as positive ones. Figure 3 is a radar chart comparing our model with the models in Table 3 on the Twitter dataset. Our model demonstrates strong performance in identifying real news, suggesting a tendency to classify news as real. However, when dealing with fake news, while the precision is high, the recall and F1 scores are relatively low. This indicates that the model adopts a conservative approach in predicting fake news, potentially leading to a higher false negative rate.
+Figure 4 shows the ROC curve that describes our model’s performance on the Weibo dataset. Most of the ROC curve is close to the upper left corner, indicating that the model exhibits a high true positive rate and a low false positive rate under most thresholds. The curve rises sharply in the initial stage and flattens out when the true positive rate is close to 1, indicating that the model rapidly increases the true positive rate while maintaining a low false positive rate. The AUC value is 0.95, which means that the model can effectively distinguish between real news and fake news, and the probability of misclassification is low. Figure 5 shows the ROC curve that describes our model’s performance on the Twitter dataset. The curve rises rapidly at a low false positive Rate, which means that the model can maintain a high true positive Rate at a low false alarm rate; that is, it can identify real news more accurately. The AUC value is 0.89, which shows that the model performs well in the classification task.
+Ablation study
+To verify the importance of each module in CCGN, we compare various CCGN variants with the following variants: - CCGN w/o GNN, a variant of CCGN with the vision GNN removed.
+
+- CCGN w/o att, a CCGN variant that eliminates the cross-attention mechanism.
+
+- CCGN w/o CL, a CCGN variant that eliminates consistency contrastive learning.
+
+- CCGN w/o GNN, att, a CCGN variant with the vision GNN and cross-attention mechanism removed.
+
+- CCGN w/o GNN, CL, a CCGN variant with the vision GNN and consistency contrastive learning removed.
+
+- CCGN w/o att, CL, a variant of CCGN that eliminates the cross-attention mechanism and consistency contrastive learning.
+
+- CCGN w/o GNN, att, CL, a variant of CCGN that eliminates the vision GNN, cross-attention, and consistency contrastive learning.
+
+Table 5 shows the ablation study results. We can obtain the following observations: (1) CCGN outperforms other variant models on the Weibo and Twitter datasets, demonstrating the necessity of vision GNN, cross-attention, and consistency contrastive learning. (2) The performance of CCGN w/o CL is relatively average, indicating that consistency contrastive learning plays a crucial role. (3) The performance of CCGN w/o GNN and CCGN w/o att has declined to a certain extent, which confirms the image feature graphing effect of vision GNN and the fusion effect of cross-attention. (4) After removing vision GNN, attention mechanism and consistency contrastive learning, the performance dropped by 5.8 and 9% on Weibo and Twitter datasets respectively. This shows that vision GNN, attention mechanism and consistency contrastive learning are crucial in CCGN model, especially in improving the detection ability of fake news.
+Conclusion
+In this paper, we propose a multi-modal fake news detection model based on consistency contrastive-learning Graph Network. The model first uses a vision GNN module to construct a graph structure for image features, thereby enhancing feature expression and suppressing irrelevant features. To improve the consistency between text and images, consistency contrastive learning is used to reduce the semantic distance between similar parts of text and image in the feature space to extract more consistent features. Finally, cross-attention fuses text and image features for fake news detection. Experimental results on Weibo and Twitter datasets demonstrate the effectiveness and superiority of the proposed model in fake news detection.
+Our model still faces challenges in deep multimodal information fusion, and many issues need to be addressed. Moving forward, we will further explore the problems related to multimodal information fusion in fake news detection to enhance the accuracy of our model.
+Author contributions
+ShaoDong Cui and Kaibo Duan contributed equally to the conceptualization and methodology design of the study. ShaoDong Cui implemented the core algorithms, performed experiments, and analyzed the results. Kaibo Duan assisted with experimental validation and data analysis. Wen Ma contributed to the model development and provided critical revisions. Hiroyuki Shinnou supervised the research, contributed to the methodology, and provided overall guidance. All authors contributed to the manuscript writing and approved the final version.
+Data availability
+All data included are freely available through the following repository: https://github.com/wangzhuang1911/Weibo-dataset.
+Declarations
+Conflict of interest
+The authors declare that they have no conflict of interest.
+Ethics approval
+This article does not contain any studies with human participants or animals performed by any of the authors.
+Bing-kun Bao
+Publisher's Note
+Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References
+1. Bondielli, A; Marcelloni, F. A survey on fake news and rumour detection techniques. Inf. Sci. ; 2019; 497 , pp. 38-55. [DOI: https://dx.doi.org/10.1016/j.ins.2019.05.035]
+2. Singhal, S., Shah, RR., Chakraborty, T., Kumaraguru, P., Satoh, S.: Spotfake: a multi-modal framework for fake news detection. In: 2019 IEEE Fifth International Conference on Multimedia Big Data (BigMM), pp. 39–47 (2019) https://doi.org/10.1109/BigMM.2019.00-44
+3. Wang, Y., Ma, F., Jin, Z., Yuan, Y., Xun, G., Jha, K., Su, L., Gao, J.: EANN: event adversarial neural networks for multi-modal fake news detection. In: Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining, Association for Computing Machinery, New York, NY, USA, KDD ’18, pp. 849–857 (2018) https://doi.org/10.1145/3219819.3219903
+4. Zhang, H., Fang, Q., Qian, S., Xu, C.: Multi-modal knowledge-aware event memory network for social media rumor detection. In: Proceedings of the 27th ACM International Conference on Multimedia, Association for Computing Machinery, New York, NY, USA, MM ’19, pp. 1942–1951 (2019) https://doi.org/10.1145/3343031.3350850,
+5. Jin, Z., Cao, J., Guo, H., Zhang, Y., Luo, J.: Multimodal fusion with recurrent neural networks for rumor detection on microblogs. In: Proceedings of the 25th ACM international conference on Multimedia, pp 795–816 (2017)
+6. Zhou, X., Wu, J., Zafarani, R.: SAFE: similarity-aware multi-modal fake news detection. CoRR https://arxiv.org/abs/2003.04981 (2020)
+7. Bahad, P; Saxena, P; Kamal, R. Fake news detection using bi-directional LSTM-recurrent neural network. Procedia Comput. Sci. ; 2019; 165 , pp. 74-82. [DOI: https://dx.doi.org/10.1016/j.procs.2020.01.072]
+8. Nasir, JA; Khan, OS; Varlamis, I. Fake news detection: a hybrid CNN-RNN based deep learning approach. Int. J. Inf. Manag. Data Insights ; 2021; 1 , 1 [DOI: https://dx.doi.org/10.1016/j.jjimei.2020.100007] 100007.
+9. Ni, S; Li, J; Kao, HY. Mvan: multi-view attention networks for fake news detection on social media. IEEE Access ; 2021; 9 , pp. 106907-106917. [DOI: https://dx.doi.org/10.1109/ACCESS.2021.3100245]
+10. Trueman, TE; Ashok Kumar, J; Narayanasamy, P; Vidya, J. Attention-based C-BILSTM for fake news detection. Appl. Soft Comput. ; 2021; 110 , [DOI: https://dx.doi.org/10.1016/j.asoc.2021.107600] 107600.
+11. Raza, S; Ding, C. Fake news detection based on news content and social contexts: a transformer-based approach. Int. J. Data Sci. Anal. ; 2022; 13 , 4 pp. 335-362. [DOI: https://dx.doi.org/10.1007/s41060-021-00302-z]
+12. Gundapu, S., Mamidi, R.: Transformer based automatic covid-19 fake news detection system. arXiv preprint arXiv:2101.00180 (2021)
+13. Guo, Z; Zhang, Q; Ding, F; Zhu, X; Yu, K. A novel fake news detection model for context of mixed languages through multiscale transformer. IEEE Trans. Comput. Soc. Syst. ; 2023; 11 , pp. 5079-5089. [DOI: https://dx.doi.org/10.1109/TCSS.2023.3298480]
+14. Li, T., Sun, Y., Hsu, Sl., Li, Y., Wong, R. C. W.: Fake news detection with heterogeneous transformer. arXiv preprint arXiv:2205.03100 (2022)
+15. Mahmud, FB., Rayhan, MMS., Shuvo, MH., Sadia, I., Morol, M.: A comparative analysis of graph neural networks and commonly used machine learning algorithms on fake news detection. In: 2022 7th International Conference on Data Science and Machine Learning Applications (CDMA), pp. 97–102 (2022) https://doi.org/10.1109/CDMA54072.2022.00021
+16. Xu, W., Wu, J., Liu, Q., Wu, S., Wang, L.: Evidence-aware fake news detection with graph neural networks. In: Proceedings of the ACM Web Conference 2022, Association for Computing Machinery, New York, NY, USA, WWW ’22, pp. 2501–2510 (2022) https://doi.org/10.1145/3485447.3512122
+17. Hu, L., Yang, T., Zhang, L., Zhong, W., Tang, D., Shi, C., Duan, N., Zhou, M.: Compare to the knowledge: Graph neural fake news detection with external knowledge. In: Zong C, Xia F, Li W, Navigli R (eds) Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and the 11th International Joint Conference on Natural Language Processing (Volume 1: Long Papers), Association for Computational Linguistics, Online, pp 754–763 (2021) https://doi.org/10.18653/v1/2021.acl-long.62,
+18. Bazmi, P; Asadpour, M; Shakery, A; Maazallahi, A. Entity-centric multi-domain transformer for improving generalization in fake news detection. Inf. Process. Manag. ; 2024; 61 , 5 [DOI: https://dx.doi.org/10.1016/j.ipm.2024.103807] 103807.
+19. Khattar, D., Goud, JS., Gupta, M., Varma, V.: Mvae: Multimodal variational autoencoder for fake news detection. In: The World Wide Web Conference, Association for Computing Machinery, New York, NY, USA, WWW ’19, pp. 2915–2921 (2019) https://doi.org/10.1145/3308558.3313552
+20. Xue, J; Wang, Y; Tian, Y; Li, Y; Shi, L; Wei, L. Detecting fake news by exploring the consistency of multimodal data. Inf. Process. Manag. ; 2021; 58 , 5 [DOI: https://dx.doi.org/10.1016/j.ipm.2021.102610] 102610.
+21. Hu, L; Chen, Z; Zhao, Z; Yin, J; Nie, L. Causal inference for leveraging image-text matching bias in multi-modal fake news detection. IEEE Trans. Knowl. Data Eng. ; 2022; 35 , 11 pp. 11141-11152. [DOI: https://dx.doi.org/10.1109/TKDE.2022.3231338]
+22. Hu, L; Zhao, Z; Qi, W; Song, X; Nie, L. Multimodal matching-aware co-attention networks with mutual knowledge distillation for fake news detection. Inf. Sci. ; 2024; 664 , [DOI: https://dx.doi.org/10.1016/j.ins.2024.120310] 120310.
+23. Chen, Y., Li, D., Zhang, P., Sui, J., Lv, Q., Tun, L., Shang, L.: Cross-modal ambiguity learning for multimodal fake news detection. In: Proceedings of the ACM Web Conference 2022, Association for Computing Machinery, New York, NY, USA, WWW ’22, p 2897–2905 (2022) https://doi.org/10.1145/3485447.3511968,
+24. Li, J., Bin, Y., Zou, J., Wei, J., Wang, G., Yang, Y.: Cross-modal consistency learning with fine-grained fusion network for multimodal fake news detection. In: Proceedings of the 5th ACM International Conference on Multimedia in Asia, Association for Computing Machinery, New York, NY, USA, MMAsia ’23 (2024) https://doi.org/10.1145/3595916.3626397,
+25. Wu, Z; Pan, S; Chen, F; Long, G; Zhang, C; Philip, SY. A comprehensive survey on graph neural networks. IEEE Trans. Neural Netw. Learn. Syst. ; 2020; 32 , 1 pp. 4-24.4205495 [DOI: https://dx.doi.org/10.1109/TNNLS.2020.2978386]
+26. Kipf, TN., Welling, M.: Semi-supervised classification with graph convolutional networks. arXiv preprint arXiv:1609.02907 (2016)
+27. Han, K; Wang, Y; Guo, J; Tang, Y; Wu, E. Vision GNN: an image is worth graph of nodes. Adv. Neural Inf. Process. Syst. ; 2022; 35 , pp. 8291-8303.
+28. Wu, Z., Xiong, Y., Yu, SX., Lin, D.: Unsupervised feature learning via non-parametric instance discrimination. In: Proceedings of the IEEE conference on computer vision and pattern recognition, pp. 3733–3742 (2018)
+29. Jin, Z., Cao, J., Guo, H., Zhang, Y., Luo, J.: Multimodal fusion with recurrent neural networks for rumor detection on microblogs. In: Proceedings of the 25th ACM International Conference on Multimedia, Association for Computing Machinery, New York, NY, USA, MM ’17, pp. 795–816 (2017) https://doi.org/10.1145/3123266.3123454,
+30. Boididou, C., Andreadou, K., Papadopoulos, S., Dang Nguyen, DT., Boato, G., Riegler, M., Kompatsiaris, Y., et al.: Verifying multimedia use at mediaeval 2015. In: MediaEval 2015, vol 1436, CEUR-WS (2015)
+31. Devlin, J.: Bert: pre-training of deep bidirectional transformers for language understanding. arXiv preprint arXiv:1810.04805 (2018)
+32. Liu, Z., Lin, Y., Cao, Y., Hu, H., Wei, Y., Zhang, Z., Lin, S., Guo, B.: Swin transformer: hierarchical vision transformer using shifted windows. In: Proceedings of the IEEE/CVF international conference on computer vision, pp 10012–10022 (2021)
+33. Kumari, R; Ekbal, A. AMFB: attention based multimodal factorized bilinear pooling for multimodal fake news detection. Expert Syst. Appl. ; 2021; 184 , [DOI: https://dx.doi.org/10.1016/j.eswa.2021.115412] 115412.
+34. Singh, P; Srivastava, R; Rana, K; Kumar, V. Semi-FND: stacked ensemble based multimodal inferencing framework for faster fake news detection. Expert Syst. Appl. ; 2023; 215 , [DOI: https://dx.doi.org/10.1016/j.eswa.2022.119302] 119302.
+35. Qian, S., Wang, J., Hu, J., Fang, Q., Xu, C.: Hierarchical multi-modal contextual attention network for fake news detection. In: Proceedings of the 44th International ACM SIGIR Conference on Research and Development in Information Retrieval, Association for Computing Machinery, New York, NY, USA, SIGIR ’21, pp. 153–162 (2021) https://doi.org/10.1145/3404835.3462871
+36. Wu, Y., Zhan, P., Zhang, Y., Wang, L., Xu, Z.: Multimodal fusion with co-attention networks for fake news detection. In: Zong C, Xia F, Li W, Navigli R (eds) Findings of the Association for Computational Linguistics: ACL-IJCNLP 2021, Association for Computational Linguistics, Online, pp. 2560–2569 (2021) https://doi.org/10.18653/v1/2021.findings-acl.226
+37. Bai, Y., Cao, M., Gao, D., Cao, Z., Chen, C., Fan, Z., Nie, L., Zhang, M.: Rasa: relation and sensitivity aware representation learning for text-based person search. In: Proceedings of the Thirty-Second International Joint Conference on Artificial Intelligence, IJCAI ’23 (2023) https://doi.org/10.24963/ijcai.2023/62,
+38. Hu, L; Chen, Z; Zhao, Z; Yin, J; Nie, L. Causal inference for leveraging image-text matching bias in multi-modal fake news detection. IEEE Trans. Knowl. Data Eng. ; 2023; 35 , 11 pp. 11141-11152. [DOI: https://dx.doi.org/10.1109/TKDE.2022.3231338]

@@ -1,0 +1,374 @@
+1. Introduction The rise of digital platforms has revolutionized information dissemination, but it has also accelerated the spread of misinformation and disinformation, which, although often used interchangeably, are distinct concepts: misinformation refers to false information shared without intent to harm, while disinformation involves deliberate deception [1]. Both forms pose serious risks to public health, democratic discourse, and social trust.
+In response, numerous computational models have been proposed to identify misleading content. While many achieve high accuracy on benchmark datasets, two enduring limitations hinder real-world deployment: (1) lack of explainability and (2) poor cross-domain generalization. Importantly, as highlighted in previous work, most fake news detection systems, including ours, do not verify the factual truth of claims directly, which would require comprehensive and continuously updated world knowledge [2]. Instead, these systems detect linguistic, contextual, and stylistic indicators that are statistically associated with previously verified instances of misinformation [3,4]. This distinction is critical to setting realistic expectations about system capabilities and deployment contexts.
+The first challenge, explainability, is particularly relevant for high-stakes domains such as journalism, fact-checking, and content moderation. State-of-the-art natural language processing (NLP) models, especially those based on large language models (LLM), often operate as ‘black boxes’, producing predictions without transparent justifications. This opacity reduces user trust and limits adoption. While Explainable AI (XAI) methods such as Local Interpretable Model-agnostic Explanations (LIME) [5] and Shapley Additive Explanations (SHAP) [6] offer post-hoc interpretability, they often focus on token-level importance without incorporating theoretically grounded communication or credibility frameworks. Recent studies show that LIME explanations can suffer from instability, small input changes can yield significantly different outputs, and that both LIME and SHAP are highly influenced by feature collinearity and model dependence [7,8].
+The second challenge is generalization. Models trained on one domain (e.g., political news) frequently underperform on others (e.g., health misinformation) [9], particularly when switching between formal news articles and informal user-generated content. Domain shifts can reduce accuracy by 20–50%—often around 30 % in practical settings [10], reflecting the need for domain-invariant features and cross-modal robustness.
+To address these challenges, we propose X-FRAME, a hybrid framework that fuses deep semantic encoding of the multilingual transformer XLM-RoBERTa [11] with structured, theory-driven features from psycholinguistics, communication studies, and social context analysis. By integrating these two information streams: semantic embeddings and engineered contextual features, X-FRAME detects indicators of misinformation across diverse modalities while providing human-understandable explanations.
+Our main contributions are as follows.
+We introduce a hybrid architecture combining XLM-RoBERTa embeddings with framing-theoretic features, achieving 86 % accuracy and outperforming text-only and features-only baselines.
+We evaluated X-FRAME on an aggregated corpus of 286,260 samples from eight public datasets, demonstrating the potential for cross-domain adaptability with strong performance on both formal news and social media.
+We provide interpretable insights using LIME and permutation importance, grounding predictions in cues such as source credibility, emotional tone, and sensational framing.
+By explicitly addressing both interpretability and generalization, X-FRAME advances the practical deployment of misinformation detection systems while clarifying that its outputs reflect probabilistic indicators of deceptive patterns rather than definitive truth verification.
+The remainder of this paper is structured as follows. Section 2 surveys prior literature. Section 3 presents our dataset, feature engineering, and model architecture. Section 4 and Section 5 detail our experimental results and analysis. Section 6 concludes and outlines future directions.
+2. Related Work The task of automatic fake news detection has garnered substantial scholarly attention due to its profound societal implications. Research spans multiple sub-fields of natural language processing (NLP), machine learning, and information retrieval. This section reviews four principal research directions that underpin our work: (1) advances in detection model architectures, (2) the integration of Explainable AI (XAI) for interpretability, (3) the challenge of model generalization, and (4) the role of framing, contextual, and multimodal features in enhancing detection.
+2.1. Advances in Fake News Detection Models Early fake news detection systems relied predominantly on traditional machine learning algorithms, such as support vector machines (SVMs) and decision trees, using hand-crafted features, including n-grams, syntactic patterns, and readability indices to capture stylistic differences between deceptive and factual content [12]. While interpretable, these shallow methods lacked the capacity to capture deep semantic structures or long-range dependencies.
+The advent of deep learning brought convolutional neural networks (CNNs) to capture local text patterns and recurrent neural networks (RNNs), particularly long-short-term memory (LSTM) networks, to model sequential dependencies [13,14]. A transformative shift followed with Transformer-based architectures such as BERT [15], which leverage bidirectional self-attention for richer contextual understanding. Building on these foundations, fine-tuned variants like FakeBERT [16] have demonstrated strong in-domain performance.
+To capture the full range of deceptive signals, recent research has increasingly focused on multimodal approaches that incorporate images, videos, or user interactions alongside text. These models combine textual encoders with visual backbones, such as residual neural networks (ResNet) or vision transformers (ViT), enabling joint modeling of semantic and visual signals [17,18]. Recent systems such as Event-Radar [19], MCOT [20], MViR [21], and MFUIE [22] demonstrate various fusion strategies. Event-Radar employs event-driven multi-view fusion of text and images; MCOT uses contrastive learning between XLM-RoBERTa and ViT embeddings; MViR and MFUIE integrate relational user graphs and engagement features to augment their visual-semantic pipelines. While these multimodal systems often achieve state-of-the-art performance on visually rich datasets like Weibo, Twitter, and PolitiFact, they also introduce greater architectural complexity and often lack interpretability, especially in cross-domain generalization scenarios where visual data may be unavailable.
+Our proposed model, X-FRAME, offers a contrasting approach relying solely on textual and contextual features, including psycholinguistic, source credibility, and structural metadata. This enables interpretable predictions with broader applicability across domains and platforms. Table 5 in Section 4 compares X-FRAME with these multimodal systems, highlighting key differences in modality, interpretability, and scope of evaluation. Unlike multimodal pipelines that optimize for narrow benchmarks, X-FRAME is designed for cross-domain generalization while maintaining model transparency.
+2.2. Explainable AI (XAI) for Misinformation Detection As model complexity has increased, the lack of transparency in decision-making, the ‘black box’ problem, has become a major obstacle to adoption in sensitive domains [23,24]. To address this, researchers have integrated XAI methods to provide human-understandable insights into model predictions. Attention-based explanations, for example, have been explored through hierarchical attention networks such as 3HAN, which can highlight the most influential textual components contributing to a decision [25]. Counterfactual analyzes have also been developed to help users understand why a specific claim is classified as false; one approach generates alternative scenarios through question answering and textual entailment to reveal decision boundaries [26]. Recent work further evaluates whether explanations themselves can mitigate misinformation, both in the short and long term, by measuring their influence on user belief change [27]. However, most of these techniques focus narrowly on textual artifacts, neglecting broader contextual signals such as source credibility, speaker history, or social network behavior. Our X-FRAME addresses this gap by combining Transformer-based semantics with structured, theory-driven features, enabling holistic explanations grounded in both content and context.
+2.3. Generalization and Robustness High in-domain accuracy does not guarantee robust performance in real-world settings. Domain shifts between topics (for example, politics versus health) or platforms (for example, formal news versus social media) can cause substantial degradation [28]. Models often overfit to dataset-specific stylistic artifacts, prompting research into domain-adversarial training [29] and contrastive adaptation [30]. However, few works evaluate generalization on multiple axes, topics, modality, and platforms simultaneously. We extend this by evaluating X-FRAME on a heterogeneous corpus spanning eight datasets, providing a more rigorous test of adaptability [31].
+2.4. The Role of Framing, Contextual, and Multimodal Features Beyond raw text, the context of the framing and presentation shapes perceived credibility [32]. Prior studies incorporate user metadata, propagation patterns, and network structures [33]. Often these models are implemented via Graph Neural Networks (GNNs) [34,35]. Other work draws on framing theory to encode psycholinguistic markers such as subjectivity, sentiment, and sensationalism [36,37]. While these enrich text models, they are often evaluated in isolation. Our work fuses such features with semantic embeddings in a unified architecture. Additionally, multimodal detection approaches (as noted in Section 2.1) extend context to include visual or audiovisual signals, which can capture manipulated imagery or memes that reinforce misinformation narratives. While powerful, these methods face limitations when visual data is absent or noisy. X-FRAME instead demonstrates that interpretable, non-visual contextual features can deliver robust performance without the heavy dependency on multimodal inputs.
+3. Methodology This section presents the detailed methodological framework adopted in this study. We begin by describing the construction of our comprehensive multi-source corpus, followed by the design of a multi-layered feature engineering pipeline grounded in communication theory. We then elaborate on the architecture of our proposed X-FRAME model and conclude with the experimental design used for training, evaluation, and interpretability assessments.
+3.1. Corpus Construction and Composition To ensure robust generalization across domains, we aggregated eight publicly available fake news datasets into a single heterogeneous corpus (Table 1). Datasets are grouped by content origin and communicative style to enable explicit cross-domain analysis.
+Table 1 Summary of datasets in the aggregated corpus (grouped by curation/source type).
+Dataset Modality/Source Label Type
+Group A (curated/news-style sources)
+ISOT [38] Formal news Binary (Real/Fake)
+WELFake [39] Synthetic + real (GAN-generated + real) Binary
+FNC-1 [40] News site claims (stance) Multiclass (agree/deny/discuss/unrelated) → Binary
+FakeNewsAMT [12] Crowdsourced (AMT) Binary
+Celebrity News websites (AMT) Binary
+Group B (social/noisy/real-world feeds)
+LIAR [41] PolitiFact (speeches, interviews) 6-way → Binary
+PHEME [42] Twitter cascades 4-way (support/deny/query/comment) → Binary
+FakeNewsNet [43] Twitter + fact-checking (GossipCop/PolitiFact) Binary
+Multiclass labels were mapped to a binary schema for harmonization (e.g., LIAR 6-way; PHEME 4-way; FNC-1 stance). Group A = curated/news-style; Group B = social-media–based.
+Group A (formal news articles). Editorially produced news or claims from established outlets; longer sentences, standardized grammar, and a formal tone.
+Group B (social media content and claims). User-generated posts, short claims, and rumor cascades; informal style with abbreviations, hashtags, and unstructured discourse.
+This separation supports the evaluation between professionally edited news (Group A) and noisier, informal user content (Group B). For comparability, multiclass labels were harmonized to a binary schema (Real vs. Fake) when necessary.
+3.1.1. Statistical Differences Between Groups To support the validity of the Group A/B division used in Table 1, we computed descriptive statistics for three representative features: token length, sentiment polarity, and subjectivity. Group A texts averaged 250.33 tokens per sample (SD = 234.52), with mean sentiment polarity P sent = 0.04 and subjectivity S subj = 0.42 . In contrast, Group B texts averaged only 6.79 tokens (SD = 3.91), with polarity P sent = 0.01 and subjectivity S subj = 0.31 .
+All three metrics showed statistically significant differences based on independent two-sample Welch’s t -tests: token length ( p < 0.001 ), sentiment polarity ( p ≈ 1.25 × 10 − 25 ), and subjectivity ( p ≈ 8.52 × 10 − 284 ). These results confirm that Group B is substantially shorter and less subjective—consistent with informal, reactive, social media content. Welch’s test was chosen for its robustness to unequal variances and sample sizes [44].
+3.1.2. Label Mapping and Validation A critical step in creating a unified corpus was the standardization of labels. Following common practice in multi-dataset studies [45], we mapped all datasets to a binary schema (1 = Fake, 0 = Real). For LIAR, the labels pants-on-fire, false, and barely-true were grouped as Fake, while half-true, mostly-true, and true were grouped as Real. To validate this mapping, we conducted a manual annotation comparison: A random sample of 150 LIAR statements was independently annotated by two researchers, yielding a Cohen’s κ of 0.82. According to the benchmark scale of Landis and Koch [46], values between 0.81 and 1.00 indicate “almost perfect” agreement, confirming the reliability of our binary relabeling.
+For FNC-1, the disagree label was mapped to Fake, and the remaining labels (agree, discuss, unrelated) were mapped to Real.
+3.2. Data Cleaning and Preprocessing To ensure data quality and avoid label leakage or content redundancy across training and evaluation, we implemented a multi-stage preprocessing and deduplication pipeline prior to dataset merging and partitioning.
+3.2.1. Text Normalization The raw texts were first normalized using the spaCy language-specific model. This included: URL and user mention removal
+Lowercasing
+Lemmatization
+Stopword and punctuation filtering
+
+These transformations supported downstream feature engineering tasks—such as readability and sentiment analysis—where consistent lexical forms improve reliability. Notably, this preprocessing was applied to the structured feature stream only; raw text for transformer encoding was preserved to retain semantic integrity.
+3.2.2. Deduplication Strategy To further refine the corpus and reduce content redundancy, we applied a three-step deduplication process: Exact match removal: Duplicate entries with identical cleaned_text strings were dropped.
+Near-duplicate filtering: TF-IDF cosine similarity was computed for short texts (e.g., tweets, claims). Pairs with similarity ≥ 0.95 were flagged and one copy was removed.
+Metadata-based filtering: Entries with identical URL , source_id , or post IDs were pruned when such metadata was available.
+
+This process reduced sampling bias, mitigated viral content oversampling, and ensured independence across domains. The resulting corpus contained 286,260 unique samples, ready for stratified train/validation/test partitioning.
+3.3. Feature Engineering Pipeline To capture a comprehensive range of predictive signals, we designed a multi-layered feature pipeline that complements raw semantic representations with structured contextual, psychological, and source-level attributes [47]. The final engineered feature vector, after one-hot encoding of categorical variables, contains 104 dimensions: 9 continuous numerical features and 95 binary features derived from categorical encodings. As shown in Figure 1.
+The conceptual feature set prior to encoding consisted of 18 raw features, grouped as follows: Source and credibility (4 features)
+Social context (2 features)
+Psycholinguistic and stylistic (6 features)
+Sensationalism and urgency (3 features)
+Sentiment and subjectivity (2 features)
+
+3.3.1. Contextual and Framing Feature Extraction Inspired by media framing theory and research in media psychology [48], we engineered a rich set of structured features to capture the framing, tone, and provenance of each news item.
+Source and Credibility Features
+This category captures metadata associated with source identity and political affiliation. We included the categorical variables source_name , source_domain , and  liar_party , which were one-hot encoded and a numeric speaker credibility score. For datasets with speaker metadata (e.g., LIAR), we engineered the following: S cred i = C true i + C mostly - true i + C half - true i C total i + ϵ
+where C true i is the count of “true” statements, and  ϵ = 10 − 6 prevents division by zero. This feature estimates the historical factuality of a speaker.
+Social Context Features
+To capture audience interaction and propagation signals, we included: engagement_tweet_count ( C engagement ): number of unique tweet IDs per article (FakeNewsNet)
+mention_count ( C mentions ): frequency of @username mentions per tweet (PHEME)
+
+These features reflect message virality and direct user-to-user interactions in early rumor dynamics. However, we acknowledge that such metadata is not available in all datasets. For datasets lacking these signals (e.g., LIAR, FNC-1), we handle missing values by setting them to zero, which is interpretable as the absence of observed engagement.
+To test the impact of this design choice, we conducted an ablation analysis in Section 4. The results show that even in the absence of social signals, the model maintains robust performance, with contextual embeddings and psycholinguistic features that compensate for missing metadata. This confirms that the X-FRAME architecture is adaptable to both metadata-rich and metadata-sparse environments, ensuring broad generalizability.
+Psycholinguistic and Stylistic Features
+Based on linguistic deception research [49], we derived features associated with cognitive processing load and stylistic anomalies.
+Readability and Cognitive Load : We used textstat to compute the Flesch Reading Ease (FRE) score: FRE = 206.835 − 1.015 words sentences − 84.6 syllables words
+
+Extremely low or high readability may signal manipulative intent, either oversimplifying to appeal broadly or obfuscating through complex jargon [50].
+Sensationalism and Urgency : We measured affective stylistic features: Exclamation marks ( C em )
+Question marks ( C qm )
+All-capitalized words ( C caps )
+
+These reflect emotionally charged, urgent framing common in clickbait and propaganda.
+Sentiment and Subjectivity : We used TextBlob  [51] to compute: P sent ∈ [ − 1 , 1 ] , S subj ∈ [ 0 , 1 ]
+
+These measure emotional polarity and opinionated framing. High subjectivity or strong sentiment may reflect persuasive intent over factual reporting.
+Feature Scaling
+All continuous variables were scaled to the [ 0 , 1 ] range using Min–Max normalization, while categorical variables were one-hot encoded. The conceptual feature space comprised 104 features (9 continuous and 95 categorical), which expanded to 129 encoded dimensions in the final feature matrix used for model training.
+Limitations of Engineered Features
+Although frame-based cues have been shown to improve detection and calibration [52], their effectiveness may erode as deceptive tactics evolve. Monitoring for drift in framing signals should be considered in future iterations.
+3.4. The X-FRAME Model Architecture X-FRAME is a hybrid neural architecture that fuses structured and semantic features through dual encoding streams and a classification head. This mirrors hybrid frameworks like BRaG, which combines semantic encoding (via BERT and RNN) with contextual graph-based features before classification [53], See Figure 2.
+3.4.1. Text Encoder Stream We utilized the XLM-RoBERTa base model to generate 768-dimensional contextual embeddings from the cleaned_text . The final hidden state of the [CLS] token is used as the text representation: E text = XLM - R ( input _ ids , attention _ mask )
+
+3.4.2. Structured Feature Stream The structured feature vector S comprises 9 continuous variables and binary indicators from one-hot–encoded categorical features. While the conceptual feature set contains 104 features, the actual model input expands to 129 encoded dimensions after preprocessing.
+This 129-dimensional input is passed through a multilayer perceptron (MLP) with two hidden layers [128, 64], ReLU activations, and dropout ( p = 0.3 ), yielding a 64-dimensional context embedding: E struct = MLP struct ( S ) .
+
+3.4.3. Fusion and Classification The text and structured embeddings are fused via concatenation and passed through a final classification head: E combined = [ E text ⊕ E struct ] , Logits = MLP classifier ( E combined )
+
+3.5. Experimental Design and Evaluation Framework 3.5.1. Training Protocol The corpus was split into training (70%), validation (15%), and test (15%) subsets using stratified sampling to preserve class balance. We fine-tuned the model for four epochs with a batch size of 16. Optimization was performed using AdamW [54] with a learning rate of 2 × 10 − 5 —a value commonly adopted in transformer fine-tuning due to its favorable trade-off between convergence speed and training stability.
+Hyperparameter Selection
+To ensure robustness, we conducted a grid search over several architecture and regularization configurations using validation performance (macro F1 score) as the selection criterion. For the structured MLP stream, we evaluated hidden layer configurations [ 64 , 32 ] , [ 128 , 64 ] , and  [ 256 , 128 ] , while testing dropout rates of { 0.1 , 0.3 , 0.5 } . The configuration [ 128 , 64 ] with dropout p = 0.3 consistently achieved the best validation performance, striking a balance between model expressiveness and overfitting mitigation.
+Similarly, for the learning rate, we tested { 1 × 10 − 5 , 2 × 10 − 5 , 3 × 10 − 5 } . The setting 2 × 10 − 5 offered the best blend of convergence and generalization—consistent with prevailing best practices that favor low learning rates to avoid catastrophic forgetting in Transformer fine-tuning [55].
+Hyperparameter Validation
+We compared representative hyperparameter configurations for the structured MLP (hidden layer sizes), dropout, and learning rate on the held-out validation set. The configuration used in all subsequent experiments is the one that maximized validation performance: [ 128 , 64 ] with dropout 0.3 and learning rate 2 × 10 − 5 . Table 2 reports validation accuracy for each configuration and the percentage change relative to the selected setting (higher is better), and Figure 3 visualizes the trend across learning rates.
+Class Imbalance Handling
+To address the inherent class imbalance in the training data (approximately 2:1 Real to Fake), we applied a weighted Cross-Entropy Loss function. This technique penalizes the model more heavily for misclassifying the minority class. The weight for each class c , denoted w c , was calculated as inversely proportional to its frequency in the training data. w c = C × N N c
+where N is the total number of training samples, C is the number of classes (2), and  N c is the number of samples in class c . This results in a higher weight for the “Fake” class, encouraging the model to focus on detecting under-represented instances.
+Evaluation Metrics
+We report accuracy, area under the ROC curve (AUC), and both macro-averaged and class-specific F1-scores in subsequent sections. Macro-averaging ensures that both majority and minority classes contribute equally to the score, regardless of their frequency.
+The model checkpoint that achieved the highest validation macro F1 score was saved and used for all subsequent evaluations.
+3.5.2. Benchmarking and Comparative Analysis To validate the hybrid design, we benchmarked X-FRAME against two internal baselines: Text-Only: XLM-RoBERTa with no structured input.
+Features-Only: A Gradient Boosting Classifier [56] trained only on structured features.
+
+We also compared X-FRAME with recent state-of-the-art models from prior works to contextualize its performance.
+3.5.3. Explainability and Robustness Analysis To validate the model’s transparency and resilience, we conducted a multi-faceted analysis using three complementary methods, each targeting a different aspect of model behavior.
+Global Feature Importance with Permutation Importance
+To determine which engineered features consistently influenced the model predictions, we employed Permutation Importance [57], a model-agnostic technique. This approach aligns with the theoretical framework of ‘model reliance’ introduced by Fisher, Rudin, and Dominici [58], which generalizes permutation importance beyond tree-based models.
+A larger drop in accuracy following feature shuffling indicates a more influential feature: I j = Accuracy baseline − Accuracy shuffled j
+
+Local Prediction Explanation with LIME
+To interpret individual predictions, we used LIME (Local Interpretable Model-agnostic Explanations). LIME constructs a local interpretable surrogate model, typically a linear classifier, that approximates the behavior of the full X-FRAME model in the vicinity of a specific input. By generating thousands of small perturbations of the input and observing the resulting predictions, LIME identifies the features (both textual and structured) that most strongly influenced the model’s decision. This produces a human-understandable rationale for individual classification outcomes. LIME, along with other XAI techniques such as SHAP, has proven essential in enhancing the transparency of fake news detection models in recent comparative studies [59].
+Semantic Robustness with Adversarial Testing
+To assess robustness against subtle semantic manipulations, we conducted adversarial testing using the TextFooler attack algorithm [60]. TextFooler replaces important words in the input with semantically similar alternatives (determined via pre-trained embeddings) until the model’s prediction changes. We report two key metrics: Attack success rate: The proportion of successful label flips.
+Average Perturbed Word Percentage: The average percentage of words altered per successful attack.
+
+Together, these metrics provide insight into whether the model relies on deep semantic understanding or is vulnerable to superficial linguistic changes.
+4. Experimental Results This section presents a comprehensive empirical evaluation of our proposed X-FRAME model. We first report on the overall performance of the final model trained on the complete aggregated corpus in Table 3. We then contextualize these results through a comparative analysis against strong baseline models. Subsequently, we conduct a series of in-depth analyses, including ablation studies, generalization tests across different data modalities, and robustness checks against adversarial attacks, to provide a holistic understanding of the model’s characteristics. Finally, we demonstrate the effectiveness of a domain adaptation strategy to improve performance in challenging social media content. The confusion matrix corresponding to the model’s final evaluation is illustrated in Figure 4.
+Precision is defined as 1 − FDR (False Discovery Rate), and Recall as 1 − FNR (False Negative Rate).
+The results indicate high precision for both classes, suggesting that the model is reliable when it makes a classification. To further evaluate its discriminative capacity, we plotted the Receiver Operating Characteristic (ROC) curve. As shown in Figure 5, the model achieved an Area Under the Curve (AUC) score of 0.9367, demonstrating excellent performance in distinguishing between Real and Fake classes across a range of classification thresholds.
+4.1. Benchmarking Against Baselines To validate the effectiveness of our hybrid architecture, we benchmarked X-FRAME against two internal baselines, each designed to isolate the contribution of one component of the hybrid pipeline: Baseline 1: Text-Only—XLM-RoBERTa fine-tuned on the cleaned_text field only, without any structured features.
+Baseline 2: Features-Only—Gradient Boosting Classifier (GBC) trained solely on the 104-dimensional structured feature set, without any Transformer-based semantic input.
+All baselines were trained and evaluated on the same train/validation/test splits of our aggregated corpus to ensure fairness. We report accuracy, class-specific F1-scores, macro-averaged F1, and AUC to provide a comprehensive view of performance.
+The results in Table 4 show that X-FRAME outperforms both baselines across all major metrics. The performance gap between the hybrid model and the baselines demonstrates the value of combining deep semantic content with contextual and psycholinguistic engineered features. This supports recent findings that enriching large language models with structured external knowledge improves complex classification performance [61]. A comparative AUC-ROC curve illustrating these performance differences is shown in Figure 6.
+4.2. Comparison with State-of-the-Art Models To contextualize X-FRAME’s performance, we compare it against several recent state-of-the-art (SOTA) fake news detection systems that represent diverse modeling strategies, including multimodal fusion and user-interaction features. Table 5 summarizes their architectures and reported results, grouped by dataset for fair comparison.
+It is important to note that not all reported figures are directly comparable: many SOTA systems are evaluated on a single dataset or platform, often with abundant multimodal information (e.g., images, videos), whereas X-FRAME is evaluated on a diverse, cross-domain text corpus without relying on visual features. Consequently, while some specialist models report higher headline accuracies, their domain scope and required input modalities limit generalizability. X-FRAME’s key contribution lies in achieving competitive accuracy while providing interpretable, theory-grounded predictions across heterogeneous sources.
+4.3. Ablation Study and Feature Importance To quantify the contribution of each stream in the hybrid model, we conducted an ablation study on the validation set. The results, summarized in Table 6, evaluate the impact of textual and structured feature components.
+The study reveals a clear hierarchy in the model’s decision process. The textual content, processed through the XLM-RoBERTa encoder, provides the dominant predictive signal; its removal results in a 14.11% drop in accuracy, underscoring that deep semantic understanding is foundational to performance. Nevertheless, integrating the 104 conceptual structured features (expanding to 129 encoded inputs) yields a 1.00% improvement, demonstrating the value of the hybrid design. Within the structured stream, credibility-related features alone contribute a 0.60% gain—accounting for more than half of the structured feature impact—highlighting the central role of source reliability in veracity assessment.
+4.3.1. Permutation Importance To analyze individual structured feature importance, we employed Permutation Importance [57]. Figure 7 visualizes the top 20 ranked features by their mean decrease in validation accuracy when permuted. Higher values indicate that the model’s predictions are more sensitive to that feature. A tabular summary of these feature importance scores is also provided in Table 7.
+The results reveal that X-FRAME strategically prioritizes contextual indicators over isolated psycholinguistic cues, aligning with its hybrid design philosophy. The top-ranked feature, pheme_topic_charliehebdo , caused a validation accuracy drop of 0.0135 when permuted, suggesting that the model encodes specific linguistic and social dynamics tied to prominent misinformation events. High importance scores for features such as source_name_WELFAKE_dataset and liar_speaker_credibility_score further underscore the model’s sensitivity to source reliability and speaker trustworthiness, validating its grounding in credibility-based features. Additionally, the influence of modality_type attributes (e.g., formal news vs. social claims) confirms that X-FRAME modulates its reasoning pathways based on content origin, demonstrating cross-modal flexibility rather than surface-level token reliance. Collectively, these findings affirm that the model captures deeper structural and contextual semantics crucial for robust fake news detection.
+4.3.2. Local Prediction Explanation with LIME To understand how X-FRAME reasons about individual instances, we employed LIME (Local Interpretable Model-agnostic Explanations) to analyze a representative case from the test set that was correctly classified as Fake. LIME constructs an interpretable local surrogate model that approximates the behavior of the full classifier around a specific prediction. The explanation for this sample is summarized in Table 8.
+The explanation for this instance highlights the strength of our hybrid modeling approach. The model’s prediction was overwhelmingly driven by structured features, such as the absence of known high-credibility topics or source identifiers. In contrast, the textual signal was minimal, and the word ok contributed only 0.0090 to the final prediction. This case study illustrates that X-FRAME does not rely solely on superficial lexical patterns, but instead incorporates contextual signals to derive meaningful and interpretable predictions—an advantage for real-world deployment where transparency is essential. To further contextualize X-FRAME’s interpretability, we compared its explanatory outputs with those of recent SOTA systems.
+4.3.3. Interpretability Comparison with SOTA Models While most state-of-the-art fake news detectors report strong accuracy figures, few provide a quantifiable analysis of interpretability. For instance, Event-Radar and MCOT include attention-weight visualizations focused solely on textual tokens, without reporting feature-level importance across different modalities. MFUIE incorporates user interaction graphs but does not present explicit attribution scores for individual features. In contrast, X-FRAME offers both global explanations (via Permutation Importance) and local explanations (via LIME) that encompass semantic, contextual, and psycholinguistic features, enabling human-interpretable rationale for every prediction.
+To provide a preliminary quantitative comparison, we conducted a small-scale human evaluation with three independent annotators on 50 randomly selected test instances. Each annotator rated the explanations as actionable (i.e., useful for understanding and potentially contesting a decision) or non-actionable. Explanations generated by X-FRAME were rated as actionable in 88% of cases, compared to 54% for attention-only visualizations from a fine-tuned XLM-R baseline. Although limited in scope, these results suggest that X-FRAME not only maintains competitive classification performance but also delivers higher practical interpretability than comparable SOTA models.
+4.4. Generalization and Domain Adaptation A central objective of this study was to evaluate the generalization capabilities of X-FRAME across distinct data modalities. The model’s performance on different data groups is detailed in Table 9, highlighting a significant domain shift between formal news content and social media.
+While the model achieved near-perfect performance on structured, formal news articles, its accuracy and F1-score dropped considerably on social media content. This decline, particularly in detecting fake instances, underscores the difficulty of cross-modal generalization, a well-documented challenge in real-world misinformation detection [62].
+Adversarial Robustness Analysis
+To assess semantic resilience, we applied the TextFooler adversarial attack using the TextAttack framework [63] on X-FRAME. We selected a sample of 100 correctly classified test examples and perturbed them under the following settings: maximum perturbation ratio of 30%, up to 50 synonym candidates per word, a minimum semantic similarity threshold of 0.8 (Universal Sentence Encoder) and part-of-speech constraints to preserve grammaticality. Named entities and stopwords were excluded from modification. The structured features remained unaltered throughout the attack, targeting only the textual input.
+Table 10 summarizes the results. The attack succeeded in 61.18% of cases, requiring a perturbation of 17.44% of the input words on average. This moderate attack success rate and the relatively high perturbation effort suggest that X-FRAME is not overly reliant on specific keywords and is capable of capturing deeper semantic patterns.
+To contextualize these results, Table 11 benchmarks our robustness against other recent systems. Despite not using adversarial training, X-FRAME demonstrates relatively lower vulnerability, which we attribute to its hybrid design, which integrates contextual features beyond text alone.
+5. Discussion The experimental results demonstrate that the proposed X-FRAME model offers a robust and effective framework for detecting linguistic, contextual, and psycholinguistic indicators that are statistically associated with misinformation and disinformation. It is important to note that, like most approaches in the literature, X-FRAME does not perform direct fact verification through comprehensive world-knowledge reasoning. True verification would require dynamic, up-to-date modeling of real-world facts, which remains a significant and open challenge in computational fact checking. Instead, our approach identifies patterns in text and metadata that are strongly correlated with known instances of misinformation, making it a practical tool for early warning and content triage in real-world applications.
+This section provides a deeper interpretation of our findings, contextualizing them within broader challenges in misinformation research. We examine the principal findings related to our hybrid architecture and generalization tests, analyze specific failure modes, and acknowledge the study’s limitations.
+5.1. Principal Findings and Implications Our study yielded three key findings with important implications for future work.
+First, the superior performance of the X-FRAME hybrid model over both the text-only and feature-only baselines confirms the core hypothesis: fusing deep semantic understanding with explicit contextual features is more effective than relying on either stream alone. The ablation study quantifies this synergy, showing that while textual content remains the primary driver of performance, the engineered features provide a measurable accuracy boost. This suggests that future models should incorporate source, context, and framing information in addition to content analysis.
+Second, our generalization analysis reveals the magnitude of the domain shift problem. The performance drop from 98% accuracy on formal news articles to 72% on noisy social media content demonstrates the fragility of single-modality training. This reinforces the understanding that misinformation manifests differently across contexts—fabricated long-form articles differ substantially from conversational rumors in both linguistic structure and social dynamics.
+Third, our explainability analyses show that high-performing models need not be opaque. The Permutation Importance results indicate that the model prioritizes human-intuitive heuristics such as speaker credibility and source reputation over surface-level psycholinguistic markers. This is supported by local explanations via LIME, which demonstrate that X-FRAME grounds predictions in interpretable features. Such transparency is critical for deploying models in journalism, policy-making, and content moderation, where accountability and trust are essential.
+Despite these promising results, it is important to temper claims of domain robustness. While X-FRAME attained 97% accuracy on formal news articles, its performance dropped to 72% accuracy (F1 fake = 0.67) on noisy, user-generated content. This suggests that while the model generalizes better than baseline systems, it is not immune to the challenges posed by unstructured inputs. Given the ambiguous and dynamic nature of social media discourse, 72% may represent a competitive benchmark for cross-domain adaptability, but we acknowledge that it may not meet the reliability threshold required for high-stakes or real-time deployment. Further improvements via domain adaptation, continual learning, or social-pragmatic feature augmentation are necessary to bridge this gap. Accordingly, we frame these findings not as conclusive evidence of full generalization, but rather as a demonstration of X-FRAME’s adaptability potential under challenging conditions.
+5.2. Analysis of Model Errors A qualitative inspection of validation errors offers additional insight into X-FRAME’s limitations.
+False positives (real news predicted as fake) often occurred when authentic posts exhibited stylistic cues typical of misinformation. Legitimate yet emotionally charged social media content with sensational formatting (e.g., excessive punctuation or capitalization) was sometimes misclassified. This suggests that the model may over-rely on stylistic framing indicators when tone deviates from journalistic neutrality.
+False negatives (fake news predicted as real) were more common when misinformation was subtle or conversational. Short or informal fake content lacking overt signals (such as strong sentiment or framing cues) tended to evade detection. This indicates a need for further enhancement of the model’s ability to recognize less stylized misinformation, possibly by integrating more nuanced discourse-level and pragmatic features.
+5.3. Limitations of the Study While the findings of this study are promising, several limitations should be acknowledged.
+First, although the corpus is large and heterogeneous, it is composed entirely of publicly available datasets, which may carry labeling inconsistencies and sampling biases. For instance, annotations in datasets such as LIAR are based on fact-checking assessments from platforms like PolitiFact, which can introduce subjectivity. Despite applying label harmonization to enforce a consistent binary schema, domain-specific artifacts may still affect model generalizability. Furthermore, the exclusive use of English-language data constrains the applicability of the model in multilingual or cross-lingual contexts.
+Second, although class imbalance was mitigated using a weighted loss function, other approaches, such as oversampling, undersampling, or synthetic data augmentation, were not explored. Incorporating these strategies may improve fairness and robustness, particularly for underrepresented examples of disinformation.
+Third, our robustness evaluation was limited to a single adversarial technique (TextFooler). A more comprehensive adversarial analysis would involve a broader set of perturbations, including paraphrasing, back-translation, syntactic transformations, and adversarial training, to better assess model resilience under diverse manipulation strategies.
+Finally, this work adopts a binary classification schema (Real vs. Fake), which, while practical, may oversimplify the spectrum of misinformation. Extending the framework to a multiclass taxonomy, recognizing satire, hoaxes, propaganda, clickbait, and factual reporting, could enable more nuanced content categorization and better support domain-specific policy interventions.
+6. Conclusions and Future Work 6.1. Conclusions This study addressed two persistent challenges in computational misinformation detection: the lack of explainability in predictive models and limited generalizability across content domains. We introduced X-FRAME, a hybrid architecture that integrates the deep semantic understanding of XLM-RoBERTa with a structured set of 104 features grounded in communication theory, psycholinguistics, and social context analysis. Unlike conventional approaches, our framework incorporates indicators such as source credibility, speaker history, propagation behavior, and psycholinguistic framing—elements essential for detecting patterns that are statistically associated with misinformation and disinformation. We emphasize that X-FRAME, like most current systems, does not perform fact verification against an authoritative knowledge base; instead, it identifies linguistic and contextual signals correlated with previously verified examples of misinformation.
+X-FRAME was evaluated on a large and heterogeneous corpus comprising 286,260 instances from both formal news outlets and informal social media platforms. It achieved an overall accuracy of 86.1% and a recall of 81% on the minority Fake class. Notably, the model demonstrated cross-domain adaptability potential, attaining 97% accuracy on formal news articles and 72% on unstructured, user-generated content. These results reflect the model’s robustness across diverse textual environments while acknowledging the performance gap between structured and noisy domains.
+Importantly, X-FRAME advances beyond black-box modeling. Using Permutation Importance and LIME, we demonstrated that predictions were driven by interpretable, theory-informed signals—such as source trustworthiness, sensationalism, and partisan tone—thus, enhancing model transparency and accountability. These findings support the viability of X-FRAME as a practical tool for real-world deployment in journalism, fact-checking, and policy monitoring settings, where both performance and interpretability are essential.
+6.2. Future Work Several promising directions remain for extending this research.
+Enhanced fusion strategies. While simple feature concatenation proved effective, future versions of X-FRAME could benefit from more sophisticated fusion mechanisms. Techniques such as co-attention, gating, or late fusion may yield better alignment between semantic embeddings and structured features, enabling richer representation learning.
+Broader adversarial evaluation. Although our robustness analysis used the TextFooler algorithm, a more comprehensive suite of adversarial techniques—including paraphrasing, entity substitution, syntactic perturbations, and adversarial training—would offer deeper insight into model resilience under real-world attack conditions.
+Multimodal integration. While the current model relies solely on textual and structured input, integrating complementary modalities such as images, video thumbnails, or social engagement graphs could expand X-FRAME’s applicability to more dynamic, platform-specific misinformation formats.
+Fine-grained misinformation classification. Extending the binary classification scheme to a multiclass taxonomy—e.g., satire, clickbait, hoax, propaganda, or factual content—could enhance content triage workflows and better support policy design in media literacy and regulation.
+These directions represent complementary, not strictly sequential lines of advancement. Together, they chart a path toward more robust, generalizable, and interpretable misinformation detection systems.
+Author Contributions Conceptualization, S.N. and N.J.; methodology, N.J.; software, S.N.; validation, A.T. and S.N.; formal analysis, A.T.; investigation, S.N.; resources, N.J.; data curation, S.N.; writing—original draft preparation, S.N.; writing—review and editing, N.J. and A.T.; visualization, A.T.; supervision, N.J.; project administration, N.J. All authors have read and agreed to the published version of the manuscript.
+Institutional Review Board Statement Not applicable.
+Informed Consent Statement Not applicable.
+Data Availability Statement All datasets used in this study are publicly available and have been appropriately cited in the manuscript. If a processed or aggregated version of the dataset is required for replication purposes, it will be provided by the authors upon reasonable request.
+Acknowledgments We appreciate the Rajamangala University of Technology Thanyaburi for the participation, assistance, and computational resources utilized in our studies.
+Conflicts of Interest The authors declare no conflict of interest.
+Abbreviations The following abbreviations are used in this manuscript: AI Artificial Intelligence
+AUC Area Under the Curve
+BERT Bidirectional Encoder Representations from Transformers
+CLEF Conference and Labs of the Evaluation Forum
+CLS Classification Token
+FNC-1 Fake News Challenge 1
+FN False Negative
+FP False Positive
+GBC Gradient Boosting Classifier
+LIME Local Interpretable Model-agnostic Explanations
+LIAR A dataset of short, fact-checked statements
+MLP Multi-Layer Perceptron
+NLP Natural Language Processing
+PHEME A dataset of rumor cascades on social media
+ROC Receiver Operating Characteristic
+SHAP SHapley Additive exPlanations
+SOTA State-of-the-Art
+TN True Negative
+TP True Positive
+XAI Explainable Artificial Intelligence
+XLM-R Cross-lingual Language Model - RoBERTa
+MCOT Multimodal Fake News Detection with Contrastive Learning and Optimal Transport
+MViR Multimodal Veracity Inference with Relational Graph Learning
+MFUIE Multimodal Feature and User Information Enhancement
+
+Footnotes
+Disclaimer/Publisher’s Note: The statements, opinions and data contained in all publications are solely those of the individual author(s) and contributor(s) and not of MDPI and/or the editor(s). MDPI and/or the editor(s) disclaim responsibility for any injury to people or property resulting from any ideas, methods, instructions or products referred to in the content.
+Figures and Tables Figure 1 Feature engineering pipeline. The conceptual feature set consists of 104 features (9 continuous and 95 categorical), which expand to 129 encoded dimensions after preprocessing (one-hot encoding and scaling). These encoded features form the input to the structured feature stream of the X-FRAME model.
+Generate image description
+Figure 2 Architecture of the proposed X-FRAME model. A 768-dimensional text embedding is combined with a 64-dimensional structured embedding (from 129 encoded features), yielding an 832-dimensional fusion vector that is passed to the final classifier for Fake vs. Real prediction.
+Generate image description
+Figure 3 Validation accuracy versus learning rate (log scale) for the three tested configurations. Markers correspond to the settings in Table 2 ; the line connects them to show the trend across learning rates.
+Generate image description
+Figure 4 Confusion matrix of X-FRAME on the test set, showing balanced performance across Real and Fake news classes.
+Generate image description
+Figure 5 ROC curve for the X-FRAME model with an AUC score of 0.9367.
+Generate image description
+Figure 6 ROC curve comparison between X-FRAME and baseline models.
+Generate image description
+Figure 7 Top 20 most important structured features based on Permutation Importance. Higher values indicate a larger decrease in validation accuracy when the feature is randomly permuted.
+Generate image description
+Table 2 Validation accuracy under different hyperparameter combinations and percent change relative to the selected setting ( [ 128 , 64 ] , dropout 0.3 , learning rate 2 × 10 − 5 ).
+Hidden Layers Dropout Learning Rate Val. Accuracy % Change
+[ 64 , 32 ] 0.1 1 × 10 − 5 83.5% − 2.57 %
+[ 128 , 64 ] 0.3 2 × 10 − 5 85.7% 0.00%
+[ 256 , 128 ] 0.5 3 × 10 − 5 82.9% − 3.27 %
+Table 3 X-FRAME classification performance on the held-out test set, including class-wise Precision, Recall, and F1-Score.
+Class Precision Recall F1-Score
+Real (Class 0) 0.91 0.89 0.90
+Fake (Class 1) 0.77 0.81 0.79
+Accuracy 0.86
+Macro Avg 0.84 0.85 0.84
+Weighted Avg 0.86 0.86 0.86
+Table 4 Performance comparison with baseline models (all metrics computed on the test set). AUC refers to the area under the ROC curve.
+Model Architecture Accuracy F1 (Fake) F1 (Real) Macro F1 AUC
+X-FRAME (Proposed) 0.861 0.79 0.90 0.845 0.9367
+Baseline 1: Text-Only 0.847 0.78 0.89 0.835 0.9226
+Baseline 2: Features-Only 0.716 0.68 0.75 0.715 0.8375
+Table 5 Comparison of X-FRAME with state-of-the-art fake news detection models. “—” denotes values not reported.
+Method Acc Fake News Real News
+P R F1 P R F1
+Weibo
+Event-Radar (text + image) 0.919 — — 0.919 — — —
+MCOT (text + image, contrastive) 0.901 0.895 0.911 0.903 0.906 0.890 0.898
+MViR (visual–semantic fusion) 0.924 0.944 0.906 0.925 0.906 0.941 0.923
+MFUIE (ViLBERT + user graph) 0.926 0.936 0.912 0.924 0.917 0.940 0.929
+PHEME
+Event-Radar (text + image) 0.901 — — 0.880 — — —
+MCOT (text+image, contrastive) 0.870 0.839 0.727 0.779 0.882 0.936 0.908
+MViR (visual–semantic fusion) 0.895 0.784 0.619 0.692 0.914 0.963 0.937
+MFUIE (ViLBERT + user graph) 0.935 0.946 0.912 0.935 0.917 0.940 0.929
+Cross-domain (8-dataset corpus): LIAR; FNC-1; FakeNewsNet (GossipCop, PolitiFact); PHEME; WELFake; FakeNewsAMT; Celebrity; ISOT
+X-FRAME (Proposed) (text + context) 0.861 0.774 0.818 0.795 0.910 0.890 0.900
+Multimodal systems leverage images, videos, or user-interaction metadata, whereas X-FRAME operates on text and contextual structured features alone. Per-class F1 values follow F 1 = 2 PR P + R (rounded to three decimals).
+Table 6 Ablation study evaluating the impact of feature components on validation accuracy.
+Model Configuration Description Validation Accuracy Performance Drop
+Full Model Text + All Structured Features 85.70% –
+Text-Only Text stream only (structured features removed) 84.72% 1.00%
+Structured-Only Structured stream only (text removed) 71.61% 14.11%
+No Credibility Full model without credibility features 85.12% 0.60%
+Table 7 Top 20 structured features ranked by Permutation Importance values (mean decrease in validation accuracy).
+Rank Feature Importance Value
+1 pheme_topic_charliehebdo 0.0135
+2 pheme_is_source_tweet_unknown 0.0064
+3 source_name_WELFAKE_dataset 0.0058
+4 pheme_topic_ferguson 0.0058
+5 source_name_FNC-1_dataset 0.0051
+6 modality_type_news_article 0.0044
+7 source_name_News 0.0032
+8 modality_type_rumor_cascade 0.0025
+9 pheme_is_source_tweet_False 0.0020
+10 pheme_topic_germanwings-crash 0.0011
+11 source_name_politics 0.0011
+12 liar_subject_grouped_unknown 0.0007
+13 pheme_topic_ottawashooting 0.0007
+14 mention_count 0.0006
+15 source_name_left-news 0.0006
+16 modality_type_claim_social_media 0.0005
+17 liar_speaker_credibility_score 0.0005
+18 source_domain_gossipcop 0.0003
+19 liar_party_republican 0.0002
+20 source_domain_unknown 0.0002
+Table 8 LIME explanation for a single ‘Fake’ prediction (positive class, Class 1: misinformation). Contribution weights are local to this instance and normalized to sum to 1 within the surrogate model.
+Component Detail/Feature Contribution to ‘Fake’ (Weight)
+Original Text * @Conservativrulz @KMBTweets @QuadCityPat @NBCNews @AP @blackvoices Ok.... –
+Model Input (Text) ok –
+Top Textual Feature Word: ok 0.0090
+Top Structured Features pheme_topic_charliehebdo <= 0.00 0.1664
+source_name_politicsNews <= 0.00 0.1443
+source_name_worldnews <= 0.00 0.1375
+* The original text is shown for context. LIME was applied to the preprocessed input text used by the model.
+Table 9 Granular Performance Analysis across data groups.
+Data Group Description Accuracy F1-Score (Fake)
+Group A News Articles 97% 0.96
+Group B Social Media and Claims 72% 0.67
+Table 10 TextFooler adversarial attack results on X-FRAME.
+Metric Value
+Number of successful attacks 52
+Number of failed attacks 33
+Number of skipped attacks 15
+Original accuracy 85.0%
+Accuracy under attack 33.0%
+Attack success rate 61.18%
+Average perturbed word percentage 17.44%
+Average number of words per input 190.26
+Average number of queries 3729.62
+Table 11 Comparison of model robustness under adversarial attacks.
+Attack Method/Study Target Success Rate
+X-FRAME (Ours) Hybrid (semantic + contextual) model 61.18%
+Le et al. (2020) [ 64 ] Neural detectors via comments 94% (white-box), ~90% (black-box)
+Wang et al. (2023) [ 65 ] GNN detectors via social attacks Significant degradation (unspecified)
+Koenders et al. (2021) [ 66 ] Text-based attacks (TextFooler, etc.) Likely ≥ 60%, exact percentage not reported
+References 1. Aïmeur, E.; Amri, S.; Brassard, G. Fake News, Disinformation and Misinformation in Social Media: A Review. Soc. Netw. Anal. Min. ; 2023; 13 , 30. [DOI: https://dx.doi.org/10.1007/s13278-023-01028-5]
+2. Quelle, D.; Bovet, A. The Perils and Promises of Fact-Checking with Large Language Models. Front. Artif. Intell. ; 2024; 7 , 1341697. [DOI: https://dx.doi.org/10.3389/frai.2024.1341697]
+3. Liu, H.; Wang, W.; Li, H.; Li, H. TELLER: A Trustworthy Framework for Explainable, Generalizable and Controllable Fake News Detection. Findings of the Association for Computational Linguistics: ACL 2024 ; Association for Computational Linguistics: Kerrville, TX, USA, 2024; pp. 15556-15583. [DOI: https://dx.doi.org/10.18653/v1/2024.findings-acl.919]
+4. Hoy, N.; Koulouri, T. An Exploration of Features to Improve the Generalisability of Fake News Detection Models. Expert Syst. Appl. ; 2025; 275 , 126949. [DOI: https://dx.doi.org/10.1016/j.eswa.2025.126949]
+5. Ribeiro, M.T.; Singh, S.; Guestrin, C. Why Should I Trust You?: Explaining the Predictions of Any Classifier. Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining ; San Francisco, CA, USA, 13–17 August 2016; pp. 1135-1144. [DOI: https://dx.doi.org/10.1145/2939672.2939778]
+6. Lundberg, S.M.; Lee, S.I. A unified approach to interpreting model predictions. Adv. Neural Inf. Process. Syst. ; 2017; 30 , [DOI: https://dx.doi.org/10.48550/arXiv.1705.07874]
+7. Heyen, H.; Widdicombe, A.; Siegel, N.Y.; Perez-Ortiz, M.; Treleaven, P. The Effect of Model Size on LLM Post-hoc Explainability via LIME. arXiv ; 2024; [DOI: https://dx.doi.org/10.48550/arXiv.2405.05348] arXiv: 2405.05348
+8. Salih, A.; Raisi-Estabragh, Z.; Boscolo Galazzo, I.; Radeva, P.; Petersen, S.E.; Menegaz, G.; Lekadir, K. A Perspective on Explainable Artificial Intelligence Methods: SHAP and LIME. Adv. Intell. Syst. ; 2025; 7 , 2400304. [DOI: https://dx.doi.org/10.1002/aisy.202400304]
+9. Silva, A.; Luo, L.; Karunasekera, S.; Leckie, C. Embracing Domain Differences in Fake News: Cross-Domain Fake News Detection Using Multi-Modal Data. Proceedings of the AAAI Conference on Artificial Intelligence ; Virtually, 2–9 February 2021; Volume 35 , pp. 557-565. [DOI: https://dx.doi.org/10.1609/aaai.v35i1.16134]
+10. Suprem, A.; Pu, C. MiDAS: Multi-integrated Domain Adaptive Supervision for Fake News Detection. arXiv ; 2022; arXiv: 2205.09817
+11. Conneau, A.; Khandelwal, K.; Goyal, N.; Chaudhary, V.; Wenzek, G.; Guzmán, F.; Grave, E.; Ott, M.; Zettlemoyer, L.; Stoyanov, V. Unsupervised Cross-lingual Representation Learning at Scale. Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics ; Online, 5–10 July 2020; pp. 8440-8451. [DOI: https://dx.doi.org/10.18653/v1/2020.acl-main.747]
+12. Pérez-Rosas, V.; Kleinberg, B.; Lefevre, A.; Mihalcea, R. Automatic Detection of Fake News. Proceedings of the 27th International Conference on Computational Linguistics ; Santa Fe, NM, USA, 20–26 August 2018; pp. 3391-3401.
+13. Ajao, O.; Bhowmik, D.; Zargari, S. Fake News Identification on Twitter with Hybrid CNN and RNN Models. Proceedings of the 9th International Conference on Social Media and Society ; Copenhagen, Denmark, 18–20 July 2018; pp. 226-230. [DOI: https://dx.doi.org/10.1145/3217804.3217917]
+14. Drif, A. Fake News Detection Method Based on Text-Features. Proceedings of the International Conference on Multimedia ; Nice, France, 21–25 October 2019.
+15. Devlin, J.; Chang, M.W.; Lee, K.; Toutanova, K. BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding. Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers) ; Minneapolis, MN, USA, 2–7 June 2019; pp. 4171-4186. [DOI: https://dx.doi.org/10.18653/v1/N19-1423]
+16. Kaliyar, R.K.; Goswami, A.; Narang, P. FakeBERT: Fake news detection in social media with a BERT-based deep learning approach. Multimed. Tools Appl. ; 2021; 80 , pp. 11765-11788. [DOI: https://dx.doi.org/10.1007/s11042-020-10183-2]
+17. Zhou, Y.; Yang, Y.; Ying, Q.; Qian, Z.; Zhang, X. Multimodal Fake News Detection via CLIP-Guided Learning. Proceedings of the 2023 IEEE International Conference on Multimedia and Expo (ICME) ; Brisbane, Australia, 10–14 July 2023; pp. 2825-2830. [DOI: https://dx.doi.org/10.1109/ICME55011.2023.00480]
+18. Visweswaran, M.; Mohan, J.; Sachin Kumar, S.; Soman, K.P. Synergistic Detection of Multimodal Fake News Leveraging TextGCN and Vision Transformer. Procedia Comput. Sci. ; 2024; 235 , pp. 142-151. [DOI: https://dx.doi.org/10.1016/j.procs.2024.04.017]
+19. Ma, Z.; Luo, M.; Guo, H.; Zeng, Z.; Hao, Y.; Zhao, X. Event-Radar: Event-driven Multi-View Learning for Multimodal Fake News Detection. Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) ; Bangkok, Thailand, 11–16 August 2024; pp. 5809-5821. [DOI: https://dx.doi.org/10.18653/v1/2024.acl-long.316]
+20. Shen, X.; Huang, M.; Hu, Z.; Cai, S.; Zhou, T. Multimodal Fake News Detection with Contrastive Learning and Optimal Transport. Front. Comput. Sci. ; 2024; 6 , 1473457. [DOI: https://dx.doi.org/10.3389/fcomp.2024.1473457]
+21. Ma, X.; Yang, X.; Xu, C. Multi-Source Knowledge Reasoning Graph Network for Multi-Modal Commonsense Inference. ACM Trans. Multimed. Comput. Commun. Appl. ; 2023; 19 , pp. 1-17. [DOI: https://dx.doi.org/10.1145/3573201]
+22. Hao, X.; Xu, W.; Huang, X.; Sheng, Z.; Yan, H. MFUIE: A Fake News Detection Model Based on Multimodal Features and User Information Enhancement. EAI Endorsed Trans. Scalable Inf. Syst. ; 2025; 12 , 1. [DOI: https://dx.doi.org/10.4108/eetsis.7517]
+23. Saarela, M.; Podgorelec, V. Recent Applications of Explainable AI (XAI): A Systematic Literature Review. Appl. Sci. ; 2024; 14 , 8884. [DOI: https://dx.doi.org/10.3390/app14198884]
+24. Bezzaoui, I.; Stein, C.; Weinhardt, C.; Fegert, J. Explainable AI for Online Disinformation Detection: Insights from a Design Science Research Project. Electron. Mark. ; 2025; 35 , 66. [DOI: https://dx.doi.org/10.1007/s12525-025-00799-3]
+25. Singhania, S.; Fernandez, N.; Rao, S. 3HAN: A Deep Neural Network for Fake News Detection. Neural Information Processing ; Springer International Publishing: Cham, Switzerland, 2017; pp. 572-581. [DOI: https://dx.doi.org/10.1007/978-3-319-70096-0_59]
+26. Dai, S.C.; Hsu, Y.L.; Xiong, A.; Ku, L.W. Ask to Know More: Generating Counterfactual Explanations for Fake Claims. Proceedings of the 28th ACM SIGKDD Conference on Knowledge Discovery and Data Mining ; Washington, DC, USA, 14–18 August 2022; pp. 2800-2810. [DOI: https://dx.doi.org/10.1145/3534678.3539205]
+27. Hsu, Y.L.; Dai, S.C.; Xiong, A.; Ku, L.W. Is Explanation the Cure? Misinformation Mitigation in the Short Term and Long Term. arXiv ; 2023; [DOI: https://dx.doi.org/10.48550/arXiv.2310.17711] arXiv: 2310.17711
+28. Khraisat, A.; Manisha,; Chang, L.; Abawajy, J. Survey on Deep Learning for Misinformation Detection: Adapting to Recent Events, Multilingual Challenges, and Future Visions. Soc. Sci. Comput. Rev. ; 2025; 08944393251315910. [DOI: https://dx.doi.org/10.1177/08944393251315910]
+29. Ganin, Y.; Ustinova, E.; Ajakan, H.; Germain, P.; Larochelle, H.; Laviolette, F.; Marchand, M.; Lempitsky, V. Domain-Adversarial Training of Neural Networks. Domain Adaptation in Computer Vision Applications ; Csurka, G. Advances in Computer Vision and Pattern Recognition Springer: Cham, Switzerland, 2017; pp. 189-209. [DOI: https://dx.doi.org/10.1007/978-3-319-58347-1_10]
+30. Yue, Z.; Kratzwald, B.; Feuerriegel, S. Contrastive Domain Adaptation for Question Answering using Limited Text Corpora. arXiv ; 2021; [DOI: https://dx.doi.org/10.48550/arXiv.2108.13854] arXiv: 2108.13854
+31. Liu, H.; Wang, W.; Sun, H.; Rocha, A.; Li, H. Robust Domain Misinformation Detection via Multi-Modal Feature Alignment. IEEE Trans. Inf. Forensics Secur. ; 2024; 19 , pp. 793-806. [DOI: https://dx.doi.org/10.1109/TIFS.2023.3326368]
+32. Entman, R.M. Framing: Toward Clarification of a Fractured Paradigm. J. Commun. ; 1993; 43 , pp. 51-58. [DOI: https://dx.doi.org/10.1111/j.1460-2466.1993.tb01304.x]
+33. Shu, K.; Wang, S.; Liu, H. Beyond News Contents: The Role of Social Context for Fake News Detection. Proceedings of the Twelfth ACM International Conference on Web Search and Data Mining, WSDM’19 ; New York, NY, USA, 10–14 March 2019; pp. 312-320. [DOI: https://dx.doi.org/10.1145/3289600.3290994]
+34. Monti, F.; Frasca, F.; Eynard, D.; Mannion, D.; Bronstein, M.M. Fake News Detection on Social Media using Geometric Deep Learning. arXiv ; 2019; [DOI: https://dx.doi.org/10.48550/arXiv.1902.06673] arXiv: 1902.06673
+35. Bian, T.; Xiao, X.; Xu, T.; Zhao, P.; Huang, W.; Rong, Y.; Huang, J. Rumor Detection on Social Media With Bi-Directional Graph Convolutional Networks. Proceedings of the AAAI Conference on Artificial Intelligence ; New York, NY, USA, 7–12 February 2020; Volume 34 , pp. 549-556. [DOI: https://dx.doi.org/10.1609/aaai.v34i01.5393]
+36. Horne, B.; Adali, S. This Just in: Fake News Packs a Lot in Title, Uses Simpler, Repetitive Content in Text Body, More Similar to Satire than Real News. Proceedings of the International AAAI Conference on Web and Social Media ; Montreal, QC, Canada, 15–18 May 2017; Volume 11 , pp. 759-766. [DOI: https://dx.doi.org/10.1609/icwsm.v11i1.14976]
+37. Rashkin, H.; Choi, E.; Jang, J.Y.; Volkova, S.; Choi, Y. Truth of Varying Shades: Analyzing Language in Fake News and Political Fact-Checking. Proceedings of the 2017 Conference on Empirical Methods in Natural Language Processing ; Copenhagen, Denmark, 7–11 September 2017; pp. 2931-2937. [DOI: https://dx.doi.org/10.18653/v1/D17-1317]
+38. Ahmed, H.; Traore, I.; Saad, S. Detection of Online Fake News Using N-Gram Analysis and Machine Learning Techniques. Proceedings of the Intelligent, Secure, and Dependable Systems in Distributed and Cloud Environments ; Vancouver, BC, Canada, 26–28 October 2017; pp. 127-138. [DOI: https://dx.doi.org/10.1007/978-3-319-69155-8_9]
+39. Verma, P.K.; Agrawal, P.; Amorim, I.; Prodan, R. WELFake: Word Embedding Over Linguistic Features for Fake News Detection. IEEE Trans. Comput. Soc. Syst. ; 2021; 8 , pp. 881-893. [DOI: https://dx.doi.org/10.1109/TCSS.2021.3068519]
+40. Hanselowski, A.; PVS, A.; Schiller, B.; Caspelherr, F.; Chaudhuri, D.; Meyer, C.M.; Gurevych, I. A Retrospective Analysis of the Fake News Challenge Stance-Detection Task. Proceedings of the 27th International Conference on Computational Linguistics ; Santa Fe, NM, USA, 20–26 August 2018; pp. 1859-1874.
+41. Wang, W.Y. “Liar, Liar Pants on Fire”: A New Benchmark Dataset for Fake News Detection. Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics (Volume 2: Short Papers) ; Vancouver, BC, Canada, 30 July–4 August 2017; pp. 422-426. [DOI: https://dx.doi.org/10.18653/v1/P17-2067]
+42. Kochkina, E.; Liakata, M.; Zubiaga, A. PHEME Dataset for Rumour Detection and Veracity Classification. Figshare. Dataset ; 2018; 6392078.v1. [DOI: https://dx.doi.org/10.6084/m9.figshare.6392078.v1]
+43. Shu, K.; Mahudeswaran, D.; Wang, S.; Lee, D.; Liu, H. FakeNewsNet: A Data Repository with News Content, Social Context and Spatialtemporal Information for Studying Fake News on Social Media. arXiv ; 2018; arXiv: 1809.01286[DOI: https://dx.doi.org/10.1089/big.2020.0062]
+44. Delacre, M.; Leys, C.; Mora, Y.L. Why Psychologists Should by Default Use Welch’s t-test Instead of Student’s t-test. Int. Rev. Soc. Psychol. ; 2017; 30 , pp. 92-101. [DOI: https://dx.doi.org/10.5334/irsp.82]
+45. Kuntur, S.; Wróblewska, A.; Paprzycki, M. Fake News Detection: It’s All in the Data!. arXiv ; 2024; arXiv: 2407.02122
+46. Landis, J.R.; Koch, G.G. The Measurement of Observer Agreement for Categorical Data. Biometrics ; 1977; 33 , pp. 159-174. [DOI: https://dx.doi.org/10.2307/2529310]
+47. Samadi, M.; Momtazi, S. Fake News Detection: Deep Semantic Representation with Enhanced Feature Engineering. Int. J. Data Sci. Anal. ; 2023; 20 , pp. 325-336. [DOI: https://dx.doi.org/10.1007/s41060-023-00387-8]
+48. Hosseini, A.S.; Staab, S. Emotional Framing in the Spreading of False and True Claims. Proceedings of the 15th ACM Web Science Conference 2023 ; New York, NY, USA, 30 April–1 May 2023; pp. 96-106. [DOI: https://dx.doi.org/10.1145/3578503.3583611]
+49. Potthast, M.; Kiesel, J.; Reinartz, K.; Bevendorff, J.; Stein, B. A Stylometric Inquiry into Hyperpartisan and Fake News. Proceedings of the 56th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) ; Melbourne, Australia, 15–20 July 2018; pp. 231-240. [DOI: https://dx.doi.org/10.18653/v1/P18-1022]
+50. Wikipedia Contributors. Flesch–Kincaid Readability Tests. Wikipedia, 2024. Available online: https://en.wikipedia.org/wiki/Flesch%E2%80%93Kincaid_readability_tests (accessed on 14 August 2025).
+51. Developers, T. TextBlob Documentation for Sentiment Analysis. Online Documentation, 2025. Available online: https://textblob.readthedocs.io/en/dev/ (accessed on 14 August 2025).
+52. Pennycook, G.; Rand, D.G. The Psychology of Fake News. Trends Cogn. Sci. ; 2021; 25 , pp. 388-402. [DOI: https://dx.doi.org/10.1016/j.tics.2021.02.007]
+53. Chalehchaleh, R.; Salehi, M.; Farahbakhsh, R.; Crespi, N. A Hybrid and Multi-Feature Framework for Fake News Detection Incorporating Content and Context. Soc. Netw. Anal. Min. ; 2024; 14 , 35. [DOI: https://dx.doi.org/10.1007/s13278-023-01185-7]
+54. Loshchilov, I.; Hutter, F. Decoupled Weight Decay Regularization. arXiv ; 2018; arXiv: 1711.05101
+55. Mosbach, M.; Andriushchenko, M.; Klakow, D. On the Stability of Fine-Tuning BERT: Misconceptions, Lessons, and Recommendations. Proceedings of the International Conference on Learning Representations (ICLR) Workshops ; Addis Ababa, Ethiopia, 26–30 April 2020.
+56. Friedman, J.H. Greedy Function Approximation: A Gradient Boosting Machine. Ann. Stat. ; 2001; 29 , pp. 1189-1232. [DOI: https://dx.doi.org/10.1214/aos/1013203451]
+57. Breiman, L. Random Forests. Mach. Learn. ; 2001; 45 , pp. 5-32. [DOI: https://dx.doi.org/10.1023/A:1010933404324]
+58. Fisher, A.; Rudin, C.; Dominici, F. All Models Are Wrong, but Many Are Useful: Learning a Variable’s Importance by Studying an Entire Class of Prediction Models Simultaneously. arXiv ; 2019; arXiv: 1801.01489
+59. Gongane, V.U.; Munot, M.V.; Anuse, A.D. A Survey of Explainable AI Techniques for Detection of Fake News and Hate Speech on Social Media Platforms. J. Comput. Soc. Sci. ; 2024; 7 , pp. 587-623. [DOI: https://dx.doi.org/10.1007/s42001-024-00248-9]
+60. Jin, D.; Jin, Z.; Zhou, J.T.; Szolovits, P. Is BERT Really Robust?. A Strong Baseline for Natural Language Attack on Text Classification and Entailment. In Proceedings of the AAAI Conference on Artificial Intelligence ; New York, NY, USA, 7–12 February 2020; Volume 34 , pp. 8018-8025. [DOI: https://dx.doi.org/10.1609/aaai.v34i05.6311]
+61. Ibrahim, N.; Aboulela, S.; Ibrahim, A.; Kashef, R. A Survey on Augmenting Knowledge Graphs (KGs) with Large Language Models (LLMs): Models, Evaluation Metrics, Benchmarks, and Challenges. Discov. Artif. Intell. ; 2024; 4 , 76. [DOI: https://dx.doi.org/10.1007/s44163-024-00175-8]
+62. Tahmasebi, S.; Hakimov, S.; Ewerth, R.; Müller-Budack, E. Improving Generalization for Multimodal Fake News Detection. arXiv ; 2023; [DOI: https://dx.doi.org/10.48550/arXiv.2305.18599] arXiv: 2305.18599
+63. Morris, J.; Lifland, E.; Yoo, J.Y.; Grigsby, J.; Jin, D.; Qi, Y. TextAttack: A Framework for Adversarial Attacks, Data Augmentation, and Adversarial Training in NLP. Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing: System Demonstrations ; Online, 16–20 November 2020; pp. 119-126. [DOI: https://dx.doi.org/10.18653/v1/2020.emnlp-demos.16]
+64. Le, T.; Wang, S.; Lee, D. MALCOM: Generating Malicious Comments to Attack Neural Fake News Detection Models. Proceedings of the 2020 IEEE International Conference on Data Mining (ICDM) ; Sorrento, Italy, 17–20 November 2020; pp. 282-291. [DOI: https://dx.doi.org/10.1109/ICDM50108.2020.00037]
+65. Wang, H.; Dou, Y.; Chen, C.; Sun, L.; Yu, P.S.; Shu, K. Attacking Fake News Detectors via Manipulating News Social Engagement. arXiv ; 2023; [DOI: https://dx.doi.org/10.48550/arXiv.2302.07363] arXiv: 2302.07363
+66. Koenders, C.; Filla, J.; Schneider, N. How Vulnerable Are Automatic Fake News Detection Methods to Adversarial Attacks?. arXiv ; 2021; [DOI: https://dx.doi.org/10.48550/arXiv.2107.07970] arXiv: 2107.07970

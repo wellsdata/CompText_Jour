@@ -1,0 +1,1168 @@
+1. Introduction An increasing number of individuals are opting to share opinions and access information through convenient social media platforms. However, this trend has also led to the rapid and widespread dissemination of fake news (Mitra et al., 2017; Zubiaga et al., 2018). The term “fake news” can be understood as a report fabricated or written for the purpose of misleading the public, and news posts on social media are more susceptible to manipulation and falsification than traditional written materials such as newspapers and magazines (Nadeem et al., 2023). Although hundreds of millions of social media users constantly generate unverified news posts,1 relying on expert disinformation and manual verification to combat the spread of fake news is insufficient. Therefore, there is an urgent need for efficient and automated fake news detection methods.
+Early fake news detection efforts relied heavily on textual data (Popat, 2017). Both machine learning approaches, such as plain Bayesian classifiers, decision trees (DTs), and support vector machines (SVMs) (Liu et al., 2015; Chen et al., 2017), and deep learning approaches, such as long short-term memory (LSTM) and convolutional neural networks (CNNs) (Rashkin et al., 2017; Yu et al., 2017), tend to be performed by extracting features such as keywords, word frequency, and syntactic structure in news text as source post representations for classification. In addition, some text-based fake news detection efforts consider other cues such as emotional tendencies (Ge et al., 2022) and grammatical errors (Bian et al., 2020). However, with the development of technology and the increasing popularity of social media, news posts often include text, images, and other forms, and relying only on news text for fake news detection is no longer comprehensive and accurate enough. For this reason, researchers have begun to focus on mining textual and visual features in news content to improve fake news detection (Alonso-Bartolome and Segura-Bedmar, 2021; Hua et al., 2023; Singhal et al., 2022). The Contrastive Language–Image Pre-training (CLIP) model (Radford et al., 2021), developed by OpenAI, is a multimodal learning architecture that, through the application of contrastive learning, is able to learn multimodal representations with strong generalization capabilities. Recent studies (Zhou et al., 2023a,b) have demonstrated the efficacy of CLIP in the domain of fake news detection, yielding encouraging outcomes; however, but the common limitation of such methods is that they ignore the social context of the news, and the social context can provide more clues for recognizing elaborate fake news (Hu et al., 2023). Although social context features are considered in the works of Zheng et al. (2022), Shang et al. (2022), they ignore cross-modal correlations and semantic alignment relationships between different modalities.
+Fig. 1 shows six different types of fake news, and it may be difficult to discern carefully crafted fake news simply by using textual and visual features in the post (shown in Fig. 1(f)), whereas news-engaged users and news comments can provide additional help in effectively identifying such fake news. A very small number of users nevertheless disseminate the vast majority of fake news, and older, more politically conservative users are more likely to view and share false information (Guess et al., 2019; Grinberg et al., 2019). Therefore, more evidence for fake news detection can be provided by analyzing user characteristics. In addition, since post content and user comments are inherently interrelated, user comments can provide important clues to confirm false information that may be contained in a post and provide interpretability for disinformation detection (Shu et al., 2019). A heterogeneous information network (HIN) is a network structure that includes diverse nodes and relationships. In such a network, nodes can represent different types of entities, while edges (or relationships) can represent different types of connections or interactions. Compared to homogeneous networks, HINs can more accurately describe and characterize the diversity and heterogeneity within complex systems (Sun and Han, 2013; Shi et al., 2016). Inspired by this, we construct a news-oriented heterogeneous information network (N-HIN) using news posts, users, and comments, and extract its features as supplementary information to improve fake news detection.
+Our work faces two major challenges: First, the heterogeneity among textual features, visual features, and N-HIN features makes it difficult to integrate multiple features of different modalities into the same framework for effective aggregation to generate the final representation of news to improve the performance of the decision-making process. Second, emerging pretrained multimodal learning models (eg. CLIP) and powerful cross-modal contrastive learning methods are not fully applicable in fake news detection, and how to effectively utilize these advanced techniques to improve fake news detection remains an open question.
+We propose to address the above challenges with a new fake news detection model, SARD, which is a fake news detection method based on CLIP contrastive learning and multimodal semantic alignment. Specifically, to fully exploit the news content features, we extract different levels of textual and visual features using pretrained Bidirectional Encoder Representations from Transformers (BERT) (Devlin et al., 2019), Residual Neural Network (ResNet) (He et al., 2016) and CLIP (Radford et al., 2021) models. The SARD consists of three major modules. First, the CLIP contrastive learning-guided cross-modal association generation module learns the correlation between deep textual and visual features to obtain text-image cross-modal correlation features, which is helpful for solving the ambiguity and mismatch problems in fake news detection (shown in Fig. 1(d)–(e)). Second, the multimodal semantic alignment module realizes the semantic alignment of news content features and N-HIN features. Finally, the multimodal feature aggregation module generates the final news representation and classifies the news by adaptively weighting the cross-modal correlation features, semantically aligned news content features, and N-HIN features. SARD, as a comprehensive framework based on CLIP contrastive learning and multimodal semantic alignment, effectively integrates different modal features to improve the performance of fake news detection. Fig. 1 [Images not available. See PDF.]
+Six different types of fake news from microblogs and tweets. (a) Exaggerated and illogical textual information indicates that it is likely to be fake news. (b) Tampered image information indicates that it is likely fake news. (c) The text and image are semantically consistent, but both the text message and the doctored image indicate that it is probably fake. (d) Ambiguity problem: the semantic information of the text and the image is clearly ambiguous; the text describes a sad story, but the image conveys a happy message. (e) Mismatch problem: the semantic information of the text and the image do not match, and both the text and image information are correct individually, but together they convey misleading information. (f) The use of a small and logical amount of text to describe a real image is carefully crafted fake news.
+
+The main contributions of this paper are as follows:
+- This paper introduces a novel multimodal fake news detection framework, SARD. To the best of our knowledge, this framework is the first to integrate N-HIN features and textual and visual features from different levels into a unified model, offering a new perspective for detecting meticulously crafted fake news.
+
+- Our method not only considers the alignment and fusion of textual and visual features at different levels but also designs a multimodal feature aggregation module that generates the final news representation through an adaptive weighting strategy, thereby enhancing classification performance.
+
+- SARD improves fake news detection by achieving semantic alignment between news content features and N-HIN features, a crucial aspect overlooked by almost all existing methods.
+
+
+Extensive experiments conducted on three datasets show that SARD outperforms existing state-of-the-art fake news methods. The ablation study demonstrates the effectiveness of each component of this paper’s model and validates the contribution of semantic alignment between news content features and N-HIN features to improving fake news detection.
+2. Related work 2.1. Text or image-based methods Early unimodal fake news detection methods often classify news by manually constructing and filtering textual features of the news (Feng et al., 2012; Pérez-Rosas et al., 2017), however, manual features are less robust and require considerable time for data processing. With the rise of deep learning, many unimodal methods based on deep learning have emerged to improve the performance of fake news detection. Ma et al. (2019) proposed a rumor detection model based on Generative Adversarial Network (GAN), named GAN-GRU. This model improves the representation of news text through adversarial learning between the text generator and discriminator, thereby enhancing the accuracy of rumor detection. However, due to the complexity of the GAN training process, substantial debugging may be required to balance the generator and discriminator. Kaliyar et al. (2021)improved fake news detection by combining convolutional blocks with BERT to extract text features, effectively addressing ambiguity issues. Nonetheless, the optimization of numerous parameters for BERT enhancements may increase the complexity of training and deployment. DEAP-FAKED (Mayank et al., 2022) connects entities in news headlines with the open-source Wikidata knowledge graph (KG), relying solely on headline data for fake news detection, thereby reducing dependence on full news text. However, the effectiveness of this approach is highly dependent on the quality and coverage of the knowledge graph. Incomplete or inaccurate entity information in the KG may affect the accuracy of fake news detection. Guo et al. (2018) proposed a hierarchical neural network (HSA-BLSTM), a model that introduces a social context on top of news text content to extract important semantic information. Ge et al. (2022), Cui et al. (2023) improved fake news detection from the perspective of sentiment analysis. In addition, some methods utilize visual information such as the quality of images in the news and whether the images are tampered with for fake news detection (Cao et al., 2020; Han et al., 2021). Although unimodal detection methods have achieved significant results, extracting information from a single modality may lack a global perspective in fake news detection. Additionally, information from different modalities (such as text and images) can verify and complement each other, whereas unimodal methods overlook the associations and complementary information between modalities in the original data. This may lead to insufficient information utilization and affect the accuracy of the final decision.
+2.2. Text and image-based methods Integrating the multimodal information of news is the key to properly addressing the challenges of fake news detection (Comito et al., 2023). Several approaches work to fully exploit textual and image information in news content to improve fake news detection. EANN (Wang et al., 2018) combines event-invariant feature learning and adversarial training to improve the accuracy and generalization of fake news detection. However, this method only employs a sequential approach to fuse multimodal features, which may not effectively capture the cross-modal associations between text and images.CSFND (Peng et al., 2024) utilizes contextual semantic representation learning to learn the contextual semantic representation of a post by fusing the local contextual features of the news with the global semantic features, which fills the news gap between the news semantic feature space and the news decision space while demonstrating that the semantic features of the news play an important role in improving fake news detection. MVAE (Khattar et al., 2019) designed multimodal autoencoders to learn shared representations to capture cross-modal inter-modal correlations. Hu et al. (2023) conducts reverse retrieval of text and images in news to gather evidence for fake news detection, leveraging extensive external knowledge to improve model accuracy. However, the complex relationship between images and text in news may lead to mismatches or misunderstandings during reverse search, affecting the detection performance. CAFE (Chen et al., 2022) minimizes the Kullback–Leibler (KL) dispersion of image–text pairs in news to obtain the corresponding cross-modal disambiguation scores and then uses the cross-modal disambiguation scores to reweight unimodal features and cross-modal association features. However, for fake news with matching text and images, the KL scatter will be small, e.g., the text in Fig. 1(c) matches the semantic information of the tampered image, but both can indicate that it may be fake.
+The multimodal learning pretrained model CLIP (Radford et al., 2021), as an advanced multimodal representation learning model, aims to integrate visual and textual information through a shared embedding space to understand the relationships between images and text. Additionally, CLIP encodes text and images into a shared semantic space, greatly simplifying cross-modal correlation computation and demonstrating strong generalization capabilities across numerous downstream tasks (Gu et al., 2021). COOLANT (Wang et al., 2023) constructed the textual semantic level and visual semantic level of news content and demonstrated the importance of the textual feature and visual semantic level, respectively. levels and demonstrated that the alignment between textual features and visual features helps to improve the classification performance. FND-CLIP (Zhou et al., 2023b) extracts textual features and visual features in news content using a CLIP encoder and then computes cross-modal similarity scores to guide the weighting of the different modal features. MMFN (Zhou et al., 2023a) extracts textual and image features at different granularity levels to generate more comprehensive synthesized news representations. Despite the stunning results achieved by these approaches, their common limitation is that they fully exploit only textual features and visual features in news content to improve fake news detection, ignoring the social contextual features of news, which have been shown to effectively improve the performance of fake news detection models (Yuan et al., 2019).
+2.3. Text, image and social context-based methods Some methods further introduce social context information in addition to text and image information to improve fake news detection. att-RNN (Jin et al., 2017) extracts features and fuses them for the first time in three types of source data, namely, text, image, and social metadata (retweet counts, sentiment scores, etc.). DGExplain Shang et al. (2022) first captures cross-modal correlation features between text and visual information and then utilizes user comments as supplementary information for fake news detection. However, both methods overlook the dissemination structure of news. Fake news often exhibits specific propagation patterns, such as viral spread or botnet manipulation. Analyzing the dissemination structure can help identify these patterns, thereby providing a better understanding of the strategies and tactics used in spreading fake news. MFAN (Zheng et al., 2022) is the first attempt to jointly model textual features, visual features, and social graph features and use cross-modal attention mechanisms to fuse different modal features to improve fake news detection, but using only cross-modal attention mechanisms to fuse the features may not be able to solve the ambiguity problem in multimodal fake news detection very well. In addition, using the average value of posts made by users as the embedding of user nodes in the social graph may not represent user features well.
+Tables 1–2 summarizes the latest methods in the field of fake news detection, including the name, core algorithm, feature type, dataset, and results. For the results, we have compiled the key evaluation metric of Accuracy (Acc) for the fake news detection models. These methods are primarily applicable to the two most popular social networking platforms, Twitter and Weibo.
+We propose a novel multimodal fake news detection model to address these difficult problems in response to the shortcomings of existing methods. Compared to previous methods, we comprehensively consider the cross-modal associations between text and images, news content features, and social context features. The multiple sources of information make our framework more advantageous in complex environments and in detecting carefully crafted fake news. Moreover, we found that aligning the semantics between news content features and N-HIN features can further enhance the effectiveness of fake news detection, which is a point almost all existing methods have overlooked. Table 3 compares SARD and existing state-of-the-art representative multimodal fake news detection methods, demonstrating the advantages and the unique features of our approach.
+Table 1. Summary of fake news detection methods.
+Name
+Core algorithms
+Feature type
+Dataset
+Results(Acc)
+
+GAN-GRU
+(Ma et al., 2019)
+Generative adversarial training algorithm
+Textual
+Twitter
+PHEME
+Twitter: 0.863
+PHEME: 0.781
+
+DEAP-FAKED
+(Mayank et al., 2022)
+Tensor decomposition model, Knowledge graph
+Textual
+KFN-UB
+CoAID-UB
+KFN-UB: 0.90
+CoAID-UB: 0.78
+
+EDI
+(Ge et al., 2022)
+CNN, Emotion attention
+Textual
+Twitter
+Weibo-16
+Weibo-20
+Twitter: 0.849
+Weibo-16: 0.888
+Weibo-20: 0.879
+
+Han et al. (2021)
+Two-stream network with learnable SRM
+Visual
+FaceForen-
+sics++
+FaceForen-
+sics++: 0.9036
+
+EANN
+(Wang et al., 2018)
+Text-CNN, VGG-19, Event discriminator
+Textual
+Visual
+Twitter
+Weibo
+Twitter: 0.715
+Weibo: 0.827
+
+MVAE
+(Khattar et al., 2019)
+Bimodal variational autoencoder, Bi-LSTM, VGG-19
+Textual
+Visual
+Twitter
+Weibo
+Twitter: 0.745
+Weibo: 0.824
+
+CAFE
+(Chen et al., 2022)
+BERT, ResNet, MLP, Variational encoder
+Textual
+Visual
+Twitter
+Weibo
+Twitter: 0.806
+Weibo: 0.824
+
+CSFND
+(Peng et al., 2024)
+BERT, XLNet, VGG-19, ResNet, GRU, K-means algorithm, Cross-attention network
+Textual
+Visual
+Twitter
+Weibo
+Twitter: 0.833
+Weibo: 0.895
+
+Table 2 Summary of fake news detection methods.
+Name
+Core algorithms
+Feature type
+Dataset
+Results(Acc)
+
+Hu et al. (2023)
+BERT, ResNet, Multimodal Retrieval-augmented
+Textual
+Visual
+MR \( {}^2 \)-E
+MR \( {}^2 \)-C
+MR \( {}^2 \)-E: 0.8562
+MR \( {}^2 \)-C: 0.8595
+
+COOLANT
+(Wang et al., 2023)
+BERT, ResNet, Attention mechanism, MLP, Variational autoencoder
+Textual
+Visual
+Twitter
+Weibo
+Twitter: 0.900
+Weibo: 0.923
+
+FND-CLIP
+(Zhou et al., 2023b)
+BERT, ResNet, CLIP, Modality-wise attention
+Textual
+Visual
+Weibo
+Politifact
+Gossipcop
+Weibo: 0.907
+Politifact: 0.942
+Gossipcop: 0.880
+
+MMFN
+(Zhou et al., 2023a)
+BERT, SWIN-T, CLIP, Co-attention transformer
+Textual
+Visual
+Weibo
+Twitter
+Gossipcop
+Weibo: 0.923
+Twitter: 0.935
+Gossipcop: 0.894
+
+att-RNN
+(Jin et al., 2017)
+Bi-LSTM, VGG-19, Word embedding
+Textual
+Visual
+Social
+Weibo
+Twitter
+Weibo: 0.788
+Twitter: 0.682
+
+DGExplain
+(Shang et al., 2022)
+LSTM, BiGRU, Knowledge distillation
+Textual
+Visual
+Comments
+ReCOVery
+MMCoVaR
+ReCOVery: 0.897
+MMCoVaR: 0.895
+
+MFAN
+(Zheng et al., 2022)
+CNN, ResNet, Co-attention mechanism, Signed GAT
+Textual
+Visual
+Social
+PHEME
+Weibo
+PHEME: 0.8873
+Weibo: 0.8895
+
+Table 3. Comparison of research methods. Symbol Descriptions: Text (T), Visual (V), Social Context (S), News Heterogeneous Information Network (N-HIN), Different Levels of Text, Visual Features (DTV), Contrastive Learning (CTL), Text-Visual Feature Alignment (T-V A), and Multimodal Semantic Alignment (MSA).
+T
+V
+S
+N-HIN
+DTV
+CTL
+T-V A
+MSA
+
+CAFE (Chen et al., 2022)
+\( \surd \)
+\( \surd \)
+\( \surd \)
+
+COOLANT (Wang et al., 2023)
+\( \surd \)
+\( \surd \)
+\( \surd \)
+\( \surd \)
+
+FND-CLIP (Zhou et al., 2023b)
+\( \surd \)
+\( \surd \)
+\( \surd \)
+
+MMFN (Zhou et al., 2023a)
+\( \surd \)
+\( \surd \)
+\( \surd \)
+
+att-RNN (Jin et al., 2017)
+\( \surd \)
+\( \surd \)
+\( \surd \)
+
+DGExplain Shang et al. (2022)
+\( \surd \)
+\( \surd \)
+\( \surd \)
+
+MFAN (Zheng et al., 2022)
+\( \surd \)
+\( \surd \)
+\( \surd \)
+
+SARD
+\( \surd \)
+\( \surd \)
+\( \surd \)
+\( \surd \)
+\( \surd \)
+\( \surd \)
+\( \surd \)
+\( \surd \)
+
+
+3. Lexicon description and problem statement 3.1. Lexicon description Description 1. Posts Posts are news information posted or retweeted by users on social media. Posts can be represented as a set \( P=\left\{{p}_1,{p}_2,\dots, {p}_n\right\} \) , and the set of posts \( P \) contains textual information \( T \) and image information \( V \) . For example, each post \( {P}_i\in P \) contains textual information \( {t}_i\in T \) and image information \( {v}_i\in V \) , denoted as \( {p}_i=\left\{{t}_i,{v}_i\right\} \).
+Description 2. Users Users are the users who publish or retweet posts. Given each news post \( {P}_i\in P \) , the corresponding set of users \( {U}_i \) can be denoted as \( {U}_i=\left\{{u}_{i1},{u}_{i2},\dots, {u}_{ik}\right\} \) for each participating user \( {U}_{ij}\in {U}_i \) , which contains profile information such as name, age, location, personal label, and party status.
+Description 3. Comments Comments are the feedback from the crowd on social media. The set of users \( {C}_i \) for each post \( {P}_i\in P \) can be denoted as \( {C}_i=\left\{{c}_{i1},{c}_{i2},\dots, {c}_{im}\right\} \) , and for each comment \( {C}_{ij}\in {C}_i \) , it contains the crowd’s viewpoints, stances, and sentiments of the post and other information.
+Description 4. N-HIN (I) in Fig. 2 illustrates the three different types of entities, posts, users and comments, and the relationships between them. As shown in (II) in Fig. 2 , we construct the News-oriented Heterogeneous Information Network (N-HIN) to better integrate this heterogeneous social contextual information. The N-HIN is defined as \( \mathcal{G}=\left(\mathcal{V},\mathcal{E}\right) \) , where \( \mathcal{V} \) stands for the set of post nodes, user nodes, and comment nodes, and the set of edges \( \mathcal{E} \) includes the “posting” edge between user nodes and post nodes and the “pertain to” edge between comment nodes and post nodes. Note that in the N-HIN construction, if a user has posted or forwarded a post, we consider that there is a “posting” edge between the user node and the post node.
+3.2. Problem statement In this paper, we define the task of detecting fake news on social media as a binary classification problem. Specifically, the task goal of our proposed method, SARD, is to distinguish real news from fake news by comprehensively analyzing the textual features, visual features, and social contextual features of the news. Given the fake news detection training set \( {D}_{\mathbf{train}}={\left\{\left({p}_i,{y}_i\right)\right\}}_{i=1}^n,{y}_i\in Y \). where \( n \) is the size of the training set, \( {y}_i\in \left\{1,0\right\} \) denotes the categorization label of the post, \( {y}_i=1 \) denotes that post \( {p}_i \) is fake news, and \( {y}_i=0 \) denotes that post \( {p}_i \) is true news. The goal of the model in this paper is to learn a classification function to accurately predict the label \( F\left({P}_i\right)\to \overset{\hat{\mkern6mu} }{y}\in \left\{0,1\right\} \) for a given post \( {P}_i \), where \( \overset{\hat{\mkern6mu} }{y} \) is the predicted label.
+4. Methodology In this section, we describe the proposed method SARD in detail. First, we provide an overview of the general framework of SARD and its information processing process (Section 4.1). Then, the multimodal feature extractor (Section 4.2), CLIP contrastive learning-guided cross-modal association generation module (Section 4.3), multimodal semantic alignment module (Section 4.4), and multimodal feature aggregation module (Section 4.5) are described in detail. Finally, we present pseudo codes of the SARD training process and inference process for a clearer understanding of our model (Section 4.6).
+4.1. General model framework The overall architecture and processing of SARD are shown in Fig. 2. The focus of SARD is to improve fake news detection by effectively integrating textual features, visual features and N-HIN features. We first extract N-HIN features as well as different levels of textual and visual features via the multimodal feature extractor. For the token-level deep textual features and deep visual features extracted by the pretrained BERT (Devlin et al., 2019) and ResNet (He et al., 2016), we use the CLIP contrastive learning-guided cross-modal association generation module to learn the correlation between the textual and visual modalities. The module contains two submodules, contrastive learning and correlation generation. The contrastive learning submodule aims to realize the alignment between deep textual and visual features, and the correlation generation submodule captures the cross-modal correlation features between deep textual features and deep visual features through a text–visual modality fusion network. In the multimodal semantic alignment module, for semantically aligned textual and visual features encoded by CLIP (Radford et al., 2021), the textual–visual co-attention mechanism utilizes the complementary relationship between textual features and visual features to fuse and generate news content features. The semantic alignment module transforms the news content features and N-HIN features into a shared semantic space, semantically aligns the news content features and N-HIN features through joint learning of a specific multilayer perceptron (MLP) and semantic sharing layer, and optimizes this process using a cosine similarity loss function. The multimodal feature aggregation module involves adaptive weighting of different types of features using a weight generation mechanism, aggregation generation of the final representation of the news, and the design of the overall loss function of the model.
+Fig. 2 [Images not available. See PDF.]
+General architecture of SARD: (a) CLIP contrastive learning-guided cross-modal association generation module. (b) The multimodal semantic alignment module. (c) The multimodal feature aggregation module.
+
+4.2. Multimodal feature extractor 4.2.1. Multilevel textual feature and visual feature generation Generating multimodal features via CLIP. We use the CLIP encoder (Radford et al., 2021) to extract semantically aligned textual and visual features. Specifically, for the textual information \( {t}_i \) and visual information \( {v}_i \) in each multimodal post \( {p}_i \), the semantically aligned textual embedding \( {m}_i^t \) and visual embedding \( {m}_i^v \) are obtained using the CLIP text encoder and CLIP image encoder, respectively.
+The CLIP model is dedicated to pretraining using large-scale image–text pairs to understand the semantic relationship between image content and related text descriptions; thus, it may ignore features that are not related to direct semantic matching but are important for fake news detection, such as line style features, syntactic features of the text, and image noise features, and so on. In contrast, the pretrained models BERT (Devlin et al., 2019) and ResNet (He et al., 2016) can capture more comprehensive deep unimodal features.
+Generating deep textual features via BERT. For textual information \( {t}_i \), we alternatively adopt BERT (Devlin et al., 2019) to generate deep textual features \( {e}_i^t \) that contain more trivial clues.
+Generating deep visual features via ResNet. To capture more comprehensive features of image information \( {v}_i \), we use the pretrained model ResNet50 (He et al., 2016), which is pretrained on ImageNet, to generate deep visual features \( {e}_i^v \). Specifically, \( {e}_i^v \) is generated by using a fully connected layer to combine the output of the penultimate layer of ResNet50, which is transformed to have the same dimension as the deep text feature \( {e}_i^t \) obtained.
+4.2.2. News-oriented heterogeneous information network (N-HIN) feature generation For news-oriented heterogeneous information networks (N-HINs), we use BERT encoded text of posts and comments as well as user profiles as the initial embedding of post nodes, comment nodes, and user nodes in the N-HIN. We obtain the social context information of a post \( {P}_i \) by extracting features from different heterogeneous information sources via a hierarchical graph attention network (HGAT) (Ren and Zhang, 2021). For each post node \( {P}_i\in \mathcal{V} \) in N-HIN \( \mathcal{G}=\left(\mathcal{V},\mathcal{E}\right) \), its neighboring nodes also belong to \( \mathcal{V} \). Neighboring nodes include user nodes and comment nodes connected to node \( {P}_i \) as well as node \( {P}_i \) itself, and treating node \( {P}_i \) itself as a neighboring node can strengthen the feature representation of the target node \( {P}_i \) by using the collaborative self-attention mechanism. HGAT includes node-level attention and pattern level attention. Node-level attention aims to learn a set of weights of nodes \( {P}_i \) having neighbors of the same type, which can reflect the importance of each neighbor node of the same type to the target node \( {P}_i \). In other words, node-level attention learns which entities within the set of entities of the same type are important to the target node. For example, a set of user nodes associated with node \( {P}_i \) acts as neighbor nodes of the same type as node \( {P}_i \), and this set of weights can reflect which user nodes are important to node \( {P}_i \). Then, neighboring nodes of the same type are aggregated into schema nodes based on the weights, and schema-level attention is devoted to learning the attention weights among different schema nodes to react to the importance of different types of entities. Finally, the final representation \( {m}_i^g \) of the target node \( {P}_i \) is obtained by fusing the schema nodes. Details can be found in the literature (Ren and Zhang, 2021).
+4.3. CLIP contrastive learning-guided cross-modal association generation In this module, we propose an approach based on CLIP contrastive learning that aims to facilitate alignment and cross-modal correlation generation between deep textual features and deep visual features.
+4.3.1. Contrastive learning Inspired by the idea of CLIP contrastive learning (Radford et al., 2021; Wang et al., 2023), we design a contrastive learning submodule to achieve alignment between deep textual and visual embeddings. For a batch of \( N \) posts \( {P}_N \) used for training, where each post \( {P}_i\in {P}_N \) contains text-image pairs and label information, denoted as \( {\left\{\left({t}_i,{v}_i\right),{y}_i\right\}}_{i=1}^N \) ( \( i \) denotes the \( i \) th post, and \( {y}_i \) is the label of the post), the normalized features of the input to the contrastive learning submodule are denoted as \( {\left\{{e}_i^t,{e}_i^v\right\}}_{i=1}^N \). The cross-modal alignment of the contrastive learning submodule is achieved by predicting the text-to-vision similarity \( {S}_i^{t\to v}={\left\{{s}_{ij}^{t\to v}\right\}}_{j=1}^N \) and vision-to-text similarity \( {S}_i^{v\to t}={\left\{{s}_{ij}^{v\to t}\right\}}_{j=1}^N \) in the post \( {P}_i \); this process uses In-foNCE (Oord et al., 2018) as the contrastive loss. The similarity scores \( {s}_{ij}^{t\to v} \) and \( {s}_{ij}^{v\to t} \) are measured by calculating the dot product via Eq. (1): 1 \[ {s}_{ij}^{t\to v}=\frac{\exp \left(\left({e}_i^t\cdot {e}_j^v\right)/\tau \right)}{\sum \limits_{j=1}^N\exp \left(\left({e}_i^t\cdot {e}_j^v\right)/\tau \right)} \]\[ {s}_{ij}^{v\to t}=\frac{\exp \left(\left({e}_i^v\cdot {e}_j^t\right)/\tau \right)}{\sum \limits_{j=1}^N\exp \left(\left({e}_i^v\cdot {e}_j^t\right)/\tau \right)} \]
+In Eq. (1), \( \tau \) is the learnable temperature parameter. Next, the cross-entropy losses \( {\mathcal{L}}^{t\to v} \) and \( {\mathcal{L}}^{v\to t} \) are computed using Eq. (2). 2 \[ {\mathcal{L}}^{t\to v}=-\frac{1}{N}\sum \limits_{i=1}^N\sum \limits_{j=1}^N{y}_{ij}^{t\to v}\log {s}_{ij}^{t\to v} \]\[ {\mathcal{L}}^{v\to t}=-\frac{1}{N}\sum \limits_{i=1}^N\sum \limits_{j=1}^N{y}_{ij}^{v\to t}\log {s}_{ij}^{v\to t} \]
+\( {y}_{ij}^{t\to v} \) and \( {y}_{ij}^{v\to t} \) in Eq. (2) denote the vectors corresponding to the real labels expressed using one-hot coding. Specifically, \( {\left\{{y}_{ij}^{t\to v}\right\}}_{j=1}^N=1 \) and \( {\left\{{y}_{ij}^{v\to t}\right\}}_{j=1}^N=1 \) denote pairs of positive samples, and the number of positive sample pairs is \( N \) (diagonal elements of the similarity matrix of the contrastive learning submodule in Fig. 2(a)). \( {\left\{{y}_{ij}^{t\to v}\right\}}_{j=1}^N=0 \) and \( {\left\{{y}_{ij}^{t\to v}\right\}}_{j=1}^N=0 \) denote the negative sample pairs, and the number of negative sample pairs is \( {N}^2-N \). The loss term for the contrastive learning submodule is computed as in Eq. (3): 3 \[ {\mathcal{L}}_{ct}=\frac{{\mathcal{L}}^{t\to v}+{\mathcal{L}}^{v\to t}}{2} \]
+The contrastive learning submodule is trained to obtain the aligned deep text embedding \( {e}^{t\prime } \) and deep visual embedding \( {e}^{v\prime } \) as inputs to the correlation generation submodule.
+4.3.2. Correlation generation News detection can be effectively improved by capturing the semantic interactions and correlations between the two modalities (Chen et al., 2022). Therefore, we fuse the aligned deep textual features and deep visual features through the correlation generation submodule to obtain more comprehensive and accurate cross-modal correlation features. For the aligned deep unimodal embeddings \( {e}^{t\prime } \) and \( {e}^{v\prime } \), the intermodal weight maps \( {f}_{t\to v} \) and \( {f}_{v\to t} \) between the deep textual embedding to the deep visual embedding and the deep visual embedding to the deep text embedding, respectively, are first computed by Eq. (4): 4 \[ {f}_{t\to v}=\mathrm{softmax}\left(\left[{e}^{v\prime}\right]{\left[{e}^{t\prime}\right]}^T/\sqrt{\dim}\right) \]\[ {f}_{v\to t}=\mathrm{softmax}\left(\left[{e}^{t\prime}\right]{\left[{e}^{v\prime}\right]}^T/\sqrt{\dim}\right) \]\( \sqrt{\dim } \) denotes the square root of the dimension size of the deep unimodal embedding, which is intended to normalize the original feature map. We update the original deep textual and visual embeddings via the intermodal weight map, as expressed in Eq. (5): 5 \[ {e}^{vt\prime }={f}_{t\to v}\times {e}^{v\prime } \]\[ {e}^{tv\prime }={f}_{v\to t}\times {e}^{t\prime } \]
+To capture the complex modal interactions between deep textual and visual embeddings, we use the interaction matrix \( {e}^{f\prime } \) to represent the cross-modal correlations between deep textual embeddings and deep visual embeddings. In Eq. (6), the interaction matrix \( {e}^{f\prime } \) is generated by performing an outer product between \( {e}^{tv\prime } \) and \( {e}^{v{t}^{\prime }} \): 6 \[ {e}^{f\prime }={e}^{tv\prime}\otimes {e}^{vt\prime } \]\( \otimes \) in Eq. (6) denotes the outer product. The final generated cross-modal correlation feature \( {e}^f \) is obtained by inputting the fully connected layer transformation after the interaction matrix \( {e}^{f\prime } \) has been flattened into a vector, which is used as an input to the multimodal feature aggregation module.
+4.4. Multimodal semantic alignment In this module we designed textual–visual co-attention, which aims to utilize the complementary relationship between semantically aligned textual and visual embeddings for fusion to generate semantically informative news content embeddings. The semantic alignment task aims to achieve semantic alignment of news content embeddings with N-HIN embeddings.
+4.4.1. Textual–visual co-attention Since CLIP (Radford et al., 2021) can encode textual and visual features into the same mathematical space, it is very convenient for textual–visual co-attention to obtain semantically informative news content embeddings. As an example, for the textual feature \( {m}_i^t \) in post \( {P}_i \), a method similar to multihead self-attention (Vaswani et al., 2017) is used to compute its query matrix, key matrix, and value matrix, respectively: \( {Q}_i^t={m}_i^t{W}_t^Q,{K}_i^t={m}_i^t{W}_t^K \) and \( {V}_i^t={m}_i^t{W}_t^V,{W}_t^Q,{W}_t^K,{W}_t^V\in {\mathbb{R}}^{d\times \frac{d}{H}} \). where \( {W}_t^Q,{W}_t^K,{W}_t^V \) is the linear transformation matrix and \( d \) and \( H \) denote the dimension size and the number of heads, respectively. The query matrix, key matrix and value matrix of the visual deep features \( {m}_i^v \) can be obtained in the same way: \( {Q}_i^v,{K}_i^v \) and \( {V}_i^v \). Next, Eq. (7) is used to compute the textual feature \( {m}_i^{vt} \) enhanced with visual information as well as the visual feature \( {m}_i^{tv} \) enhanced with textual information: 7 \[ {m}_i^{vt}=\left(\underset{h=1}{\overset{H}{\parallel }} softmax\left(\frac{Q_i^v{K}_i^{t^T}}{\sqrt{d}}\right){V}_i^t\right){W}_{vt}^O \]\[ {m}_i^{tv}=\left(\underset{h=1}{\overset{H}{\parallel }} softmax\left(\frac{Q_i^t{K}_i^{v^T}}{\sqrt{d}}\right){V}_i^v\right){W}_{tv}^O \]\( {W}_{vt}^o,{W}_{tv}^o\in {\mathbb{R}}^{d\times d} \) in Eq. (7) is the output linear transformation matrix. Next, \( {m}_i^{vt} \) and \( {m}_i^{tv} \) are spliced to obtain the news content feature representation \( {m}_i^c \) in post \( {P}_i \), as shown in Eq. (8): 8 \[ {m}_i^c={m}_i^{vt}\oplus {m}_i^{tv} \]
+Here, \( \oplus \) represents the concatenation operation. The news content feature \( {m}^c \) obtained through textual–visual co-attention is used as the input to the semantic alignment task.
+4.4.2. Semantic alignment In the field of fake news detection, the semantic differences between different source features often pose a challenge to detection accuracy (Peng et al., 2024; Chen et al., 2022). The semantic differences between news content features and N-HIN features blur the boundaries between real and fake information. This not only increases the difficulty of identifying fake news but also adds additional complexity to automated fake news detection, which most existing works have not considered. Therefore, we propose the task of semantic alignment, which aims to achieve semantic alignment between news content features and N-HIN features through joint learning with specific multilayer perceptron (MLP) and a semantic sharing layer. Specifically, we first define the semantic relevance between news content embeddings and N-HIN embeddings. If the news content embedding and N-HIN embedding come from the same true news, these two embeddings are defined as positively related samples with labels \( {y}^{\prime }=1 \). Otherwise, they are negatively related samples with labels \( {y}^{\prime }=0 \). To better assist in related learning tasks, we generate a new auxiliary dataset \( {D}^{\prime } \) by randomly sampling positively and negatively related samples.
+In the semantic alignment task, the input news content embedding \( {m}^c \) and N-HIN embedding \( {m}^g \) are first transformed to a shared semantic space through the corresponding specific MLP to learn and refine shared semantic representations. The subsequent semantic sharing layer is responsible for learning and refining the shared semantic representation. The shared semantic representation is then fed into an average pooling layer to integrate information and passed through a fully connected layer for binary classification. The semantic alignment module is trained using positive and negative samples, and the cosine similarity loss function in Eq. (9) is used as the optimization objective. 9 \[ {\mathcal{L}}_{sa}=\left\{\begin{array}{cc}1-\cos \left({m}^c,{m}^g\right)\kern1em \hfill & \mathrm{if}{y}^{\prime }=1.\hfill \\ {}\max \left(0,\cos \left({m}^c,{m}^g\right)-d\right)\kern1em \hfill & \mathrm{if}{y}^{\prime }=0.\hfill \end{array}\right. \]\( \cos \left(\cdot \right) \) denotes the normalized cosine similarity. The cosine similarity loss function aims to maximize the cosine similarity of the embedding vectors between positive samples and minimize the cosine similarity between negative samples until a preset bound \( d \) is reached (set to 0.2 based on empirical studies). We use the backpropagation algorithm to optimize the parameters during the joint training of the semantic alignment module and produce semantically aligned news content features \( \overset{\sim }{\mathrm{m}}^c \) and N-HIN features \( {\overset{\sim }{m}}^g \).
+4.5. Multimodal feature aggregation The multimodal feature aggregation module works to efficiently aggregate semantically aligned news content features \( {\overset{\sim }{\mathrm{m}}}^c \), N-HIN features \( {\overset{\sim }{\mathrm{m}}}^g \), and cross-modal correlation features \( {e}^f \) (Section 4.3.2) to generate the final representation of the news.
+4.5.1. Weight generation mechanism Considering the different roles played by different modal features in the decision-making process (Singhal et al., 2022), the importance of each feature in the multimodal feature aggregation process needs to be adjusted according to its contribution. Inspired by the success of the Squeeze-and-Excitation Network (SE-Net) (Hu et al., 2018), we propose using a weight generation mechanism to adaptively weight each feature. Specifically, the three \( L\times 1 \) features \( {\overset{\sim }{\mathrm{m}}}^c,{\overset{\sim }{\mathrm{m}}}^g \) and \( {e}^f \) are first concatenated into an \( L\times 3 \) feature, where \( L \) denotes the length of the feature. This \( L\times 3 \) feature is then compressed by adaptive pooling into a 1 × 3 vector \( s \). Each type of feature corresponds to a channel, and the vector \( s \) contains the initial weights of each channel. Eq. (10) describes a simple gating mechanism to capture the dependencies between different channels: 10 \[ \mathbf{a}={f}_S\left(\kern1em {\mathrm{W}}_2{f}_{LR}\left(\kern1em {\mathrm{W}}_1\kern1em \mathrm{s}\right)\right) \]where \( {f}_{LR}\left(\cdot \right) \) denotes the LeakyReLU function. \( {\mathrm{W}}_1\in {\mathbb{R}}^{\frac{C}{r}\times C} \) and \( {\mathrm{W}}_2\in {\mathbb{R}}^{\frac{C}{r}\times C} \) denote the weight matrices of the two fully-connected layers, where \( C \) denotes the size of the dimensionality (set \( C=3 \)), and \( r \) is the scaling parameter (set \( r=1 \)). \( {f}_S\left(\cdot \right) \) denotes the sigmoid function, which normalizes the output range to \( \left[0-1\right] \). \( \mathbf{a}=\left\{{a}_c,{a}_g,{a}_f\right\} \) denotes the attentional weights corresponding to the given three features \( {\overset{\sim }{m}}^c,{\overset{\sim }{m}}^g \), and \( {e}^f \), then the final representation of the post, \( \tilde{\mathbf{p}} \), is obtained via Eq. (11): 11 \[ \tilde{\mathbf{p}}=\left({a}_c\times {\overset{\sim }{\mathrm{m}}}^c\right)\oplus \left({a}_g\times {\overset{\sim }{\mathrm{m}}}^g\right)\oplus \left({a}_f\times {e}^f\right) \]\( \oplus \) represents the concatenation operation.
+4.5.2. Classifier We input the final representation \( \tilde{\mathbf{p}} \) of a given post into the fully connected network to predict the label \( \overset{\hat{\mkern6mu} }{y} \) that represents whether the post is true or fake news, as shown in Eq. (12): 12 \[ \overset{\hat{\mkern6mu} }{y}=\mathrm{softmax}\left( MLP\left(\overset{\sim }{\mathbf{x}}\right)\right) \]
+The function in Eq. (13) then uses cross-entropy to calculate the predicted loss: 13 \[ {\mathcal{L}}_{CLS}=-\left(y\log \left(\overset{\hat{\mkern6mu} }{y}\right)+\left(1-y\right)\log \left(1-\overset{\hat{\mkern6mu} }{y}\right)\right) \]\( y \) denotes the ground truth label of the given post. Overall, the general objectives of SARD can be defined as follows: 14 \[ {\mathcal{L}}_{\mathrm{all}}={\mathcal{L}}_{CLS}+\alpha {\mathcal{L}}_{ct}+\beta {\mathcal{L}}_{sa} \]
+Here we adopt a strategy to simplify the model training process by fixing the weight of one key loss function \( {\mathcal{L}}_{CLS} \) and optimizing the weights of the other losses \( {\mathcal{L}}_{ct} \) and \( {\mathcal{L}}_{sa} \) to reduce the number of hyperparameters and maintain the balance of the overall loss function. Specifically, we set the weight of the classifier loss \( {\mathcal{L}}_{CLS} \) directly related to this task to 1 to ensure that model training is focused on the most important task goals. The relative proportions of the impact of different loss terms on model performance can be directly controlled by optimizing the weights of the other losses \( {\mathcal{L}}_{ct} \) and \( {\mathcal{L}}_{sa} \). This strategy effectively simplifies the SARD parameter tuning process while reducing the computational resources and time required for model optimization, and improves the hyperparameter search efficiency.
+4.6. Algorithm of SARD In this section, we demonstrate the training process of the SARD model more intuitively in the form of pseudocode.
+The training process of SARD is shown in Algorithm 1. In general, the model in this paper extracts different types of unimodal embeddings in Steps 1–5, Steps 7–15 describe the CLIP contrastive learning-guided cross-modal association generation module, Steps 16–23 are the multimodal semantic alignment module, and finally, we obtain the final representation of the news, compute the overall loss function and optimize the model parameters through Steps 24–27. Specifically, we extract deep textual embeddings and deep visual embeddings through steps 1–2, respectively, semantically aligned textual and visual embeddings through steps 3–4, respectively; and N-HIN embeddings through step 5. In each training batch, Steps 7–12 describe the contrastive learning submodule for realizing the alignment between deep textual embeddings and deep visual embeddings, and we obtain the aligned deep textual and visual embeddings in Step 13 and the cross-modal correlation features through the correlation generation submodule in Step 15. We obtain news content embeddings using semantically aligned textual, visual embeddings through the textual–visual co-attention mechanism in Step 16. Steps 17–23 describe the training process of the semantic alignment task and obtain semantically aligned news content embeddings and N-HIN embeddings. Step 24 aggregates the cross-modal correlation embeddings as well as the semantically aligned news content embeddings and N-HIN embeddings to generate the final representation of the news, Step 25 uses the final representation of the news to perform classification, and Steps 26–27 compute the overall loss function of the model and optimize the parameters. After multiple training epochs, the trained SARD model is obtained. [Images not available. See PDF.]
+
+5. Experiments 5.1. Datasets In this paper, we evaluate the proposed fake news detection model SARD using three real-world public datasets, namely PHEME (Zubiaga et al., 2017), Gossipcop (Shu et al., 2020) and MR \( {}^2 \) (Hu et al., 2023). PHEME consists of tweets collected on Twitter about five different events containing text, images and comment information. The GossipCop dataset is from the FakeNewsNet (Shu et al., 2020) repository, which collects a large number of articles about celebrity gossip and entertainment news on Twitter. This dataset is widely used in the field of fake news detection, and it includes features such as text, images, user profiles, comments, and retweet relationships, etc. MR \( {}^2 \) can be divided into the MR \( {}^2 \)-E English dataset and MR \( {}^2 \)-C Chinese dataset, which are constructed by collecting posts from two social platforms, Twitter and Weibo, respectively. MR \( {}^2 \) includes text, images, comments, retweet relations, likes, posting dates, and information such as users’ names, geographic locations, and personal tags. In addition, MR \( {}^2 \) is a high-quality multimodal dataset for training and evaluating fake news detection models, as posts with similar content are removed during the construction phase, and duplicate images and low-resolution images are removed. For the PHEME dataset, we crawl user profiles based on user IDs using the official TwitterAPI.2 In this paper, posts containing only text or only images in the dataset are removed in the same way as in the baseline model (Zhou et al., 2023b; Zheng et al., 2022). The detailed statistics of the datasets used in the experiments are shown in Table 4.
+Table 4 Data set statistics.
+Fake news
+Real news
+Images
+Users
+Comments
+
+PHEME
+590
+1428
+2018
+894
+7388
+
+Gossipcop
+2054
+3472
+5526
+148 665
+218 624
+
+MR \( {}^2 \)-E
+1418
+2318
+3736
+36 051
+304 484
+
+MR \( {}^2 \)-C
+1754
+2609
+4363
+28 579
+174 520
+
+
+5.2. Experimental details In the experiments of this paper, the batch size is 64, the learning rate is 0.001, the model is trained using the Adam optimizer (Kingma and Ba, 2014) and lasts for 50 epochs, and an early stopping strategy is used to avoid overfitting during training. For the data input, the input text length is set to 200 words, and the input image size is set to 224 × 224. For news posts that contain multiple images at the same time, we randomly select an image. For the selection of the pretrained BERT model (Devlin et al., 2019), the BERT-Base-Cased model is used in the experiment to encode the English data collected based on the Twitter platform, and the BERT-Base-Chinese model (Wolf et al., 2020) is used to encode the Chinese data collected based on the microblogging platform. The output dimension of the penultimate layer of the pretrained ResNet50 (He et al., 2016) features is 2048. The pretrained CLIP model in SARD is “ViT-B/32” (Radford et al., 2021), and there is no pretrained Chinese text model for the CLIP model, so it is used to encode the Chinese data using the Google Translation API (Johnson, 2012) to translate the Chinese text into English. Since the upper limit of CLIP text input is set to 77 tokens, the experiment uses the summary generation model (Raffel et al., 2020) to generate summary statements as CLIP inputs for texts with lengths greater than 50. The number of attention heads in the HGAT (Ren and Zhang, 2021) is set to 8, and the dimensionality of the node-level representations and the schema-level representations are set to 12 and (8*K), respectively. To ensure a fair comparison, the model parameters of BERT, ResNet and CLIP were frozen throughout the experiments. The number of attention heads in textual–visual co-attention was set to 8. In the semantic alignment module, the specific multilayer perceptron (MLP) consists of three fully-connected layers, and each fully-connected layer contains 64 hidden units. In Eq. (1), the learnable temperature parameter is initialized to 0.07.
+To facilitate the comparison with other studies in this field, the accuracy, precision, recall, and F1-score are chosen as model evaluation metrics in the experiments. The calculation formula is shown in Eq. (15). 15 \[ \mathrm{Accuracy}\ \left(\mathrm{Acc}\right)=\frac{TP+ TN}{TP+ TN+ FN+ FP} \]\[ \mathrm{Precision}\ \left(\ \mathrm{Pre}\ \right)=\frac{TP}{TP+ FP} \]\[ \mathrm{Recall}\ \left(\mathrm{Rec}\ \right)=\frac{TP}{TP+ FN} \]\[ \mathrm{F}1-\mathrm{Score}=\frac{2\mathrm{Pre}\cdot \kern1em \mathrm{Rec}}{\mathrm{Pre}+\mathrm{Rec}} \]
+TP (true positive) denotes the number of fake news items actually correctly identified by the model, and TN (true negative) denotes the number of true news items correctly identified by the model. FN (false negative) denotes the number of fake news items misidentified as true by the model, and FP (false positive) denotes the number of true news items misidentified as fake news items.
+In the experiments, the dataset is partitioned into training, validation and test sets at a ratio of \( 8:1:1 \), and the optimal hyperparameters \( \alpha =0.3 \) and \( \beta =0.5 \) are determined on the validation set using accuracy as the criterion. We implement SARD, the fake news detection framework proposed in this paper, in the experimental setting shown in Table 5.
+Table 5. Experimental environment configuration.
+Environmental project
+Type/Parameters
+
+PyTorch
+1.11.0
+
+Python
+3.8
+
+Operating System
+ubuntu20.04
+
+Cuda
+11.3
+
+GPU
+RTX 4090
+
+CPU
+12 vCPU Intel(R)Xeon(R) Platinum 8255C CPU @2.50 GHz
+
+Random Access Memory
+40 GB
+
+
+5.3. Baseline Considering the different types of source data used by existing methods, the baselines are categorized into the following four types. In addition to the text-only or image-only based approaches, the experiments compare the model SRAD proposed in this paper with twelve existing powerful baselines.
+Based on plain text or plain image: In this paper, we use the pretrained models BERT (Devlin et al., 2019) and ResNet (He et al., 2016) to validate the effectiveness of textual and visual features in news content for fake news detection, because these two pretrained models can extract comprehensive unimodal features and are widely used in current fake news detection methods. In our experiments, the textual features encoded by BERT and visual features encoded by ResNet are directly fed into the classifier for the determination of true and false news.
+Based on text and social context: dEFEND (Shu et al., 2019) jointly models textual content and comments by developing a sentence-comment co-attention subnetwork for fake news detection. FinerFact (Jin et al., 2022) proposed a fine-grained inference framework and designed an a priori aware two-channel kernel graph network to capture subtle evidence-to-evidence differences. TR-HGAN (Gao et al., 2022) utilizes a topological imbalance smoothing strategy to measure the topological weights of nodes and utilizes an attention mechanism for graph convolutional learning to detect fake news.DANES (Truică et al., 2023) is an integrated architecture of deep neural networks that combines social and textual contextual information for fake news detection.
+Based on text and image: CAFE (Chen et al., 2022) models the ambiguity between different modalities by calculating the KL scatter and uses it to measure the importance of cross-modal features in fake news detection.HMCAN (Qian et al., 2021) performs multimodal fusion through a multimodal contextual attention network and designs a hierarchical coding network to capture rich semantic information to aid in fake news detection. FND-CLIP (Zhou et al., 2023b) introduces an attention layer that adaptively outputs channel scores to measure the importance of each modality, and is used to dynamically adjust the use of unimodal features and fusion features.MMFN (Zhou et al., 2023a) achieves more accurate fake news detection by integrating unimodal features and multi-granularity multimodal fusion features.
+Based on text, image, and social context: For the first time, att-RNN (Jin et al., 2017) uses RNNs with attention mechanisms to fuse image features, text features, and social context features for news detection. DGExplain Shang et al. (2022) performs fake news detection by cross-modal correlation of features between text and vision as well as comment information. DCNN (Chen and Sui, 2022) uses deep learning with the FM algorithm combined with DeepFM to learn news social features, textCNN, and VGG19 to learn textual and image features of news, and concatenates the three parts to obtain multimodal features. MFAN (Zheng et al., 2022) was the first attempt to consider textual, visual, and social graph features at the same time in a framework and to detect fake news by cross-modal attention networks fusing different source features for fake news detection.
+The data types and main models used in the baseline approach are shown in Table 6.
+Table 6. Baseline methodology.
+Baseline
+Data type
+Models
+
+BERT (Devlin et al., 2019)
+Text
+BERT
+
+Resnet (He et al., 2016)
+Image
+Resnet
+
+dEFEND (Shu et al., 2019)
+Txet+social
+BiGRU, Co-attention
+
+FinerFact (Jin et al., 2022)
+Txet+social
+BERT, MLP, APPNP, Bi-Channel KGAT
+
+TR-HGAN (Gao et al., 2022)
+Txet+social
+CNN, self-attention,HGAN
+
+DANES (Truică et al., 2023)
+Txet+social
+RNN, CNN, BiGRU, LSTM
+
+CAFE (Chen et al., 2022)
+Text+image
+BERT, Resnet34, VAE
+
+HMCAN (Qian et al., 2021)
+Text+image
+BERT, Resnet50, contextual transformer
+
+FND-CLIP (Zhou et al., 2023b)
+Text+image
+CLIP, BERT, ResNet, modality-wise attention
+
+MMFN (Zhou et al., 2023a)
+Text+image
+CLIP, BERT, Swin-T, Co-attention Transformer
+
+att-RNN (Jin et al., 2017)
+Text+image+social
+RNN, LSTM, VGG-19, Attention mechanism
+
+DGExplain Shang et al. (2022)
+Text+image+social
+LSTM, BiGRU
+
+DCNN (Chen and Sui, 2022)
+Text+image+social
+DeepFM, VGG19, textCNN
+
+MFAN (Zheng et al., 2022)
+Text+image+social
+BERT, Resnet50, Signed GAT, Co-attention
+
+Table 7. Performance comparison of SARD with other state-of-the-art methods on PHEME and Gossipcop.
+Model
+PHEME
+Gossipcop
+
+Acc
+Fake news
+Real news
+Acc
+Fake news
+Real news
+
+Pre
+Rec
+F1
+Pre
+Rec
+F1
+Pre
+Rec
+F1
+Pre
+Rec
+F1
+
+BERT(2019)
+71.41
+71.52
+70.38
+70.95
+71.98
+69.34
+70.64
+69.12
+68.31
+51.98
+59.04
+67.54
+68.06
+67.80
+
+ResNet(2016)
+64.89
+63.78
+63.16
+63.47
+62.57
+58.51
+60.47
+61.27
+60.48
+47.24
+53.05
+59.86
+57.19
+58.49
+
+dEFEND(2019)
+82.14
+77.53
+79.27
+78.39
+78.71
+77.93
+78.32
+80.79
+72.87
+75.61
+74.21
+77.86
+76.84
+77.35
+
+FinerFact(2022)
+85.54
+84.17
+83.74
+83.95
+80.49
+81.57
+81.03
+85.24
+86.17
+87.82
+86.99
+84.89
+83.88
+84.38
+
+TR-HGAN(2022)
+89.14
+88.56
+86.47
+87.50
+89.24
+87.49
+88.36
+88.77
+84.56
+86.91
+85.72
+88.52
+87.23
+87.87
+
+DANES(2023)
+80.17
+79.51
+78.34
+78.92
+76.54
+78.23
+77.38
+79.95
+77.18
+76.54
+76.86
+74.16
+73.87
+74.01
+
+CAFE(2022)
+84.58
+82.17
+83.19
+82.68
+84.78
+85.07
+84.92
+86.74
+72.21
+49.07
+58.43
+88.74
+94.31
+91.44
+
+HMCAN(2021)
+88.19
+83.67
+84.09
+83.88
+84.57
+86.89
+85.71
+86.23
+84.89
+85.76
+85.32
+86.98
+85.67
+86.32
+
+FND-CLIP(2023)
+88.98
+87.34
+89.71
+88.51
+88.12
+87.46
+87.79
+88.17
+76.14
+56.84
+65.09
+94.71
+89.54
+92.05
+
+MMFN(2023)
+89.04
+86.89
+88.79
+87.83
+88.67
+87.98
+88.32
+88.27
+79.23
+60.14
+68.38
+90.57
+92.71
+91.63
+
+att-RNN(2017)
+81.26
+83.43
+81.46
+82.43
+80.09
+82.13
+81.10
+79.83
+78.49
+76.41
+77.44
+75.73
+74.53
+75.13
+
+DGExplain(2022)
+89.72
+87.56
+82.48
+84.94
+87.14
+86.45
+86.79
+88.31
+87.68
+86.75
+87.21
+84.98
+86.41
+85.69
+
+DCNN(2022)
+83.21
+81.72
+83.09
+82.40
+82.87
+83.74
+83.30
+84.56
+86.17
+87.61
+86.88
+83.47
+80.56
+81.99
+
+MFAN(2022)
+88.93
+87.46
+86.64
+87.05
+87.93
+87.76
+87.84
+87.52
+86.91
+87.01
+86.96
+89.21
+87.34
+88.27
+
+SARD
+91.27
+90.34
+91.42
+90.88
+90.47
+89.96
+90.21
+91.98
+91.96
+90.57
+91.26
+92.01
+92.24
+92.12
+
+
+5.4. Results and analysis Tables 7–8 detail the performance of SARD and all the baseline methods on the PHEME, Gossipcop, and MR \( {}^2 \) datasets. Experiments on the three datasets show that SARD outperforms all state-of-the-art methods in terms of accuracy (Acc) and F1 values. First, for the unimodal approach, from the experimental results, it can be found that the text-only based approach (BERT) outperforms the image-only approach (ResNet) on all three datasets, which suggests that the textual information of the news is the core data for the fake news detection task. Both the text-and social context-based methods and the text- and image-based methods perform better than the unimodal method, proving that the social context and visual information of the news can provide an important complement to the fake news detection task.
+The better performance of TR-HGAN in the text- and social context-based approach proves that modeling the social context of news as a graph structure can better improve the performance of the fake news detector, which is also indicated by the better performance of MFAN over DCNN and att-RNN. In text-and-image-based methods, FND-CLIP and MMFN have achieved good results across three datasets, demonstrating that novel multimodal learning techniques (such as CLIP) play an important role in improving the performance of fake news detectors. Compared to FND-CLIP and MMFN, SARD not only considers social context features but also introduces a contrastive learning module to achieve cross-modal alignment between text and images, which aids the generation module in learning more meaningful cross-modal associations. Among the methods based on text, image and social context, DGExplain achieves good results, indicating that introducing social context information based on considering news text and images can effectively improve fake news detection. MFAN integrates text, image, and social graph features but focuses on using cross-modal attention mechanisms to fuse features from different modalities, thus overlooking the varying contributions of different modal features to the performance of fake news detectors. In contrast, SARD designs a weight generation mechanism to adaptively weight different types of modal features. Table 8 Performance comparison of SARD with other state-of-the-art methods on MR \( {}^2 \)-E and MR \( {}^2 \)-C.
+Model
+MR \( {}^2 \)-E
+MR \( {}^2 \)-C
+
+Acc
+Fake news
+Real news
+Acc
+Fake news
+Real news
+
+Pre
+Rec
+F1
+Pre
+Rec
+F1
+Pre
+Rec
+F1
+Pre
+Rec
+F1
+
+BERT(2019)
+71.54
+71.82
+67.53
+69.61
+70.06
+70.14
+70.10
+70.57
+70.41
+72.14
+71.26
+68.54
+64.07
+66.23
+
+ResNet(2016)
+58.21
+60.32
+56.47
+58.33
+56.47
+57.61
+57.03
+60.68
+59.14
+62.84
+60.93
+54.64
+55.37
+55.00
+
+dEFEND(2019)
+81.56
+74.67
+82.16
+78.24
+81.64
+78.59
+80.09
+83.68
+81.09
+79.87
+80.48
+82.07
+81.54
+81.80
+
+FinerFact(2022)
+84.57
+86.24
+78.26
+82.06
+79.81
+82.17
+80.97
+85.19
+86.31
+85.47
+85.89
+83.21
+81.49
+82.34
+
+TR-HGAN(2022)
+86.75
+84.63
+84.14
+84.38
+80.92
+85.71
+83.25
+87.13
+85.46
+83.14
+84.28
+81.41
+86.48
+83.87
+
+DANES(2023)
+80.17
+82.61
+75.19
+78.73
+79.85
+81.02
+80.43
+79.94
+81.21
+78.37
+79.76
+76.41
+78.63
+77.50
+
+CAFE(2022)
+84.51
+86.21
+79.23
+82.57
+74.51
+70.44
+72.42
+86.53
+78.12
+84.14
+81.02
+85.24
+80.17
+82.63
+
+HMCAN(2021)
+87.96
+84.78
+84.52
+84.65
+86.28
+87.13
+86.70
+87.34
+84.12
+83.19
+83.65
+83.78
+76.43
+79.94
+
+FND-CLIP(2023)
+86.51
+72.49
+76.34
+74.37
+87.41
+84.03
+85.69
+87.29
+84.34
+76.83
+80.41
+87.12
+74.17
+80.13
+
+MMFN(2023)
+87.33
+73.44
+75.91
+74.65
+85.47
+88.32
+86.87
+87.88
+85.61
+79.85
+82.63
+86.54
+83.94
+85.22
+
+att-RNN(2017)
+80.31
+78.43
+81.22
+79.80
+76.52
+78.67
+77.58
+81.23
+75.49
+80.23
+77.79
+76.84
+78.97
+77.89
+
+DGExplain(2022)
+88.04
+86.47
+87.19
+86.83
+84.27
+86.39
+85.32
+87.16
+82.54
+87.67
+85.03
+75.14
+79.85
+77.42
+
+DCNN(2022)
+83.37
+84.61
+83.26
+83.93
+81.47
+78.94
+80.19
+84.62
+78.47
+70.64
+74.35
+84.67
+83.17
+83.91
+
+MFAN(2022)
+88.18
+86.79
+87.04
+86.91
+85.41
+86.58
+85.99
+88.16
+82.43
+87.19
+84.74
+85.41
+86.02
+85.71
+
+SARD
+89.86
+88.27
+87.98
+88.12
+87.21
+88.14
+87.67
+89.75
+88.26
+89.58
+88.92
+88.57
+86.41
+87.48
+
+
+SARD outperforms all state-of-the-art methods due to its consideration of not only the alignment and complementary relationships between diverse levels of textual and visual features but also the semantic alignment between news content features and N-HIN features. In addition, the semantic alignment task in SARD can learn the shared semantics of news content features and N-HIN features to derive the invariant features of fake news, which allows the model to show better performance when facing fake news from newly arrived events. As shown in Tables 7–8, the accuracy of SARD on PHEME, Gossipcop, MR \( {}^2 \)-E, and MR \( {}^2 \)-C are improved by 1.55%, 3.21%, 1.68%, and 1.59%. In addition, we introduced Mac.F1 in the experimental results to measure the overall performance of the model across all categories (true news/false news). As shown in Figs. 3–4, SARD outperforms all existing state-of-the-art fake news detection methods in terms of overall performance.
+The experimental results show that SARD can effectively integrate textual, visual, and N-HIN features through the joint work of the three modules as a way to learn a better final representation of the news. In this process, SARD utilizes advanced multimodal learning techniques and contrastive learning ideas to achieve alignment and fusion between different source features, which can capture more comprehensive information and thus detect fake news more effectively. Figs. 5–6 show the ROC-AUC curves of SARD on the four datasets. Fig. 3 [Images not available. See PDF.]
+Analysis of Mac.F1 results on PHEME and Gossipcop.
+Fig. 4 [Images not available. See PDF.]
+Analysis of the Mac.F1 results for MR \( {}^2 \)-E and MR \( {}^2 \)-C.
+
+Fig. 5 [Images not available. See PDF.]
+ROC-AUC curves on PHEME and Gossipcop.
+Fig. 6 [Images not available. See PDF.]
+ROC-AUC curves on MR \( {}^2 \)-E and MR \( {}^2 \)-C.
+
+5.5. Ablation study This ablation study aims to conduct a series of ablation experiments on the SARD model in this paper to investigate the contribution of each component to the model performance. For the proposed model SARD, five different ablation versions are designed in this study: (1) w/o CT: removes the contrastive learning submodule and feeds \( {e}^v \) and \( {e}^t \) directly into the association generation submodule. (2) w/o AG: indicates that the association generation submodule is removed and a simple connection is used instead. (3) w/o CA: Indicates that the textual–visual co-attention mechanism is removed, and a simple connection of \( {m}^v \) and \( {m}^t \) is used. (4) w/o SA: Indicates that the semantic alignment task is removed. (5) w/o WG: indicates that the weight generation mechanism is deleted, and \( {e}^f,{\overset{\sim }{\mathrm{m}}}^c \) and \( {\overset{\sim }{m}}^g \) are directly connected as the final representation of the news.
+Quantitative Analysis. The results of the ablation study on PHEME, Gossipcop, MR \( {}^2 \)-E and MR \( {}^2 \)-C are presented in Table 9, and the experiments show that the removal of any of the components leads to a decrease in the overall performance of the SARD method proposed in this paper.
+In addition, the results show poor performance of w/o CA, illustrating that fully utilizing the complementary relationship between news text and images for the fusion generation of news content features is necessary for improving fake news detection. The performance degradation of w/o SA demonstrates the effectiveness of semantic alignment between news content features and N-HIN features for fake news detection as explored in this paper. From the performance of w/o SA on the full dataset, the performance degradation of w/o SA on PHEME and Gossipcop is more obvious compared to the performance on MR \( {}^2 \)-E and MR \( {}^2 \)-C, which verifies that the semantic alignment task can derive event-invariant features to enhance the model’s ability to recognize the same class of fake news.
+Qualitative Analysis. While verifying the validity of the model components, ablation studies can also reveal the internal mechanisms and workings of the model to validate the rationality of the model design. To this end, we visualize the final representations of news learned by SARD and its ablated versions on the MR \( {}^2 \)-E test set by T-SNE (Van der Maaten and Hinton, 2008) to further analyze the impact of each component on the model’s learning of news features. Table 9 Experimental results of SARD and its ablation versions on three datasets.
+Method
+Acc
+F1 score
+Method
+Acc
+F1 score
+
+Fake
+Real
+Fake
+Real
+
+PHEME
+w/o CT
+89.97
+89.24
+89.09
+MR \( {}^2 \)-E
+w/o CT
+88.89
+87.41
+87.02
+
+w/o AG
+89.36
+89.75
+88.78
+w/o AG
+88.31
+87.41
+86.37
+
+w/o CA
+88.21
+88.35
+86.62
+w/o CA
+87.68
+87.04
+86.41
+
+w/o SA
+89.03
+89.17
+88.46
+w/o SA
+88.54
+87.06
+86.59
+
+w/o WG
+88.79
+87.63
+89.34
+w/o WG
+88.72
+87.84
+86.31
+
+SARD
+91.27
+90.88
+90.21
+SARD
+89.86
+88.12
+87.67
+
+Gossipcop
+w/o CT
+90.84
+90.89
+91.24
+MR \( {}^2 \)-C
+w/o CT
+88.76
+88.03
+86.64
+
+w/o AG
+90.76
+90.57
+90.52
+w/o AG
+88.32
+87.56
+86.53
+
+w/o CA
+90.18
+89.86
+90.06
+w/o CA
+87.23
+87.78
+85.49
+
+w/o SA
+90.84
+90.67
+91.54
+w/o SA
+88.76
+87.69
+86.14
+
+w/o WG
+90.03
+89.54
+89.52
+w/o WG
+87.64
+88.27
+86.38
+
+SARD
+91.98
+91.26
+92.12
+SARD
+89.75
+88.92
+87.48
+
+Fig. 7 [Images not available. See PDF.]
+T-SNE visualization of the final representation of news learned by SARD and its variants on the MR \( {}^2 \)-E test set.
+
+In Fig. 7, we can see that SARD has the clearest classification boundaries compared to the other five variants, which suggests that the final representation of news learned by SARD has a better representation capability and thus is easier to discriminate. As shown in Fig. 7(a)–(e), the final representations of the news learned by the five variants are heavily misclassified in addition to having unclear classification boundaries. Therefore, each variant plays an important role in improving the performance of the fake news detector, and SARD can effectively improve fake news detection by combining the five components.
+Fig. 8 [Images not available. See PDF.]
+Effect of the key hyperparameters \( \alpha \) and \( \beta \) on the model performance metric accuracy on the MR \( {}^2 \)-E dataset.
+
+5.6. Impact of hyperparameters In this section we explore the impact of two important hyperparameters, \( \alpha \) and \( \beta \), in the SARD overall loss function on the performance of fake news detection. The overall loss function (Eq. (14)) consists of three components: the contrastive learning loss \( {\mathcal{L}}_{ct} \), the semantic alignment loss \( {\mathcal{L}}_{sa} \), and the classifier loss \( {\mathcal{L}}_{CLS} \). Since our ultimate goal in the fake news detection task is to achieve better classification of true and false news, the classifier loss weight is set to 1. The experiments in this section model the model performance metric accuracy corresponding to different values of the hyperparameters \( \alpha \) and \( \beta \) in three dimensions on the MR \( {}^2 \)-E dataset to find the optimal hyperparameters. As shown in Fig. 10, we increase \( \alpha \) and \( \beta \) from 0.0 to 1.0 at intervals of 0.1, with each pair of \( \alpha \) and \( \beta \) corresponding to the model accuracy of the peaks on the graph. When \( \alpha =0.3 \), and \( \beta =0.5 \), it corresponds to the highest point of the peak, i.e., the highest accuracy, as shown in Fig. 8. On other datasets, such a setting also shows better performance, and thus we set the two important hyperparameters \( \alpha \) and \( \beta \) of the proposed fake news detection model, SARD, to 0.3 and 0.5, respectively, for our experiments.
+6. Discussion 6.1. Implications Based on the experimental results, SARD outperforms the current state-of-the-art fake news detection methods across three datasets. This advantage is attributed to the synergistic operation of SARD’s three key modules: the cross-modal association generation module guided by CLIP contrastive learning, the multimodal semantic alignment module, and the multimodal feature aggregation module.
+In the CLIP Contrastive Learning-guided Cross-modal Association Generation module, our proposed contrastive learning component enables the alignment of deep textual and deep visual features within the same feature space. This process captures the bidirectional relationship between these features by predicting similarity scores for text-to-vision and vision-to-text, and utilizes InfoNCE as the contrastive loss function to enhance alignment comprehensiveness. This precise cross-modal alignment not only aids in generating cross-modal associations but also helps detect fake news where the text does not match the images. The association generation component dynamically adjusts the relationships between features by computing modality-specific weight graphs, thus better capturing complex inter-modal interactions. SARD leverages CLIP to encode textual and visual information in the same embedding space, allowing our proposed Textual–Visual Co-Attention mechanism to efficiently capture and integrate semantic information from different modalities, thereby producing richly informative features for news content.
+For social context information, real-world news often involves a large amount of comments and shares, and directly extracting all features from social context information may lead to redundancy and increased computational cost. To effectively extract key information, we construct an N-HIN using posts, comments, and user information. Through HGAT, we can weight different types of nodes in the N-HIN and use attention mechanisms to automatically assign importance to various nodes, thereby obtaining more representative N-HIN features.
+We observed that almost all existing methods overlook the impact of semantic relationships between news content features and N-HIN features on fake news detection. To address this, we designed a semantic alignment component that aligns the semantic representations of these two feature sources through joint learning using a specific multi-layer perceptron (MLP) and a semantic sharing layer, with cosine similarity loss as the optimization objective. This enables our fake news detection framework to more accurately understand and match the relationship between news content and social context. To effectively utilize various feature types, we designed a weight generation mechanism for adaptive weighting of each feature. This mechanism employs a simple gating approach to capture dependencies between different channels, processes feature information through fully connected layers and LeakyReLU functions, and derives attention weights using a Sigmoid function. This approach allows SARD to adjust the importance of different feature types based on their actual contribution during the multimodal feature aggregation process.
+Considering the multiple components of SARD, we have adopted a parallel computing approach to optimize the computational process. This strategy reduces the time cost of model training and inference by simultaneously executing multiple computational tasks, effectively lowering the overall time complexity of the framework. Through this optimization measure, the system can complete complex computational tasks more quickly and efficiently. The experimental results show that SARD does not exhibit reduced performance in detecting fake news even when the dataset contains slightly more true news samples than fake ones. This is attributed to SARD’s ability to leverage the technical advantages of its various components, effectively learning fake news characteristics from multiple perspectives, thereby achieving improved fake news detection performance.
+6.2. Limitations Firstly, the potential practical applications of the proposed framework are worth exploring. For instance, integrating SARD into the content moderation systems of social media platforms to detect and flag potential fake news in real-time. By combining textual, visual, and social context features, SARD comprehensively evaluates the authenticity of news, improving the accuracy and efficiency of automated moderation. Additionally, SARD can serve as an auxiliary tool for news verification agencies, supporting manual verification to assess the authenticity of news, thereby saving human resources and helping verifiers make more accurate judgments.
+Secondly, to achieve semantic alignment between news content features and N-HIN features, we designed a semantic alignment component. However, there is still much to explore in cross-modal semantic alignment. For example, self-supervised learning could be used to generate pseudo-labels to aid in feature semantic alignment. Moreover, the N-HIN constructed in this paper includes comments and user information, and more social metadata could be integrated into N-HIN to enhance the expressive power of N-HIN features. In future work, we will address these issues to further improve fake news detection.
+7. Conclusions In this paper, we propose a new fake news detection method, SARD, based on CLIP contrastive learning and multimodal semantic alignment, which integrates N-HIN features as well as different levels of textual and visual features into a unified framework to learn a better final representation of news. To fully exploit the textual and image information in the news content, we use contrastive learning to achieve more complex alignment between deep textual features and deep visual features and set up an association generation task and textual–visual co-attention to learn cross-modal associations and semantic complementary relationships between different levels of textual and visual features. To utilize social context features more effectively, we set up a semantic alignment task to achieve semantic alignment between news content features and N-HIN features to improve fake news detection, which is not considered by most existing methods. Extensive experiments and ablation studies on the dataset demonstrate the effectiveness of SARD and each of its components and that our approach is more advantageous for the detection of new arrival event fake news and carefully crafted fake news.
+Acknowledgments This work was supported by the sponsor-id="http://dx.doi.org/10.13039/501100001809" National Natural Science Foundation of China under Grants 20BXW101 and 18XXW015.
+CRediT authorship contribution statement Facheng Yan: Writing – review & editing, Writing – original draft, Software, Resources, Project administration, Methodology, Investigation, Funding acquisition, Formal analysis, Data curation, Conceptualization. Mingshu Zhang: Writing – original draft, Validation, Supervision, Methodology, Formal analysis, Conceptualization. Bin Wei: Supervision, Software, Resources, Methodology, Data curation. Kelan Ren: Visualization, Software, Resources, Investigation, Data curation. Wen Jiang: Visualization, Methodology, Investigation, Funding acquisition, Conceptualization.
+Declarations Declaration of competing interest The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+Footnotes 1 https://datareportal.com/social-media-users.
+2 https://developer.twitter.com/en/docs/twitter-api/v1.
+References Alonso-Bartolome and Segura-Bedmar, 2021 Alonso-Bartolome, S.; Segura-Bedmar, I. Multimodal fake news detection ; 2021;
+Bian et al., 2020 Bian, T., Xiao, X., Xu, T., Zhao, P., Huang, W., Rong, Y., Huang, J., 2020. Rumor detection on social media with bi-directional graph convolutional networks. In: Proceedings of the AAAI Conference on Artificial Intelligence. Vol. 34, (01), pp. 549–556.
+Cao et al., 2020 Cao, J.; Qi, P.; Sheng, Q.; Yang, T.; Guo, J.; Li, J. Shu, K.; Wang, S.; Lee, D.; Liu, H. Exploring the role of visual content in fake news detection. Disinformation, Misinformation, and Fake News in Social Media: Emerging Research Challenges and Opportunities ; 2020; Cham, Springer: pp. 141-161.
+Chen et al., 2017 Chen, D.; Fisch, A.; Weston, J.; Bordes, A. Reading wikipedia to answer open-domain questions ; 2017;
+Chen et al., 2022 Chen, Y., Li, D., Zhang, P., Sui, J., Lv, Q., Tun, L., Shang, L., 2022. Cross-modal ambiguity learning for multimodal fake news detection. In: Proceedings of the ACM Web Conference 2022. pp. 2897–2905.
+Chen and Sui, 2022 Chen, Z.; Sui, J. DeepFM and convolutional neural networks ensembles for multimodal rumor detection. Comput. Sci. ; 2022; 49 , 1 pp. 101-107.
+Comito et al., 2023 Comito, C.; Caroprese, L.; Zumpano, E. Multimodal fake news detection on social media: a survey of deep learning techniques. Soc. Netw. Anal. Min. ; 2023; 13 , 1 101.
+Cui et al., 2023 Cui, S.; Han, Y.; Duan, Y.; Li, Y.; Zhu, S.; Song, C. A two-stage voting-boosting technique for ensemble learning in social network sentiment classification. Entropy ; 2023; 25 , 4 555.
+Devlin et al., 2019 Devlin, J.; Chang, M.-W.; Lee, K.; Toutanova, K. Burstein, J.; Doran, C.; Solorio, T. BERT: Pre-training of deep bidirectional transformers for language understanding. Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers) ; 2019; Minneapolis, Minnesota, Association for Computational Linguistics: pp. 4171-4186. [DOI: https://dx.doi.org/10.18653/v1/N19-1423]
+Feng et al., 2012 Feng, S., Banerjee, R., Choi, Y., 2012. Syntactic stylometry for deception detection. In: Proceedings of the 50th Annual Meeting of the Association for Computational Linguistics (Volume 2: Short Papers). pp. 171–175.
+Gao et al., 2022 Gao, L., Song, L., Liu, J., Chen, B., Shang, X., 2022. Topology imbalance and relation inauthenticity aware hierarchical graph attention networks for fake news detection. In: Proceedings of the 29th International Conference on Computational Linguistics. pp. 4687–4696.
+Ge et al., 2022 Ge, X.; Zhang, M.; Wang, X.A.; Liu, J.; Wei, B. Emotion-drive interpretable fake news detection. Int. J. Data Warehousing Min. (IJDWM) ; 2022; 18 , 1 pp. 1-17.
+Grinberg et al., 2019 Grinberg, N.; Joseph, K.; Friedland, L.; Swire-Thompson, B.; Lazer, D. Fake news on Twitter during the 2016 US presidential election. Science ; 2019; 363 , 6425 pp. 374-378.
+Gu et al., 2021 Gu, X.; Lin, T.-Y.; Kuo, W.; Cui, Y. Open-vocabulary object detection via vision and language knowledge distillation ; 2021;
+Guess et al., 2019 Guess, A.; Nagler, J.; Tucker, J. Less than you think: Prevalence and predictors of fake news dissemination on facebook. Sci. Adv. ; 2019; 5 , 1 eaau4586.
+Guo et al., 2018 Guo, H., Cao, J., Zhang, Y., Guo, J., Li, J., 2018. Rumor detection with hierarchical social attention network. In: Proceedings of the 27th ACM International Conference on Information and Knowledge Management. pp. 943–951.
+Han et al., 2021 Han, B.; Han, X.; Zhang, H.; Li, J.; Cao, X. Fighting fake news: two stream network for deepfake detection via learnable SRM. IEEE Trans. Biometr. Behav. Identity Sci. ; 2021; 3 , 3 pp. 320-331.
+He et al., 2016 He, K., Zhang, X., Ren, S., Sun, J., 2016. Deep residual learning for image recognition. In: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition. pp. 770–778.
+Hu et al., 2023 Hu, X., Guo, Z., Chen, J., Wen, L., Yu, P.S., 2023. Mr2: A benchmark for multimodal retrieval-augmented rumor detection in social media. In: Proceedings of the 46th International ACM SIGIR Conference on Research and Development in Information Retrieval. pp. 2901–2912.
+Hu et al., 2018 Hu, J., Shen, L., Sun, G., 2018. Squeeze-and-excitation networks. In: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition. pp. 7132–7141.
+Hua et al., 2023 Hua, J.; Cui, X.; Li, X.; Tang, K.; Zhu, P. Multimodal fake news detection through data augmentation-based contrastive learning. Appl. Soft Comput. ; 2023; 136 , 110125.
+Jin et al., 2017 Jin, Z., Cao, J., Guo, H., Zhang, Y., Luo, J., 2017. Multimodal fusion with recurrent neural networks for rumor detection on microblogs. In: Proceedings of the 25th ACM International Conference on Multimedia. pp. 795–816.
+Jin et al., 2022 Jin, Y., Wang, X., Yang, R., Sun, Y., Wang, W., Liao, H., Xie, X., 2022. Towards finegrained reasoning for fake news detection. In: Proceedings of the AAAI Conference on Artificial Intelligence. Vol. 36, (5), pp. 5746–5754.
+Johnson, 2012 Johnson, G. Tech. Serv. Q. ; 2012; 29 , 2 165.
+Kaliyar et al., 2021 Kaliyar, R.K.; Goswami, A.; Narang, P. FakeBERT: Fake news detection in social media with a BERT-based deep learning approach. Multimedia Tools Appl. ; 2021; 80 , 8 pp. 11765-11788.
+Khattar et al., 2019 Khattar, D., Goud, J.S., Gupta, M., Varma, V., 2019. Mvae: Multimodal variational autoencoder for fake news detection. In: The World Wide Web Conference. pp. 2915–2921.
+Kingma and Ba, 2014 Kingma, D.P.; Ba, J. Adam: A method for stochastic optimization ; 2014;
+Liu et al., 2015 Liu, X., Nourbakhsh, A., Li, Q., Fang, R., Shah, S., 2015. Real-time rumor debunking on twitter. In: Proceedings of the 24th ACM International on Conference on Information and Knowledge Management. pp. 1867–1870.
+Ma et al., 2019 Ma, J., Gao, W., Wong, K.-F., 2019. Detect rumors on twitter by promoting information campaigns with generative adversarial learning. In: The World Wide Web Conference. pp. 3049–3055.
+Mayank et al., 2022 Mayank, M.; Sharma, S.; Sharma, R. DEAP-FAKED: Knowledge graph based approach for fake news detection. 2022 IEEE/ACM International Conference on Advances in Social Networks Analysis and Mining, ASONAM ; 2022; IEEE: pp. 47-51.
+Mitra et al., 2017 Mitra, T., Wright, G.P., Gilbert, E., 2017. A parsimonious language model of social media credibility across disparate events. In: Proceedings of the 2017 ACM Conference on Computer Supported Cooperative Work and Social Computing. pp. 126–145.
+Nadeem et al., 2023 Nadeem, M.I.; Ahmed, K.; Zheng, Z.; Li, D.; Assam, M.; Ghadi, Y.Y.; Alghamedy, F.H.; Eldin, E.T. SSM: Stylometric and semantic similarity oriented multimodal fake news detection. J. King Saud Univ.-Comput. Inf. Sci. ; 2023; 35 , 5 101559.
+Oord et al., 2018 Oord, A.v.d.; Li, Y.; Vinyals, O. Representation learning with contrastive predictive coding ; 2018;
+Peng et al., 2024 Peng, L.; Jian, S.; Kan, Z.; Qiao, L.; Li, D. Not all fake news is semantically similar: Contextual semantic representation learning for multimodal fake news detection. Inf. Process. Manage. ; 2024; 61 , 1 103564.
+Pérez-Rosas et al., 2017 Pérez-Rosas, V.; Kleinberg, B.; Lefevre, A.; Mihalcea, R. Automatic detection of fake news ; 2017;
+Popat, 2017 Popat, K., 2017. Assessing the credibility of claims on the web. In: Proceedings of the 26th International Conference on World Wide Web Companion. pp. 735–739.
+Qian et al., 2021 Qian, S., Wang, J., Hu, J., Fang, Q., Xu, C., 2021. Hierarchical multi-modal contextual attention network for fake news detection. In: Proceedings of the 44th International ACM SIGIR Conference on Research and Development in Information Retrieval. pp. 153–162.
+Radford et al., 2021 Radford, A.; Kim, J.W.; Hallacy, C.; Ramesh, A.; Goh, G.; Agarwal, S.; Sastry, G.; Askell, A.; Mishkin, P.; Clark, J. et al. Learning transferable visual models from natural language supervision. International Conference on Machine Learning ; 2021; PMLR: pp. 8748-8763.
+Raffel et al., 2020 Raffel, C.; Shazeer, N.; Roberts, A.; Lee, K.; Narang, S.; Matena, M.; Zhou, Y.; Li, W.; Liu, P.J. Exploring the limits of transfer learning with a unified text-to-text transformer. J. Mach. Learn. Res. ; 2020; 21 , 140 pp. 1-67.
+Rashkin et al., 2017 Rashkin, H., Choi, E., Jang, J.Y., Volkova, S., Choi, Y., 2017. Truth of varying shades: Analyzing language in fake news and political fact-checking. In: Proceedings of the 2017 Conference on Empirical Methods in Natural Language Processing. pp. 2931–2937.
+Ren and Zhang, 2021 Ren, Y.; Zhang, J. Fake news detection on news-oriented heterogeneous information networks through hierarchical graph attention. 2021 International Joint Conference on Neural Networks, IJCNN ; 2021; IEEE: pp. 1-8.
+Shang et al., 2022 Shang, L., Kou, Z., Zhang, Y., Wang, D., 2022. A duo-generative approach to explainable multimodal covid-19 misinformation detection. In: Proceedings of the ACM Web Conference 2022. pp. 3623–3631.
+Shi et al., 2016 Shi, C.; Li, Y.; Zhang, J.; Sun, Y.; Philip, S.Y. A survey of heterogeneous information network analysis. IEEE Trans. Knowl. Data Eng. ; 2016; 29 , 1 pp. 17-37.
+Shu et al., 2019 Shu, K., Cui, L., Wang, S., Lee, D., Liu, H., 2019. Defend: Explainable fake news detection. In: Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining. pp. 395–405.
+Shu et al., 2020 Shu, K.; Mahudeswaran, D.; Wang, S.; Lee, D.; Liu, H. Fakenewsnet: A data repository with news content, social context, and spatiotemporal information for studying fake news on social media. Big Data ; 2020; 8 , 3 pp. 171-188.
+Singhal et al., 2022 Singhal, S., Pandey, T., Mrig, S., Shah, R.R., Kumaraguru, P., 2022. Leveraging intra and inter modality relationship for multimodal fake news detection. In: Companion Proceedings of the Web Conference 2022. pp. 726–734.
+Sun and Han, 2013 Sun, Y.; Han, J. Mining heterogeneous information networks: a structural analysis approach. ACM SIGKDD Explor. Newsl. ; 2013; 14 , 2 pp. 20-28.
+Truică et al., 2023 Truică, C.-O.; Apostol, E.-S.; Karras, P. DANES: Deep neural network ensemble architecture for social and textual context-aware fake news detection ; 2023;
+Van der Maaten and Hinton, 2008 Van der Maaten, L., Hinton, G., 2008. Visualizing data using t-SNE. J. Mach. Learn. Res. 9 (11).
+Vaswani et al., 2017 Vaswani, A.; Shazeer, N.; Parmar, N.; Uszkoreit, J.; Jones, L.; Gomez, A.N.; Kaiser, Ł.; Polosukhin, I. Attention is all you need. Advances in Neural Information Processing Systems, Vol. 30 ; 2017;
+Wang et al., 2018 Wang, Y., Ma, F., Jin, Z., Yuan, Y., Xun, G., Jha, K., Su, L., Gao, J., 2018. Eann: Event adversarial neural networks for multi-modal fake news detection. In: Proceedings of the 24th Acm Sigkdd International Conference on Knowledge Discovery & Data Mining. pp. 849–857.
+Wang et al., 2023 Wang, L., Zhang, C., Xu, H., Xu, Y., Xu, X., Wang, S., 2023. Cross-modal contrastive learning for multimodal fake news detection. In: Proceedings of the 31st ACM International Conference on Multimedia. pp. 5696–5704.
+Wolf et al., 2020 Wolf, T., Debut, L., Sanh, V., Chaumond, J., Delangue, C., Moi, A., Cistac, P., Rault, T., Louf, R., Funtowicz, M., et al., 2020. Transformers: State-of-the-art natural language processing. In: Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing: System Demonstrations. pp. 38–45.
+Yu et al., 2017 Yu, F.; Liu, Q.; Wu, S.; Wang, L.; Tan, T. et al. A convolutional approach for misinformation identification. IJCAI ; 2017; pp. 3901-3907.
+Yuan et al., 2019 Yuan, C.; Ma, Q.; Zhou, W.; Han, J.; Hu, S. Jointly embedding the local and global relations of heterogeneous graph for rumor detection. 2019 IEEE International Conference on Data Mining, ICDM ; 2019; IEEE: pp. 796-805.
+Zheng et al., 2022 Zheng, J.; Zhang, X.; Guo, S.; Wang, Q.; Zang, W.; Zhang, Y. MFAN: Multi-modal feature-enhanced attention networks for rumor detection. IJCAI ; 2022; pp. 2413-2419.
+Zhou et al., 2023a Zhou, Y., Yang, Y., Ying, Q., Qian, Z., Zhang, X., 2023a. Multi-modal fake news detection on social media via multi-grained information fusion. In: Proceedings of the 2023 ACM International Conference on Multimedia Retrieval. pp. 343–352.
+Zhou et al., 2023b Zhou, Y.; Yang, Y.; Ying, Q.; Qian, Z.; Zhang, X. Multimodal fake news detection via clip-guided learning. 2023 IEEE International Conference on Multimedia and Expo, ICME ; 2023; IEEE: pp. 2825-2830.
+Zubiaga et al., 2018 Zubiaga, A.; Aker, A.; Bontcheva, K.; Liakata, M.; Procter, R. Detection and resolution of rumours in social media: A survey. Acm Comput. Surv. (Csur) ; 2018; 51 , 2 pp. 1-36.
+Zubiaga et al., 2017 Zubiaga, A.; Liakata, M.; Procter, R. Exploiting context for rumour detection in social media. Social Informatics: 9th International Conference, SocInfo 2017, Oxford, UK, September 13-15, 2017, Proceedings, Part I 9 ; 2017; Springer: pp. 109-123.

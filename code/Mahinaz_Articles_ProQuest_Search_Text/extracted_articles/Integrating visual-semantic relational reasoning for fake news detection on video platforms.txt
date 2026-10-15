@@ -1,0 +1,364 @@
+Introduction
+Fake News Video Detection (FNVD) is a growing and complex field that demands machines to accurately discern and evaluate deceptive content within videos, drawing significant interest from researchers [1]. This task’s intricacy lies in the need to comprehend diverse and nuanced video elements, including object relationships and frame transitions, making relational inference a critical component of FNVD. Recent research [2, 3–4] has explored the use of advanced methods like memory networks [5], attention mechanisms [6], and Graph Convolutional Networks (GCN) [7] to enhance relational reasoning in FNVD. While these approaches have shown some success, they continue to encounter two prevalent challenges.
+[See PDF for image]
+Fig. 1 Multi-level relation reasoning
+
+
+Firstly, current FNVD approaches primarily focus on relational reasoning at either the object [8] or frame [9, 10] level, lacking an effective integration of the two in a multi-level framework. As illustrated in Fig. 1, humans typically identify key objects and their interactions within individual frames (e.g., a zookeeper playing with a panda ) and then connect these frames to comprehend the sequence of actions and their temporal dynamics (e.g., the panda falling and the zookeeper catching it ). This reflects a multi-level reasoning process that transitions from object-level to frame-level analysis. For machines to replicate such reasoning, a method that explicitly enables multi-level relational reasoning is essential. However, existing techniques have yet to achieve this, potentially overlooking critical relationships necessary for accurately identifying fake news. Consequently, developing an FNVD approach that combines object-level and frame-level information for effective multi-level reasoning is vital to enhancing detection accuracy and reliability.
+Secondly, current FNVD methods mainly focus on using visual information for judgment, while ignoring the deep reasoning analysis in semantic space. In related studies [11, 12], relation analysis is performed by using Convolutional Neural Network (CNN) to extract features from video frames. Similarly, some researchers such as Zhang et al. [13] and Jin et al. [14] used region Convolutional neural Network (RCNN) to capture object-level visual information. However, these approaches generally ignore the importance of integrating semantic knowledge for comprehensive reasoning, possibly because of the limitations in understanding caused by the inherent gap existing between visual content and semantics. Compared with visual information alone, semantic knowledge, which includes the attributes, categories and logical relationships between objects in a video, provides more explicit and rich clues, which is crucial to accurately judge the authenticity of news videos.
+In this study, to address the shortcomings of current FNVD approaches, we propose a multi-level visual-semantic relation reasoning framework (VS-FND) that integrates both visual and semantic reasoning within a hierarchical structure. Specifically, we introduce two graph memory mechanisms. The first is the visual graph memory, which leverages the visual content of the video to progressively extract task-relevant visual features through relational reasoning. The second is the semantic graph memory, where object categories and attributes in the video are represented as nodes, and edges between nodes are established based on commonsense knowledge, explicitly incorporating semantic information to strengthen relational reasoning. Building on this, we further design a multi-level structure that transitions from object-level to frame-level analysis, enabling the framework to reason about the interplay between visual and semantic elements across multiple levels. Our VS-FND framework effectively uncovers and utilizes both visual and semantic information in videos, offering a more precise and comprehensive foundation for detecting fake news videos.
+In summary, the contributions of this work are threefold:
+
+- We propose an efficient graph memory mechanism for relational reasoning, and specifically design visual graph memory and semantic graph memory modules for processing visual information and semantic knowledge in videos.
+
+- We construct a multi-level vision-semantic relation reasoning framework (VS-FND). The framework can integrate object-level and frame-level relational reasoning to realize multi-level analysis of fake news videos.
+
+- The experimental results show that the VS-FND framework performs well on the fake news video detection dataset. It not only exceeds the existing methods in accuracy, but also has significant advantages in the number of model parameters and inference speed.
+
+
+
+Related work
+Fake news video detection
+Fake news video detection is more complex than image forgery detection, because it involves not only spatial tampering trace identification [15], but also the analysis of temporal dimension [16]. This requires the detection algorithm to identify multiple inconsistencies in space, time, vision and semantics [17]. Most of the existing researches convert video frames into global feature vectors and focus on frame-level relationship recognition [18]. For example, Jiang et al. [19] proposed a heterogeneous graph alignment network. However, these methods have limitations in capturing spatial details, and it is difficult to accurately detect the tampered videos of objects and their relationships. To improve this situation, Wu et al. [20] tried to use location-aware graph convolutional networks for detailed object-level analysis, but did not fully incorporate frame-level relationships. Different from them, our proposed multi-level relational reasoning framework integrates frame-level and object-level analysis, simulates human cognitive processes, and realizes multi-level comprehensive reasoning.
+GNN and memory network
+Graph Neural Network (GNN) has shown great potential in relation reasoning due to its excellent message passing between nodes and iterative update node representation ability, which is widely used in image fields such as image recognition [21], pose estimation [22], and video fields such as action recognition and video object segmentation [23]. Despite studies [24, 25] that attempt to represent nodes as a fusion of visual and query features, GNNs still struggle to effectively cope with such dynamic requirements. Memory networks [26] provide an effective solution for multimodal tasks [27] by explicitly retrieving and storing information through read and write operations, which are able to learn query-relevant information step by step and dynamically. Given its successful application in multi-modal QA, we are inspired to combine GNN with memory network, aiming at dynamic relation inference in fake news video detection task. We call it graph memory, which not only inherits the advantages of GNN in relation reasoning, but also incorporates the dynamic information retrieval capability of memory networks.
+[See PDF for image]
+Fig. 2 Multi-level visual-semantic relation reasoning (VS-FND) framework for news video detection
+
+
+Methods
+In this section, we introduce a multi-level visual semantic relation reasoning framework (VS-FND) for FNVD. The overall architecture is shown in Fig. 2. First extracts the input representations, and constructs visual graph and semantic graph at object level. After that, both graph memory mechanisms perform object-level relational reasoning over visual and semantic representations, respectively. Node aggregation is used to aggregate nodes for each frame and build new graphs at frame level. Next, the two graph memory mechanisms perform frame-level relational reasoning for visual and semantic representations, respectively. Multi-scale node aggregation captures multi-scale time information and generates a global representation of video. Finally, the veracity detector fuses multimodal representations to detect the results.
+[See PDF for image]
+Fig. 3 Illustration of visual graph memory (VGM)
+
+
+Graph memory
+Visual graph memory
+As shown in Fig. 3, the visual graph memory mechanism enables deep iterative relational reasoning about the content presented by visual information. We set as the start state of the read controller, which is used to guide the subsequent read operations. Meanwhile, represents the initial vector of the ith node in the graph structure. For each inference step , where ranges from to , where represents the total number of inference steps to be performed. Based on the current query state , the pieces of information we read are summarized into content : 1
+2
+3
+
+The read controller is able to continuously learn and adapt during iterative reasoning, gradually deepening its understanding of the visual representation, and is updated as follows: 4
+5
+6
+
+where is used to process the current input information or query vector, while is used to process information from the previous state. We introduce a sigmoid activation function and hadamard product operator . The gating function is a key component that controls how much information from the previous state is kept.
+At each step of iteration k, the write controller is responsible for updating the state of the -th node in the network. The write controller will refer to the previous state or expression and also consider reading the contents of the controller . By combining the output of the read controller, the write controller is able to combine the new query information with the current state of the node. However, in graph neural networks, the relationships between nodes are equally important. Therefore, the write controller also performs an information aggregation step before updating the node state: 7
+8
+9
+
+where MLP is a feedforward neural network that captures complex features in the input data through multiple layers of nonlinear transformations. Next, denotes the relation weight from node to node . Feature concatenation means concatenating two feature vectors together. The node information is updated after extracting the context representation : 10
+11
+12
+
+Graph neural network is good at modeling graph structure data and can capture the complex relationship between nodes. The memory network realizes the dynamic memory and retrieval of information by introducing an external memory unit and a read/write controller. The complete process of iterative inference can be written as follows: 13
+
+where is responsible for storing, updating, and retrieving visual information in the graph structure. The read controller is responsible for retrieving relevant information from the graph structure according to the current task or query requirements. Each node of the graph has a visual representation associated with it.
+Semantic graph memory
+The semantic graph memory aims to capture and understand elements and their interrelations in complex scenes by combining semantic information and visual representation. As shown in Fig. 4, the read controller is responsible for retrieving and selecting relevant information during inference. The semantic graph expression , where each row represents the representation of a semantic node. The visualization graph expression , where each row represents the representation of a visualization node. After completing the steps of visual representation enhancing semantic representation, the semantic graph memory will enter the iterative reasoning process: 14
+15
+
+where represents the mapping confidence. This quantity represents the mapping strength from the -th visual node to the -th semantic node . We introduce a learnable voting matrix, denoted as is responsible for mapping the representations of visual nodes onto specific semantic nodes . We construct the semantic node update mechanism, each semantic node update expressed as
+[See PDF for image]
+Fig. 4 Illustration of semantic graph memory (SGM)
+
+
+After initially obtaining the enhanced semantic representation , we initiate an iterative relational inference process. Specifically, we employ the same read and write operation mechanism as in the visual graph memory, and perform iterations of reasoning on the augmented semantics . After iterations of reasoning, we obtain a richer semantic representation . 16
+17
+18
+
+where and are learnable weights. We design two node mapping mechanisms to achieve effective interaction and collaborative work between visual graph memory and semantic graph. At the same time, we adopt a residual connection to further improve the representation quality of visual nodes. Specifically, we define the final representation of each visual node as the sum of its representations updated after iterations.
+The whole process can be succinctly written as follows: 19
+
+Overall architecture
+In this section, we elaborate the overall architecture of the multilevel visual semantic relation reasoning framework, as shown in Fig. 2. This framework aims to achieve deeper relational reasoning and video content understanding by integrating visual and semantic information.
+Input embedding
+For a given video, which contains consecutive frames of images, we use a modified version of Faster RCNN [29] pre-trained on the VGenome dataset [28] to extract object information frame by frame. We introduce a four-dimensional spatial feature to describe the relative bounding box coordinates of the object, where and denote the width and height of each image frame. Then, the visual object features and position features are projected into a -dimensional feature space with two linear layers and summed as the initial visual feature , where is the number of each frame and is the -th object in the -th image. The semantic information is extracted by the pre-trained word embedding model, and then they are mapped into the -dimensional space as the initial feature of the semantic representation. To obtain the context representation of news titles, we further extract features through Bi-LSTM. Finally, the feature is obtained.
+Reasoning at object level
+After successfully obtaining the initial visual features of the object in the video frame , the initial visual features of the object in the video frame , and the initial query or context features relevant to the task, we use these features to initialize three key components: the visual map, the semantic map, and the read controller. Together, these components constitute a complex processing framework that aims to deeply understand and analyze visual and semantic objects and their interrelations in videos through iterative reasoning. 20
+21
+
+where is the updated expression of the -th frame image, which represents the relationship between the query related object-level visual information and semantics after encoding.
+In the visual graph, we aggregate the nodes using a news headline driven attention model. The attention model can obtain the aggregated visual expression according to the attention weights between the initial representation of the news title, and then the nodes are weighted and summed according to these weights. This aggregation process can be expressed as: , where is the visual feature vector aggregated at the -th frame. Since the relationships between semantic objects can be more complex, we utilize average pooling to provide a global perspective to capture these relationships. Specifically, we perform an average pooling operation on all semantic object nodes in the -th frame to obtain an aggregated semantic representation . This representation captures the average characteristics of all semantic objects within the frame.
+Reasoning at frame level
+We define two frame-level expressions and that represent the set of visual and semantic representations of all frames in a video sequence, respectively. Specifically, the is obtained by aggregating the in-frame visual objects in some way. The , which is obtained by average pooling or other aggregation methods on the intra-frame semantic objects. After that, the iterative relation reasoning is performed on the visual and semantic representations respectively through the graph memory mechanism. 22
+23
+
+where through this frame-level iterative relation inference, the model gradually learns keyframes and captures the relationship between different frames.
+We design a multi-scale node aggregation method that aims to efficiently integrate node features into a global representation . On this basis, we incorporate the news headline guided attention mechanism. The mechanism can dynamically adjust the attention to different nodes according to the context information of news titles. Finally, we concatenate the outputs of each processing head to obtain the overall expression . This representation not only integrates the original node features, but also incorporates the multi-scale temporal information and the context guidance of news title, which provides comprehensive and accurate feature support for subsequent tasks.
+Veracity detection
+In the classification stage, we use a fully connected layer with activations to project the final fusion representation into the target space and obtain a probability distribution: 24
+
+where is the predicted probability vector, where and denote the predicted probability of the label is 0 (true news) and 1 (fake news), respectively. is the weight matrix and is the bias term. Thus, for each news video post, the goal is to minimize a binary cross-entropy loss function as follows: 25
+
+where denotes the true label.
+Experiments
+Datasets
+We use two publicly available COVID-VTS [31] and FVC [18] datasets. The COVID-VTS dataset contains news videos related to COVID-19, all of which are derived from video posts on Twitter. The dataset is divided into training set, validation set and test set, containing 8500, 500 and 1000 news items respectively, for a total of 10,000 items. The average length of news titles is about 13.25 words, and the average duration of videos is about 75.08 s. FVC dataset covers the official English news videos from the foreign Xinhua News Agency, which has a wide range of content, including news reports on multiple topics such as politics, sports, and health. FVC dataset contains 2505 news videos, divided into training set (2130), validation set (125) and test set (250). The average title length of news is about 11 words, and the average video duration is nearly 70 s.
+Implementation details
+In our research, we take a systematic approach to processing and parsing video data, aiming to extract key information from each video precisely. First, we uniformly pick out 16 frames from each video as key frames. We then use Faster R-CNN to identify and select objects in each frame. In each frame, we pick out the eight highest scoring objects, which represent the most salient objects in that frame. We set the embedding space to 512 dimensions. In this space, we represent each target as a 512-dimensional vector. During training, we used the Adam optimizer to optimize the parameters of the model. We set the initial learning rate to 1e-5 to ensure that the model can gradually converge and achieve the best performance during training. Meanwhile, we set the batch size to 32 to make full use of computing resources during training. To evaluate the performance of the model, we used precision (Acc.), precision (Prec.), recall (Rec.), and F1-measure (F1) as evaluation metrics on the two datasets.
+Baseline system
+In order to better illustrate the advantages of the proposed methods, we selected current representative baselines for comparison, including video-based methods and fake news video detection methods.
+Methods based on fake news video detection: (1) TikTec [32]: can use captions to accurately capture key information from distracting video content; (2) FANVM [18]: A topic agnostic fake news detection model based on adversarial learning and topic modeling is proposed; (3) TwtrDet [31]: An effective model combined with cross-media consistency checking is proposed to detect malicious tampering of different modes; (4) HGRN [20]: A local view multi-hop knowledge inference network is proposed to capture richer evidence information in context.
+Video-based approach: (1) VEIN [34]: A visual-based emotion interpretation network is designed to effectively capture the emotion conveyed in the video; (2) AMFM [33]: can learn potential visual relationships between frame-level and video-level embedment to dynamically enhance pre-trained visual features; (3) VCMR [35]: A query-specific multimodal context is built to capture complementary and consistent semantics between captions and video frames.
+Performance comparison
+We compare our VS-FND with state-of-the-art methods on two publicly available benchmark datasets, and the results are shown in Table 1. On both FVC and COVID-VTS datasets, the authenticity detection scores of the VS-FND framework are better than those of other compared methods. Especially in terms of F1 score, VS-FND reaches 80.32 and 72.88 on the two datasets respectively, which is significantly higher than other methods, indicating that it has excellent performance in considering recall and precision.
+Table 1. Comparison with state-of-the-art methods on FVC and COVID-VTS dataset
+Method
+FVC
+COVID-VTS
+
+Rec
+Prec
+F1
+Acc
+Rec
+Prec
+F1
+Acc
+
+TikTec [33]
+67.43
+61.22
+64.28
+66.82
+64.44
+66.63
+65.52
+64.35
+
+FANVM [18]
+69.05
+67.44
+68.24
+69.92
+67.11
+69.66
+68.38
+67.14
+
+TwtrDet [31]
+70.02
+74.26
+67.77
+72.15
+65.23
+67.21
+67.32
+68.73
+
+HGRN [20]
+78.66
+76.37
+77.50
+78.65
+70.79
+70.07
+70.93
+70.80
+
+VEIN [35]
+72.34
+72.24
+72.31
+72.47
+65.56
+66.54
+66.12
+66.56
+
+AMFM [34]
+76.47
+75.10
+75.78
+77.30
+67.60
+69.82
+68.71
+67.60
+
+VCMR [36]
+76.87
+76.23
+76.54
+76.83
+68.62
+68.52
+68.42
+68.54
+
+VS-FND
+80.22
+80.45
+80.32
+80.25
+73.99
+73.77
+72.88
+73.80
+
+
+The VS-FND shows significant performance advantages in the detection of fake news videos compared to TikTec, FANVM, TwtrDet and HGRN, which rely on a single error message. This is thanks to the hierarchical structure built by VS-FND, which extends from object-level to frame-level, enhancing the ability to detect visual and semantic inconsistencies. VS-FND also performs better than VEIN, AMFM, and VCMR, which mainly rely on visual information for inference. VEIN focuses on capturing video emotion, while AMFM and VCMR focus on consistent semantic information extraction. The advantage of VS-FND is the introduction of graph memory mechanism, and the design of visual and semantic graph memory reasoning. This design refines the core visual and semantic knowledge in the video gradually through relational reasoning, and effectively improves the semantic consistency detection ability of news title and video content.
+Ablation studies
+Multi-level relational reasoning
+We explored the role of hierarchical relational reasoning in FNVD. As shown in the first block of Table 2, removing either object or frame level information significantly degrades detection performance, underscoring the importance of considering both. At the same time, we compare the two-stream framework, which focuses on the object and frame level information respectively, and prove its advantage in integrating the level information. Next, we explore the impact of visual semantic relational reasoning in FNVD, as shown in the second part of Table 2. In general, “w/o visual” causes a more significant performance degradation than “w/o Semantic.” We found that “w/o visual” actually achieved better performance than the absence of semantics. This is because semantic knowledge can provide clear clues to some problems directly. However, when we disable both visual and semantic graph memory mechanisms, detection performance declines further, suggesting that visual and semantic relational reasoning complement each other.
+Table 2. Ablation study on the architecture design of VS-FND on FVC
+Setting
+Rec
+Prec
+F1
+Acc
+
+Object level only
+73.42
+73.73
+73.10
+73.12
+
+Frame level only
+70.75
+70.65
+70.26
+70.09
+
+Two-stream
+76.22
+76.91
+76.24
+76.92
+
+w/o visual
+69.92
+69.23
+69.01
+69.05
+
+w/o semantic
+75.12
+75.83
+75.54
+75.10
+
+w/o visual + semantic
+68.02
+68.63
+68.54
+68.30
+
+GCN
+72.93
+72.52
+72.01
+72.12
+
+GCN (fusion)
+76.04
+76.02
+76.05
+76.90
+
+Self-attention
+77.34
+77.92
+77.05
+77.05
+
+Memory network
+75.04
+75.52
+75.04
+75.10
+
+Full
+80.22
+80.45
+80.32
+80.25
+
+
+We design a relational reasoning mechanism for graph-based memory. In the in-depth study of FNVD, we also compare and analyze several other relational reasoning modules, as shown in the third part of Table 2. Specifically, although graph convolutional networks (GCN) are good at processing information flow and feature aggregation in graph structure, their performance is not superior to graph memory mechanism in experiments. The reason is that GCN lacks dynamic query guidance and flexible feature selection ability. In addition, we also try to use the self-attention mechanism to capture the dependency between video frames, but because it does not have the ability of dynamic iterative reasoning, the performance is not as good as the graph memory mechanism. On the other hand, we also considered introducing memory networks, but failed to explicitly model the complex relationships between video frames, resulting in performance degradation. Compared with these results, our graph-based memory mechanism shows significant advantages.
+[See PDF for image]
+Fig. 5 Comparison of different reasoning steps on FVC and COVID-VTS
+
+
+Reasoning steps
+In exploring the depth of reasoning about visual and semantic relations in the FNVD task, we tested different reasoning steps against the model, and the results are shown in Fig. 5. We have the following observations: (1) Best synergy point: When both the visual reasoning () and semantic reasoning () steps are set to 2, the model performs best in the four FNVD tasks. This indicates that visual and semantic information are equally important in identifying fake news. (2) The complementary role of visual reasoning: when the semantic reasoning step is fixed at 1, the model performance is gradually improved as the visual reasoning step increases from 1 to 3. This shows that deepening visual reasoning can effectively supplement semantic understanding when semantic information is limited, because deep visual features can capture more high-level semantic clues. (3) Semantic reasoning overprocessing: Increasing the number of semantic reasoning steps (from 2 to 3) leads to performance degradation compared to increasing the number of visual reasoning steps. This may be because too much semantic reasoning will smooth or blur the originally clear and specific semantic information.
+Table 3. Comparison of inference time, model size and memory footprint
+Method
+Inference time
+Model size
+Memory footprint
+
+VEIN
+2.3s
+48.5 M
+2635 MB
+
+HGRN
+0.5s
+42.8 M
+2203 MB
+
+VS-FND
+0.5s
+23.1 M
+2215 MB
+
+
+Model efficiency comparison
+Table 3 shows how our method (VS-FND) compares with two existing methods -VEIN and HCRN in terms of inference time, model size (measured by number of parameters), as well as memory footprint on the FNVD task. All tests were performed in an environment equipped with Nvidia Tesla V100 Gpus and a batch size of 32. The observations show that our VS-FND method significantly outperforms VEIN and HCRN in efficiency. Specifically, VS-FND achieves comparable or better performance than them with almost half the number of parameters and faster inference time. This finding not only verifies the high efficiency of VS-FND in FNVD tasks, but also indicates its potential advantages in processing large-scale data and real-time applications.
+[See PDF for image]
+Fig. 6 Visualization of relational reasoning process of our VS-FND
+
+
+Qualitative studies
+To get a deeper understanding of our VS-FND, we present a visualization of the relational reasoning process in Fig. 6. Initially, the model failed to focus on relevant objects and frames (e.g., objects “road”, “traffic light”) and could not model accurate object-object and frame-frame relationships (e.g., the relationship between “vehicle” and “police line” and between frames 1 and 2). As the iterative steps continue, the model gradually learns to focus on the most relevant objects and frames (e.g., object “cordon” and frame 4), and on the exact object-object relationship and frame-frame relationship (e.g., the relationship between “police car” and “cordon” between frame 3 and 4). In particular, in the absence of explicit semantic knowledge, the model misidentifies objects and actions, even though more visual relational reasoning steps have been performed. After the semantic knowledge is used for relational reasoning, the ability to judge the inconsistency between video and news title is enhanced, and the model finally gives the correct answer.
+Conclusion
+In this paper, we introduce a fake news video detection method named VS-FND, which achieves effective identification of fake news videos by fusing object-level and frame-level relational reasoning at multiple levels. In order to integrate and utilize this information more effectively, VS-FND also introduces a novel graph memory module. The module adopts advanced graph data structure, which can dynamically filter and integrate video information according to query requirements, so as to generate more accurate video representation. Experimental verification shows that VS-FND performs well in fake news video detection. It has high accuracy and strong adaptability, and can easily deal with complex video content and scenes.
+Future work will focus on enhancing model generalization, fusing multi-modal information, and enhancing detection capabilities. It pays attention to real-time application and social responsibility, ensures fairness and transparency of technology, and is committed to building a more real and credible information dissemination environment.
+Authors contribution
+Huang Biying. conceptualized and designed the algorithm, implemented the initial codebase, and prepared the original manuscript draft.
+Qu Jianfeng. provided essential theoretical insights, critically revised the manuscript for important intellectual content.
+Data availability statement
+The datasets used and analyzed during the current study are available from the corresponding author upon reasonable request.
+Declarations
+Competing interests
+The authors declare no competing interests.
+Publisher's Note
+Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References
+1. Zimmerman, MS; Shaw, G, Jr. Health information seeking behaviour: a concept analysis. Health Info. Libr. J. ; 2020; 37 , 3 pp. 173-191.
+2. Kaliyar, RK; Goswami, A; Narang, P. FakeBERT: Fake news detection in social media with a BERT-based deep learning approach. Multimed Tools Appl ; 2021; 80 , 8 pp. 11765-11788.
+3. Chen, Y., Li, D., Zhang, P., et al.: Cross-modal ambiguity learning for multimodal fake news detection. In: Proceedings of the ACM web conference, pp. 2897–2905 (2022).
+4. Qi, P., Zhao, Y., Shen, Y., et al.: Two heads are better than one: Improving fake news video detection by correlating with neighbors. arXiv preprint arXiv:2306.05241 (2023).
+5. Zhang, J., Shi, X., King, I., et al.: Dynamic key-value memory networks for knowledge tracing. In: Proceedings of the 26th international conference on World Wide Web, pp. 765–774 (2017).
+6. Dong, Y., Cordonnier, J. B., Loukas, A.: Attention is not all you need: Pure attention loses rank doubly exponentially with depth. In: International Conference on Machine Learning. PMLR, pp. 2793–2803 (2021).
+7. Zhang, H., Lu, G., Zhan, M., et al.; Semi-supervised classification of graph convolutional networks with Laplacian rank constraints. Neural Processing Letters, pp. 1–12 (2022).
+8. Wang, Z; Cao, Q; Shen, H et al. Location-aware convolutional neural networks for graph classification. Neural Netw. ; 2022; 155 , pp. 74-83.
+9. Le, T.M., Le, V., Venkatesh, S., et al.: Hierarchical conditional relation networks for video question answering. In: Proceedings of the IEEE/CVF conference on computer vision and pattern recognition, pp. 9972–9981 (2020).
+10. Radford, A., Kim, J. W., Hallacy, C., et al.: Learning transferable visual models from natural language supervision. In: International conference on machine learning. PMLR, pp. 8748–8763 (2021).
+11. Ye, H., Li, G., Qi, Y., et al.: Hierarchical modular network for video captioning. In: Proceedings of the IEEE/CVF conference on computer vision and pattern recognition, pp. 17939–17948 (2022).
+12. Sun, T., Qian, Z., Dong, S., et al.: Rumor detection on social media with graph adversarial contrastive learning. In: Proceedings of the ACM Web Conference 2022. 2022: 2789–2797.
+13. Zhang, Z., Li, D., Song, Z., et al.: Location-Aware social network recommendation via temporal graph networks. In: Proceedings of the 7th ACM SIGSPATIAL Workshop on Location-based Recommendations, Geosocial Networks and Geoadvertising, pp. 58–61, (2023)
+14. Jin W, Zhao Z, Gu M, et al. Multi-interaction network with object relation for video question answering. In: Proceedings of the 27th ACM international conference on multimedia. 2019: 1193–1201.
+15. Przybyla, P.: Capturing the style of fake news. In: Proceedings of the AAAI conference on artificial intelligence, vol. 34, no. 01, pp. 490–497 (2020).
+16. Cao, J., Qi, P., Sheng, Q., et al.: Exploring the role of visual content in fake news detection. Disinformation, Misinformation, and Fake News in Social Media: Emerging Research Challenges and Opportunities, pp. 141–161 (2020).
+17. Zhou, X., Wu, J., Zafarani, R.: Similarity-aware multi-modal fake news detection. In: Pacific-Asia Conference on knowledge discovery and data mining. Cham: Springer International Publishing, 2020: 354–367.
+18. Choi, H., Ko, Y.: Using topic modeling and adversarial neural networks for fake news video detection. In: Proceedings of the 30th ACM international conference on information & knowledge management, pp. 2950–2954 (2021).
+19. Jiang, P., Han, Y.: Reasoning with heterogeneous graph alignment for video question answering. In: Proceedings of the AAAI conference on artificial intelligence, vol. 34, no. 07, pp. 11109–11116 (2020).
+20. Wu, L., Yu, D., Liu, P., et al.: Heuristic heterogeneous graph reasoning networks for fact verification. IEEE Trans. Neural Netw. Learn. Syst. (2023)
+21. Tan, Z., Yang, Y., Wan, J., et al.: Relation-aware pedestrian attribute recognition with graph convolutional networks. In: Proceedings of the AAAI conference on artificial intelligence, 34, no. 07, pp. 12055–12062 (2020)
+22. Bin, Y; Chen, ZM; Wei, XS et al. Structure-aware human pose estimation with graph convolutional networks. Pattern Recogn. ; 2020; 106 , 107410.
+23. Shi L, Zhang Y, Cheng J, et al. Skeleton-based action recognition with directed graph neural networks. In: Proceedings of the IEEE/CVF conference on computer vision and pattern recognition. 2019: 7912–7921.
+24. Gao, D., Li, K., Wang, R., et al.: Multi-modal graph neural network for joint reasoning on vision and scene text. In: Proceedings of the IEEE/CVF conference on computer vision and pattern recognition, pp. 12746–12756 (2020).
+25. Wang, Y., Yasunaga, M., Ren, H., et al.: Vqa-gnn: reasoning with multimodal knowledge via graph neural networks for visual question answering. In: Proceedings of the IEEE/CVF international conference on computer vision, pp. 21582–21592 (2023).
+26. Sukhbaatar, S., Weston, J., Fergus, R.: End-to-end memory networks. Adv. Neural Inf. Process. Syst. 28 (2015).
+27. Wang, Z., You, H., Li, L. H., et al.: SGEITL: scene graph enhanced image-text learning for visual commonsense reasoning. In: Proceedings of the AAAI conference on artificial intelligence. Vol. 36, no. 5, pp. 5914–5922 (2022).
+28. Krishna, R; Zhu, Y; Groth, O et al. Visual genome: Connecting language and vision using crowdsourced dense image annotations. Int. J. Comput. Vision ; 2017; 123 , pp. 32-73.3640738
+29. Ren, S; He, K; Girshick, R et al. Faster R-CNN: towards real-time object detection with region proposal networks. IEEE Trans. Pattern Anal. Mach. Intell. ; 2016; 39 , 6 pp. 1137-1149.
+30. de Santana, CA; Colombini, EL. Attention, please! a survey of neural attention models in deep learning. Artif. Intell. Rev. ; 2022; 55 , 8 pp. 6037-6124.
+31. Liu, F., Yacoob, Y., Shrivastava, A.: Covid-vts: fact extraction and verification on short video platforms. arXiv preprint arXiv:2302.07919 (2023)
+32. Shang, L., Kou, Z., Zhang, Y., et al.: A multimodal misinformation detector for covid-19 short videos on tiktok. In: 2021 IEEE international conference on big data (big data). IEEE, pp. 899–908 (2021)
+33. Zhang, Y; Liu, Y; Wu, C. Attention-guided multi-granularity fusion model for video summarization. Expert Syst. Appl. ; 2024; 249 , 123568.
+34. Song, P; Guo, D; Yang, X et al. Emotional video captioning with vision-based emotion interpretation network. IEEE Trans. Image Process. ; 2024; 33 , pp. 1122-1135.
+35. Zhang, L., Song, P., Duan, Z., et al.: Video corpus moment retrieval with query-specific context learning and progressive localization. IEEE Trans. Circuits Syst. Video Technol (2025).

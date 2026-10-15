@@ -1,0 +1,2043 @@
+Introduction In the era of social media and instant communication, fake news has become a significant issue [1]. Fake news dissemination through online platforms can have detrimental effects, ranging from political polarization and social unrest to health risks and financial fraud [2, 3] (Fig. 1). Vosoughi et al. [4] identified a significant connection between the spread of fake news and political motivations, a link that gained prominence during the 2016 US presidential elections, a period when the term "fake news" entered mainstream usage. Some researchers argue that the dissemination of false information, coupled with allegations of interference by Russian trolls, may have impacted the election’s outcome [2]. Additionally, the influence of fake news was also observed in the context of the 2016 UK Brexit referendum, where it played a role in influencing public opinion and the overall dynamics of the vote [5]. The Pizzagate incident [6], where baseless conspiracy theories led to a violent attack on a restaurant, underscores the physical dangers that misinformation can pose. A fabricated tweet falsely claiming the death of President Obama in 2013 triggered a brief but significant crash in the stock market [7]. Fake news was a catalyst for the three-month diplomatic crisis in the Middle East in 2017 and has played a role in shaping broader regional changes [8]. The spread of misinformation led to a decline in trust toward vaccines during the Ebola and Zika virus outbreaks [9] as well as during COVID-19 outbreak [10]. Fig. 1 [Images not available. See PDF.]
+Consequences of fake news spread (Courtesy: blogs.lse.ac.uk)
+
+With the rise of disinformation campaigns and the ease of creating and sharing misleading content, it has become increasingly challenging to distinguish between truth and falsehood in the digital realm [11]. Research on fake news aims to understand the mechanisms, effects, and countermeasures of this phenomenon [12]. Scholars from various fields, including communication studies, psychology, sociology, computer science, and political science, have contributed to the research related to fake news. Their studies have shed light on the cognitive, social, and technological factors that shape the production, diffusion, and reception of false information [13, 14].
+Machine learning-based research on developing effective tools to automatically identify social media-based fake news has recently gained a lot of popularity [15]. However, to train machine learning algorithms for identifying false news, a large benchmark dataset is essential [16]. For instance, the LIAR dataset [17] used for fake news identification consists of approximately 12,800 short statements categorized over a 10-year period in various contexts. BuzzFeed News dataset [18] includes news stories from nine different news organizations, divided into two CSV files containing twelve variables and ninety-one observations, with a total of 2292 short sentences. FakeNewsNet dataset [19] provides information on news content as well as on its social context and is large enough with 15,500 posts for machine learning-based fake news detection systems. However, these existing datasets used to train and test machine learning models for identifying fake news containing limited features, are restricted to specific geopolitical incidents covering smaller domains, and are written in only English language (except a few written in other languages [20, 21]).
+This paper proposes an ensemble learning-based BharatAuthenticNet (BAN) model, which is trained and tested on BharatFakeNewsKosh (BFNK) dataset to predict whether the given news statement is legitimate or fraudulent. BharatFakeNewsKosh dataset is a multi-domain, multi-feature, and multi-lingual dataset that contains social media-based Indian fake news events and has a large enough size with over 26,232 entries and 16 features, covering news statements in 60 domains of 9 Indian languages to train and test the machine learning models. The proposed BAN model achieves higher accuracy, precision, recall, and an F1 score of 0.9341, 0.9619, 0.9889, and 0.9421, respectively, surpassing the performances of baseline algorithms and state-of-the-art techniques. This model is further trained and tested on existing global benchmark datasets used for fake news-related research, and their performance comparison is made in the paper. The primary contributions of the paper are outlined as follows: - Proposing a novel ensemble learning-based model named BharatAuthenticNet (BAN) for effectively identifying fake news events on social media across multiple domains and languages;
+
+- Evaluating the performance of the proposed BAN model on both the BharatFakeNewsKosh dataset, a comprehensive multi-domain and multi-lingual dataset, and on existing global benchmark datasets used for fake news detection;
+
+- Comparing the performance of the proposed BAN model against baseline models and other state-of-the-art methods in the field of fake news detection; and
+
+- Assessing the robustness of the BAN model through extensive hyperparameter tuning and analysis.
+
+The paper is organized into five sections. Section 2 reviews the existing work in the given area while highlighting their major limitations. Section 3 provides details of the research methodology followed in the current work. Section 4 provides results and discussion related to the experiments conducted in this paper. Finally, in section 5, the paper concludes by outlining the future scope of research.
+Related Work Various approaches have been explored to address the challenges associated with fake news detection, ranging from traditional linguistic methods to advanced machine learning and deep learning techniques. Early studies in fake news detection predominantly focused on linguistic and stylistic features. For instance, Perez-Rosas et al. [22] utilized lexical, syntactic, and semantic features to build classifiers that distinguish between true and false information, achieving reasonable accuracy. However, their reliance on language-specific characteristics limited their effectiveness in multilingual contexts. Machine learning models were subsequently introduced to improve detection capabilities. Ruchansky et al. [23] proposed the CSI model, which integrated user behavior, news content, and temporal patterns for detecting fake news. This model demonstrated promising results, but its dependence on user engagement data made it less effective in cases where such data was either scarce or subject to manipulation. Later, deep learning approaches gained prominence. For example, Yang et al. [24] applied convolutional neural networks (CNNs) and recurrent neural networks (RNNs) to capture contextual relationships in news content, achieving higher accuracy than traditional methods. However, these models required large-scale datasets for training and lacked generalizability across different domains [25].
+Several benchmark datasets have been developed to support the advancement of fake news detection methods. The LIAR dataset [17], consisting of 12,800 short statements labeled as true or false, provided a foundation for initial experiments but was limited by its size and feature set. Another popular dataset, called BuzzFeed News [18], was curated with a collection of news stories from nine different news organizations, with a limited size of 2,292 short sentences. The FakeNewsNet dataset [19] expanded this work by incorporating user-profiles and social context to provide a large enough dataset with approximately 15,500 posts, allowing for a more comprehensive understanding of fake news propagation. Nonetheless, this dataset was restricted to English language news, limiting its global applicability. Similarly, datasets such as those compiled by Boididou et al. [26] focused on misinformation related to specific geopolitical incidents, like the Syrian conflict, and lacked diversity in content and features, thereby limiting their use in broader applications. The multilingual nature of fake news has led to research on cross-lingual detection approaches. Raja et al. [27] developed the Dravidian_Fake dataset and created multilingual datasets by combining the English ISOT dataset with Dravidian_Fake. They fine-tuned mBERT and XLM-R pretrained transformer models using adaptive learning techniques on both English and Dravidian language datasets. However, these methods suffered from translation inaccuracies and loss of contextual meaning, affecting model performance. Ensemble learning has shown promise in enhancing fake news detection by leveraging multiple models. Kaliyar et al. [28] proposed the FakeBERT model, which integrates BERT with other classification algorithms to improve detection accuracy, achieving state-of-the-art results through diverse model architectures. Li et al. [29] demonstrated that stacking multiple classifiers, including latent semantic analysis and ensemble learning model, could further improve performance. However, these methods often require meticulous hyperparameter tuning and can be computationally expensive.
+Despite these advancements, several challenges remain. Most existing models are limited to monolingual, domain-specific datasets, reducing their effectiveness in a global context. Moreover, dependence on user behavior data and social context information raises ethical concerns regarding privacy and the potential for data manipulation [30]. Additionally, many models struggle with balancing performance and computational efficiency, particularly when processing large-scale, real-time data streams. To address these limitations, this paper proposes the BharatAuthenticNet (BAN) model, an ensemble learning-based approach that demonstrates superior performance across various metrics compared to existing state-of-the-art methods over the BharatFakeNewsKosh (BFNK) dataset, which is basically a comprehensive multi-domain, multi-feature, and multi-lingual benchmark dataset specifically designed for fake news detection. This work contributes to the development of a more robust and generalizable model for fake news detection, ultimately enhancing the reliability of social media platforms and mitigating the spread of misinformation.
+Research Methodology and Experimentation The architecture of the proposed BharatAuthenticateNet (BAN) model is given in Fig. 2. It is designed as an ensemble learning approach that combines linguistic feature extraction techniques with machine learning algorithms to detect fake news on social media. This approach exploits the BharatFakeNewsKosh (BFNK) dataset [31], a comprehensive collection of fake and true news related to Indian social media events. The data was gathered from a combination of 14 International Fact-Checking Network (IFCN) certified and 5 non-IFCN-certified fact-checking websites in India. Fig. 2 [Images not available. See PDF.]
+Architecture of the BharatAuthenticNet (BAN) model for detecting fake news
+
+The methodology begins with preprocessing the dataset to ensure uniformity and consistency across all samples. Preprocessing includes removing irrelevant content, filtering out articles with insufficient information, and normalizing multicolumn articles into a single-column format. Subsequently, key linguistic attributes, including word sentiment (positive or negative emotions), the ratio of stop words, and grammatical structures (nouns, verbs, punctuation, etc.), are extracted. The n-grams technique, combined with TF-IDF (term frequency-inverse document frequency), converts these attributes into numerical vectors that are used for training.
+Several machine learning models as well as ensemble techniques like bagging, boosting (e.g., AdaBoost and XGBoost) are trained on this processed data, and a novel voting classifier-based ensemble method called BharatAuthenticNet (BAN) is finally obtained. The BAN model integrates the predictions of five machine learning algorithms: naive Bayes, decision tree, k-nearest neighbors (KNN), long short-term memory (LSTM), and convolutional neural network (CNN). To illustrate how the BAN model combines these components, consider a news article about a political event. The decision-making process involves the following steps: (a). The CNN extracts key phrases, sentence structures, and contextual features from the article; (b) the LSTM processes the sequence of words to capture the temporal context and flow of information; (c) the KNN analyzes the article in the context of similar articles to determine local patterns and anomalies; (d) the decision tree evaluates the extracted features and patterns to create a hierarchical decision path, considering multiple feature interactions; and (e) the SVM defines the decision boundary by considering the optimal separation between fake and true news based on the aggregated features. Finally, each model’s prediction is considered as a vote. The ensemble model combines these votes, with the majority decision determining the final classification. This approach ensures that the strengths of each model are leveraged while their individual weaknesses are mitigated.
+Stratified sampling is used to divide the dataset into training and testing subsets. This technique ensures that both subsets have an equal distribution of true and false news instances, maintaining the original dataset’s class proportions. The specific splits used are 80%–20%, 75%–25%, 70%–30%, 65%–35%, and 60%–40%. After stratified sampling, the exclusivity of the training and testing datasets is verified using unique identifiers for each news item. This process involves: (a) assigning a unique ID to each news item in the dataset; (b) ensuring that these IDs are only present in one of the subsets (either training or testing) during each split; and (c) implementing cross-validation techniques to further ensure that there is no overlap between the training and testing datasets across different iterations.
+The learning classifiers are trained using several hyperparameters that find an ideal balance between variance (due to overfitting) and bias (due to underfitting) to attain the highest accuracy for a given dataset. This entails employing a grid search to iteratively train and optimize each model using a set of distinct parameters. While being computationally expensive, i.e., this method requires a lot of work but this step is necessary to prevent models from overfitting or underfitting the data. Accuracy, F1 score, recall, and precision metrics were used to evaluate each model’s performance.
+Dataset The current research is carried out on the BharaFakeNewsKosh1 (BFNK) dataset comprising Indian fake news events. A data extraction system was built using Python libraries like BeautifulSoup, Selenium, and Scrapy to gather data from 2013 to September 2022. This system collected news samples from IFCN2 signatory sites (23,826 samples) and non-IFCN signatory sites (2406 samples), which were stored in separate sheets for easier organization and analysis. The BharatFakeNewsKosh (BFNK) dataset includes data from all fourteen IFCN sites, as well as five prominent non-IFCN fact-checking operating in India. Table 1 presents the statistics of the sources used to collect news samples for the BFNK dataset. Table 1. The Statistics of BharatFakeNewsKosh (BFNK) Dataset
+S.No
+Website
+Language
+Category
+News samples
+
+IFCN Signatory Sites
+
+1
+Factcrescendo.com
+Multilingual
+Mainstream, Coronavirus
+10,903
+
+2
+Alt News
+Bilingual
+Mainstream, Politics, etc
+3,342
+
+3
+India Today
+English
+Mainstream
+2,496
+
+4
+Boomlive.in
+Multilingual
+Mainstream
+2,066
+
+5
+Youturn.in
+Tamil
+Mainstream
+1,903
+
+6
+dfrac.org
+English
+Mainstream
+903
+
+7
+factchecker.in
+English
+Mainstream
+524
+
+8
+Vishvasnews.com
+English
+Mainstream, Coronavirus
+513
+
+9
+Newsmobile.in
+English
+Mainstream
+300
+
+10
+thip.media
+English
+Health
+250
+
+11
+Factly.in
+Bilingual
+Mainstream, Coronavirus
+221
+
+12
+DigitEye India
+English
+Mainstream, Coronavirus
+177
+
+13
+Newschecker.in
+Multilingual
+Mainstream
+128
+
+14
+The Quint
+Bilingual
+Mainstream, Health
+100
+
+Non-IFCN Signatory Sites
+
+15
+OpIndia
+Bilingual
+Mainstream
+650
+
+16
+IndiaSpend
+English
+Coronavirus, Earth, Education
+524
+
+17
+SM Hoax Slayer
+English
+Mainstream
+491
+
+18
+Times of India
+English
+Mainstream
+417
+
+19
+Scroll.in
+English
+Mainstream
+324
+
+Total Size
+26, 232
+
+Table 2. BharatFakeNewsKosh (BFNK) Dataset: Data Structure with Attribute Details
+S.No
+Attribute
+Details
+
+1
+FCN_ID
+Unique ID for each news
+
+2
+Author_Name
+Author(s) of the news article
+
+3
+Statement
+Headline or main news statement
+
+4
+News_Body
+Complete text of the article
+
+5
+Media_Link
+URL of attached media files
+
+6
+Publish_Date
+Original publication date of article
+
+7
+Fact_Check_Link
+URL link to fact-check source
+
+8
+News_Category
+Category of fact-checked news
+
+9
+Language
+Language of the news article
+
+10
+Region
+Relevant geographical region of news
+
+11
+Platform
+Media sites where news was shared
+
+12
+Supported_Text
+Indicates text format sharing status
+
+13
+Supported_Video
+Signifies video format sharing status
+
+14
+Supported_Image
+Describes image format sharing status
+
+15
+Fact_Check_Source
+Source of fact-checking website
+
+16
+Label
+For classification of news credibility
+
+
+The BharatFakeNewsKosh (BFNK) dataset reflects India’s linguistic diversity by incorporating news articles in various languages, such as Assamese, Bangla, English, Gujarati, Hindi, Malayalam, Odia, Tamil, and Telugu. It is organized with 16 specific attributes that offer comprehensive metadata for each news article. These attributes are structured to facilitate multi-modal analysis. Table 2 provides the data structure of the BharatFakeNewsKosh (BFNK) dataset with a complete description of all its attributes.
+In this paper, the BFNK dataset is used in three forms for experimental purposes to train and test various machine learning models in order to get better insights into the quality of the given dataset: (a). the first form is the full BFNK dataset, which is denoted as DS1; (b). the second form is the sub-dataset of the BFNK dataset containing news pieces related to IFCN signatory fact-checking sites with a total size of 23,826 and it is denoted by DS2; and (c). the third form of the BFNK dataset is another sub-dataset comprising news pieces related to non-IFCN signatory sites with a size of 2,406, and it is denoted by DS3.
+Figures 3, 4, and 5 reveal notable patterns for doing comparison of word clouds for News_category and language distributions across DS1, DS2, and DS3 of the BharatFakeNewsKosh (BFNK) dataset. In all three datasets, politics is the dominant category, with DS1 and DS2 showing a broader variety, including categories like society, national, religion, and international, which are less prominent in DS3. DS3 is more narrowly focused, with social viral, coronavirus, and medical having some presence but far fewer categories overall. In terms of language, DS1 and DS2 are dominated by English but also show significant representation of Hindi, Tamil, and Gujarati, making them linguistically diverse. DS3, on the other hand, is more concentrated, featuring primarily English and a small number of Hindi entries. This makes DS3 more limited in both language and category coverage compared to the broader distribution seen in DS1 and DS2. The word clouds vividly convey the multilingual nature of the dataset, with varying font sizes helping to emphasize the linguistic diversity.
+Additionally, three global benchmark datasets for fake news detection—LIAR, BuzzFeed News, and FakeNewsNet—were used to train and evaluate the proposed BharatAuthenticNet (BAN) model, enabling a performance comparison with the BharatFakeNewsKosh (BFNK) dataset. The details of the datasets considered for the experimental setup are described in Table 3.
+Machine Learning Approaches In this research, various machine learning algorithms were used in conjunction with the proposed methodology, including Naive Bayes, k-nearest neighbor (KNN), logistic regression, support vector machines (SVM), multilayer perceptron, and ensemble techniques. Fig. 3 [Images not available. See PDF.]
+World cloud for news_category and language distribution in DS1 of BFNK dataset
+Fig. 4 [Images not available. See PDF.]
+World cloud for news_category and Language distribution in DS2 of BFNK dataset
+Fig. 5 [Images not available. See PDF.]
+World cloud for news_category and language distribution in DS3 of BFNK dataset
+Table 3. Overview of datasets considered for experimental setup
+Dataset
+Size
+Composition
+
+DS1 of BFNK
+26,232
+IFCN, Non-IFCN Signatory News Pieces
+
+DS2 of BFNK
+23,826
+IFCN Signatory News Pieces
+
+DS3 of BFNK
+2406
+Non-IFCN Signatory News Pieces
+
+LIAR
+12,800
+Politics related News Pieces
+
+BuzzFeed News
+2292
+Politics related News Pieces
+
+FakeNewsNet
+15,500
+Politifact and GossipCop related News Pieces
+
+
+Naive Bayes classifier The Naive Bayes classifier is a supervised machine learning algorithm used for text classification problems. In this paper, the smoothing parameter (alpha) is hyper-tuned to improve the accuracy of the Naive Bayes algorithm. The smoothing parameter controls the tradeoff between fitting the training data too closely (overfitting) and generalizing too much (underfitting). The Naive Bayes classifier works on the assumption that the features are independent given the class label, which allows the joint probability P ( x , y ) to be factorized into the product of the probabilities of each feature given the class label [32]: 1
+y = arg max y P ( y ) ∏ i = 1 n P ( x i ∣ y ) where y is the predicted class label for a new input vector x , P ( y ) is the prior probability of class y , P ( x i ∣ y ) is the probability of observing feature x i given the class label y , and n is the number of features in the input vector x ∗ .
+Logistic Regression Another well-known supervised machine learning method for solving binary classification problems is logistic regression (LR) [33]. To obtain the optimum outcome for each unique dataset in this research, the hyperparameters were tuned. Mathematically, the logistic regression classifier can be defined as [34]: 2
+P ( y = 1 ∣ x , w ) = σ ( w T x ) where y is the binary class label, x denotes the input feature vector, σ ( · ) denotes the sigmoid function, and w denotes the weight vector.
+Support Vector Machine Support Vector Machine (SVM) is a powerful supervised machine learning algorithm that has the ability to find the optimal hyperplane by maximizing the margin between classes, which makes it a popular choice for binary classification problems of varying complexities [35]. SVM has various kernel functions that are used to fit the data points. The choice of kernel function plays a crucial role in the performance of the SVM algorithm [36]. In this research, linear SVM is used as a kernel to hyper-tune the classifier. Mathematically, the SVM classifier can be formulated as: 3
+f ( x ) = sign ( w T x + b ) where f ( x ) is the decision function that predicts the class label for a new input vector x , w is the weight vector, b is the bias term, and sign ( · ) is the sign function.
+K-Nearest Neighbors (KNN) KNN is applicable to both supervised and unsupervised learning problems. KNN as unsupervised learning, however, can predict a dataset’s outcome without the use of a dependent variable. The KNN model calculates the separation between a new data point and its closest neighbors and classifies it based on the majority of the votes from those neighbors [37]. The class with the closest distance is given the new data point if K is equal to 1. Mathematically, the KNN classifier can be expressed as: 4
+y = argmax c ∑ i = 1 K [ y i = c ] where y is the predicted class label for a new input vector, c is a class label, K is the number of nearest neighbors to consider, and [ y i = c ] is an indicator function that returns 1 if y i = c and 0 otherwise.
+Multilayer Perceptron Multilayer perceptrons (MLPs) are a family of artificial neural networks used for a variety of machine learning applications, such as classification and regression issues. It is made up of an input layer, one or more hidden layers, and an output layer. The equation below illustrates how a function can be used to represent the fundamental multilayer perceptron model with one hidden layer [38]: 5
+f ( X ) = g ( b i a s ( 2 ) + W e i g h t ( 2 ) s ( b i a s ( 1 ) + W e i g h t ( 1 ) X ) ) Here, g and s are the activation functions; Weight(1) and Weight(2) are the weight matrices, and bias(1) and bias(2) are the bias vectors. In this research, the Adam solver and the Rectified Linear Unit (ReLU) with three hidden layers are used as the activation function.
+Ensemble Techniques In order to get predictions that are more accurate, ensemble learning techniques combine several different models. The ensemble technique can overcome the drawbacks of individual models and result in more precise conclusions by merging these models [39]. In this research, popular ensemble learning techniques, including random forest, bagging, boosting, and voting, were used to obtain the model with improved performance.
+Random forest mixes the predictions of various decision trees to increase the model’s accuracy and robustness. Mathematically, the random forest classifier can be defined as [40]: 6
+y ^ = mode f T ( x ) where y ^ is the predicted class label for a new input vector, f T ( x ) is the function that predicts the decision tree T for the input vector ′ x ′ , and mode ( · ) is the mode function that returns the most common class label among the decision trees in the forest. In this research, a random forest model is trained with the suitable hyperparameter that was obtained through Grid search to create the model that can accurately predict the result.
+Bagging is a popular ensemble learning method used for classification and regression tasks. The final output is created by integrating the predictions of numerous classifiers that have been trained on various subsets of the training data. This paper uses bagging for classification, known as bagging classifiers. The bagging classifier is built using a base classifier, such as decision trees or neural networks, and a re-sampling technique called bootstrap aggregating [41]. In this research, the decision tree is used as a bagging classifier. One of the advantages of bagging is that it reduces the variance of the model by reducing the impact of individual data points or outliers. Another benefit is that it can increase the model’s accuracy by decreasing bias, which is the tendency of the model to underfit or oversimplify the data.
+Boosting is a powerful machine learning technique that can improve the accuracy and robustness of the model by combining weak classifiers into a stronger ensemble model [42]. This paper uses boosting for classification, known as boosting classifiers. The boosting classifier is built using a base classifier, such as decision trees or support vector machines, and a boosting algorithm, such as AdaBoost, Gradient Boosting, and XGBoost [43]. For this research, AdaBoost and XGBoost are used as boosting classifiers. AdaBoost assigns weights to the training samples and focuses on the misclassified samples in each iteration. On the other hand, Gradient Boosting emphasizes the residual errors of the prior classifier and modifies the weights of the samples using the gradient of the loss function. Gradient Boosting’s improved version, XGBoost, uses regularisation approaches to reduce overfitting and increase model stability.
+Experimental Setup The experimental setup for evaluating the BharatAuthenticNet (BAN) model begins with the data curation of the BharatFakeNewsKosh (BFNK) dataset, collected via a Python-based data extraction system using BeautifulSoup, Selenium, and Scrapy from both IFCN-certified and non-IFCN-certified fact-checking websites. The dataset spans multiple domains and languages, including true and fake news related to Indian social media events. During the preprocessing phase, the data was cleaned, irrelevant content was removed, and articles were normalized to a uniform format for analysis.
+Following this, individual machine learning models such as naive Bayes, decision trees, k-nearest neighbors (KNN), long short-term memory (LSTM), and convolutional neural networks (CNNs), along with ensemble techniques like random forest, bagging, and boosting (e.g., AdaBoost, XGBoost) were trained on the processed data. After independent evaluation, the best-performing models were integrated into the BharatAuthenticNet (BAN) ensemble model. The BAN model employs a novel voting classifier that combines predictions from the selected models to enhance fake news detection accuracy. Stratified sampling was applied to split the dataset into training and testing sets to ensure a balanced class distribution.
+For a comprehensive evaluation, the BAN model was tested primarily on the BharatFakeNewsKosh (BFNK) dataset, including DS1, DS2, and DS3. Additionally, global benchmark datasets like LIAR, BuzzFeed News, and FakeNewsNet were used to validate its robustness. Performance metrics such as accuracy, F1 score, recall, and precision were computed to compare BAN against baseline models and other state-of-the-art methods for fake news detection. Extensive hyperparameter tuning was conducted to optimize each model and prevent overfitting or underfitting, ensuring generalization across different datasets.
+The experiments were executed on a system with the following configuration: Intel Core i7 processor, 32 GB RAM, NVIDIA GTX 1080 Ti GPU, running Ubuntu 20.04. The models were implemented using Python-based frameworks, including scikit-learn, TensorFlow, and Keras. This configuration enabled efficient handling of computationally intensive tasks required for model training and testing.
+Performance Metrics Assessing the performance of machine learning algorithms is essential in determining their efficiency in solving specific problems [44]. The metrics used in this study to evaluate algorithm performance are primarily based on the confusion matrix. The confusion matrix is a 2 x 2 table that demonstrates the classification model’s performance on the test set, providing information about the model’s accuracy [45]. The confusion matrix’s rows represent the predicted class labels, while its columns represent the actual class labels. An example of a confusion matrix is shown below: Actual_Positive
+Actual_Negative
+
+Predicted_Positive
+True_Positive
+False_Positive
+
+Predicted_Negative
+False_Negative
+True_Negative
+
+
+In the confusion matrix, there are four different parameters.
+- True_Positive (T_P): the number of positive cases that were accurately predicted;
+
+- False_Positive (F_P): how many times negative events were mistakenly predicted as positive;
+
+- True_Negative (T_N): the percentage of accurately predicted negative events; and
+
+- False_Negative (F_N): how many times a positive occurrence was projected as a negative one.
+
+
+The confusion matrix enables the computation of a number of performance metrics, including F1 score, recall, accuracy, and precision:
+- Accuracy: This metric measures the overall performance of a classification model. It is computed as the proportion of correctly classified occurrences to all instances. 7
+A c c u r a c y = T _ P + T _ N T _ P + T _ N + F _ P + F _ N
+
+- Precision: It is computed as the ratio of instances of positive predictions that were made correctly to all positive predictions. 8
+P r e c i s i o n = T _ P T _ P + F _ P
+
+- Recall: This metric counts how many positive events were correctly predicted out of all the positive instances that actually occurred. 9
+R e c a l l = T _ P T _ P + F _ N
+
+- F1 score: It is computed as the harmonic mean of precision and recall. 10
+F 1 s c o r e = 2 ∗ P r e c i s i o n ∗ R e c a l l P r e c i s i o n + R e c a l l
+
+
+
+Results and Discussion This section presents the results and offers an in-depth discussion of the proposed BharatAuthenticNet (BAN) model’s performance. The analysis is divided into five subsections: 4.1 evaluates the BAN model’s performance across various datasets, demonstrating its adaptability and effectiveness in diverse contexts; 4.2 compares the proposed model with baseline machine learning models, showcasing its superior performance; 4.3 contrasts the BAN model with state-of-the-art ensemble techniques, highlighting its advancements in fake news detection; 4.4 explores the influence of different hyperparameter settings on accuracy and robustness, offering insights into optimal configurations; and 4.5 discusses the computational efficiency of the BAN model in detail.
+Performance Evaluation of the Proposed Model over Various Datasets The result performance evaluation of the BharatAuthenticNet (BAN) model across multiple datasets, including the BharatFakeNewsKosh (BFNK) dataset (DS1, DS2, DS3), LIAR dataset, BuzzFeed News dataset, and FakeNewsNet dataset (GossipCop, PolitiFact) is presented in Table 4. Additionally, confusion matrices of the proposed model over each datasets were analyzed to provide insights into the model’s classification performance, as shown in Figures 6, 7 and 8. Table 4. Performance Comparison of BAN Model Across Different Datasets
+Part of Dataset
+Accuracy
+Precision
+Recall
+F1 Score
+
+BharatFakeNewsKosh (BFNK) Dataset
+
+DS1
+0 . 9341
+0 . 9619
+0 . 9889
+0 . 9421
+
+DS2
+0.9085
+0.9219
+0.9529
+0.9415
+
+DS3
+0.8678
+0.8812
+0.9119
+0.9
+
+LIAR Dataset
+
+Basic
+0.6814
+0.6607
+0.7042
+0.68
+
+BuzzFeed News Dataset
+
+Basic
+0.7483
+0.7757
+0.7694
+0.7738
+
+FakeNewsNet Dataset
+
+Gossipcop
+0.819
+0.8412
+0.831
+0.84
+
+PolitiFact
+0.8726
+0.8821
+0.8669
+0.87
+
+
+As observed in Table 4, the BAN model achieved the highest performance on the DS1 subset of the BharatFakeNewsKosh dataset, with an accuracy of 0.9341, precision of 0.9619, recall of 0.9889, and an F1 score of 0.9421. These metrics reflect the model’s strong ability to detect fake news, particularly through high recall, indicating its effectiveness in minimizing false negatives. This is confirmed in the confusion matrix (Fig. 6), which shows only 172 (i.e., 0.01) false positives (FP) and 697 (i.e. 0.09) false negatives (FN), yielding a well-balanced performance. On the DS2 subset, the model maintained robust performance, achieving an accuracy of 0.9085, precision of 0.9219, recall of 0.9529, and an F1 score of 0.9415 (Table 4). However, as seen in the confusion matrix (Fig. 6), the number of false positives (FP = 802, i.e., 0.05) and false negatives (FN = 1040, i.e., 0.15) increased compared to DS1, indicating some challenges in classifying certain fake news events. Nevertheless, the model’s overall balance between precision and recall showcases its reliability across diverse content and language variations within the dataset. The DS3 subset presented a more difficult challenge for the BAN model, resulting in a slightly lower performance with an accuracy of 0.8678, precision of 0.8812, recall of 0.9119, and an F1 score of 0.90 (Table 4). As shown in the confusion matrix (Fig. 6), false positives (FP = 150, i.e., 0.09) and false negatives (FN = 59, i.e., 0.08) further increased, affecting the overall accuracy. These misclassifications highlight the increased complexity of DS3, potentially due to more ambiguous or less representative fake news instances. The model’s robust recall suggests that it still successfully captures the majority of fake news, though precision suffers due to the higher false-positive rate. Fig. 6 [Images not available. See PDF.]
+Confusion matrix of BharatAuthenticNet (BAN) model over DS1, DS2, and DS3 of BharatFakeNewsKosh (BFNK) dataset
+
+The BAN model’s performance on the LIAR dataset was comparatively lower, achieving an accuracy of 0.6814, precision of 0.6607, recall of 0.7042, and an F1 score of 0.68 (Table 4). The confusion matrix in Fig. 7 reveals a considerable number of false positives (FP = 2659, i.e., 0.30) and false negatives (FN = 2237, i.e., 0.58), indicating that the model faced challenges in generalizing to the LIAR dataset’s specific patterns. This could be attributed to differences in linguistic structure, content, and fact-checking labels, which may require further fine-tuning of the model to improve precision and recall on this dataset. On the BuzzFeed News dataset, the model performed moderately well, achieving an accuracy of 0.7483, precision of 0.7757, recall of 0.7694, and an F1 score of 0.7738 (Table 4). The confusion matrix (Fig. 7) shows a relatively balanced performance, though the presence of 368 (i.e., 0.23) false positives (FP) and 153 (i.e., 0.22) false negatives (FN) suggests room for improvement in fine-grained classification. Despite this, the model’s precision and F1 score reflect its capacity to effectively classify fake news with a reasonable degree of confidence. The BAN model performed well on the GossipCop subset, achieving an accuracy of 0.8190, precision of 0.8412, recall of 0.8310, and an F1 score of 0.8400 (Table 4). The confusion matrix in Fig. 8 reveals moderate numbers of false positives (FP = 1850, i.e., 0.17) and false negatives (FN = 1074, i.e., 0.19), suggesting that the model performs competently on this dataset but still requires refinement to further minimize misclassifications. Fig. 7 [Images not available. See PDF.]
+Confusion matrix of BharatAuthenticNet (BAN) model over LIAR and BuzzFeed news datasets
+Fig. 8 [Images not available. See PDF.]
+Confusion matrix of BharatAuthenticNet (BAN) model over GossipCop and PolitiFact of FakeNewsNet dataset
+
+While the BAN model performs well across most datasets, especially in detecting fake news on the BharatFakeNewsKosh dataset, further refinement is needed to improve its generalization to other datasets. Future work could focus on enhancing the model’s adaptability to varied linguistic patterns and content types, as well as addressing the trade-off between precision and recall in more challenging datasets.
+Performance Comparison of the Proposed Model with Baselines Table 5 presents a comprehensive performance comparison between the proposed BharatAuthenticNet (BAN) model and various baseline models on three distinct datasets—DS1, DS2, and DS3 of BharatFakeNewsKosh (BFNK) using evaluation metrics—accuracy, precision, recall, and F1 score—which provide valuable insights into the models’ classification performance. These results could be better visualized in Fig. 9. Confusion matrices of each model provided in Figs. 6, 10, 11, 12, 13, 14 offer a more granular view of the classification outcomes of their performances. Table 5. Performance Comparison of the Proposed Model with Baselines
+Dataset
+Model
+Accuracy
+Precision
+Recall
+F1 Score
+
+Naive Bayes
+0.5766
+0.6186
+0.7861
+0.6920
+
+Logistic Regression (LR)
+0.7901
+0.8083
+0.7557
+0.7838
+
+DS1
+SVM
+0.8532
+0.8412
+0.8673
+0.8541
+
+KNN
+0.7563
+0.8160
+0.8736
+0.8439
+
+Multilayer Perceptron (MLP)
+0.8140
+0.8491
+0.8702
+0.8617
+
+BharatAuthenticNet (BAN)
+0 . 9341
+0 . 9619
+0 . 9889
+0 . 9421
+
+Naive Bayes
+0.5743
+0.6158
+0.7956
+0.6943
+
+Logistic Regression (LR)
+0.8067
+0.8135
+0.7629
+0.7912
+
+DS2
+SVM
+0.8709
+0.8529
+0.8939
+0.8736
+
+KNN
+0.7451
+0.8168
+0.8721
+0.84
+
+Multilayer Perceptron (MLP)
+0.7616
+0.8035
+0.8419
+0.8201
+
+BharatAuthenticNet (BAN)
+0 . 9085
+0 . 9219
+0 . 9529
+0 . 9415
+
+Naive Bayes
+0.5814
+0.6236
+0.7877
+0.6962
+
+Logistic Regression (LR)
+0.7119
+0.7427
+0.7342
+0.7413
+
+DS3
+SVM
+0.8016
+0.8273
+0.8541
+0.8430
+
+KNN
+0.74
+0.8219
+0.9015
+0.8574
+
+Multilayer Perceptron (MLP)
+0.6162
+0.6491
+0.6823
+0.6738
+
+BharatAuthenticNet (BAN)
+0 . 8678
+0 . 8812
+0 . 9119
+0 . 90
+
+
+Analyzing the results, it is evident that the proposed BAN model consistently outperforms the baseline models across all datasets. Regarding accuracy, the BAN model achieves exceptional scores, with values ranging from 0.8678 to 0.9341. In comparison, the baseline models exhibit lower accuracy values, with Naive Bayes ranging from 0.5743 to 0.5814, Logistic Regression from 0.7119 to 0.8067, SVM from 0.8016 to 0.8709, KNN from 0.74 to 0.7563, and MLP from 0.6162 to 0.8140. These results highlight the superior classification accuracy of the BAN model in all three datasets. Fig. 9 [Images not available. See PDF.]
+Performance comparison of the proposed BharatAuthenticNet (BAN) model with baselines over DS1, DS2, and DS3 of BharatFakeNewsKosh (BFNK) dataset
+
+Precision, which measures the proportion of correctly predicted positive instances, further demonstrates the superior performance of the BAN model. Across all datasets, the BAN model consistently achieves high precision scores, ranging from 0.8812 to 0.9619. In contrast, the baseline models exhibit lower precision scores, with Naive Bayes ranging from 0.6158 to 0.6236, Logistic Regression from 0.7427 to 0.8135, SVM from 0.8273 to 0.8529, KNN from 0.8160 to 0.8219, and MLP from 0.6491 to 0.8491. These findings indicate the BAN model’s ability to minimize false-positive predictions and provide more accurate identification of positive instances.
+Recall, which represents the proportion of actual positive instances correctly identified, also showcases the BAN model’s superior performance. The BAN model consistently achieves high recall scores, ranging from 0.9119 to 0.9889, while the baseline models exhibit lower recall scores. Naive Bayes ranges from 0.7861 to 0.7956, Logistic Regression from 0.7342 to 0.7629, SVM from 0.8541 to 0.8939, KNN from 0.8721 to 0.9015, and MLP from 0.6823 to 0.8702.
+Furthermore, the F1 score, which combines precision and recall into a single measure, reaffirms the superior performance of the BAN model. Across all datasets, the BAN model consistently achieves the highest F1 scores, ranging from 0.90 to 0.9421. In comparison, the baseline models exhibit slightly lower F1 scores, with naive Bayes ranging from 0.6920 to 0.6962, Logistic Regression from 0.7413 to 0.7912, SVM from 0.8430 to 0.8736, KNN from 0.84 to 0.8574, and MLP from 0.6738 to 0.8617. Fig. 10 [Images not available. See PDF.]
+Confusion matrix of naive Bayes model over DS1, DS2, and DS3 of BharatFakeNewsKosh (BFNK) dataset
+Fig. 11 [Images not available. See PDF.]
+Confusion matrix of logistic regression (LR) model over DS1, DS2, and DS3 of BharatFakeNewsKosh (BFNK) dataset
+Fig. 12 [Images not available. See PDF.]
+Confusion matrix of SVM model over DS1, DS2, and DS3 of BharatFakeNewsKosh (BFNK) dataset
+Fig. 13 [Images not available. See PDF.]
+Confusion matrix of KNN model over DS1, DS2, and DS3 of BharatFakeNewsKosh (BFNK) dataset
+Fig. 14 [Images not available. See PDF.]
+Confusion matrix of multilayer perceptron (MLP) model over DS1, DS2, and DS3 of BharatFakeNewsKosh (BFNK) dataset
+
+The confusion matrices provide clear evidence that the BAN model delivers the most reliable and robust performance. It achieves a superior balance across precision, recall, and accuracy due to its ensemble learning-based architecture and ability to extract meaningful linguistic features. While baseline models such as SVM and KNN show relatively strong recall, they fall short in precision due to higher false-positive rates. On the other hand, models like Naive Bayes and Logistic Regression fail to handle complex data distributions effectively, as reflected in their lower overall performance metrics.
+A comparative analysis was conducted between the proposed BAN model and baseline models (naive Bayes, logistic regression, support vector machine, k-nearest neighbor, multilayer perceptron) across various train-test splits of three datasets (DS1, DS2, and DS3) and the results of this analysis are provided in Tables 6, 7, and 8, respectively. Table 6. Performance comparison of the proposed BAN model with baselines for various train-test splits on DS1 Dataset
+Train-test split (%)
+Accuracy
+Precision
+Recall
+F1 Score
+
+Naive Bayes
+
+80–20
+0 . 5766
+0 . 6186
+0 . 7861
+0 . 6920
+
+75–25
+0.5753
+0.6170
+0.7851
+0.6913
+
+70–30
+0.5701
+0.6118
+0.7743
+0.6909
+
+60–40
+0.557
+0.5997
+0.7724
+0.6801
+
+Logistic Regression (LR)
+
+80–20
+0 . 7901
+0 . 8083
+0 . 7557
+0 . 7838
+
+75–25
+0.7856
+0.8081
+0.7532
+0.7811
+
+70–30
+0.7828
+0.8078
+0.7517
+0.7808
+
+65–35
+0.7815
+0.8041
+0.7491
+0.7801
+
+60–40
+0.7801
+0.8027
+0.7452
+0.7749
+
+Support Vector Machine (SVM)
+
+80–20
+0.8510
+0.8396
+0.8614
+0.8531
+
+75–25
+0 . 8532
+0 . 8412
+0 . 8673
+0 . 8541
+
+70–30
+0.8490
+0.8359
+0.8593
+0.8535
+
+65–35
+0.8463
+0.8305
+0.8507
+0.8441
+
+60–40
+0.8412
+0.8271
+0.8499
+0.8411
+
+K-Nearest Neighbor (KNN)
+
+80–20
+0 . 7563
+0 . 816
+0 . 8736
+0 . 8439
+
+75–25
+0.756
+0.8155
+0.8703
+0.8421
+
+70–30
+0.7543
+0.8101
+0.8688
+0.84
+
+65–35
+0.75
+0.8029
+0.8601
+0.8325
+
+60–40
+0.7401
+0.7928
+0.854
+0.8279
+
+Multilayer Perceptron (MLP)
+
+80–20
+0.8057
+0.8428
+0.8671
+0.8535
+
+75–25
+0 . 8140
+0 . 8491
+0 . 8702
+0 . 8617
+
+70–30
+0.8128
+0.8442
+0.8696
+0.8611
+
+65–35
+0.8112
+0.8403
+0.8667
+0.8503
+
+60–40
+0.8087
+0.8379
+0.8628
+0.85
+
+Proposed BharatAuthenticNet (BAN) Model
+
+80–20
+0 . 9341
+0 . 9619
+0 . 9889
+0 . 9421
+
+75–25
+0.9339
+0.9604
+0.9882
+0.9418
+
+70–30
+0.931
+0.9587
+0.9877
+0.9409
+
+65–35
+0.9303
+0.956
+0.986
+0.9397
+
+60–40
+0.92
+0.9522
+0.9854
+0.9351
+
+Table 7. Performance Comparison of the Proposed BAN Model with Baselines for Various Train-Test Splits on DS2 Dataset
+Train-test split (%)
+Accuracy
+Precision
+Recall
+F1 Score
+
+Naive Bayes
+
+80–20
+0.573
+0.6148
+0.7929
+0.6926
+
+75–25
+0 . 5743
+0 . 6158
+0 . 7956
+0 . 6943
+
+70–30
+0.5736
+0 . 6158
+0.7955
+0.694
+
+65–35
+0.5627
+0.6143
+0.7951
+0.6931
+
+60–40
+0.5612
+0.6138
+0.7946
+0.692
+
+Logistic Regression (LR)
+
+80–20
+0.8001
+0.8077
+0.7555
+0.7895
+
+75–25
+0 . 8067
+0 . 8135
+0 . 7629
+0 . 7912
+
+70–30
+0.8008
+0.8059
+0.7528
+0.7856
+
+65–35
+0.7999
+0.7985
+0.7176
+0.7628
+
+60–40
+0.7987
+0.79
+0.7037
+0.7403
+
+Support Vector Machine (SVM)
+
+80–20
+0 . 8709
+0 . 8529
+0.89
+0 . 8736
+
+75–25
+0.8691
+0.8475
+0 . 8939
+0.87
+
+70–30
+0.8665
+0.8412
+0.8872
+0.8699
+
+65–35
+0.8602
+0.8359
+0.8827
+0.8633
+
+60–40
+0.8547
+0.8294
+0.8763
+0.8572
+
+K-Nearest Neighbor (KNN)
+
+80–20
+0.7429
+0.8132
+0.87
+0.8375
+
+75–25
+0 . 7451
+0 . 8168
+0 . 8721
+0 . 84
+
+70–30
+0.7447
+0.8163
+0.8718
+0.8397
+
+65–35
+0.744
+0.8157
+0.8712
+0.8392
+
+60–40
+0.7428
+0.8141
+0.8703
+0.8381
+
+Multilayer Perceptron (MLP)
+
+80–20
+0 . 7616
+0 . 8035
+0.8410
+82
+
+75–25
+0.7591
+0.8012
+0 . 8419
+0 . 8201
+
+70–30
+0.7563
+0.7928
+0.8347
+0.8183
+
+65–35
+0.7537
+0.7803
+0.8228
+0.8096
+
+60–40
+0.7502
+0.77
+0.8106
+0.7988
+
+Proposed BharatAuthenticNet (BAN) Model
+
+80–20
+0 . 9085
+0 . 9219
+0 . 9529
+0 . 9415
+
+75–25
+0.9073
+0.9204
+0.9517
+0.94
+
+70–30
+0.9065
+0.9182
+0.9478
+0.9372
+
+65–35
+0.9052
+0.9137
+0.9449
+0.9337
+
+60–40
+0.9037
+0.9098
+0.94
+0.928
+
+Table 8. Performance comparison of the proposed BAN model with baselines for various train-test splits on DS3 dataset
+Train-test split (%)
+Accuracy
+Precision
+Recall
+F1 Score
+
+Naive Bayes
+
+80–20
+0.5795
+0.6224
+0.7827
+0.6934
+
+75–25
+0 . 5814
+0 . 6236
+0 . 7877
+0 . 6962
+
+70–30
+0.5798
+0.6232
+0.78
+0.6953
+
+65–35
+0.5777
+0.6225
+0.7704
+0.693
+
+60–40
+0.5723
+0.6216
+0.7635
+0.6911
+
+Logistic Regression (LR)
+
+80–20
+0 . 7119
+0 . 7427
+0 . 7342
+0 . 7413
+
+75–25
+0.7115
+0.7388
+0.7286
+0.7361
+
+70–30
+0.7089
+0.7321
+0.7147
+0.7297
+
+65–35
+0.7024
+0.7279
+0.7039
+0.7165
+
+60–40
+0.6958
+0.7109
+0.6903
+0.7016
+
+Support Vector Machine (SVM)
+
+80–20
+0 . 8016
+0 . 8273
+0 . 8541
+0 . 8430
+
+75–25
+0.7986
+0.8244
+0.8504
+0.84
+
+70–30
+0.7950
+0.8187
+0.8471
+0.8369
+
+65–35
+0.7107
+0.8103
+0.8415
+0.8307
+
+60–40
+0.7056
+0.8021
+0.8353
+0.8235
+
+K-Nearest Neighbor (KNN)
+
+80–20
+0 . 74
+0 . 8219
+0 . 9015
+0.8467
+
+75–25
+0.7349
+0 . 8219
+0.8906
+0 . 8574
+
+70–30
+0.7305
+0.8194
+0.8843
+0.8484
+
+65–35
+0.7298
+0.8171
+0.8796
+0.8367
+
+60–40
+0.7281
+0.8129
+0.8784
+0.833
+
+Multilayer Perceptron (MLP)
+
+80–20
+0 . 6162
+0 . 6491
+0 . 6823
+0 . 6738
+
+75–25
+0.6129
+0.6467
+0.6795
+0.6687
+
+70–30
+0.6098
+0.6438
+0.6743
+0.6642
+
+65–35
+0.6057
+0.6403
+0.6691
+0.6568
+
+60–40
+0.6011
+0.6379
+0.6658
+0.65
+
+Proposed BharatAuthenticNet (BAN) Model
+
+80–20
+0 . 8678
+0 . 8812
+0 . 9119
+0 . 90
+
+75–25
+0.8649
+0.8787
+0.9088
+0.8995
+
+70–30
+0.8601
+0.8741
+0.9053
+0.8951
+
+65–35
+0.8565
+0.8693
+0.9003
+0.8894
+
+60–40
+0.8506
+0.8654
+0.8947
+0.8817
+
+
+Fig. 15 [Images not available. See PDF.]
+Performance comparison of the proposed BharatAuthenticNet (BAN) model with baselines for various train-test splits over DS1, DS2, and DS3 of BharatFakeNewsKosh (BFNK) dataset
+
+The BharatAuthenticNet (BAN) model demonstrates exceptional performance across all train-test splits in the DS1, DS2, and DS3 datasets, consistently achieving accuracy above 92%, 90%, and 85%, respectively. BAN excels in precision, recall, and F1 scores, with its F1 score reaching 0.9421 on DS1, 0.9415 on DS2, and 0.90 on DS3, outperforming all baseline models. Support vector machine (SVM) performs well but lags behind BAN, with an F1 score of 0.8541 on DS1 and 0.8736 on DS2. Multilayer perceptron (MLP) and k-nearest neighbors (KNN) show stable but weaker performance, while logistic regression (LR) and naive Bayes struggle with accuracy and F1 scores below 80%, particularly on the more complex DS2 and DS3 datasets. This highlights BAN’s superior ability to detect fake news accurately, even in the presence of complex linguistic and categorical features, and its resilience across varying data splits.
+It’s worth noting that as the train-test split ratio increased, the performance of all models generally decreased. This trend could be attributed to the reduced amount of training data available for model learning and the potential for overfitting when the testing data becomes relatively larger. Overall, the superior performance of the proposed BharatAuthenticNet (BAN) model suggests its potential as a powerful tool for classification tasks. It demonstrates the capability to accurately classify datasets with different sizes and characteristics. While the baseline models showed reasonable performance, the BAN model consistently outshined them, highlighting its effectiveness in capturing intricate patterns and making precise predictions (see Fig. 15).
+Performance Comparison of the Proposed Model with State-of-the-art Ensemble Techniques Table 9 presents a comprehensive comparison of performance between the proposed BharatAuthenticNet (BAN) model and existing ensemble techniques on different datasets. This comparison is better visualized in Fig. 16. The evaluated ensemble models include bagging with decision tree, random forest, boosting with AdaBoost, and Boosting with XGBoost. The evaluation metrics include accuracy, precision, recall, and F1 score. The confusion matrices presented in Figs. 6, 17, 18, 19, 20 provide a detailed breakdown of the classification results for each model’s performance.
+The results, as summarized in Table 9, clearly indicate that BAN outperforms the existing ensemble techniques across all three datasets. For DS1, BAN achieves the highest accuracy (0.9341), precision (0.9619), and recall (0.9889), demonstrating its ability to detect fake news events effectively while maintaining a low rate of misclassification. Similarly, BAN outperforms other models in DS2 and DS3, although the overall performance slightly drops with increasing dataset complexity, particularly in DS3. However, even in DS3, which is noisier and less reliable, BAN maintains a solid accuracy of 0.8678, outperforming other models, which suffer from more significant drops in performance. Table 9. Performance Comparison of the Proposed BharatAuthenticNet (BAN) Model with Existing Ensemble Techniques
+Dataset
+Model
+Accuracy
+Precision
+Recall
+F1 Score
+
+Random Forest (RF)
+0.8723
+0.8942
+0.8590
+0.8764
+
+Bagging (Decision Tree)
+0.9136
+0.9337
+0.8965
+0.9126
+
+DS1
+Boosting (AdaBoost)
+0.8367
+0.8526
+0.8729
+0.8641
+
+Boosting (XGBoost)
+0.8767
+0.8578
+0.8906
+0.8701
+
+BharatAuthenticNet (BAN)
+0 . 9341
+0 . 9619
+0 . 9889
+0 . 9421
+
+Random Forest (RF)
+0.8294
+0.8643
+0.8291
+0.8539
+
+Bagging (Decision Tree)
+0.8909
+0.9018
+0.8701
+0.8897
+
+DS2
+Boosting (AdaBoost)
+0.8167
+0.8012
+0.8542
+0.8319
+
+Boosting (XGBoost)
+0.8493
+0.8167
+0.8701
+0.8449
+
+BharatAuthenticNet (BAN)
+0 . 9085
+0 . 9219
+0 . 9529
+0 . 9415
+
+Random Forest (RF)
+0.7823
+0.7767
+0.8046
+0.7938
+
+Bagging (Decision Tree)
+0.8078
+0.8391
+0.8557
+0.8519
+
+DS3
+Boosting (AdaBoost)
+0.7679
+0.7927
+0.8012
+0.8001
+
+Boosting (XGBoost)
+0.7812
+0.7919
+0.8361
+0.8073
+
+BharatAuthenticNet (BAN)
+0 . 8678
+0 . 8812
+0 . 9119
+0 . 90
+
+
+Fig. 16 [Images not available. See PDF.]
+Performance comparison of the proposed BharatAuthenticNet (BAN) model with existing ensemble techniques over DS1, DS2, and DS3 of BharatFakeNewsKosh (BFNK) dataset
+Fig. 17 [Images not available. See PDF.]
+Confusion matrices of random forest (RF) ensemble-based model over DS1, DS2, and DS3 of BharatFakeNewsKosh (BFNK) dataset
+Fig. 18 [Images not available. See PDF.]
+Confusion matrices of bagging (decision tree) ensemble-based model over DS1, DS2, and DS3 of BharatFakeNewsKosh (BFNK) dataset
+Fig. 19 [Images not available. See PDF.]
+Confusion matrices of boosting (AdaBoost) ensemble- based model over DS1, DS2, and DS3 of BharatFakeNewsKosh (BFNK) dataset
+Fig. 20 [Images not available. See PDF.]
+Confusion matrices of boosting (XGBoost) ensemble- based model over DS1, DS2, and DS3 of BharatFakeNewsKosh (BFNK) dataset
+
+The confusion matrix analysis in Figs. 6, 17, 18, 19, 20 highlights the exceptional performance of the BharatAuthenticNet (BAN) model across all datasets, showing its ability to minimize false positives (FP) and false negatives (FN). In DS1, BAN demonstrates superior performance with only 172 false positives and 697 false negatives, effectively handling the dataset’s diverse linguistic and thematic patterns. In contrast, models like random forest and bagging show higher false negative rates, with random forest misclassifying 1692 true news items as fake, indicating its limitations. AdaBoost and XGBoost perform even worse, with more misclassifications due to overfitting. For DS2, which contains more subtle distinctions between true and fake news, BAN again performs well with 2621 false positives and 1301 false negatives, indicating its strong ability to handle nuanced misinformation. Random forest, with 1709 false positives and 828 false negatives, struggles more with distinguishing between verified and manipulated content, while AdaBoost and XGBoost show the highest number of misclassifications, reflecting their inability to generalize effectively. In DS3, the most challenging dataset with unreliable sources, BAN outperforms the others with 59 false negatives and 150 false positives. Although these figures are higher than in DS1 and DS2, BAN still performs better than other models. Random forest and bagging show considerable difficulty, with higher false-positive rates, while XGBoost and AdaBoost perform the worst, highlighting their limitations in handling noisy and unstructured data. BAN’s confusion matrix reveals its ability to manage these challenges more effectively than other models.
+The performance comparison of existing ensemble techniques with that of the proposed model for various train-test splits (including 80%–20%, 75%–25%, 70%–30%, 65%–35%, and 60%–40%) on datasets DS1, DS2, and DS3 of BharatFakeNewsKosh (BFNK) are given in Tables 10, 11, and 12, respectively. Figure 21 provides better visualization of this performance comparison. Table 10. Performance comparison of the proposed BAN model with existing ensemble techniques for various train-test splits on DS1 dataset
+Train-test split (%)
+Accuracy
+Precision
+Recall
+F1 Score
+
+Random Forest (RF)
+
+80–20
+0 . 8723
+0 . 8942
+0 . 8590
+0 . 8764
+
+75–25
+0.8702
+0.8917
+0.8556
+0.8735
+
+70–30
+0.8611
+0.8825
+0.8483
+0.8701
+
+65–35
+0.8453
+0.8611
+0.8203
+0.8483
+
+60–40
+0.8217
+0.8401
+0.7997
+0.82s8
+
+Bagging Ensemble Classifier (Decision Trees)
+
+80–20
+0.912
+0.9334
+0.8923
+0.9111
+
+75–25
+0 . 9136
+0 . 9337
+0 . 8965
+0 . 9126
+
+70–30
+0.9133
+0.9324
+0.8957
+0.9119
+
+65–35
+0.9126
+0.93
+0.8881
+0.9102
+
+60–40
+0.9117
+0.9229
+0.8713
+0.9033
+
+Boosting Ensemble Classifier (AdaBoost)
+
+80–20
+0 . 8367
+0.8504
+0 . 8729
+0 . 8461
+
+75–25
+0.8364
+0 . 8526
+0.8681
+0.8660
+
+70–30
+0.8362
+0.8485
+0.8613
+0.8587
+
+65–35
+0.8367
+0.8414
+0.8545
+0.8500
+
+60–40
+0.8361
+0.8306
+0.8422
+0.8408
+
+Boosting Ensemble Classifier (XGBoost)
+
+80–20
+0 . 8767
+0 . 8578
+0 . 8906
+0 . 8701
+
+75–25
+0.8617
+0.8502
+0.8536
+0.8593
+
+70–30
+0.8512
+0.8439
+0.8520
+0.8563
+
+65–35
+0.8387
+0.8301
+0.8485
+0.8484
+
+60–40
+0.82
+0.8173
+0.8317
+0.8298
+
+Proposed BharatAuthenticNet (BAN) Model
+
+80–20
+0 . 9341
+0 . 9619
+0 . 9889
+0 . 9421
+
+75–25
+0.9339
+0.9604
+0.9882
+0.9418
+
+70–30
+0.931
+0.9587
+0.9877
+0.9409
+
+65–35
+0.9303
+0.956
+0.986
+0.9397
+
+60–40
+0.92
+0.9522
+0.9854
+0.9351
+
+
+In the case of DS1, the BAN model consistently outperformed the other techniques across all train-test splits. It achieved higher accuracy, precision, recall, and F1 score values. The accuracy of the BAN model ranged from 0.92 to 0.9341, while the other techniques achieved lower accuracy values ranging from 0.8217 to 0.9126. Similarly, the BAN model demonstrated superior precision, recall, and F1 score, highlighting its ability to provide more accurate and reliable predictions. Table 11. Performance comparison of the proposed BAN model with existing ensemble techniques with for various train-test splits on DS2 Dataset
+Train-test split (%)
+Accuracy
+Precision
+Recall
+F1 Score
+
+Random Forest (RF)
+
+80–20
+0.8257
+0.8612
+0.8235
+8487
+
+75–25
+0 . 8294
+0.8629
+0.8268
+0.8498
+
+70–30
+0 . 8294
+0 . 8643
+0 . 8291
+0 . 8539
+
+65–35
+0.8210
+0.8638
+0.8458
+0.8483
+
+60–40
+0.8158
+0.8581
+0.8200
+0.8445
+
+Bagging Ensemble Classifier (Decision Trees)
+
+80–20
+0.8869
+0 . 9018
+0 . 8701
+0 . 8897
+
+75–25
+0 . 8909
+0 . 9018
+0 . 8701
+0 . 8897
+
+70–30
+0.8977
+0.8955
+0.8664
+0.8871
+
+65–35
+0.8884
+0.8808
+0.8547
+0.9758
+
+60–40
+0.8794
+0.8685
+0.8479
+0.8633
+
+Boosting Ensemble Classifier (AdaBoost)
+
+80–20
+0 . 8167
+0 . 8012
+0 . 8542
+0 . 8319
+
+75–25
+0.816
+0.7989
+0.8499
+0.8272
+
+70–30
+0.8149
+0.7901
+0.8429
+0.8224
+
+65–35
+0.8134
+0.7834
+0.8311
+0.8128
+
+60–40
+0.8111
+0.77
+0.8206
+0.7967
+
+Boosting Ensemble Classifier (XGBoost)
+
+80–20
+0 . 8493
+0 . 8167
+0 . 8701
+0 . 8449
+
+75–25
+0.8490
+0.8158
+0.8693
+0.8432
+
+70–30
+0.8484
+0.8143
+0.8679
+0.8419
+
+65–35
+0.8477
+0.8126
+0.8605
+0.8400
+
+60–40
+0.8461
+0.8100
+0.8523
+0.8367
+
+Proposed BharatAuthenticNet (BAN) Model
+
+80–20
+0 . 9085
+0 . 9219
+0 . 9529
+0 . 9415
+
+75–25
+0.9073
+0.9204
+0.9517
+0.9507
+
+70–30
+0.9065
+0.9172
+0.9478
+0.9392
+
+65–35
+0.9052
+0.9107
+0.9449
+0.9326
+
+60–40
+0.9037
+0.9048
+0.9400
+0.9208
+
+
+For DS2, similar trends were observed, with the BAN model surpassing the other techniques in terms of accuracy, precision, recall, and F1 score. The accuracy of the BAN model ranged from 0.9037 to 0.9085, while the other techniques achieved accuracy values ranging from 0.7704 to 0.8909. The BAN model consistently exhibited higher precision, recall, and F1 score, indicating its superiority in classifying instances accurately. Table 12. Performance comparison of the proposed BAN model with existing ensemble techniques for various train-test splits on DS3 Dataset
+Train-test split (%)
+Accuracy
+Precision
+Recall
+F1 Score
+
+Random Forest (RF)
+
+80–20
+0.7791
+0.7760
+0.8023
+0.7901
+
+75–25
+0 . 7823
+0 . 7767
+0 . 8046
+0 . 7938
+
+70–30
+0.7708
+0.7744
+0.7998
+0.7915
+
+65–35
+0.7783
+0.7729
+0.7931
+0.7883
+
+60–40
+0.7728
+0.7717
+0.7859
+0.7811
+
+Bagging Ensemble Classifier (Decision Trees)
+
+80–20
+0 . 8078
+0 . 8391
+0 . 8557
+0 . 8519
+
+75–25
+0.8021
+0.8367
+0.8538
+0.8511
+
+70–30
+0.7947
+0.8303
+0.8503
+0.8496
+
+65–35
+0.7856
+0.8231
+0.8475
+0.8431
+
+60–40
+0.7704
+0.8105
+0.8419
+0.8327
+
+Boosting Ensemble Classifier (AdaBoost)
+
+80–20
+0.7638
+0 . 7927
+0 . 8012
+0 . 8001
+
+75–25
+0 . 7679
+0.7915
+0.7984
+0.7994
+
+70–30
+0.7625
+0.7884
+0.7921
+0.7968
+
+65–35
+0.7587
+0.7829
+0.7865
+0.7879
+
+60–40
+0.7513
+0.7711
+0.7773
+0.7707
+
+Boosting Ensemble Classifier (XGBoost)
+
+80–20
+0 . 7812
+0 . 7919
+0 . 8261
+0 . 8073
+
+75–25
+0.7894
+0.7884
+0.8314
+0.8069
+
+70–30
+0.7873
+0.7856
+0.8251
+0.8041
+
+65–35
+0.7837
+0.7823
+0.8105
+0.8006
+
+60–40
+0.7708
+0.7769
+0.7983
+0.7953
+
+Proposed BharatAuthenticNet (BAN) Model
+
+80–20
+0 . 8678
+0 . 8812
+0 . 9119
+0 . 90
+
+75–25
+0.8649
+0.8767
+0.9648
+0.9615
+
+70–30
+0.8601
+0.8606
+0.9573
+0.9509
+
+65–35
+0.8563
+0.8493
+0.9503
+0.9474
+
+60–40
+0.8482
+0.8177
+0.9477
+0.9415
+
+
+The results for DS3 followed the same pattern, with the BAN model outperforming the other techniques across all evaluation metrics. The BAN model achieved higher accuracy values ranging from 0.8482 to 0.8678, while the other techniques achieved accuracy values ranging from 0.7513 to 0.7894. Moreover, the BAN model consistently demonstrated superior precision, recall, and F1 score, emphasizing its effectiveness in accurate classification. Fig. 21 [Images not available. See PDF.]
+Performance comparison of the proposed model with that of existing ensemble technique for various train-test splits on DS1, DS2, and DS3 of BharatFakeNewsKosh (BFNK) dataset
+
+Performance Comparison of the Proposed Model with Different Hyperparameter Settings The performance of the proposed BharatAuthenticNet (BAN) model across different datasets (DS1, DS2, and DS3) was evaluated using various hyperparameter configurations, including learning rate, regularization parameter, and the number of estimators whose results are presented in Tables 13, 14, 15. This evaluation reveals the critical impact of hyperparameter tuning on model performance, highlighting the importance of selecting appropriate settings for each specific dataset. Table 13. Performance comparison of the proposed BAN model with different hyperparameter settings for DS1 dataset
+Hyperparameter settings
+Accuracy
+Precision
+Recall
+F1 Score
+
+Learning rate = 0.001
+0.9341
+0.9619
+0.9889
+0.9421
+
+Learning rate = 0.01
+0.9267
+0.9552
+0.9854
+0.9348
+
+Learning rate = 0.1
+0.9072
+0.9413
+0.9803
+0.9154
+
+Learning rate = 1.0
+0.8546
+0.8953
+0.9537
+0.8639
+
+Regularization = 0.001
+0.9402
+0.9675
+0.9921
+0.9456
+
+Regularization = 0.01
+0.9365
+0.9636
+0.9903
+0.9412
+
+Regularization = 0.1
+0.9137
+0.9478
+0.9856
+0.9212
+
+Regularization = 1.0
+0.8082
+0.8556
+0.9247
+0.8132
+
+Number of estimators = 50
+0.9324
+0.9603
+0.9883
+0.9392
+
+Number of estimators = 100
+0.9358
+0.9628
+0.9897
+0.9431
+
+Number of estimators = 200
+0.9396
+0.9652
+0.9923
+0.9467
+
+Number of estimators = 500
+0.9415
+0.9665
+0.9934
+0.9487
+
+Table 14. Performance comparison of the proposed BAN model with different hyperparameter settings for DS2 dataset
+Hyperparameter settings
+Accuracy
+Precision
+Recall
+F1 Score
+
+Learning rate = 0.001
+0.9085
+0.9219
+0.9529
+0.9415
+
+Learning rate = 0.01
+0.9013
+0.9136
+0.9481
+0.9325
+
+Learning rate = 0.1
+0.8879
+0.9003
+0.9354
+0.9175
+
+Learning rate = 1.0
+0.8546
+0.8749
+0.9142
+0.8889
+
+Regularization = 0.001
+0.9127
+0.9253
+0.9578
+0.9442
+
+Regularization = 0.01
+0.9092
+0.9225
+0.9554
+0.9407
+
+Regularization = 0.1
+0.8963
+0.9098
+0.9456
+0.9253
+
+Regularization = 1.0
+0.8485
+0.8697
+0.9073
+0.8828
+
+Number of estimators = 50
+0.9076
+0.9206
+0.9521
+0.9401
+
+Number of estimators = 100
+0.9104
+0.9239
+0.9562
+0.9430
+
+Number of estimators = 200
+0.9152
+0.9281
+0.9597
+0.9479
+
+Number of estimators = 500
+0.9178
+0.9305
+0.9621
+0.9502
+
+Table 15. Performance Comparison of the Proposed BAN Model with Different Hyperparameter Settings for DS3 Dataset
+Hyperparameter settings
+Accuracy
+Precision
+Recall
+F1 Score
+
+Learning rate = 0.001
+0.8678
+0.8812
+0.9119
+0.9000
+
+Learning rate = 0.01
+0.8532
+0.8674
+0.9013
+0.8840
+
+Learning rate = 0.1
+0.8319
+0.8471
+0.8822
+0.8642
+
+Learning rate = 1.0
+0.7894
+0.8099
+0.8506
+0.8296
+
+Regularization = 0.001
+0.8751
+0.8882
+0.9204
+0.9039
+
+Regularization = 0.01
+0.8622
+0.8763
+0.9091
+0.8924
+
+Regularization = 0.1
+0.8376
+0.8524
+0.8879
+0.8698
+
+Regularization = 1.0
+0.7762
+0.7965
+0.8408
+0.8179
+
+Number of estimators = 50
+0.8654
+0.8794
+0.9136
+0.8962
+
+Number of estimators = 100
+0.8697
+0.8837
+0.9172
+0.8999
+
+Number of estimators = 200
+0.8745
+0.8880
+0.9210
+0.9044
+
+Number of estimators = 500
+0.8791
+0.8921
+0.9246
+0.9079
+
+
+Impact of Learning Rate: The learning rate plays a crucial role in controlling how quickly the model adapts to the underlying data patterns. For DS1, a learning rate of 0.001 achieved the highest accuracy of 0.9341. This suggests that the model effectively learned the complex patterns in the dataset with this small step size. When the learning rate was increased to 0.01, accuracy slightly dropped to 0.9267, while precision, recall, and F1 score remained robust, reflecting a well-balanced trade-off in classification performance. However, with a higher learning rate of 0.1, the accuracy dropped further to 0.9072, and at a learning rate of 1.0, the model showed a significant decline in accuracy to 0.8546. This trend indicates that the model may have struggled to converge effectively at higher learning rates due to overshooting the optimal solution. Similar trends were observed in DS2 and DS3, with lower learning rates yielding better results across precision, recall, and F1 scores. The deterioration of performance with higher learning rates across all datasets reflects the challenge of model convergence and emphasizes the need for careful selection of this parameter.
+Effect of Regularization: Regularization helps in preventing overfitting, a critical issue when dealing with diverse and complex datasets such as DS1, DS2, and DS3. The results show that lower regularization values, particularly 0.001 and 0.01, led to the highest accuracy, precision, recall, and F1 scores across all datasets. For instance, on DS1, a regularization value of 0.001 produced an accuracy of 0.9402, demonstrating the model’s ability to generalize effectively without overfitting. As the regularization value increased to 0.1 and 1.0, there was a noticeable decline in performance, with DS1’s accuracy dropping to 0.9137 and 0.8082, respectively. This trend was consistent in DS2 and DS3, where excessive regularization led to underfitting, evident from decreased accuracy and F1 scores. The results confirm that while regularization is essential for controlling model complexity, overly high values can suppress the model’s ability to capture the intricate relationships within the data.
+Number of Estimators: The number of estimators significantly influenced the performance of the BAN model. Increasing the number of estimators from 50 to 500 consistently improved accuracy, precision, recall, and F1 score across all datasets. For DS1, accuracy rose from 0.9324 with 50 estimators to 0.9415 with 500 estimators, indicating that a higher number of estimators enhanced the model’s generalization capability. The positive correlation between the number of estimators and performance suggests that the ensemble techniques used in the BAN model benefited from larger ensembles, as they allowed the model to better capture diverse patterns in the data. Similar performance improvements were observed in DS2 and DS3, with a gradual increase in performance metrics as the number of estimators was raised. For example, in DS3, accuracy increased from 0.8654 with 50 estimators to 0.8791 with 500 estimators, reflecting the robustness of the ensemble approach even in smaller datasets.
+Dataset-Specific Trends: The performance of the BAN model varied across the three datasets, emphasizing the impact of dataset size and complexity on model performance. DS1, the largest dataset with 26,232 entries, consistently achieved the highest accuracy and overall performance, suggesting that the model was better able to learn from the larger volume of data. DS2, with 23,826 entries, showed slightly lower accuracy values across all hyperparameter settings, while DS3, the smallest dataset with 2,406 entries, exhibited the lowest accuracy across all metrics. The results highlight the importance of dataset size in achieving optimal model performance, as larger datasets provide more data points for the model to learn from, thereby improving its ability to generalize to new instances. In contrast, the smaller size of DS3 limited the model’s capacity to fully capture the data’s underlying structure, leading to lower performance.
+Computational Efficiency of the Proposed BharatAuthenticNet (BAN) Model The proposed BharatAuthenticNet (BAN) model employs a variety of machine learning techniques in an ensemble framework, which inherently adds layers of computation. While ensemble methods are known for their superior accuracy and robustness, they tend to demand more computational resources than single models. The trade-off between performance gains and computational efficiency is a key consideration in the model’s design and implementation.
+Time Complexity: Ensemble methods, such as those used in the BAN model, typically involve training multiple base learners and combining their predictions, which can significantly increase both training and prediction times. The computational cost is proportional to the number of base learners (estimators) and the complexity of the algorithms used. For instance, random forests or gradient boosting (commonly employed in ensemble methods) are computationally intensive, especially as the number of estimators grows. In the BAN model, increasing the number of estimators from 50 to 500 was observed to enhance performance, but this came with an associated increase in computation time. Each additional estimator requires retraining over the entire dataset, which linearly increases the time required for both training and inference. However, the performance improvement observed in accuracy, precision, recall, and F1score suggests that this computational trade-off yields substantial gains in classification reliability.
+Model Training Time and Resource Requirements: The training time for the BAN model was directly influenced by the choice of hyperparameters, particularly the number of estimators and the learning rate. Lower learning rates typically result in longer training times, as the model takes smaller steps in optimizing the objective function. In contrast, a higher learning rate reduces the training time but can negatively impact convergence and overall performance. To evaluate computational efficiency, the training times of the BAN model were measured across different configurations of hyperparameters. When using 500 estimators with a learning rate of 0.001, training times were significantly longer compared to configurations with fewer estimators or higher learning rates. However, the trade-off between training time and performance showed diminishing returns beyond a certain number of estimators, indicating that while 500 estimators provided marginally better accuracy, 200 estimators offered a more computationally efficient solution with only a slight reduction in performance. This observation is important for practical applications, where computational resources and time are often limited.
+Memory Usage and Parallelization: Another important aspect of computational efficiency is memory usage, especially when dealing with large datasets like DS1 and DS2. The ensemble approach used in the BAN model can be memory-intensive, as each base learner requires storage of its own parameters, and the dataset must often be loaded multiple times during training. The model’s performance across DS1 (the largest dataset) demonstrated the need for efficient memory management to handle high-dimensional data without exceeding system memory limits. To mitigate memory and computational overhead, the BAN model can be optimized using parallelization techniques. Many ensemble methods, such as those used in random forests and gradient boosting, are inherently parallelizable, allowing for faster training times on multi-core processors. Implementing parallel processing in the BAN model helps distribute the computational load, significantly reducing training time without sacrificing accuracy. This approach is particularly effective when dealing with large datasets or when using a high number of estimators.
+Scalability for Real-World Applications: For practical deployment, the scalability of the BharatAuthenticNet (BAN) model is a critical consideration. Real-world applications, such as detecting fake news on social media platforms, require models that can process large volumes of data in real-time. While ensemble methods are computationally intensive, the BAN model’s performance gains justify its use in scenarios where accuracy and reliability are paramount, such as high-stakes environments where misclassification of fake news could have serious consequences. However, for real-time applications, computational efficiency can be further improved by employing techniques such as model pruning, reducing the number of base learners after initial training, or using lightweight models for inference. Additionally, the use of early stopping during training can prevent unnecessary computation once the model’s performance plateaus, thus saving time and computational resources. As far as the different geographic locations are concerned, the proposed model will apply to similar datasets and attributes. This work can be customized as per the requirement specific to other geographic locations, as the model is robust and adaptable.
+Balancing Accuracy and Efficiency: The results demonstrate that increasing the number of estimators improves the model’s performance but also increases computational cost. In applications where computational resources are limited or where quick inference is required, it may be more practical to opt for a configuration with fewer estimators. For example, the BAN model with 200 estimators achieved near-optimal results while being computationally more efficient than the configuration with 500 estimators. This suggests that by carefully tuning the hyperparameters, it is possible to strike a balance between accuracy and computational efficiency.
+Conclusion This paper presented a novel ensemble-based model, the BharatAuthenticNet (BAN), which demonstrated significant efficacy in addressing the challenge of fake news detection within the complex, multilingual landscape of Indian social media. By utilizing an ensemble-based approach that integrates linguistic feature extraction with machine learning techniques, the model outperformed conventional baseline models as well as state-of-the-art methods across various evaluation metrics by achieving higher accuracy, precision, recall, and F1 score of 0.9341, 0.9619, 0.9889, and 0.9421, respectively. Its capability in handling diverse news categories and languages underscores its potential for real-world deployment in combating misinformation across different domains. This work is the first of its kind to provide a detailed experimental analysis for a proposed model in the field of fake news detection. This study contributes a novel framework that can be scaled for broader applications while laying the groundwork for future enhancements. The comprehensive evaluation and extensive hyperparameter tuning ensure that the model exhibits strong generalization capabilities. Nonetheless, certain limitations highlight directions for further research.
+Future work will focus on expanding the BharatFakeNewsKosh dataset to encompass additional languages, dialects, and regional variations, thereby increasing linguistic and contextual diversity. This will further improve the model’s ability to accurately detect misinformation in a multilingual environment. Incorporating advanced deep learning architectures, such as transformer-based models, holds the potential to enhance contextual understanding, thereby improving classification accuracy. Optimization of the BAN model for real-time fake news detection is another critical direction. Reducing computational complexity without compromising performance is essential for deployment in resource-constrained environments, such as mobile platforms or regions with limited connectivity. Techniques like model pruning, knowledge distillation, or efficient ensemble methods can facilitate this balance. Practical deployment is also an important consideration. A real-time monitoring system for detecting misinformation during critical periods (such as elections, health crises, or social movements) could significantly mitigate the impact of false information. Furthermore, adapting the model for use in other multilingual and multicultural contexts would demonstrate its scalability and robustness beyond the Indian context. Collaborative efforts with stakeholders from various sectors, including media, government, and civil society, will be essential to refine the model and ensure its broad applicability in the global fight against misinformation.
+Acknowledgements The authors would like to express their sincere gratitude to Dr. Sachin Kumar (Cluster Innovation Center, University of Delhi), Mr. Pankaj Singh (NIT Alumni, Bhopal and Co-founder, Infoastra), Dr. Shivesh Berwal (Assistant Professor, SPM College, University of Delhi) and Aastha Baliyan (Shyama Prasad Mukherji College, University of Delhi) for their invaluable support during the course of the current research.
+Funding No particular funding was provided to the authors for this work.
+Data Availability The corresponding author can be reached to provide data supporting this research’s findings.
+Declarations Conflict of interest The authors affirm that they do not have any Conflict of interest.
+Footnotes 1 https://www.kaggle.com/datasets/man2191989/bharatfakenewskosh.
+2 IFCN stands for International Fact-Checking Network, a community of fact-checkers worldwide, launched by the Poynter Institute for Media Studies (USA) in 2015.
+References 1. Kietzmann, JH; Hermkens, K; McCarthy, IP; Silvestre, BS. Social media? get serious! understanding the functional building blocks of social media. Bus. Horizons ; 2011; 54 , 3 pp. 241-251. [DOI: https://dx.doi.org/10.1016/j.bushor.2011.01.005]
+2. Allcott, H; Gentzkow, M. Social media and fake news in the 2016 election. J. Econ. Perspect. ; 2017; 31 , 2 pp. 211-36. [DOI: https://dx.doi.org/10.1257/jep.31.2.211]
+3. Singh, MK; Ahmed, J; Alam, MA; Raghuvanshi, KK; Kumar, S. A comprehensive review on automatic detection of fake news on social media. Multimed. Tools Appl. ; 2024; 83 , 16 pp. 47319-47352. [DOI: https://dx.doi.org/10.1007/s11042-023-17377-4]
+4. Vosoughi, S; Roy, D; Aral, S. The spread of true and false news online. Science ; 2018; 359 , 6380 pp. 1146-1151. [DOI: https://dx.doi.org/10.1126/science.aap9559]
+5. Howard, P.N., Kollanyi, B.: Bots,# strongerin, and# brexit: computational propaganda during the uk-eu referendum. Available at SSRN 2798311 (2016)
+6. Shu, K; Sliva, A; Wang, S; Tang, J; Liu, H. Fake news detection on social media: a data mining perspective. ACM SIGKDD Explor. Newslett. ; 2017; 19 , 1 pp. 22-36. [DOI: https://dx.doi.org/10.1145/3137597.3137600]
+7. Rapoza, K.: Can ‘fake news’ impact the stock market? Forbes News (2017)
+8. Ferrara, E; Varol, O; Davis, C; Menczer, F; Flammini, A. The rise of social bots. Commun. ACM ; 2016; 59 , 7 pp. 96-104. [DOI: https://dx.doi.org/10.1145/2818717]
+9. Spohr, D. Fake news and ideological polarization: filter bubbles and selective exposure on social media. Bus. Inf. Rev. ; 2017; 34 , 3 pp. 150-160.
+10. Karabela, ŞN; Coşkun, F; Hoşgör, H. Investigation of the relationships between perceived causes of Covid-19, attitudes towards vaccine and level of trust in information sources from the perspective of infodemic: the case of turkey. BMC Public Health ; 2021; 21 , 1 1195. [DOI: https://dx.doi.org/10.1186/s12889-021-11262-1]
+11. Perrin, A. Social media usage. Pew Res. Center ; 2015; 125 , pp. 52-68.
+12. Bai, N., Meng, F., Rui, X., Wang, Z.: A multi-task attention tree neural net for stance classification and rumor veracity detection. Applied Intelligence, 1–11 (2022)
+13. Masood, M., Nawaz, M., Malik, K.M., Javed, A., Irtaza, A., Malik, H.: Deepfakes generation and detection: State-of-the-art, open challenges, countermeasures, and way forward. Appl. Intell., 1–53 (2022)
+14. Alturayeif, N., Luqman, H., Ahmed, M.: A systematic review of machine learning techniques for stance detection and its applications. Neural Comput. Appl., 1–32 (2023)
+15. Mridha, MF; Keya, AJ; Hamid, MA; Monowar, MM; Rahman, MS. A comprehensive review on fake news detection with deep learning. IEEE Access ; 2021; 9 , pp. 156151-156170. [DOI: https://dx.doi.org/10.1109/ACCESS.2021.3129329]
+16. Lotfi, S; Mirzarezaee, M; Hosseinzadeh, M; Seydi, V. Detection of rumor conversations in twitter using graph convolutional networks. Appl. Intell. ; 2021; 51 , pp. 4774-4787. [DOI: https://dx.doi.org/10.1007/s10489-020-02036-0]
+17. Wang, W.Y.: “liar, liar pants on fire”: A new benchmark dataset for fake news detection. In: Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics (Volume 2: Short Papers), pp. 422–426. Association for Computational Linguistics, Vancouver, Canada (2017). https://doi.org/10.18653/v1/P17-2067. https://aclanthology.org/P17-2067
+18. Tandoc, EC, Jr; Lim, ZW; Ling, R. Defining “fake news” a typology of scholarly definitions. Digit. J. ; 2018; 6 , 2 pp. 137-153.
+19. Shu, K., Mahudeswaran, D., Wang, S., Lee, D., Liu, H.: Fakenewsnet: A data repository with news content, social context and spatialtemporal information for studying fake news on social media. arXiv preprint arXiv:1809.01286 (2018)
+20. Nassif, AB; Elnagar, A; Elgendy, O; Afadar, Y. Arabic fake news detection based on deep contextualized embedding models. Neural Comput. Appl. ; 2022; 34 , 18 pp. 16019-16032. [DOI: https://dx.doi.org/10.1007/s00521-022-07206-4]
+21. Quoc Tran, K., Trong Nguyen, A., Hoang, P.G., Luu, C.D., Do, T.-H., Van Nguyen, K.: Vietnamese hate and offensive detection using phobert-cnn and social media streaming data. Neural Comput. Appl., 1–22 (2022)
+22. Perez-Rosas, V., Kleinberg, B., Lefevre, A., Mihalcea, R.: Automatic detection of fake news. In: Bender, E.M., Derczynski, L., Isabelle, P. (eds.) Proceedings of the 27th International Conference on Computational Linguistics, pp. 3391–3401. Association for Computational Linguistics, Santa Fe, New Mexico, USA (2018). https://aclanthology.org/C18-1287
+23. Ruchansky, N., Seo, S., Liu, Y.: Csi: A hybrid deep model for fake news detection. In: Proceedings of the 2017 ACM on Conference on Information and Knowledge Management, pp. 797–806 (2017)
+24. Yang, Y., Zheng, L., Zhang, J., Cui, Q., Li, Z., Yu, P.S.: Ti-cnn: Convolutional neural networks for fake news detection. arXiv preprint arXiv:1806.00749 (2018)
+25. Yang, S., Shu, K., Wang, S., Gu, R., Wu, F., Liu, H.: Unsupervised fake news detection on social media: A generative approach. In: Proceedings of the AAAI Conference on Artificial Intelligence, vol. 33, pp. 5644–5651 (2019)
+26. Boididou, C; Papadopoulos, S; Zampoglou, M; Apostolidis, L; Papadopoulou, O; Kompatsiaris, Y. Detection and visualization of misleading content on twitter. Int. J. Multimed. Inf. Retr. ; 2018; 7 , 1 pp. 71-86. [DOI: https://dx.doi.org/10.1007/s13735-017-0143-x]
+27. Raja, E; Soni, B; Borgohain, SK. Fake news detection in dravidian languages using transfer learning with adaptive finetuning. Eng. Appl. Artif. Intell. ; 2023; 126 , 106877. [DOI: https://dx.doi.org/10.1016/j.engappai.2023.106877]
+28. Kaliyar, R.K.; Goswami, A.; Narang, P.: Fakebert: fake news detection in social media with a bert-based deep learning approach. Multimed. Tools Appl. 80 (8), 11765–11788 (2021)
+29. Li, S., Ma, K., Niu, X., Wang, Y., Ji, K., Yu, Z., Chen, Z.: Stacking-based ensemble learning on low dimensional features for fake news detection. In: 2019 IEEE 21st International Conference on High Performance Computing and Communications; IEEE 17th International Conference on Smart City; IEEE 5th International Conference on Data Science and Systems (HPCC/SmartCity/DSS), pp. 2730–2735 (2019). IEEE
+30. Shu, K; Mahudeswaran, D; Wang, S; Lee, D; Liu, H. Fakenewsnet: a data repository with news content, social context, and spatiotemporal information for studying fake news on social media. Big data ; 2020; 8 , 3 pp. 171-188. [DOI: https://dx.doi.org/10.1089/big.2020.0062]
+31. Singh, M.K., Ahmed, J., Raghuvanshi, K.K., Alam, M.A.: Bharatfakenewskosh: a data repository for fake news research in India. In: International Conference on Smart Trends for Information Technology and Computer Communications, pp. 277–288 (2023). Springer
+32. Silverman, JD; Roche, K; Holmes, ZC; David, LA; Mukherjee, S. Bayesian multinomial logistic normal models through marginally latent matrix-t processes. J. Mach. Learn. Res. ; 2022; 23 , pp. 7-1.4420732
+33. Buyrukoğlu, S; Savaş, S. Stacked-based ensemble machine learning model for positioning footballer. Arab. J. Sci. Eng. ; 2023; 48 , 2 pp. 1371-1383. [DOI: https://dx.doi.org/10.1007/s13369-022-06857-8]
+34. Sperandei, S. Understanding logistic regression analysis. Biochemia Medica ; 2014; 24 , 1 pp. 12-18. [DOI: https://dx.doi.org/10.11613/BM.2014.003]
+35. Suthaharan, S., Suthaharan, S.: Support vector machine. Machine learning models and algorithms for big data classification: thinking with examples for effective learning, 207–235 (2016)
+36. Mahmoud, SA; Awaida, SM. Recognition of off-line handwritten Arabic (Indian) numerals using multi-scale features and support vector machines vs. hidden Markov models. Arab. J. Sci. Eng. ; 2009; 34 , 2B pp. 429-444.
+37. Hang, H; Cai, Y; Yang, H; Lin, Z. Under-bagging nearest neighbors for imbalanced classification. J. Mach. Learn. Res. ; 2022; 23 , 118 pp. 1-63.4576703
+38. Murtagh, F. Multilayer perceptrons for classification and regression. Neurocomputing ; 1991; 2 , 5–6 pp. 183-197.1118783 [DOI: https://dx.doi.org/10.1016/0925-2312(91)90023-5]
+39. Alsayat, A. Improving sentiment analysis for social media applications using an ensemble deep learning language model. Arab. J. Sci. Eng. ; 2022; 47 , 2 pp. 2499-2511. [DOI: https://dx.doi.org/10.1007/s13369-021-06227-w]
+40. Lin, W; Wu, Z; Lin, L; Wen, A; Li, J. An ensemble random forest algorithm for insurance big data analysis. IEEE access ; 2017; 5 , pp. 16568-16575. [DOI: https://dx.doi.org/10.1109/ACCESS.2017.2738069]
+41. Kadiyala, A; Kumar, A. Applications of python to evaluate the performance of bagging methods. Environ. Progress Sustain. Energy ; 2018; 37 , 5 pp. 1555-1559. [DOI: https://dx.doi.org/10.1002/ep.13018]
+42. BÃ¼hlmann, P.: Bagging, boosting and ensemble methods. Springer, 985–1022 (2012)
+43. Drucker, H.; Cortes, C.; Jackel, L.D.; LeCun, Y.; Vapnik, V.: Boosting and other ensemble methods. Neural Comput. 6 (6), 1289–1301 (1994)
+44. Zhang, YJ; Alazab, M; Muthu, BA. Machine learning-based holistic privacy decentralized framework for big data security and privacy in smart city. Arab. J. Sci. Eng. ; 2021; 48 , 3 pp. 1-11.
+45. Racz, A.; Bajusz, D.; Héberger, K.: Multi-level comparison of machine learning classifiers and their performance metrics. Molecules 24 (15), 2811 (2019)

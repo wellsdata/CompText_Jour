@@ -1,0 +1,475 @@
+Introduction The dissemination of fake news currently poses a critical threat to public trust in democratic institutions and societal stability 1,2 . Misinformation campaigns manipulate public opinion, influencing election outcomes and even creating conditions for violent conflicts. Turkey faces unique challenges in this regard, given its wide social media use and deep political polarization that exacerbate the problem of combating fake news. Research reveals that Turkish-language misinformation proliferates through platforms like Twitter and Facebook, encompassing political, health-related, and national security topics 3,4 . However, most automatic detection systems rely on English-language training datasets to identify misinformation while neglecting non-English content - specifically Turkish, with its morphologically complex structure 5,6 .
+Current fake news detection technologies range from traditional machine learning algorithms (SVM, Naïve Bayes) to advanced deep learning approaches (LSTMs, transformers) 7, 8–9 . BERT achieves state-of-the-art performance but requires substantial computational capabilities and underperforms under conditions of insufficient pre-training data for languages outside its main scope. Furthermore, existing models exhibit limited capacity for domain generalization (e.g., politics to health), which affects their real-world applicability 10,11 . The potential of attention-based mechanisms to assess word importance appears promising for Turkish fake news detection; however, their application in this area remains insufficiently investigated.
+The integration of attention mechanisms could enhance Turkish fake news detection by identifying subtle cues, such as emotionally charged phrasing and campaign-driven narratives. The model emphasizes scalability, enabling potential integration with social media moderation tools and fact-checking platforms. By bridging global NLP advancements with local language requirements, this study lays the groundwork for countering misinformation in Turkish and numerous other underserved languages.
+It is important to clarify the nature of our contribution. While the components of our architecture (FastText, LSTM, Attention) are individually well-established, their specific integration and optimization for the challenges of Turkish fake news detection represent the novel aspect of this work. Turkish is a low-resource, morphologically complex language, and the focus was not on inventing a new core architecture, but on designing a highly effective and efficient pipeline tailored to this specific problem. This pipeline achieves superior performance compared to both traditional models and more complex modern baselines, as detailed in the results.
+Literature review The global proliferation of fake news has necessitated strong detection systems to address this process’s substantial societal concerns 12 . Early approaches to fake news detection primarily employed traditional machine learning (ML) techniques, particularly Support Vector Machines (SVM) and Naïve Bayes classifiers. These models relied on hand-crafted features such as word frequency data, n-gram sequences, syntactic patterns, and sentiment markers to distinguish false information from authentic content. The function of TF-IDF vectors allowed SVM to achieve moderate accuracy during English-language fake news classification. However, these methods fail to adequately capture contextual complexities and often require complicated feature engineering, which hinders their practical applicability across different languages or domains 13 .
+The advent of deep learning has revolutionized text recognition technology through Convolutional Neural Networks (CNNs) and Long Short-Term Memory (LSTM) networks. CNN filters effectively detect local textual patterns, while LSTMs excel in sequence analysis, making them particularly suitable for evaluating the temporal structure of news articles. LSTM-based text processing demonstrated superior accuracy compared to standard ML techniques by capturing sequences and identifying distant word connections. Nevertheless, deep learning models remain limited in their ability to understand contextual connections within texts - especially for morphologically complex languages like Turkish 14,15 .
+Transformers such as BERT (Bidirectional Encoder Representations from Transformers) and RoBERTa advance natural language processing through pre-trained language models that process contextual information from both directions. The effectiveness of fake news detection has considerably improved due to the application of domain-specific dataset training to these models. However, their reliance on large-scale pre-training data and substantial computational demands render BERT and RoBERTa models impractical for Turkish and other low-resource languages. Additionally, their black-box characteristic nature reduces interpretability, hindering researchers’ ability to identify specific linguistic markers of misinformation 16,17 .
+Self-attention has emerged as the fundamental technical building block among all transformer models. This mechanism provides a dynamic system for evaluating word significance, enabling the models to more effectively capture broader contextual relationships and long-range dependencies. In BERT models, individual attention heads specialize in detecting specific syntactic or semantic features, including subject-verb agreement and negation patterns. Transformers achieve excellence in understanding tasks that require sophisticated analysis because their self-attention abilities excel at fake news detection 18,19 . Transformers excel at complex understanding tasks, particularly fake news detection, due to these sophisticated self-attention capabilities.
+In the context of fake news detection, the application of attention mechanisms has extended to Graph Neural Networks (GNNs) and Graph Attention Networks (GATs). In GATs, news articles are structured as graph nodes, with relationships between elements represented through edges. The model assigns attention weights to consolidate information between neighboring nodes, effectively tracing misinformation across connected networks. However, GAT implementations face challenges due to their requirement for structured data and complicated calculations, limiting their real-time deployment potential 20, 21–22 . Both traditional and deep learning models benefit from attention mechanisms through improved feature recognition and enhanced interpretability capabilities. Attention weights provide users with linguistic markers, for instance, phrases like “secretly planning” and “urgent action” that frequently appear in fake news content. This explainable model particularly benefits fact-checking processes by enabling fact-checkers and policymakers to understand the rationale behind misinformation classifications.
+Turkish society is particularly vulnerable to disinformation due to its active social media presence and polarized media environment. Numerous studies confirm that fake news with political motivation proliferates during both election periods and crises 23,24 . Research by Teyit.org demonstrated how fabricated stories about refugee policies and health hazards spread rapidly through Turkish Twitter. The current situation in Turkey underscores the urgent need for automated, scalable detection solutions, as fact-checking and keyword detection remain the primary methods for identifying disinformation 25,26 .
+The detection of false news presents greater complexity when analyzing non-English content due to unique linguistic and contextual factors. Natural language processing (NLP) models encounter particular processing challenges with Turkish, given the language’s agglutinative morphology and complex syntactic structure. Specialized language tools become essential for tasks like word stemming and stop-word removal, as general-purpose NLP pipelines demonstrate poor performance with Turkish texts. Turkish-specific detection models are necessary due to culturally-specific references and local phrases that lack direct equivalents in English datasets 27,28 . The scarcity of adequately labeled datasets creates barriers to the development of effective Turkish fake news detection systems. Researchers working on Turkish fake news detection typically rely on unstructured datasets since existing public English-based resources lack sufficient coverage and relevance 29, 30–31 .
+The literature review identifies limitations in current approaches while highlighting how attention mechanisms can solve these problems. By integrating global and regional perspectives, the present study aimed to advance the development of improved fake news detection systems for Turkish and other lower-resource languages, offering both scalable and efficient solutions. The main objective of this research was to develop a resource-efficient and interpretable attention-based neural network specifically for Turkish fake news detection. This addresses the language’s morphological complexity and the resource constraints typical of non-English scenarios. The study pursued four specific goals: (1) to devise a novel architecture that integrates FastText embeddings with LSTM layers and attention mechanisms to learn Turkish-specific linguistic patterns in misinformation; (2) to compile and annotate a balanced and diverse set of 10,000 Turkish news articles with rigorous validation; (3) to evaluate the model’s cross-domain generalization following a one-stage adaptation to different topics without retraining, and (4) to optimize computational efficiency for practical deployment, ensuring the model outperforms both traditional and transformer-based models.
+Methodology Dataset collection We compiled a representative dataset comprising 10,000 Turkish news articles (5,000 authentic and 5,000 fabricated) sourced from diverse channels. This diverse collection spans January 2020 through December 2023, capturing significant historical events, including elections, economic crises, and the COVID-19 pandemic. Data was acquired from three primary sources:
+- Verified News Outlets . Articles were selected from Bianet and T24 due to their partnerships with fact-checking organizations and rigorous editorial policies.
+
+- Social Media . The dataset incorporates 3,000 Twitter posts collected via API and 3,000 Facebook posts sourced from fact-checking communities.
+
+
+A team of native speakers conducted manual annotation, with verification performed using automated tools (Google Fact Check Explorer and Hoaxy) to ensure labeling accuracy. Google Fact Check Explorer (web-based tool) and the Hoaxy misinformation tracking platform (Version 2.1) were used to support automated verification during dataset validation. All discrepancies, which accounted for less than 5% of the data, were resolved by consensus (Table 1).
+Table 1. Dataset composition and characteristics.
+Attribute
+Specification
+
+Period
+Jan 2020 - Dec 2023
+
+Regional Coverage
+Istanbul (50%), Ankara (20%), Other (30%)
+
+Topic Distribution
+Politics (40%), Health (30%), Entertainment (20%), Economics (10%)
+
+Source Breakdown
+News Sites: 40%; Social Media: 60%
+
+Validation Method
+Manual + Automated (95% inter-annotator agreement)
+
+
+This rigorous collection methodology ensured the dataset’s relevance to contemporary Turkish misinformation while achieving balanced demographic and topical representation. The inclusion of both institutional and social media content enabled a comprehensive analysis of fake news propagation across various media environments.
+The dataset was carefully balanced to contain 5,000 authentic and 5,000 fabricated articles, ensuring an equal prior probability for both classes during training. To mitigate preprocessing biases, all texts underwent the same rigorous normalization pipeline using Zemberek, a library specifically designed for Turkish. For ethical considerations, social media data were collected only from public accounts and pages. All user-identifying information (e.g., usernames, profile links) was permanently removed during preprocessing to fully anonymize the dataset and protect user privacy. This use of data for academic research is consistent with the platforms’ terms of service and the principles of ethical data handling.
+Preprocessing Figure 1 illustrates the step-by-step preprocessing pipeline implemented to transform raw Turkish text data into a format suitable for model training. The pipeline consists of four key stages designed to enhance data quality and improve model performance.
+Fig. 1 [Images not available. See PDF.]
+Preprocessing pipeline.
+
+All preprocessing operations were performed using the Zemberek NLP Toolkit (Version 0.17.1, https://github.com/ahmetaa/zemberek-nlp), which provides tokenization, stop-word removal, and lemmatization specifically optimized for the Turkish language.
+Tokenization The raw text was segmented into discrete tokens (words or subwords) using Zemberek, a specialized NLP library for Turkish language processing. For example, the sentence “Bu haber doğru değil” (“This news is not true”) was decomposed into the tokens [Bu; haber; doğru; değil] . The text was divided into meaningful units for further processing.
+Stop-word removal Frequently occurring Turkish stop-words (e.g., ve (and), ama (but), ise (if)) were filtered out to eliminate noise and reduce dimensionality. This filtration process concentrated the model’s attention on content-bearing words that were more likely to indicate fake or real news.
+Stemming/lemmatization Words were reduced to their root forms using Zemberek’s lemmatizer. For instance, geliyorum (“I am coming”) was lemmatized to gel (“come”). This process normalized morphological variations, allowing them to be treated as a single feature and enhancing consistency.
+Feature extraction The text was converted into numerical representations using two methods:
+
+- TF-IDF (weighs words based on their importance within individual documents relative to the entire corpus);
+
+- Word Embeddings (utilizes pre-trained FastText embeddings for Turkish to capture semantic relationships between words).
+
+
+
+The embeddings were generated using the FastText Library (Version 0.9.2).
+Model architecture The proposed model consists of five key layers, each designed to capture contextual nuances in Turkish texts:
+Input layer This layer receives preprocessed text data represented as either TF-IDF vectors or word embeddings (e.g., FastText with 300 dimensions).
+Embedded layer Utilizing pre-trained FastText embeddings for Turkish, this layer converts discrete tokens into dense vector representations, thereby preserving semantic relationships.
+Attention layer The attention mechanism computes context-aware weights to highlight salient phrases. It is defined as: 1
+
+where is the hidden state of the token, and and denote learnable parameters. The output constitutes a weighted sum of hidden states, which highlight critical tokens for classification.
+LSTM layer A 64-unit Long Short-Term Memory (LSTM) network processes sequential dependencies within the text. The LSTM updates its hidden state at each time step according to: 2
+
+where is the input at step . The attention-weighted output from this layer is subsequently propagated.
+Output layer . The softmax activation function performs binary classification (fake-real) as follows: 3
+
+where denotes the attention-pooled representation, and , are the output layer parameters.
+The model employs 300-dimensional FastText embeddings to capture rich semantic representations of Turkish texts, while a 64-unit LSTM layer processes sequential dependencies, with a dropout rate of 0.3 to prevent overfitting. The Adam optimizer efficiently minimizes the loss function during training, with a learning rate of 0.001. These hyperparameters were empirically validated to achieve an optimal balance between computational efficiency and model accuracy. The attention weights are learned dynamically using the tanh activation function and trainable parameters ( , ), as detailed in the architecture.
+Table 2 provides a complete summary of the final model hyperparameters for clarity and reproducibility.
+Table 2. Final model hyperparameters.
+Hyperparameters
+Value
+
+FastText Embedding Dimension
+300
+
+LSTM Units
+64
+
+Dropout Rate
+0.3
+
+Optimizer
+Adam
+
+Learning Rate
+0.001
+
+Batch Size
+32
+
+Training Epochs
+50
+
+
+Baseline models for comparison To establish a performance benchmark, we evaluated our attention-based neural network against four distinct baseline models representing diverse approaches to fake news detection. The baseline implementation incorporated a linear Support Vector Machine (SVM) and TF-IDF features, as well as a Random Forest comprising 100 trees (max_depth = 10). For deep learning comparisons, we included a standard LSTM architecture with 64 units and the fine-tuned Turkish BERT model (dbmdz/bert-base-turkish), representing the latest Turkish NLP model. All models used matching training-test splits (80%−20%) and shared the same preprocessing pipeline and evaluation metrics to ensure objective/standardized comparison. The chosen baseline models enabled performance evaluation across various architectural levels, ranging from traditional feature-based foundations to advanced neural solutions. While SVM and Random Forest exemplify traditional machine learning operations using human-created features, LSTM and BERT represent modern deep learning standards. This comprehensive evaluation framework enabled the precise measurement of our attention mechanism’s effectiveness in Turkish-language fake news detection tasks. To further strengthen our evaluation and address potential concerns about architectural novelty, we implemented a Bidirectional LSTM with Attention (BiLSTM-Attention) as an additional strong baseline. This provided a more direct comparison to our unidirectional LSTM approach.
+Evaluation metrics We employed both statistical metrics and robust validation techniques to rigorously assess the model’s performance. These evaluation metrics quantified classification accuracy, while cross-validation ensured generalizability.
+Accuracy measures overall correctness by comparing accurate predictions against all samples: 4
+
+where (True Positive) and (True Negatives) are correct classifications of fake and real news, respectively, while (False Positives) and (False Negatives) represent misclassifications.
+Precision evaluates the model’s ability to minimize false alarms (lower ): 5
+
+Recall assesses the coverage of actual fake news cases (lower ): 6
+
+F1-Score provides a balanced measure of precision and recall for imbalanced scenarios: 7
+
+To ensure reliability and prevent overfitting, we employed 5-fold cross-validation. This technique randomly splits the dataset into five equal parts. The protocol included five iterations, with four folds allocated for training purposes and one for validation, rotating until each fold served as the validation set exactly once. Final assessment scores were computed as average performance metrics for each fold, with accuracy, precision, recall, and F1-score calculated for each partitioned subset. This approach validated the model’s consistency.
+In addition to these core metrics, we report the Area Under the Receiver Operating Characteristic Curve (ROC-AUC) and the Area Under the Precision-Recall Curve (PR-AUC) to provide a more comprehensive evaluation of the model’s ranking and classification capabilities across different threshold settings. Given the balanced nature of our dataset, we focus on the macro-averaged versions of these metrics to ensure equal importance is given to both classes.
+Performance metric confidence intervals were calculated to guarantee reliability in real-world environments. To statistically validate the performance differences between models, we employed McNemar’s test on the predictions of our proposed model and the Turkish BERT baseline. A p-value of less than 0.05 was considered statistically significant.
+Results Model performance metrics Table 3 summarizes the performance metrics of the attention-based neural network, providing detailed data on its ability to detect fake news within the Turkish context. The findings demonstrate the model’s high accuracy and balanced classification capabilities.
+Table 3. Performance metrics of the attention-based neural network.
+Metric
+Real news
+Fake news
+Overall
+
+Precision
+0.93
+0.91
+-
+
+Recall
+0.91
+0.93
+-
+
+F1-Score
+0.92
+0.92
+-
+
+ROC-AUC
+-
+-
+0.98
+
+PR-AUC
+-
+-
+0.97
+
+Accuracy
+-
+-
+0.92
+
+
+The class-specific Precision, Recall, and F1-Score values appear identical because macro-averaged metrics are used. Macro averaging assigns equal weight to each class, producing symmetric scores when the classifier performs uniformly across both categories. This reflects balanced model behavior rather than a duplication error. While the aggregate metrics demonstrate high performance, they mask notable vulnerabilities to specific misinformation types. A subsequent error analysis revealed substantially lower accuracy for satirical news (62%) and sophisticated fabrications that emulate credible sources (68%), underscoring domain-specific robustness challenges beyond the overall benchmark performance.
+The model reached an accuracy rate of 92%, demonstrating a strong capacity to identify true and false news articles. The model successfully distinguished between authentic news (in 93% of cases) and fabricated information (91%). Recall measures exhibited 0.91 for real news and 0.93 for fake news. The model also showed identical F1-scores of 0.92 for both types of news, maintaining balanced performance with no preference toward either category. The high ROC-AUC (0.98) and PR-AUC (0.97) scores further confirm the model’s strong ability to distinguish between the two classes across all classification thresholds. The model’s practical utility stems from its ability to minimize both false positives (authentic news misclassified as fake) and false negatives (fake news misclassified as authentic) - a crucial advantage in real-world scenarios. The model performed slightly better in detecting fabricated content; therefore, the model exhibits particular effectiveness in identifying deceptive material, which is essential for combating misinformation dissemination. Figure 2 presents the confusion matrix for the attention-based neural network, illustrating its classification performance on the Turkish fake news dataset.
+Fig. 2 [Images not available. See PDF.]
+Confusion matrix for the attention-based model.
+
+The confusion matrix details the classifications across the four quadrants: True Positives, False Positives, True Negatives, and False Negatives. Analysis of the matrix indicates that the model correctly identifies fake news with a true positive rate of 93% and authentic news with a true negative rate of 91%. The model’s error rate was low, as it failed to identify 7% of fake news and only 9% of authentic news. Furthermore, the model demonstrated robustness; the errors were evenly distributed among the classifications. The overall 92% accuracy was supported by the confusion matrix. Attention mechanisms enabled the model to effectively detect subtle linguistic patterns characteristic of Turkish texts. The visual representation of the matrix not only validates the model’s capabilities but also identifies potential areas for improvement.
+Comparative analysis with baseline models Table 4 provides a comprehensive comparison between the proposed attention-based neural network and four baseline models (SVM, Random Forest, LSTM, and Turkish BERT) across key performance metrics: accuracy, precision (fake), recall (fake), and F1-score (fake).
+Table 4. Comparative performance of all models.
+Model
+Accuracy
+Precision (fake)
+Recall (fake)
+F1-score (fake)
+
+SVM
+0.82
+0.81
+0.83
+0.82
+
+Random Forest
+0.85
+0.84
+0.86
+0.85
+
+LSTM
+0.88
+0.87
+0.89
+0.88
+
+BiLSTM-Attention
+0.89
+0.88
+0.90
+0.89
+
+Turkish BERT
+0.90
+0.89
+0.91
+0.90
+
+Our Model
+0.92
+0.91
+0.93
+0.92
+
+
+The results indicate that the attention-based model achieved superior performance with 92% accuracy and an F1-score of 0.92, outperforming all baseline approaches. Traditional machine learning methods (SVM and Random Forest) demonstrated moderate performance (from 82% to 85% accuracy), as hand-crafted feature approaches proved insufficient for capturing the complex contextual patterns in Turkish texts. While the LSTM model showed improvement (reaching an 88% accuracy through sequential learning), it failed to match the performance of the attention-based model. The Turkish BERT algorithm performed with 90% accuracy, matching the proposed model, but required three times more computational time for inference.
+The attention-based model showed exceptional precision (0.91) and recall (0.93) for fake news identification while maintaining low error rates. The detection capability of SVM and Random Forest for fake news instances was weaker—recall scores of 0.83–0.86. The F1-scores from the proposed models demonstrate that the attention mechanism maintains unbiased classification for both categories. The proposed model also offers operational advantages, training 40% faster than BERT while facilitating practical system deployment.
+To determine the statistical significance of the observed performance gain over the strongest baseline, Turkish BERT, we performed McNemar’s test. The difference was statistically significant ( p  < 0.01), confirming that the 2% improvement in accuracy is not attributable to random chance and substantiating the practical relevance of our model.
+The inclusion of the BiLSTM-Attention baseline (89% accuracy) further validates our design decisions. Although its two-way flow provided a marginal performance increase over the standard LSTM, our optimized unidirectional architecture with a full attention mechanism achieved a 3-point accuracy improvement. This demonstrates that careful model adaptation to the specific task and language can yield greater benefits than simply increasing architectural complexity.
+Feature importance and linguistic patterns This study offers an in-depth examination of the attention mechanism’s ability to identify distinctive linguistic markers in Turkish fake news, combining quantitative analysis with qualitative interpretation. The study analyzed attention weights across the dataset, revealing that emotionally charged words like gizlice (secretly) and planlıyor (planning) consistently received high weights (0.89 and 0.85, respectively), reflecting their role in sensationalist rhetoric. Conversely, neutral vocabulary like yeni (new) was downweighted. A systematic evaluation of top discriminative features (Table 5) showed that fabricated texts frequently incorporate absolute terms ( kesinlikle [absolutely], 78% occurrence), urgency markers ( acil [urgent], 65%), and conspiratorial framing ( ifşa [expose], 72%). While these patterns align with global misinformation strategies, they also exhibit unique Turkish linguistic characteristics.
+Table 5. Top discriminative features in Turkish fake news.
+Feature (Turkish)
+English translation
+Attention weight
+Occurrence in fake news
+Linguistic function
+
+kesinlikle
+absolutely
+0.89
+78%
+False certainty
+
+acil
+urgent
+0.85
+65%
+Emotional manipulation
+
+ifşa
+expose
+0.82
+72%
+Conspiratorial framing
+
+mucize
+miracle
+0.79
+58%
+Pseudoscientific claims
+
+açıklama yapıldı
+It was declared.
+0.77
+63%
+Fabricated authority attribution
+
+
+The attention layer’s interpretability further uncovered contextual nuances: political fake news favored alarmist verb constructions ( açıklama yapıldı [it was declared]). Conversely, health-related misinformation employed pseudoscientific expressions ( mucize tedavi [miracle cure]). The model’s false positives often included satirical content that imitated such patterns, whereas false negatives were caused by high-quality fake news that adopted the neutral tone of credible sources. These results illustrate the model’s decision-making process and establish a taxonomy of Turkish disinformation strategies in fact-checking applications. This discussion bridges NLP methodologies and sociolinguistic theory, providing both a technical justification and practical instruments for combating disinformation in Turkish.
+Cross-validation and robustness Table 6 presents the performance of the attention-based model across five cross-validation folds, demonstrating its consistent reliability for Turkish fake news detection. The table reports accuracy, precision, recall, and F1-score values for each fold, along with their mean values. The results show minimal variation (± 1%) across all metrics, with accuracy ranging between 91 and 93% (average 92%). Precision and recall exhibit similar stability, maintaining averages of 0.91 and 0.93, respectively, while F1-scores remain consistently strong at 0.92 overall.
+Table 6. Cross-Validation performance per Fold.
+Fold
+Accuracy
+Precision
+Recall
+F1-score
+
+1
+0.91
+0.90
+0.92
+0.91
+
+2
+0.92
+0.91
+0.93
+0.92
+
+3
+0.93
+0.92
+0.94
+0.93
+
+4
+0.91
+0.90
+0.92
+0.91
+
+5
+0.92
+0.91
+0.93
+0.92
+
+Avg.
+0.92
+0.91
+0.93
+0.92
+
+
+Fold 3 achieved peak performance (93% accuracy with 0.94 recall), likely due to containing distinctive fake news samples, though all other folds exhibited comparable results. The model demonstrated strong resistance to overfitting and reliable generalization across different news sample types, as evidenced by its uniform performance in each data partition. Performance stability was evident across all metrics (precision between 0.90 and 0.92), indicating consistent fake news detection without excessive false positives during testing stages. These cross-validation results validate the model’s real-world applicability, as extensive repeated testing methods addressed potential dataset biases.
+Cross-domain generalization analysis A series of experiments quantitatively validated the model’s cross-domain generalization. The model was trained on one domain and tested on another. The results, presented in Table 7, demonstrate robust performance across topic boundaries.
+Table 7. Cross-domain generalization performance (Accuracy).
+Training domain → testing Domain
+Politics
+Health
+Entertainment
+Economics
+
+Politics
+0.93
+0.90
+0.88
+0.91
+
+Health
+0.89
+0.92
+0.87
+0.86
+
+Entertainment
+0.85
+0.84
+0.94
+0.82
+
+Economics
+0.90
+0.87
+0.85
+0.91
+
+
+The model maintains high accuracy (often above 0.85–0.90) even when trained and tested on different domains, with only a modest performance drop compared to within-domain performance (the diagonal values). This confirms its ability to generalize beyond the specific topics encountered during training, a key requirement for real-world deployment where news topics are highly diverse.
+Computational efficiency Table 8 provides a comprehensive analysis of the proposed attention-based neural network’s computational performance compared to baseline models, highlighting its practical deployment advantages. The analysis is based on three criteria: training time, inference speed, and resource requirements. The results indicate that the model achieves the optimal trade-off between performance and efficiency.
+Table 8. Computational performance comparison.
+Model
+Training time (hours)
+Inference time (sec/article)
+GPU Memory (GB)
+CPU Memory (GB)
+
+Attention-based (Ours)
+2.1
+0.5
+1.8
+3.2
+
+Turkish BERT
+3.5
+1.4
+4.2
+6.8
+
+LSTM
+1.7
+0.3
+1.2
+2.5
+
+Random Forest
+0.5
+0.1
+0.8
+1.2
+
+
+The attention-based model trained faster than Turkish BERT (2.1 h versus 3.5 h) while achieving greater accuracy (92% versus 90%). Furthermore, the model demonstrated a superior processing speed of 0.5 s compared to BERT’s 1.4, confirming its suitability for real-time applications. This efficiency stems from the model’s streamlined architecture, which combines FastText embeddings with BERT parameter reduction, a single-layer LSTM with attention mechanisms, and optimized hyperparameters (a dropout rate of 0.3 and a learning rate of 0.001).
+Error analysis The error analysis reveals crucial insights into the model’s limitations through systematic examination of its 8% misclassification rate (Table 9).
+Table 9. Comprehensive error analysis breakdown.
+Category
+Subtype
+Prevalence
+Example case
+Linguistic features
+Improvement strategy
+
+False positives (real→fake)
+Satire
+62%
+“Meteoroloji 50 yıllık kar yağacak dedi” (“Meteorology predicts 50 years of snow”)
+Absurd claims, hyperbolic adverbs
+Fine-tuning on a dedicated satire corpus; incorporating stylistic features (e.g., absurdity score, hyperbole detection)
+
+Opinion Pieces
+23%
+“Bu politikacı ülkeyi mahvediyor” (“This politician is ruining the country”)
+Subjective adjectives, first-person pronouns
+Integration of a subjectivity classifier; feature engineering to detect first-person pronouns and evaluative language
+
+Unusual Truths
+15%
+“Köyde 3 başlı buzağı doğdu” (“Three-headed calf born in village”)
+Rare proper nouns, low-frequency verbs
+Real-time verification against knowledge bases (e.g., Wikidata); outlier detection for claims with low prior probability
+
+False Negatives (fake→real)
+Sophisticated Fakes
+68%
+“Merkez Bankası faiz artırım planını açıkladı” (“Central Bank reveals interest hike plan”)
+Balanced syntax, credible sources
+Pre-training on corpora of credible news sources to model ‘normal’ style; anomaly detection in writing patterns
+
+Translated Misinfo
+19%
+“WHO Türkiye’yi risk listesine aldı” (“WHO adds Turkey to risk list”)
+Unidiomatic phrasing, cognate overuse
+Language model perplexity scoring for non-idiomatic phrasing; detection of ‘translationese’ artifacts
+
+Multimedia Fakes
+13%
+Edited video transcript with fabricated quotes
+Text-visual discrepancy
+Vision-language model (e.g., CLIP) to verify text-image alignment; OCR to analyze text embedded in visuals
+
+
+The analysis identifies two primary sources of classification errors: satirical content that generates 4.5% of false positives and sophisticated disinformation responsible for 3.5% of false negatives. The model exhibits limitations in handling Turkish satirical content and internationally-sourced information that has been localized for Turkish audiences. The percentage of fake news reports that remained undetected after textual analysis reached 13%—current automated tools are unable to identify inconsistencies introduced by multimedia elements. These findings underscore the importance of combined analytical approaches for Turkish content verification, incorporating context awareness and detailed linguistic analysis.
+Discussion The rapid proliferation of fake news, particularly in non-English contexts such as Turkish, necessitates robust and efficient detection mechanisms. This study presents an attention-based neural model for Turkish fake news detection that solves existing problems in computational speed, cross-domain generalization, and linguistic specificity. The model outperforms traditional machine learning algorithms (SVM and Random Forest) that rely on manually engineered TF-IDF and n-gram features. While these conventional methods maintain low memory requirements, they prove inadequate for capturing Turkish semantic and morphological complexities. SVM only reached 82% accuracy and failed to analyze sequence connections and semantic patterns in texts. In contrast, our model combines FastText embeddings with attention mechanisms to dynamically evaluate linguistic feature importance, achieving 92% accuracy. Alghamdi et al. 7 reported similar observations regarding deep learning models’ capability to detect elusive patterns within misinformation.
+Our model not only matches Turkish BERT in terms of accuracy but also demonstrates 40% faster training and substantially reduced computational demands. Intensive preprocessing requirements and 4.2 GB GPU memory consumption make BERT impractical for time-sensitive and resource-constrained applications. Our architecture features a single-layer LSTM structure integrated with selected attention mechanisms, achieving outstanding efficiency and optimal results. The proposed approach meets a critical requirement pointed out in Hoy and Koulouri 10 , who emphasized the balance between system complexity and operational usability.
+The interpretability of our attention mechanism represents a key advancement over BERT’s “black-box” nature. By explicitly highlighting discriminative features (e.g., kesinlikle [absolutely], acil [urgent]), the model provides fact-checkers with actionable insights. This aligns with the arguments of Kukkar and Kaur 8 , who supported interpretable models as a means to foster trust in automated detection systems. Additionally, as quantified in the Results section (Cross-Domain Generalization Analysis), our model demonstrates robust cross-domain performance. It maintains high accuracy (often above 0.85) when trained and tested on different topics. This represents a considerable improvement over domain-specific approaches and is a direct response to the research gap identified by Yu et al. 11
+The effectiveness of our model in processing Turkish texts suggests promising applications for other morphologically rich, low-resource languages. The present study complements and extends recent advancements in languages such as Arabic 15 , Hindi, and Bangla 5 . For instance, the approach in research 5 combines multiple deep learning models for Bangla tasks, achieving high accuracy but potentially at a greater computational cost. Similarly, research on Arabic 15 highlights the critical need for tailored solutions in low-resource contexts. Our model achieves a comparable performance level (92% accuracy) while emphasizing the crucial balance between performance, interpretability, and computational efficiency. This balance is highly significant for practical deployment in resource-constrained settings. Three key implications emerge from our findings:
+- Linguistic Adaptability . The combined FastText and attention architecture proves particularly suitable for morphologically rich languages like Arabic and Finnish, supporting the findings of Kazi et al. 15 on addressing NLP gaps for low-resource languages.
+
+- Policy and Deployment . The model’s speed (40% faster than BERT) enables real-time content moderation, overcoming a challenge noted by Malik et al. 21 in deploying GNNs for fake news detection.
+
+- Cross-Cultural Patterns . While Turkish misinformation tactics (e.g., urgency markers like acil ) mirror global trends, they require localized analysis, as emphasized by Alghamdi et al. 7 through their semantic deep learning approach.
+
+
+Although our model exhibits efficiency and interpretability, Hoy and Koulouri 10 caution that generalizability depends on continuous dataset updates. We plan to address this limitation in future developments (e.g., by incorporating regional dialects). Collectively, these studies underscore the need for scalable, language-specific solutions to combat misinformation globally. Despite these advances, further research is needed to address the model’s operational challenges:
+- Text-Only Limitation. The current model analyzes only text and is therefore unable to detect fake news that uses images or videos. Future models should integrate textual and visual analysis to address this limitation.
+
+- Multimodal Misinformation. The model failed to detect approximately 13% of false news stories containing multimedia content. Subsequent studies should incorporate vision-language models, including CLIP, to evaluate text-visual consistency, building upon multi-domain and multi-modal fusion approaches such as those in research 11 .
+
+- Satire and Opinion Detection. The model frequently misclassified satirical (62%) and opinion-based pieces (23%) as false news due to their overlapping linguistic patterns. Implementing dedicated satire detection systems or sentiment analysis layers, as explored in interpretable ensemble models 8 , could mitigate this by recognizing exaggerated absurdities and personal pronoun usage.
+
+- Dynamic Misinformation Trends . The model requires further testing to examine its ability to detect modern threats such as AI-generated texts. Future research should assess its resilience against artificial media using methods that include GPT-4 detection approaches.
+
+- Dataset Expansion . Our dataset, which includes 10,000 articles, provides a robust foundation. However, the inclusion of regional dialects and underrepresented topics, specifically environmental misinformation, would improve generalizability. Collaboration with fact-checking organizations could facilitate labeled data collection through crowdsourcing.
+
+- Real-World Testing . Deploying the model on active social media platforms would validate its real-world effectiveness. The system can use an A/B testing methodology to demonstrate performance comparable to that of human fact-checkers in terms of accuracy and processing speed.
+
+
+Furthermore, while our evaluation was comprehensive on benchmark datasets, it did not explicitly include adversarial examples or highly nuanced disinformation campaigns engineered to evade detection. In future research, the model should be stress-tested against such real-world, adversarial threats to improve its practical resilience.
+The study underscores the critical importance of combating misinformation in modern society. This need is particularly acute in Turkey, where high political polarization and low public trust in the media prevail. Any deployed system must be designed with a focus on transparency to avoid exacerbating public skepticism. The interpretability features integrated into our attention mechanism help users comprehend the rationale behind the detection strategies used in the process of content classification.
+The model provides a globally applicable framework for democratic misinformation detection. It enables resource-constrained regions to develop localized solutions, reducing their reliance on systems dominated by English-language technologies. Moreover, the model aligns with United Nations Sustainable Development Goal 16 (Peace, Justice, and Strong Institutions), which identifies misinformation as a growing threat to social cohesion.
+Conclusion This study successfully developed an effective and interpretable attention-based neural network for fake news detection in Turkish, addressing an important gap in non-English misinformation research. The proposed model integrates FastText embeddings, LSTM layers, and attention mechanisms to capture nuanced Turkish linguistic patterns while achieving computational efficiency and cross-domain portability. A rigorously curated dataset of 10,000 balanced Turkish news articles was used, verified through manual annotation and fact-checking software.
+A preprocessing pipeline utilizing Zemberek (for tokenization, stop-word removal, and stemming) was employed, followed by feature extraction using TF-IDF and FastText embeddings. The model incorporates an attention layer to dynamically weight salient features, achieving 92% accuracy with a precision of 0.91, and a recall of 0.93. Comparative analysis showed that the proposed architecture outperformed baseline models, including SVM (82% accuracy), Random Forest (85%), LSTM (88%), and Turkish BERT (90%). Notably, the model trained 40 times faster than BERT, underscoring its feasibility for real world implementation.
+Despite the positive results, this study has several limitations. The model was less effective at processing satirical material (62% of false positives) and advanced fake news that imitated legitimate sources (68% of false negatives). Furthermore, the method was inefficient for multimedia-based misinformation, highlighting the necessity of multimodal extensions. Although the dataset provides a sound foundation, it could be improved by incorporating regional dialects and emerging misinformation patterns.
+Future research should prioritize multimodal integration and the development of advanced satire detection systems. Expanding the dataset to include underrepresented topics and evaluating the model in real-life social media environments would further enhance its practical applicability. If these challenges are addressed, the proposed model can serve as a scalable solution to fake news detection in Turkish and other low-resource languages, thereby contributing to the global effort to combat disinformation.
+Author contributions Kevser Ovaz Akpinar – Conceptualization, Methodology, Software, Validation, Formal Analysis; Mustafa Akpinar – Investigation, Resources, Data Curation, Writing – Original Draft Preparation; Olga Pavlovskaya – Writing – Review & Editing, Visualization, Supervision, Project Administration, Funding Acquisition. All authors read and approved the final manuscript.
+Data availability Data will be available on request from corresponding author.
+Declarations Competing interests The authors declare no competing interests.
+Publisher’s note Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References 1. Kumar, S; Agrahari, S; Soni, P; Sachdeva, A; Singh, SR. Fake news detection using hashtag context. Pattern Recogn. Lett. ; 2025; 193 , pp. 43-49.2025PaReL.193..43K [DOI: https://dx.doi.org/10.1016/j.patrec.2025.04.008]
+2. Le, M. T. The spread of fake news: disclosure willingness role. Heliyon 10 (14). https://doi.org/10.1016/j.heliyon.2024.e34468 (2024). e34468.
+3. Bilişli, Y; Çakmak, F; Zetter, SA; Ünal, MI. Navigating truth and disinformation: A comparative analysis of generational responses to the 6 February 2023 earthquake in digital media in Türkiye. Heliyon ; 2024; 10 , 19 e36867. [DOI: https://dx.doi.org/10.1016/j.heliyon.2024.e38667]
+4. Irmak, MC; Aydın, T; Yağanoğlu, M. A novel integration of multiple learning methods for detecting misleading information from different datasets during the pandemic. Eng. Appl. Artif. Intell. ; 2025; 142 , 109944. [DOI: https://dx.doi.org/10.1016/j.engappai.2024.109944]
+5. Kabir, MH; Miah, ASM; Hadiuzzaman, M; Shin, J. Combining state-of-the-art pre-trained deep learning models: A novel approach for Bangla sign Language recognition using max voting ensemble. Syst. Soft Comput. ; 2025; 7 , 200230. [DOI: https://dx.doi.org/10.1016/j.sasc.2025.200230]
+6. Vetagiri, A; Pakray, P; Das, A. A deep dive into automated sexism detection using fine-tuned deep learning and large Language models. Eng. Appl. Artif. Intell. ; 2025; 145 , 110167. [DOI: https://dx.doi.org/10.1016/j.engappai.2025.110167]
+7. Alghamdi, J; Lin, Y; Luo, S. Unveiling the hidden patterns: A novel semantic deep learning approach to fake news detection on social media. Eng. Appl. Artif. Intell. ; 2024; 137 , 109240. [DOI: https://dx.doi.org/10.1016/j.engappai.2024.109240]
+8. Kukkar, A; Kaur, G; AEC,. A novel adaptive ensemble classifier with LIME and SHAP-Based interpretability for fake news detection. Expert Syst. Appl. ; 2025; 281 , 127751. [DOI: https://dx.doi.org/10.1016/j.eswa.2025.127751]
+9. Kozachok, O. Improving AKS algorithm. Proving the simplicity of integers. Appl. Math. Inf. Sci. ; 2023; 17(1) , pp. 13-20. [DOI: https://dx.doi.org/10.18576/amis/170103]
+10. Hoy, N; Koulouri, T. An exploration of features to improve the generalisability of fake news detection models. Expert Syst. Appl. ; 2025; 275 , 126949. [DOI: https://dx.doi.org/10.1016/j.eswa.2025.126949]
+11. Yu, K; Jiao, S; Ma, Z. Fake news detection based on BERT multi-domain and multi-modal fusion network. Comput. Vis. Image Underst. ; 2025; 252 , 104301. [DOI: https://dx.doi.org/10.1016/j.cviu.2025.104301]
+12. Chang, Q; Li, X; Duan, Z. Graph global attention network with memory: A deep learning approach for fake news detection. Neural Netw. ; 2024; 172 , 106115. [DOI: https://dx.doi.org/10.1016/j.neunet.2024.106115] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/38219679]
+13. Ahmed, N. et al. Deep learning-based natural language processing in human-agent interaction: Applications, advancements and challenges. Nat. Lang. Proc. J. 9, 100112 (2024). https://doi.org/10.1016/j.nlp.2024.100112
+14. Guo, Y et al. Chinese named entity recognition with multi-network fusion of multi-scale lexical information. J. Electron. Sci. Technol. ; 2024; 22 , 4 100287. [DOI: https://dx.doi.org/10.1016/j.jnlest.2024.100287]
+15. Kazi, S; Khoja, S; Daud, A. Bridging the gap: A survey of document retrieval techniques for high-resource and low-resource languages. Comput. Sci. Rev. ; 2025; 57 , 100756.4894109 [DOI: https://dx.doi.org/10.1016/j.cosrev.2025.100756]
+16. Gorenstein, L; Konen, E; Green, M; Klang, E. Bidirectional encoder representations from Transformers in radiology: A systematic review of natural Language processing applications. J. Am. Coll. Radiol. ; 2024; 21 , 6 pp. 914-941. [DOI: https://dx.doi.org/10.1016/j.jacr.2024.01.012] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/38302036]
+17. Mirtaheri, SL; Pugliese, A; Movahed, N; Shahbazian, R. A comparative analysis on using GPT and BERT for automated vulnerability scoring. Intell. Syst. Appl. ; 2025; 26 , 200515. [DOI: https://dx.doi.org/10.1016/j.iswa.2025.200515]
+18. Guarasci, R; Silvestri, S; De Pietro, G; Fujita, H; Esposito, M. BERT syntactic transfer: A computational experiment on Italian, French and english languages. Comput. Speech Lang. ; 2022; 71 , 101261. [DOI: https://dx.doi.org/10.1016/j.csl.2021.101261]
+19. Lakshika, MVPT; Caldera, HA; De Zoysa, TNK. ECS-KG: an event-centric semantic knowledge graph for event-related news articles. Data Knowl. Eng. ; 2025; 159 , 102451. [DOI: https://dx.doi.org/10.1016/j.datak.2025.102451]
+20. Duma, RA; Niu, Z; Nyamawe, AS; Manjotho, AA. An analysis of graph neural networks for fake review detection: A systematic literature review. Neurocomputing ; 2025; 623 , 129341. [DOI: https://dx.doi.org/10.1016/j.neucom.2025.129341]
+21. Malik, A; Behera, DK; Hota, J; Swain, AR. Ensemble graph neural networks for fake news detection using user engagement and text features. Results Eng. ; 2024; 24 , 103081. [DOI: https://dx.doi.org/10.1016/j.rineng.2024.103081]
+22. Phan, HT; Nguyen, NT; Hwang, D. Fake news detection: A survey of graph neural network methods. Appl. Soft Comput. ; 2023; 139 , 110235. [DOI: https://dx.doi.org/10.1016/j.asoc.2023.110235] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/36999094][PubMedCentral: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC10036155]
+23. Tokareva, E; Malysheva, O; Smirnova, Y; Orchakova, L. A historical and political analysis of the electoral system development in contemporary russia: A look into russia’s parliamentary democracy. Public. Organ. Rev. ; 2024; 24 , 2 pp. 715-732. [DOI: https://dx.doi.org/10.1007/s11115-023-00729-x]
+24. Girma, AG. The role of financial development in post-war economic growth. J. Econ. Sci. Theory Pract. ; 2023; 80 , 2 pp. 14-27.
+25. Alkurdi, DA; Cevik, M; Akgundogdu, A. Advancing deepfake detection using Xception architecture: A robust approach for safeguarding against fabricated news on social media. Comput. Mater. Contin ; 2024; 81 , 3 pp. 4285-4305. [DOI: https://dx.doi.org/10.32604/cmc.2024.057029]
+26. Kovan, A; Yıldırım, M; Gülbahçe, A. The relationship between fear of missing out and social media addiction among Turkish Muslim students: A serial mediation model through self-control and responsibility. Soc. Sci. Humanit. Open. ; 2024; 10 , 101084. [DOI: https://dx.doi.org/10.1016/j.ssaho.2024.101084]
+27. Ciplak, Z; Yildiz, K. Occupational groups prediction in Turkish Twitter data by using machine learning algorithms with multinomial approach. Expert Syst. Appl. ; 2024; 252 , 124175. [DOI: https://dx.doi.org/10.1016/j.eswa.2024.124175]
+28. Okur, HI; Tohma, K; Sertbaş, A. Relational Turkish text classification using distant supervised entities and relations. Comput. Mater. Contin ; 2024; 79 , 2 pp. 2209-2228. [DOI: https://dx.doi.org/10.32604/cmc.2024.050585]
+29. Demir, S; Topcu, B. Graph-based Turkish text normalization and its impact on noisy text processing. Eng. Sci. Technol. Int. J. ; 2022; 35 , 101192. [DOI: https://dx.doi.org/10.1016/j.jestch.2022.101192]
+30. Kaya, YB; Tantuğ, AC. Effect of tokenization granularity for Turkish large Language models. Intell. Syst. Appl. ; 2024; 21 , 200335. [DOI: https://dx.doi.org/10.1016/j.iswa.2024.200335]
+31. Mumcuoğlu, E; Öztürk, CE; Ozaktas, HM; Koç, A. Natural Language processing in law: prediction of outcomes in the higher courts of Turkey. Inf. Process. Manag ; 2021; 58 , 5 102684. [DOI: https://dx.doi.org/10.1016/j.ipm.2021.102684]

@@ -1,0 +1,430 @@
+Introduction Online social networks (OSNs) have provided an effective platform for interaction and communication for billions of users. Many people have integrated popular online social sites into their daily lives and considered them as the main source of information. For example, the news about the death of Bin Laden was released on Twitter before the US government officially announced it on social media (Sutter 2017). Furthermore, information spreads on OSNs can have substantial impact on the society, especially political trends. For instance, Facebook and Twitter had great impact on the US Presidential Election in 2008 and the Arab Spring in 2010 (Hughes and Palen 2009; Wolfsfeld et al. 2013).
+Unfortunately, rapid dissemination of information on OSNs can be used to spread misinformation to a large amount of users. This may lead to huge economic losses as well as negative impacts on the community in real life. For example, false information about assassination of President Obama has indirectly caused a damage of $136.5 billion to the financial market (Domm 2013). In addition, misinformation on social networks had a significant impact on the US Presidential Election in 2016 (Gentzkow 2017). In order for the OSN to serve its users as a reliable channel of information, it is critical to have effective measures to detect the sources of misinformation and restrict their spread.
+Identifying sources of misinformation is a basis for preventing misinformation. Some initial studies have used data mining methods to detect sources of misinformation/rumors (Qazvinian et al. 2011; Kwon et al. 2013). Recently, in order to prevent the outbreak of misinformation and rumors, a commonly used strategy is to block accounts and links which play a vital role in the propagation process. For example, in 2015, Twitter removed 125,000 accounts which was suspected to relate to terrorisms (Yadron 2017). Facebook deleted 30,000 fake accounts reporting rumors in France before the Presidential Election in 2017 (Kottasov 2017).
+However, in reality, we cannot remove too many nodes and links because it can affect the spread of information and freedom of speech. Therefore, it is necessary to have an optimal solution for selecting edges and nodes needed to be removed. Information diffusion models provide the basis for the study of solutions to prevent the spread of misinformation in which two most used ones are linear threshold model (LT) and the independent cascade model (IC) (Kempe et al. 2003). Kimura et al. proposed heuristic methods to remove sets of edges from network in order to minimize influence from sources of misinformation (Kimura et al. 2008, 2009). In LT model, Khalil et al. (2014) proposed an algorithm with an approximation ratio of 1 - 1 / e - ϵ for this problem. Recently, Zhang et al. has designed a strategy to vaccinate sets of edges or nodes in order to reduce the influence of sources of epidemics (Zhang and Prakash 2015, 2014). After that, (Zhang et al. 2016a, c) proposed a strategy of placing monitor machine to prevent the impact of sources of misinformation to important users. In essence, vaccinating and placing monitor on nodes are equivalent to removing nodes from the network, from the abstraction point of view.
+A shortcoming of the above studies is that they do not take into account the time constraints when preventing spread of known sources of misinformation. In reality, information is spread from this user to another through only a few hops. The earlier the preventing of spread of misinformation, the smaller the amount of affected users. In addition, cost of removing one user from the network by placing monitor machine or vaccinating nodes are often different. Therefore, in this paper, we investigate a problem, Maximizing Misinformation Restriction which seeks the set of nodes to be removed satisfying two conditions: (1) the total cost to remove nodes does not exeed given budget; (2) the number of propagation hops is limited, such that the influence reduction of misinformation source is maximal. Our main contributions are summarized as follows:
+- We expand the LT model by combining the constraint of number of propagation step hops, called T-LT model, given a set of source of misinformation nodes, time constraint and limited budget. In this model, we formulate Maximizing Misinformation Restriction ( MMR ) problem that seeks a set of nodes to remove from the network within limited budget and time constraints such that influence reduction of misinformation sources is maximized.
+
+- For complexity, we show that MMR is NP-hard and even if when the network is a rooted tree at single misinformation source node, and prove that calculation of the objective function is #P-hard.
+
+- When the network has a form of tree rooted from only one misinformation source, we designed a Fully Polynomial - Time Approximation Scheme (FPTAS) algorithm which is the best approximation algorithm for NP-hard problem. In general case, we prove that the objective function is monotone and submodular , and thus a Greedy algorithm will have an approximation ratio of 1 - 1 / e . We further propose Speed-up Greedy ( SG ) algorithm by using the state-of-the-art technique in Zhang et al. (2016b). SG provide an approximation ratio of 1 - 1 / e - ϵ . In order to make this solution scalable to billion of nodes and edges, we introduce an efficient heuristic algorithm, called PR - DAG .
+
+- Experiments are performed on real-world social traces of Gnutella, Oregon, Epinions and EU Email datasets showed the performance of our purposed algorithms. In each of these networks, we observe that PR - DAG and SG outperformed baseline methods and they gave the similar result in terms of maximizing the target function while PR - DAG run faster than SG (upto 45 times faster). Experiments also sho that PR - DAG is scalable with EU Email networks, which is large-scale social network contain about 265K nodes and 420K edges.
+
+
+
+Related work Studying information propagation model is critical for research about influence maximization problem (Kempe et al. 2003) and reducing spread of misinformation/rumors on social networks (Zhang and Prakash 2015; Khalil et al. 2014; Kimura et al. 2008, 2009; Zhang and Prakash 2014; Zhang et al. 2013, 2016a, b; He et al. 2011; Budak et al. 2011; Nguyen et al. 2013). In Domingos and Richardson (2001) studied propagation of information on social networks based on data mining technique. Based on this study, Kempe et al. (2003) proposed two information propagation models which are the Linear Threshold (LT) and the Independent Cascade (IC). In these models, they proposed the problem of Influence Maximization (IM) and a greedy algorithm with a ratio of 1 - 1 / e . Later, numerous works about proposed scalability and efficiency algorithms have been done (Goyal et al. 2012; Chen et al. 2010a, b; Nguyen and Zheng 2013). In addition, many related diffusion information and variable problems were proposed and studied (Liu et al. 2012; Chen et al. 2012; Zhang et al. 2013; Bhagat et al. 2012) and some studies have extended these two models (Zhang et al. 2013; Liu et al. 2012; Chen et al. 2012).
+An important task of preventing misinformation is to identify the source of misinformation or rumors. They can be identified through collecting contents of posts, comments, shares (Qazvinian et al. 2011). Rumors can be identified by using features such as time, structures and language of users (Kwon et al. 2013). In order to prevent the spread of misinformation or bad information, some work proposed a campaign of injecting good information into some nodes in order to fight the misinformation (Budak et al. 2011; Nguyen et al. 2013; He et al. 2011). Budak et al. Budak et al. (2011) proposed a problem of selecting a seed set to create positive information so that the number of users believing in negative information is minimized. He et al. (2011) studied Influence Blocking Maximization problem which chose k nodes to initiate positive information in order to minimize influence of negative information. Nguyen et al. (2013) studied β T I -Node Protectors problem with the purpose of seeking the smallest set of nodes with good information to decontaminate misinformation. However, in order to apply all above strategies, we need to know the content of the negative information and create positive information equivalently. Furthermore, it is difficult to persuade users when they already believe in the false information.
+Recently, another branch of work used vaccinating/monitoring (Zhang and Prakash 2014, 2015; Zhang et al. 2016a, b) on a set of edges or nodes which are equivalent to solution of removing edges or nodes in the network to reduce the influence of misinformation sources (Khalil et al. 2014). Zhang et al. (2016a) proposed τ -MP problem that prevent propagation of misinformation from the sources to center set nodes at most guaranteed threshold τ ∈ [ 0 , 1 ] by placing monitors on some nodes. They showed that the problem was #P-hard under IC model and proposed greedy algorithm based on cut sets method. However, it is difficult to apply it for a large number of central nodes because the algorithm using a Monte–Carlo sampling technique which takes a long running time. Given a set of infected notes in a network, Zhang and Prakash (2015, 2014) proposed a vaccination strategy for the k remaining nodes so that the number of infected nodes after propagation is minimal under IC model. The similar method have also been applied for groups of edges and nodes to control propagation of epidemics under LT model (Zhang et al. 2016b).
+Most of existing works ignored two important aspects which are the time constraints and the cost of monitoring/vaccinating/removing a set of nodes. Preventing the spread of misinformation within time constraints is essential to limit their harmful effects. Moreover, the recent studies showed that information is spread after few hops from the source and almost negligible in the next steps (Cha et al. 2009; Leskovec et al. 2007). In addition, we considered cost of monitoring/vaccinating/removing each node on network and the total cost is limited.
+Organization The rest of the paper is structured as follows. We formulate the propagation models and problem definition in Sect. 2. Section 3 introduces some hardness and complexity results. Sections 4, 5 present our proposed algorithms. The experiments on several datasets are presented in Sect. 6. Finally, we give some implication for future work and conclusion in Sect. 7.
+Model and problem definitions In this section, we define the diffusion model called Time constraint Linear Threshold (T-LT) based on the traditional LT model. We next formulate the MMR problem, which aims to find a set of nodes to remove from the network with limited budget and time constraints. In Table 1, the frequently used notations are summarized. Table 1 Table of symbols
+Notional
+Description
+
+n ,  m
+The number of nodes and the number of edges
+
+N - ( v ) , N + ( v )
+The sets of incoming, and outgoing neighbor nodes of v
+
+d - ( v ) , d + ( v )
+In-degree, out-degree of v
+
+S
+Set of misinformation source nodes, for short is source
+
+G d = ( V d , E d )
+The graph of V d , E d which are the set of nodes and edges within d distance from any node in S
+
+N E ( A )
+The set of incoming and outgoing neighbor edges of A
+
+G ( G )
+The set of sample graph generating from G
+
+G ( G \ X )
+The set of sample graph generating from G \ X , X ⊂ E
+
+σ d ( S )
+Influence of S after d hops
+
+σ d ( S , A )
+Influence of S when remove set of nodes A ∈ V after d hop
+
+P ( G , u )
+The set of all simple paths starting node u in G
+
+P ( G , u , v )
+The set of all simple paths starting from u and ending at v
+
+P i ( G , u , v ) , P i ( G , u )
+The set of paths each of which has the length i in P ( G , u , v ) and P ( G , u ) , respectively
+
+σ d , E ( S , X )
+Influence of source S after d hops when removing set of edges X ∈ E
+
+h ( A )
+The reducetion of influence of source S when removing set A (objective function)
+
+
+Diffusion model The most well known models are the LT model and the IC model (Kempe et al. 2003). However, they are not suitable for the time constraints of propagation process. In this subsection, we first describe the standard LT model and then present our extension that incorporates time constraints of the diffusion.
+Linear threshold model Let G = ( V , E , w ) be a social network with a set of nodes V and a directed edge E , with | V | = n and | E | = m . In this paper, the concept of vertex is equivalent to node. Each directed edge ( u , v ) ∈ E is associated with an influence weight w ( u , v ) ∈ [ 0 , 1 ] such that ∑ u ∈ N - ( v ) w ( u , v ) ≤ 1 .
+Given a subset S = { s 1 , s 2 , … , s p } ⊂ V represents a source of misinformation (as the seed set in IM problem). In this paper, each node has two states, active and inactive , σ ( S ) denotes the expected number of activated nodes. In the LT model, the influence cascades in G are illustrated as follows. First, every node v ∈ V uniformly chooses a threshold θ v ∈ [ 0 , 1 ] , which represents the weighted fraction of u ’s neighbors that must be active to activate u . Next, the influence propagation happens in round t = 1 , 2 , 3 . . .
+- At round 1, all nodes in S are activated and the others are inactive.
+
+- At round t > 1 , an inactive node v is activated if weighted number of its incoming active neighbors is greater than or equal its threshold: ∑ incoming infected neighbor u w ( u , v ) ≥ θ v .
+
+- Since a node becomes activated, its status remains in the spreading process. The influence propagation stops when no more nodes can be activated.
+
+
+
+Time constraint linear threshold model We are going to describe our extension to the LT model that incorporates time-constraint diffusion processes, called T-LT. Similar to the LT model, in this model, each node chooses a uniform random number in [0, 1] as a threshold, and the spreading process performs in discrete steps. The new aspect in our model is that the influence is limited to the nodes that are within d ≥ 1 hops from the source. In other words, the difference of T-LT is the propagation process ends after the d propagation steps. The LT model is a special case of T-LT with d = | V | . Therefore, T-LT inherits some characteristics of LT model.
+Kempe et al. (2003) proved LT to be equivalent to live-edge model and sample graph . In LT model, for every node v ∈ V , picks at most one random incoming edge, such that the edge ( u ,  v ) is selected with probability w ( u ,  v ), and no edge is selected with probability 1 - ∑ u ∈ N - ( v ) w ( u , v ) . The selected edges are called live and all other edges are called blocked . Pr [ g | G ] denotes the probability of sample graph g in G , we have: 1
+Pr [ g | G ] = ∏ v ∈ V p ( v , g , G ) where 2
+p ( v , g , G d ( S ) ) = w ( u , v ) , If ∃ u : ( u , v ) ∈ E g 1 - ∑ u : ( u , v ) ∈ E w ( u , v ) , Otherwise R ( g ,  S ) denotes the set of nodes reachable from S in g , by claim 2.6 in Kempe et al. (2003), we have: 3
+σ ( S ) = ∑ g ∈ G ( G ) Pr [ g | G ] R ( g , S ) R d ( g , S ) denotes the set of nodes reachable from S in g within distance d . In T-LT model, we notice that v is reachable from source S if and only if: (1) there exits at least one path consisting entirely of live edges (called live-path) from some nodes in S to v , and (2) the collective number of hops along the shortest live-path from S to v is not greater than d . By proof of Theorem 2.11 in Chen et al. (2013), the equivalence between LT and live-edge model is with respect to all active sets S t , where t is the number of step of propagation. Hence, the influence of S after d hops is: 4
+σ d ( S ) = ∑ g ∈ G ( G ) Pr [ g | G ] R d ( g , S ) The influence of S after removal of A ⊂ V \ S is equal to the influence of S on residual graph, the influence of S at this time is: 5
+σ ( S , A ) = ∑ g ∈ G ( G [ V \ A ] ) Pr [ g | G ] R d ( g , S ) To simplify, instead of considering all sample graphs in G , we only need to consider the sample graphs in G d ( S ) . We define benefit of A is expected reduction of influence of S after removing A , that is, 6
+h d ( A ) = σ d ( S , ∅ ) - σ d ( S , A ) For convenience, we simplify the symbol h d ( · ) by h ( · ) because G and d is constant. Our purpose is to choose a set A with a given budget such that h ( A ) is maximal. The definition of the problem is presented in the next subsection.
+Problem definition Suppose that each node u ∈ V has a cost c ( u ) ≥ 0 for removing from V \ S and a limited cost is L > 0 . When d = 1 finding the solution is trivial and does not make much sense, so we only consider the case d ≥ 2 . In this paper, we consider Maximum Misinformation Restriction ( MMR ) which is defined as follows:
+Definition 1 ( MMR ) Given a graph G = ( V , E , w ) on T-LT model with d ≥ 2 be a number of hops of propagation, potential misinformation sources S = { s 1 , s 2 , … , s p } ⊂ V , and a budget L > 0 . Find the set of vertices A with total cost c ( A ) = ∑ u ∈ A c ( u ) ≤ L to maximize h ( A ).
+MMR is generalized by the following cases:
+- When d = n : Maximum Misinformation Restriction on whole process propagation of misinformation source S .
+
+- When c ( u ) = 1 ∀ u ∈ U ⊂ V , c ( u ) = + ∞ , u ∈ V \ U , find the set A in the allowed area U to maximize h ( A ).
+
+
+
+Hardness and complexity In this section, we show that MMR is NP-hard even when the graph is the rooted tree by reducing from the 0-1 Knapsack problem. Furthermore, we prove that the exact calculation of h ( A ) is #P-hard.
+Theorem 1 MMR is NP-hard in T-LT model, even for d = 2 and the input graph is the rooted tree.
+Proof To prove that MMR is NP-hard, we will reduce the decision of 0–1 Knapsack problem.
+Knapsack Given 2 n + 2 positively integers: W , K , s 1 , … , s n , c 1 , … , c n , determine whether there is a sequence x = ( x 1 , x 2 , … , x n ) ∈ { 0 , 1 } n such that ∑ i = 1 n w i x i ≤ W and ∑ i = 1 n c i x i ≥ K .
+Construction Let I 1 = ( W , K , w 1 , … , w n , c 1 , … , c n ) is an instance of Knapsack. We construct a rooted tree I 2 = ( G , S , d , L ) which is an instance of MMR as follows (Fig. 1):
+- We build only one source node S = { s } . For each c i , we construct a direct simple path, in which: the starting node is s , c i next nodes: u i , 1 , u i , 2 , … , u i , c i , the weight of all edges in this path is 1.
+
+- The cost of nodes: c ( u 1 , i ) = 1 , c ( u 2 , i ) = c ( u 3 , i ) = … = c ( u c i , i ) = + ∞ , i = 1 … n .
+
+- Finally, set L = W and Z = K and d = max i = 1 … n { c i } .
+
+
+Fig. 1 [Images not available. See PDF.]
+Reduce from 0 to 1 Knapsack to MMR
+
+By the construction, we obtain graph G = ( V , E , w ) satisfies LT model. Now, we prove that if I 1 has a solution x = ( x 1 , x 2 , … , x n ) the I 2 has a solution A = { u i , 1 | x i = 1 } such that h ( A ) ≥ Z and vice versa.
+( → ) Suppose x = ( x 1 , x 2 , … , x n ) is solution of instance I 1 . Now with our construction we see that, we chose set A = { u i , 1 | x i = 1 } . We have c ( A ) = ∑ i | x i = 1 w i ≤ W = L . According LT model, for each path, we select u i , 1 in set A , the influence from s to another nodes is blocked, implies the reduction of influence is c i . Therefore, h ( A ) = ∑ i | x i = 1 c i ≥ K = Z .
+( ← ) Otherwise, if I 2 has the solution A , A can not contain u i , j for j ≥ 2 since the cost of this node is + ∞ . Suppose A = u i , 1 , i ∈ I , now we chose a vector x = ( x 1 , x 2 , … , x n ) for x i = 1 if u 1 , i ∈ A , otherwise x i = 0 . We have c ( A ) = ∑ i | u i , 1 ∈ A w i = ∑ i = 1 n x i w i ≤ L = W and h ( A ) = ∑ i | u i , 1 ∈ A c i = ∑ i = 1 n x i c i ≥ Z = K implies x is solution of I 1 □
+Theorem 2 It is # P -hard to compute h ( A ) in T-LT model.
+Proof We will reduce from the s - t paths problem defined in the following. Given a directed graph G = ( V , E ) , | V | = n , | E | = m , computing the number of (directed) paths from node s to node t that visit every node at most once has been proved to be #P-complete (Valiant 1979). From G , we construct a graph G ′ by adding a new node t ′ and adding an edge from t to t ′ with weight w ( t , t ′ ) = 1 . The number of vertices of G is n + 1 . Let Δ be the maximum in-degree of any node in G ′ . For e ≠ ( t , t ′ ) , e ∈ E we set w ( e ) = w = 1 / Δ , this assumption satisfies the LT model since the total of in-neighbour weight is less than 1. We set S = { s } , A = { t ′ } and d = n + 1 . We will show that if for any eligible w computing h ( t ′ ) on G ′ is solvable, the s - t problem is also solvable (Fig. 2). Fig. 2 [Images not available. See PDF.]
+The constructing instance in the reduction from instance G = ( V , E ) of s - t paths problem to instance G ′ of the exact computation of h ( A ) by adding a new node t ′
+
+By the equivalence given claim 2.6 in Kempe et al. (2003), we have: 7
+σ d ( S , ∅ ) = ∑ x ∈ P ( G ′ , s ) ∏ e ∈ x w ( e ) . 8
+σ d ( S , A ) = ∑ x ∈ P ( G ′ \ { t ′ } , s ) ∏ e ∈ x w ( e ) . Eliminate the same elements in the two above equations, the remaining paths contain node t ′ , we have 9
+h ( t ′ ) = σ d ( S , ∅ ) - σ d ( S , A ) = ∑ x ∈ P ( G ′ , s , t ′ ) ∏ e ∈ x w ( e ) Since each simple path from s to t ′ in G ′ contains a simple path from s to t in G , we have: 10
+h ( t ′ ) = ∑ x ∈ P ( G ′ , s , t ′ ) ∏ e ∈ x w ( e ) = ∑ i = 0 n - 1 ∑ x ∈ P i ( G , s , t ) ( w ( t , t ′ ) ∏ e ∈ x w ( e ) ) = ∑ i = 0 n - 1 w i · α i where α i = | P i ( G , s , t ) | . For Eq. (10), we can set weight w to n distinction values w 1 , w 2 , … , w n and we have value of h ( t ′ ) corresponding to w i . Hence, we obtain a set of n linear equations with { α 0 , α 2 , … , α n - 1 } as variables. The matrix of this equation is M n × n = { m ij } and m ij = w i , i , j = 0 , . . , n - 1 so this is Vandermonde matrix and we can easily to compute the unique solution { α 0 , α 2 , … , α n - 1 } for the linear system of equations. The total of s - t paths in G is ∑ i = 0 n - 1 α i . If A is a polynomial-time algorithm which can calculate exactly h ( t ′ ) , we can use h ( t ′ ) to calculate s - t paths, implying that the exact calculaiton of h ( t ′ ) is at least as hard as s - t paths problem □
+Approximation algorithms In this section, we introduce some approximation algorithms for MMR problem. First, we provide a Fully Polynomial Time Approximation Scheme (FPTAS) algorithm for the case when the network is a rooted tree at single misinformation source node. In the general case, we designed a fast greedy algorithm with a ratio of 1 - 1 / e as the objective function is proved to be monotone and submodular .
+FPTAS for rooted tree In this section, we consider tree version of MMR (called T - MMR ) that means the network is a tree rooted at a source node I . We designed FPTAS for T - MMR , the algorithm has the best approximation ratio ( 1 - ϵ ) for NP-hard problem.
+Calculate benefit of nodes When the graph is a tree rooted at I , we consider the sub-tree rooted I that each node has a maximum depth d , called T I . If we select node u , the influence of I will not reach any descendant nodes of u . Inf ( u ,  v ) denotes the influence from u to v when u is activated, D ( u ) is the set of descendant nodes of u on T I , we have: 11
+h ( v ) = I n f ( I , v ) + I n f ( I , v ) · ∑ u ∈ D ( v ) I n f ( v , u ) To calculate h (.) we propose a recursive algorithm based on Depth-First Search (DFS) described in Algorithm 1. [Images not available. See PDF.]
+
+Lemma 1 Algorithm 1 has a complexity is O ( n T ) , where n T is number of nodes in T I .
+Proof The steps of the algorithm is similar to the algorithm DFS so it has a complexity O ( m T + n T ) = O ( n T ) (due to T I is a tree) □
+FPTAS for T - MMR Based on the tree structure of the problem, we used dynamic programming method to design a Fully Polynomial Time Approximation Scheme (FPTAS). This algorithm is divided into two phases. In the first phase, we find sub-tree rooted at I with the depth d to satisfy the time constraint of the problem. Next, we standardize benefit value of nodes as well as the flow values. Basically, we try to bound them by a polynomial in n and 1 ϵ . In the second phase, we use the dynamic programming to find the solution in polynomial time. The algorithm is summarized in Algorithm 2 (Fig. 3). Fig. 3 [Images not available. See PDF.]
+The tree T I root at I
+
+Phase 1: Preprocessing We find sub-tree root at I has the depth at most d . Next we will calculate the benefit of nodes by Algorithm 1 and standardize the benefit as shown in line 4 in Algorithm 2 then h ( u ) is scaled down by a factor K . This preprocessing step ensures that all h ( u ) is integer between 0 and ⌈ n ϵ ⌉ .
+Phase 2: Dynamic Programming In the second phase, we use dynamic programming to find an optimal solution for the MMR problem instance ( G ,  I ,  h ) Now, given the tree G = ( V , E ) with | V | = n , and the root I . In order to describe the dynamic algorithm, we use the following the notations:
+- T u : The sub-tree rooted at u in T I , with the set of vertices V u and the set of edges E u .
+
+- t ( u ): The outcoming degree of node u .
+
+- u 1 , u 2 , … , u t ( u ) : represent children of u .
+
+- T i u : The i -th sub-tree of tree rooted at u i.e, the subtree rooted at i -th u ’s child.
+
+
+We define the following recursion functions:
+- F u ( p ) : The minimum total costs when removing a set of nodes in T u so that the total benefits gained on T u is at least p .
+
+- F i u ( p ) : The minimum total costs to remove a set of nodes in T i u so that the total benefits gained on T i u is at least p .
+
+- H i u ( p ) : The minimum total costs when removing the set of nodes in subtrees { T 1 u , T 2 u , … , T i u } so that the total benefits gained is at lest p , where i = 1 … t ( u ) .
+
+
+The core of the dynamic algorithm is to compute F u ( p ) and H i u ( p ) through the following recursions: 12
+F u ( p ) = min { H t ( u ) u ( p ) , c ( u ) } , If h ( u ) ≥ p H t ( u ) u ( p ) , Otherwise , ∀ p = 1 . . . ⌈ n 2 ϵ ⌉ 13
+F i u ( p ) = min q = 1 … p { H i - 1 u ( q ) + F i u ( p - q ) } , ∀ p = 1 . . . ⌈ n ϵ ⌉ , i = 1 … t ( u ) . The basic cases are as follows. 14
+F u ( p ) = 0 , p ≤ 0 + ∞ , p > ⌈ n 2 ϵ ⌉ 15
+F i u ( p ) = 0 , p ≤ 0 + ∞ , p > ⌈ n 2 ϵ ⌉ If node u is a leaf. 16
+F u ( p ) = c ( u ) , If h ( u ) ≥ p + ∞ , Otherwise Finally, the maximum objective for instance ( G , I , h ′ ) is given at the root u by: 17
+O P T ( T , I , h ′ ) = max { p | F u ( p ) ≤ C }
+Lemma 2 Algorithm 2 finds an optimal solution for T - MMR instance ( G , I , h ′ ) has the complexity of O ( ϵ - 2 n 5 )
+[Images not available. See PDF.]
+
+Proof The accuracy of the dynamic programming algorithm comes from the sub-optimal structure of the problem. For calculation F u ( p ) , the major portion of running time is to compute F i u ( p ) . Since node u has maximum n - 1 children and q ≤ p ≤ ⌈ n 2 ϵ ⌉ . The running time to compute is O ( n · ⌈ n 2 ϵ ⌉ · ⌈ n 2 ϵ ⌉ ) = O ( ϵ - 2 n 5 ) □
+Theorem 3 Algorithm 2 is FPTAS for T - MMR .
+Proof Let A ∗ be an optimal solution of T - MMR instance I 1 = ( G , I , h ) with the objective value O P T = h ( A ∗ ) . A ′ is an optimal solution of T - MMR instance I 2 = ( G , I , h ′ ) by running Agorithm 2 with the objective value O P T ′ = h ′ ( A ) , with h ′ ( . ) is value of for I 2 . We see that A ′ is feasible solution of I 1 since it satisfies the condition that the highest cost is L . We need to prove: 18
+h ( A ′ ) ≥ ( 1 - ϵ ) · h ( A ∗ ) Due to rounding down h ′ ( u ) in line 4 in Agorithm 2, we have: h ( u ) ≥ K · h ′ ( u ) , h ′ ( u ) ≥ h ( u ) K - 1 Therefore: h ( A ′ ) ≥ K · h ′ ( A ′ ) ≥ K · h ′ ( A ∗ ) ≥ h ( A ∗ ) - n · K = O P T - ϵ · M Since we filtered nodes u with c ( u ) > L , we have O P T ≥ M . Therefore, h ( A ′ ) ≥ O P T - ϵ · M ≥ ( 1 - ϵ ) · O P T Thus the objective of A ′ is within a factor 1 - ϵ of OPT i.e. Algorithm 2 is ( 1 - ϵ ) approximation for 0 < ϵ < 1 for T - MMR . Combining lemma 2 this alg. has a time complexity of O ( ϵ - 2 n 5 ) so it is a FPTAS □
+Approximation algorithm for general case We next introduce our ( 1 - 1 / e ) -approximation algorithm. We first present the following lemmas and theorems.
+Lemma 3 σ d , E ( S , X ) is monotonically decreasing function of the set of edges X to be deleted.
+Lemma 4 The function σ d , E ( S , X ) is supermodular, i.e. for X ⊆ Y ⊂ E and ∀ e ∈ E \ Y then: 19
+σ d , E ( S , X ) - σ d , E ( S , X ∪ { e } ) ≥ σ d , E ( S , Y ) - σ d , E ( S , Y ∪ { e } )
+The proofs of Lemmas 3 and  4 are presented in “Appendix”.
+Theorem 4 The benefit function h ( A ) is monotone: 20
+h ( A ) ≤ h ( T ) and submodular function: 21
+h ( A ∪ { v } ) - h ( A ) ≥ h ( T ∪ { v } ) - h ( T ) , where ∀ A ⊆ T ⊂ V , v ∉ T
+Proof Removing a vertex u is equivalent to the influence passing through edges adjacent to it blocked. Hence, σ d ( S , A ) = σ d , E ( N E ( A ) ) . For vertex v ∈ V then N E ( A ) ⊆ N E ( A + { v } ) combining with Lemma 3, we obtain that σ d ( S , A ) is monotonically decreasing which infers that h ( A ) is monotonically increasing.
+Denote E T , v = N E ( T + { v } ) \ N E ( T ) , E A , v = N E ( A + { v } ) \ N E ( A ) . Due to A ⊆ T the set of edges adjacent to v but not adjacent to any vertices in T is subset of set of edges adjacent with v but not adjacent any vertices in A , we have E T , v ⊆ E A , v and N E ( A ) ∪ E T , v ⊆ N E ( A ) ∪ N E ( v ) = N E ( A + { v } ) . Using Lemmas 4 and  3, we have: σ d ( S , A ) - σ d ( S , A + { v } ) = σ d , E ( S , N E ( A ) ) - σ d , E ( N E ( A + { v } ) ) ≥ σ d , E ( S , N E ( A ) ) - σ d , E ( S , N E ( A ) ∪ E T , v ) ≥ σ d , E ( S , N E ( T ) ) - σ d , E ( S , N E ( T ) ∪ E T , v ) = σ d ( T ) - σ d ( T + { v } ) Combine with the definition of (Eq. 5) we have: h ( A + { v } ) - h ( A ) ≥ h ( T + { v } ) - h ( T ) This has completed the proof □
+In Algorithm 3, we make a greedy strategy. In each step, we select a node u that maximizes the marginal benefit over the cost ratio if the cost of u is not greater than the remaining budget. Let A be the set of currently selected vertices, the marginal benefit of node u over the cost ratio is calculated by the formula: 22
+δ ( v ) = h ( A ∪ v ) - h ( A ) c ( v ) , ∀ v ∈ V \ A The algorithm terminates when at least one of the two conditions occurs: no budget remains, or no node can be added to A . [Images not available. See PDF.]
+In the case that all nodes have the same cost, Algorithm 3 achieves an approximation ratio of 1 - 1 / e . However, with different node costs, Algorithm 3 can have unbounded approximation ratio and it gives even bad results. For example, considering the directed network containing t + 2 nodes V = { I , u , v 1 , v 2 , … , v t } , I is a source node, the set of edges E = { ( I , u ) , ( I , v 1 ) , ( v 1 , v 2 ) , ( v 2 , v 3 ) , … , ( v t - 1 , v t ) } and the weight of all edges is equal to 1. Let the cost c ( u ) = 1 - ϵ , c ( v i ) = t , ∀ i = 1 … t and the budget L = t . The optimal solution is node v 1 which achieves a benefit of t . Algorithm 3 only chooses node u since it has the maximum benefit gained over cost ratio 1 / ( 1 - ϵ ) , resulting benefit is 1. Next, we inherit idea of Khuller et al. (1999) to modify the Algorithm 3 to achieve a constant approximation ratio. First, we remove all nodes that cost more than the budget because they are not feasible solutions. Let A 1 be selected set of nodes by Algorithm 3. We will consider another candidate solution v max , which is the node that has the largest benefit. We compare the benefit of A 1 and v max , then output the one with higher benefit. The process is summarized in Algorithm 4.
+Theorem 5 Algorithm 4 provides a ( 1 - 1 e ) -approximation to find max h ( S ) problem.
+[Images not available. See PDF.]
+
+Proof Straightforward based on Khuller et al. (1999). □
+Complexity Let R be the maximum time needed to calculate the value of h ( A ) , ∀ A ⊆ V . Algorithm 3 runs in O ( n 2 R ) where n is the number of nodes, k is the number of iterators. u max can be determined in O ( n T ) time. Hence, Algorithm 4 runs in O ( n 2 R ) .
+Note that we can improve the approximation ratio to 1 - 1 / e by inheriting greedy with partial heuristic enumeration (Khuller et al. 1999). However, the time complexity of O ( n 4 R ) will become unfeasible. The difficulty in implementing the Algorithm 4 is computing. Kempe et al. (2003) used Monte–Carlo simulations method to estimate the influence function and this method can be applied for the algorithm. However, it is hard to apply to large graphs due to its high complexity. Therefore, to speed up the Algorithm 4, we will propose Speed-up Greedy (SA) algorithm based on two aspects: (1) simplifying the source nodes S into super source node I , and (2) and fast updating the function based on characteristics of generated samples.
+Speed-up of the improved greedy algorithm In this subsection, we apply GREEDY-LT method proposed by Zhang et al. (2016b) which is the state-of-the-art method to Speed-up IG algorithm. We first simplify the MMR problem by merging set source S = { s 1 , s 2 , … , s p } into a supper source node I . In T-LT model if a healthy node has multiple neighbors which are source nodes, it will have a new edge weight which would be the sum of weights. For example, if node u has two source neighbors s 1 and s 2 , the weight of merged node I would be: w ( I , u ) = w ( s 1 , u ) + w ( s 2 , u ) . The details of this method are presented in Algorithm 5 and equivalence between the before and after instances of MMR is proved in Proposition 1.
+Proposition 1 Given an instance of the MMR instance ( G ,  S ,  w ) under T-LT model, Algorithm 5 outputs an equivalent instance ( G ′ , I , w ′ ) where I is the only source of misinformation node in the new graph G ′ .
+Proof We will prove this proposition by induction. If a node v connects to two source nodes u 1 and u 2 . In T-LT model, the influence of u 1 and u 2 to v will be w ( u 1 , v ) + w ( u 2 , v ) which is the same as the total influence of output of Algorithm 5 (line 9). When v has i + 1 incoming neighbours source nodes u 1 , u 2 , … , u i + 1 . Denote by w i ′ ( I , v ) is influence after merging i nodes. When merging a new source node u i + 1 , the total influence is w i + 1 ′ ( I , v ) = w i ′ ( I , v ) + w ( u i + 1 , v ) which is the same as the output of Algorithm 5 (line 9) □
+[Images not available. See PDF.]
+
+Complexity As the same method in Zhang and Prakash (2015), the complexity of alg. 5 is O ( p + | N ( S ) | ) , where | N ( S )| is number of neighbours of S .
+Next, to speed up Algorithm 4, we propose the Speed-up Greedy algorithm (SGA) summarized in Algorithm 6. Firstly, we merge S into a supper source node I and we obtain the new graph is G ′ (line 2). Let R be the set of η samples generated from G ′ . In each sample graph g ∈ G ( G ′ ) , all nodes reachable from I is a tree root at I . Since the time constraint is d , denoted I I d ∼ g is sub-tree of T root at I with height at most d , Let L denote the set of η sample graphs and T = { T I d ∼ g | g ∈ G ( G ′ ) } , h ( u , T I ) denotes the benefit of node u in T I d , we have h ( u , T I ) = | { v | v ∈ s u b t r e e ( u ) } | is the number of nodes that under the sub-tree root at u (including u ) in T I . After that, we apply the framework of Algorithm 4 with the marginal benefit of node u over tree T I is: 23
+h ( I , T I d ) - h ( I , T I d \ u ) = h ( u , T I d ) The problem of computing the h ( · ) exactly has been shown to be #P-Hard. Thus we apply the Sample Average Approximation (SAA) framework to approximate the function h ( · ) in near-linear time by using empirical average over set L . That is, 24
+h ( A ) ≈ h ^ ( A ) = 1 η ∑ T I d ∼ g , g ∈ L h ( I , T I d \ { A } ) The marginal benefit of node u on G is approximated by the average marginal benefit for all tree T I d ∈ L . 25
+δ ( A , u ) ≈ δ ^ ( A , u ) = h ^ ( A ) - h ^ ( A \ { u } ) = 1 η ∑ T I d ∼ g , g ∈ L h ( I , T I d \ { A } ) - h ( I , T I d \ { A ∪ u } ) We choose the node that has the largest marginal benefit δ ^ ( A , u ) in line 7 and choose the set of nodes A 1 by framework of Algorithm 3 (lines 8–19). We remove the node which is picked into A 1 and update function h ( u , T I ) , u ∈ T I (line 16) in two cases as follows: (1) for children of u , we can remove them because they are not connected to I , (2) for any ancestor v of u , h ( v , T I d \ u ) = h ( v , T I d ) - h ( u , T I d ) , this task can be done in O ( 1 ) . The algorithm has an approximation ratio of 1 - 1 / e - ϵ where ϵ is the approximation factor for estimating h ( · ) . [Images not available. See PDF.]
+
+Complexity of SG algorithm Denoted m d = | E d | , n d = | V d | . Generating set tree T can be done by using BFS algorithm with the depth d , this task takes O ( η ( m d + n d ) ) (line 4). Calculating h ( T I , u ) , ∀ u ∈ T I can be done using Algorithm 1, the running time is O ( η n d ) . For greedy phase, in each iterator, choosing node u which has the largest marginal benefit needs O ( n d ) , updating the set of trees L needs O ( η n d ) . Hence, the total time of this phase is O ( k 1 η n d ) where k 1 is the number of iterations of greedy pharse (lines 8–19). Therefore, Algorithm 6 runs in O ( η ( m d + k 1 n d ) ) .
+DAG-based algorithm In the previous section, we introduced the approximation algorithms. However, difficult to apply these algorithms for large networks due to the fact that it estimate h ( A ) based on Monte–Carlo simulation method which runs for long time. Therefore, in this section, we will introduce an effective heuristic algorithm which is scalable for large networks. First, we are going to extract directed acyclic graph (DAG) from original graph and apply it to estimate the influence propagation. Whereby, we will provide a metric measuring the role of a node in misinformation propagation, called propagation role . Next, we put it into framework of Algorithm 4 instead of marginal benefit. To speed-up algorithm, we narrow candidate for solution set in DAG. The details of this algorithm are described in next subsections.
+DAG construction Recent studies have shown that the influence of a node is very small for a long path (Chen et al. 2010a) so we ignore these paths. On the other hand, the union of maximum influence paths is a good way to approximate the influence (Chen et al. 2010a, 2012, 2010b; Nguyen and Zheng 2013). Furthermore, for the time constraint of d in the MMR problem, we only consider paths has length at most d . Therefore, we use the set of paths which have two characteristics above as a basis for building the DAG. The following definitions are the basis for our method.
+Definition 2 ( Influence path ) For a path P ( u , v ) = { u = x 1 , x 2 , … , x l = v } , of length l from a node u to v , define the influence of the path, Inf ( P ( u , v ) ) , as: 26
+Inf ( P ( u , v ) ) = ∏ i = 1 l - 1 w ( x i , x i + 1 )
+Definition 3 ( Maximum influence path ) The Maximum Influence Path MIP ( G ,  u ,  v ) from u to v is defined as: 27
+MIP ( G , u , v ) = arg max P ∈ P ( G , u , v ) { Inf ( P ) }
+Definition 4 ( Maximum influence path within length constraint ) The Maximum Influence Path M I P d ( G , u , v ) from u to v within length d is defined as: 28
+M I P d ( G , u , v ) = arg max P ∈ P 1 ( G , u , v ) ∪ P 2 ( G , u , v ) … ∪ P d ( G , u , v ) { Inf ( P ) }
+M I P d ( G , u , v ) is different from MIP ( G ,  u ,  v ). For M I P d ( G , u , v ) , we consider all paths from u to v which have the maximum length of d and then choose the path that has the greatest influence. Based on M I P d ( G , u , v ) , we define Maximum Influence Path Out-Arborescence with Length Constraint as follows:
+Definition 5 For a graph G , an influence threshold θ , the Maximum Influence Out-Arborescence of a node u ∈ V , M I O A ( G , u , d , θ ) with length of d , is: 29
+M I O A ( G , u , d , θ ) = ⋃ v ∈ V , Inf ( M I P d ( G , u , v ) ) ≥ θ M I P d ( G , u , v )
+M I O A ( G , u , θ ) is defined as the union of all M I P d ( G , u , x ) , ∀ x ∈ V with influence path greater than a threshold θ and the maximum length of d . M I O A ( G , u , d , θ ) gives the local influence regions (given lower bound) of u within d hops, so with different values of θ we have different local influence regions sizes. M I O A ( G , u , d , θ ) can be computed by modifying Dijkstra algorithm in graph G d with edge weight - log w ( u , v ) for edge ( u ,  v ).
+Now, we use M I O A ( G , I , d , θ ) to build the DAG and use it to approximate the influence from node to node in graph. DAG is a finite directed graph with no directed cycles which has at least a topological ordering. In the M I O A ( G , u , d , θ ) tree, we add edges from the node with low depth to node with high depth (or high height to low height) in original graph, we obtain a DAG. d ( I ,  u ) denotes the depth of node u on the tree M I O A ( G , I , d , θ ) . The DAG constructing procedure is summarized in Algorithm 7 (Fig. 4). Fig. 4 [Images not available. See PDF.]
+DAG construction by Algorithm 7: a graph G ′ with source node I , b M I O A ( G , I , d , θ ) for d = 2 , θ = 0.051 , c DAG was constructed from M I O A ( G , I , d , θ ) by add a valid edge ( v 2 , v 4 )
+[Images not available. See PDF.]
+
+In DAG, we design a metric to measure the propagation role of a node u in the diffusion from source I . The metric combines the two following aspects: (1) influence from I to u , and (2) influence from u to the other nodes in DAG. We define them as f in ( u ) and f out ( u ) respectively, 30
+f in ( u ) = ∑ P ∈ P ( D , I , u ) Inf ( P ) 31
+f out ( u ) = ∑ v ∈ U ∑ P ∈ P ( D , u , v ) Inf ( P ) Finally, the propagation role of node u defined is, 32
+r ( u ) = f in ( u ) · f out ( u ) For example, in Fig. 6, f in ( v 1 ) = w ( I , v 1 ) = 0.6 , f out ( v 1 ) = 1 + 0.2 · 1 + 0.3 · 1 = 1.5 , r ( v 1 ) = 0.6 · 1.5 = 0.9 . Similarly, r ( v 2 ) = 0.75 , r ( v 3 ) = 0.12 , r ( v 4 ) = 0.23 , r ( v 6 ) = 0.2 . [Images not available. See PDF.]
+Chen et al. (2010b) design a linear-time to estimate influence from seed set node on DAG. We use this method to calculate f in ( · ) , f out ( · ) and r ( · ) . The procedure is showed in Algorithm 8. We first assign f in ( I ) = f out ( I ) = 1 , f in ( u ) = 0 , f out ( u ) = 1 , ∀ u ∈ D \ I and topological sort all nodes in D from I using DFS. We then calculate the influence from I to each node in order from first to last (lines 5–9). We use node u to update the influence from I to its out-neighbour v (line 7). For f out ( u ) , we do the same above works from the last to the first of list. This work can be performed concurrently with DFS topological sort.
+Algorithm description The heuristic algorithm is proposed based on a combination of the following aspects: (1) constructing DAG from original graph and calculating the propagation role measure of each node 8, (2) using the framework of Algorithm 4 in which margain benefit be replaced by propagation role. The algorithm is presented in Algorithm 9. [Images not available. See PDF.]
+The algorithm starts by constructing the DAG graph from original graph G (line 1). Then, it selects the node that maximizes r ( · ) with the cost less than the budget L is performed (line 4). From line 5 to 24, the greedy phase is showed. The set vertices of D except I is considered as candidate set in order to choose the solution (line 3). For the repeat loop (lines 6–23), the node that has the ratio of propagation role per cost in current DAG is selected in each iteration. Note that, the current DAG is built from residual graph. The nodes has cost more than the remaining costs are remove from candidate set U (line 19). This phase stops when the candidate is empty (line 24) or no node has a cost that is less than the remaining cost (line 8). Finally, we approximate the influence of I on current graph by its influence on D , 33
+σ ( I ) ≈ EstInf ( D , I ) = ∑ u ∈ D f in ( u ) Algorithm compares the influence of source when remove set A 1 and v max then returns the solution with the smaller propagation influence (line 26).
+Running time Next, we consider the worst-case running time of PR - DAG . Suppose that n θ , m θ is the largest number of nodes and edges in D . Calculating M I O A ( G , I , d , θ ) from G takes O ( m θ + n θ log n θ ) , so constructing D takes O ( m θ + n θ log n θ ) (line 1). Calculate propagation role of each node u ∈ D using Algorithm 8 takes O ( n θ + m θ ) time complexity (line 2). For the repeat loop from lines 6 to 32, denote k 1 is the number of iterators. For each iterator, we have to construct DAG and calculate the propagation role of each node. This work can be done in O ( n θ + m θ ) + O ( n θ + n θ log n θ ) = O ( m θ + n θ log n θ ) . The selection of nodes that maximize ratio propagation role per cost can be done in linear time. Hence, the total time of loop is O ( k 1 ( m θ + n θ log n θ ) ) . This is also the complexity of the algorithm.
+Experiments In this section, we are going to experimentally evaluate and compare the performance of our proposed algorithms to several widely used methods in the following aspects: (1) objective of solution, and (2) running time on various real social network datasets.
+Experiment settings We have implemented the proposed algorithms in Python 2.7. All experiments are conducted using a 2 × Intel(R) Xeon(R) CPU E5-2697 v4 @ 2.30 GHz with 8 × 16 GB DIMM ECC DDR4 @ 2400 MHz main memory.
+Baseline compared For a comparative analysis of the performance of our proposed algorithms, we will compare our proposed algorithms SG , PR - DAG to various baseline algorithms.
+- Random : Randomly select nodes within budget L among the N d ( S ) .
+
+- Degree Centrality ( DC ): The heuristic algorithm base centrality measure. We select nodes with the highest degree among the N d ( S ) and we keep on adding the highest-degree nodes until total costs of the selection of nodes exceed L .
+
+
+
+Datasets We run our experiment on multiple real datasets. In addition, we try to pick datasets of various sizes from different domains, in which the MMR problem is especially applicable. Table 2 shows datasets we used. Table 2. Datasets
+Dataset
+Gnutella Leskovec et al. (2007)
+Oregon Leskovec et al. (2005)
+Epinions Richardson et al. (2003)
+EU email Leskovec et al. (2007)
+
+Num. of nodes
+6301
+10,670
+75,879
+265,214
+
+Num. of edges
+20,777
+22,002
+508,837
+420,045
+
+Type
+Directed
+Undirected
+Directed
+Directed
+
+Avg. degree
+3.29
+2.06
+6.70
+1.58
+
+
+Gnutella The snapshot of the Gnutella peer-to-peer file sharing network in August 2002. Nodes represent hosts in the Gnutella network topology and edges represent connections between the Gnutella hosts (Leskovec et al. 2007). It contains 20,777 links among 6,301 hosts.
+Oregon This is a graph of Autonomous Systems (AS) peering information inferred from Oregon route-views in March 31 2001 and May 26 2001 (Leskovec et al. 2005).
+Epinions The Epinions dataset was extracted (Richardson et al. 2003) and obtained from http://snap.stanford.edu/data. This is a who-trust-whom online social network of a a general consumer review site Epinions.com. Members of the site can decide whether to “trust” each other. All the trust relationships interact and form the Web of Trust which is then combined with review ratings to determine which reviews are shown to the user.
+EU Email The network was generated using email data from a large European research institution. For a period from October 2003 to May 2005 (18 months) we have anonymized information about all incoming and outgoing emails of the research institution. Given a set of email messages, each node corresponds to an email address. There is a directed edge between nodes i and j , if i sends at least one message to j .
+Parameter settings Calculating the edge weights We assign the weights of edges in LT model according to previous studies (Goyal et al. 2012; Chen et al. 2010b; Khalil et al. 2014; Kempe et al. 2003; Zhang et al. 2016b). The weight of the edge ( u ,  v ) is calculated as follows: 34
+w ( u , v ) = 1 d - ( v ) Choice of Source nodes We use the methods in Nguyen et al. (2013); Zhang et al. (2016a) to select the source of misinformation. Accordingly, the nodes generating misinformation often have a small number of out-neighbors but are typically located in the vicinity of celebrities (high-degree nodes). Therefore, sources are chosen randomly from the neighbors of high-degree nodes. For each dataset, we choose a set of source nodes with size | S | = 100 .
+In all experiments, we choose different θ for each different social network. Cha et al. (2009) showed that information mostly propagates within 2 to 5 hops so we choose d = 3 , 4 , 5 . To get the expected benefits after removing the set of nodes, we run Mote–Carlo simulation 10,000 times and take the average.
+Experiment results Comparison of solution quality of MMR in the case of general cost In this experiment, we compare algorithms when d varies, the budget L = { 10 , 15 , 25 , 40 , 60 , 80 , 100 } and the costs of node are uniformly distributed in [ 1.0 , 3.0 ] . Figures 5,  6,  7, and  8 show the performance of SG , PR - DAG , DC and Random algorithms on Oregon, Epinion, Gnutella and EU Email networks. On avarage, we observe that SG and PR - DAG give better performance compare to the others.
+Compare PR - DAG with SG : for Oregon network, PR - DAG is better 1.37 to 12.6% than the result of SG . For Epinions, SG is better than the result of PR - DAG . There is not much diffirent between SG and PR - DAG when d = 3 , 4 (2.6 and 4.8% times better). In case of d = 5 , the distance is enlarged. For Gnutella, PR - DAG is better than SG when d = 3 and worse than SG when d = 4 , 5 . In EU Email, the running time of SG is over 72 h, so we ignore SG on above dataset. However, as shown in Fig. 8, PR - DAG still performs better than the others. This shows that for large networks (with 265K nodes and 420K edges), PR - DAG finshed within allowed time and gives good performance. Comparing with DC algorithm, the objective function of PR - DAG and SG is 1.05 to 1.72 times better than DC . As the cost of selection of nodes increases, the gap between PR - DAG and the others is getting larger. Random algorithm has a much worse results, indicating that a careful selection solution is critical to block misinformation propagation. Fig. 5 [Images not available. See PDF.]
+Comparison on MMR problem for Oregon with general cost and d = 3 , 4 , 5 , a d = 3 , b d = 4 , c d = 5
+Fig. 6 [Images not available. See PDF.]
+Comparison on MMR problem for Epinions with general cost and d = 3 , 4 , 5 , a d = 3 , b d = 4 , c d = 5
+Fig. 7 [Images not available. See PDF.]
+Comparison on MMR problem for Gnutella with general cost and d = 3 , 4 , 5 , a d = 3 , b d = 4 , c d = 5
+Fig. 8 [Images not available. See PDF.]
+Comparison on MMR problem for EU Email with general cost and d = 3
+
+Comparison of solution quality of MMR in the case of unit-cost version To observe more clearly on the performance of these algorithms, we have conducted experiments with the case of all node costs are equal to 1 on datasets. We set L varies from 1 to 50, and d varies from 3 to 5. Figures 9,  10 and  11 display the objective function on Gnutella, Oregon and Epinions, respectively. PR - DAG is very close to SG . The larger value of k , the smaller the gap betwen PR - DAG and SG . Especially, with cost greater than 25, PR - DAG and the SG achieve the same level of performance. It is very clear to prove that PR - DAG can find the solution during the constructing DAG from original graph which effectively approximate the influence between nodes. Like the previous test case, for EU Email, the running time of SG is over 72 h, so we ignore SG on above dataset. Therefore, SG algorithm is not feasible when finding the solution on large networks. Comparing PR - DAG with DC , PR - DAG outperforms DC algorithm in term of benefit of selected nodes. On avarage, PR - DAG is 1.51 times better on Gnutella, 5.12 times better on Oregon, 1.43 times better on Epinions, and 1.14 times better on EU Email. These results are also consistent with what have been observed in the previous test case. Fig. 9 [Images not available. See PDF.]
+Comparison on unit-cost version of MMR problem for Gnutella. a d = 3 , b d = 4 , c d = 5
+Fig. 10 [Images not available. See PDF.]
+Comparison on unit-cost version of MMR problem for Oregon. a d = 3 , b d = 4 , c d = 5
+Fig. 11 [Images not available. See PDF.]
+Comparison on unt-icost version of MMR problem for Epinion and Email, a Epinions, d = 3 , b Epinions, d = 4 , c Email, d = 3
+
+Scalability In this subsection, we show some running time results to demonstrate scalability. Tables 3 and  4 show the running time for PR - DAG and SG . We did not show the running time of Random and DC because they are fast heuristics that finish in the order of seconds. As expected, PR - DAG is much faster than SG . In average, PR - DAG is up to 32.5 and 45.4 times faster SG on general cost and unit-cost case, respectively. We also show detail the running times of PR - DAG and SG on Oregon in Figs. 12 and  13, for other networks we got similar results. We observe that as L increases, the gap between PR - DAG and SG increases which is consistent with their analysis theoretical complexities. For the large-scale dataset EU Email, PR - DAG took less than 11 h to select the set nodes, while SG could not finish in 72 h. This again emphasizes the scalability of PR - DAG for MMR on large-scale networks.
+Conclusion In this paper, we investigated a new NP-hard problem of Maximizing Misinformation Restriction with the aim of maximizing the influence reduction of misinformation source on OSNs by removing the set of nodes within time constraints and the limited budget. We proved the hardness results, and provided the approximation algorithm to solve the problem. In addition, due to the high runtime complexity of this approximation algorithm, a much more efficient heuristic algorithm was also proposed, named PR - DAG . This algorithm shows large performance advantage in both solution quality and running time on real social networks. Table 3 Running time (s) of PR - DAG and SG in general cost version when L = 100
+Dataset
+d = 3
+d = 4
+d = 5
+
+PR - DAG
+SG
+PR - DAG
+SG
+PR - DAG
+SG
+
+Oregon
+800.30
+20,556.32
+880.92
+26,585.70
+839.97
+27,290.34
+
+Epinions
+9255.00
+18,421.07
+10,084.91
+24,359.07
+9984.81
+26,665.14
+
+Gnutella
+172.53
+1152.47
+440.92
+1721.73
+676.95
+1996.49
+
+EU Email
+19,973.13
+–
+
+Runs terminated when running time t > 72  h (shown by ’–’)
+Table 4 Running time (s) of PR - DAG and SG in unit-cost version when L = 50
+Dataset
+d = 3
+d = 4
+d = 5
+
+PR - DAG
+SG
+PR - DAG
+SG
+PR - DAG
+SG
+
+Gnutella
+98.79
+999.78
+252.23
+1442.99
+386.64
+1702.31
+
+Oregon
+584.58
+22,525.60
+574.98
+24,931.68
+588.10
+26,713.52
+
+Epinions
+27,482.42
+65,809.16
+28,858.84
+90,167.34
+
+EU Email
+39,014.17
+–
+
+Runs terminated when running time t > 72  h (shown by ’–’)
+
+Fig. 12 [Images not available. See PDF.]
+Comparison on MMR problem for Oregon with general node costs for d = 3 , 4 , 5 , a d = 3 , b d = 4 , c d = 5
+Fig. 13 [Images not available. See PDF.]
+Running time of PR - DAG and SG on Oregon with unit-costs and d = 3 , 4 , 5 , a d = 3 , b d = 4 , c d = 5
+
+Appendix Appendix We let e = ( u , v ) , f = ( u ′ , v ′ ) , G e ( G \ X ) is the set of sample graph where incoming edge e = ( u , v ) is selected for node v , G e ¯ ( G \ X ) is the set of sample graph where a different incoming edge e ¯ = ( y , v ) is selected for node v and G ∅ ( G \ X ) is the set of sample graph where no incoming edge e ¯ = ( y , v ) is selected for node v . According to Khalil et al. (2014), we have the following results:
+Proposition 2 (Khalil et al. (2014), proposition 1) For every live-edge g ∈ G ∅ ( G \ X ) , there exits a corresponding live-edge graph g ~ ∈ G e ( G \ X ) and vice versa. If g = ( V , E g ) then g ~ = ( V , E g ∪ { e } ) .
+Proposition 3 (Khalil et al. (2014), proposition 2) G ( G \ ( X ∪ { e } ) ) ⊆ G ( G \ X ) and furthermore G ( G \ ( X ∪ { e } ) ) = G e ¯ ( G \ X ) ∪ G ∅ ( G \ X ) .
+Proposition 4 (Khalil et al. (2014), proposition 3) Given f = ( u ′ , v ′ ) ∈ E \ X , v ′ ≠ v , let t = | G ∅ ( G \ ( X ∪ { f } ) ) | then G ∅ ( G \ X ) can be partitioned into t sets { Φ i } i = 1 t such that, for every Φ i there exits a corresponding g i ∈ G ∅ ( G \ ( X ∪ { f } ) ) and vice versa.
+Proposition 5 (Khalil et al. (2014), proposition 4) For every Φ i ⊆ G ∅ ( G \ X ) and its associated g i ∈ G ∅ ( G \ ( X ∪ { e } ) ) , Pr [ g i | G \ ( X ∪ { f } ) ] = ∑ H ∈ Φ i Pr [ H | G \ X ] .
+Proof of Lemma 3 We need to show that σ d , E ( S , X ) ≥ σ d , E ( S , X ∪ { e } ) . The idea of the proof is similar to the theorem 5 in Khalil et al. (2014). Using Proposition 2 and  3, we have: σ d , E ( S , X ) - σ d , E ( S , X ∪ { e } ) = ∑ g ∈ G ( G \ X ) Pr [ g | G \ X ] f d ( g , S ) - ∑ g ∈ G ( G \ ( X ∪ { e } ) ) Pr [ g | G \ ( X ∪ { e } ) ] f d ( g , S ) = ∑ g ∈ G e ( G \ X ) Pr [ g | G \ X ] · f d ( g , S ) + ∑ g ∈ G ∅ ( G \ X ) ( Pr [ g | G \ X ) ] - Pr [ g | G \ ( X ∪ { e } ) ] ) · f d ( g , S ) + ∑ g ∈ G e ¯ ( G \ X ) ( Pr [ g | G \ X ) ] - Pr [ g | G \ ( X ∪ { e } ) ] ) · f d ( g , S ) Recall that e = ( u , v ) , for g ∈ G ∅ ( G \ X ) , we have: 35
+Pr [ g | G \ X ] - Pr [ g | G \ ( X ∪ { e } ) ] = - w ( u , v ) ∏ v ′ ≠ v P ( v ′ , g , G \ X ) For g ∈ G e ¯ ( G \ X ) we have P ( v , g , G \ X ) = P ( v , g , G \ ( X ∪ { e } ) ) = w ( e ¯ ) which leads to Pr [ g | G \ X ] = Pr [ g | G \ ( X ∪ { e } ) ] , it infers: σ d , E ( S , X ) - σ d , E ( S , X ∪ { e } ) = ∑ g ∈ G e ( G \ X ) Pr [ g | G \ X ] · f d ( g , S ) + ∑ g ∈ G ∅ ( G \ X ) - w ( u , v ) ∏ v ′ ≠ v p ( v ′ , g , G \ X ) · f d ( g , S ) Using prop. 2, for g ∈ G ∅ ( G \ X ) there exits a corresponding g ~ ∈ G e ( G \ X ) and Pr [ g ~ | G \ X ] = w ( u , v ) ∏ v ′ ≠ v p ( v ′ , g ~ , G \ X ) . Therefore, 36
+σ d , E ( S , X ) - σ d , E ( S , X ∪ { e } ) = ∑ g ∈ G ∅ ( G \ X ) Pr [ g ~ | G \ X ] ( f d ( g ~ , S ) - f d ( g , S ) ) We can see that g is a subgraph of g ~ , the set of vertices which can reach from S in g is subset of the set of vertices which can reach from S in g ~ . Hence, f d ( g ~ , S ) - f d ( g , S ) ≥ 0 , which completes the proof. □
+Proof of Lemma 4 the idea of the proof is similar to that of theorem 6 in Khalil et al. (2014). For edge f ∈ E , let t = | G ( G \ ( X { f } ) ) | . From Proposition 4, we can partition G ∅ ( G \ X ) into t sets { Φ } i = 1 t , rewrite (36) as: 37
+σ d , E ( S , X ) - σ d , E ( S , X ∪ { e } ) = ∑ g ∈ G ∅ ( G \ X ) Pr [ g ~ | G \ X ] ( f d ( g ~ , S ) - f d ( g , S ) ) = ∑ i = 1 t ∑ g ∈ Φ i Pr [ g ~ | G \ X ] ( f d ( g ~ , S ) - f d ( g , S ) ) Using similar reasoning to that in Eq. (36) in the proof of lemma 1 for G \ ( X ∪ { f } ) , we have: 38
+σ d , E ( S , X ∪ { f } ) - σ d , E ( S , X ∪ { f , e } ) = ∑ g ∈ G ∅ ( G \ ( X ∪ { f } ) ) Pr [ g ~ | G \ ( X ∪ { f } ) ] ( f d ( g ~ , S ) - f d ( g , S ) ) We will compare two Eqs. (37) and (38) term by term for each g i ∈ G ∅ ( G \ X ) , i = 1 , … , t . It can be divided into two cases: (1) Φ i = { X i } in case in g i has another incoming edge to v ′ not f , now the terms in two equations are equal; (2) in the case in g i has only incoming edge to v ′ is f , then Φ i = { g i , g i ′ } , we need to prove: 39
+Pr [ g i ~ | G \ X ] ( f d ( g i ~ , S ) - f d ( g i , S ) ) + Pr [ g i ′ ~ | G \ X ] ( f d ( g i ′ ~ , S ) - f d ( g i ′ , S ) ) ≥ Pr [ g i ~ | G \ ( X ∪ { f } ) ] ( f d ( g i ~ , S ) - f d ( g i , S ) ) Using prop. 5 in Khalil et al. (2014), we have: 40
+Pr [ g i ~ | G \ ( X ∪ { f } ) ] = Pr [ g i ~ | G \ X ] + Pr [ g i ′ ~ | G \ X ] Hence, inequality (39) is true if: 41
+f d ( g i ′ ~ , S ) - f d ( g i ′ , S ) ≥ f d ( g i ~ , S ) - f d ( g i , S ) Note that g i ′ ~ = ( V , E g i ∪ { f } ) and live-edge graphs are constructed in a way that each node has at most one incoming edge. We can see that: a reachability path in g i ~ is clearly presented in g i ′ ~ , hence if removing edge e from g i ~ results in unreachability of some nodes in g i . Similarly, some nodes become unreachable when removing e from g i ′ ~ . Removing edge e from g i ′ ~ may disconnect some additional nodes whose paths derived from the source including edge f . Therefore, the reduction in reachable nodes when removing edge e from g i ′ ~ is the same or larger than the reduction when removing e from g i ~ , it implies (41) is true. □
+References Bhagat S, Goyal A, Lakshmanan LV (2012) Maximizing product adoption in social networks. In: Proceedings of the fifth ACM international conference on Web search and data mining, Seattle, Washington, pp 603–612
+Budak C, Agrawal D, Abbadi AE (2011) Limiting the spread of misinformation in social networks, In: Proceedings of the 20th international conference on world wide web, WWW ’11, ACM, New York, NY. https://doi.org/10.1145/1963405.1963499
+Cha M, Mislove A, Gummadi KP (2009) A measurement-driven analysis of information propagation in the Flickr social network. In: Proceedings of the 18th international conference on world wide web, New York, USA, pp 721–730
+Chen, W; Lakshmanan, LVS; Castillo, C. Information and influence propagation in social networks ; 2013; San Rafael, Morgan and Claypool:
+Chen W, Lu W, Zang N (2012) Time-critical influence maximization in social networks with time-delayed diffusion process. In: Proceedings of the twenty-sixth AAAI conference on artificial intelligence, Toronto, Ontario, pp 592–598
+Chen W, Wang C, Wang Y (2010) Scalable influence maximization for prevalent viral marketing in large-scale social networks. In: Proceedings of the 16th ACM SIGKDD international conference on knowledge discovery and data mining, Washington, DC, pp 1029–1038
+Chen W, Wang C, Wang Y (2010) Scalable influence maximization in social networks under the linear threshold model. In: Proceedings of the 2010 IEEE international conference on data mining, Washington, pp 88–97
+Domingos P, Richardson M (2001) Mining the network value of customers. In: Proceedings of the seventh ACM SIGKDD international conference on knowledge discovery and data mining, New York, USA, pp 57–66
+Domm P (2013) False rumor of explosion at white house causes stocks to briefly plunge, AP Confirms Its Twitter Feed Was Hacked CNBC. http://www.cnbc.com/id/100646197(2013). Accessed 23 April 2013
+Gentzkow M (2017) Social media and fake news in the 2016 election. Stanford Web. http://news.stanford.edu/2017/01/18/stanford-study-examines-fake-news-2016-presidential-election/ (2017). Accessed 24 June 2017
+Goyal A, Lu W, Lakshmanan LVS (2012) SIMPATH: an efficient algorithm for influence maximization under the linear threshold model. In: Proceeding IEEE 11th international conference on data mining, Vancouver, BC, pp 211–220
+He X, Song G, Chen W, Jiang Q (2011) Influence blocking maximization in social networks under the competitive linear threshold model technical report, CoRR abs/1110.4723
+Hughes, AL; Palen, L. Twitter adoption and use in mass convergence and emergency events. Int J Emerg Manage ; 2009; 6 , 3 pp. 248-260. [DOI: https://dx.doi.org/10.1504/IJEM.2009.031564]
+Kempe D, Kleinberg J, Tardos E (2003) Maximizing the spread of influence through a social network. In: Proceedings of the ninth ACM SIGKDD international conference on knowledge discovery and data mining. https://doi.org/10.1145/956750.956769
+Khalil EB, Dilkina B,Song L (2014) Scalable diffusion-aware optimization of network topology. In: Proceedings of the ACM SIGKDD international conference on knowledge discovery and data mining, New York, pp 1226–1235
+Khuller, S; Moss, A; Naor, JS. The budgeted maximum coverage problem. Inf Process Lett ; 1999; 70 , 1 pp. 39-45.1695758 [DOI: https://dx.doi.org/10.1016/S0020-0190(99)00031-9] 1002.68203
+Kimura M, Saito K, Motoda H (2008) Solving the contamination minimization problem on networks for the linear threshold model. In: Pacific rim international conference on artificial intelligence. https://doi.org/10.1007/978-3-540-89197-0_94
+Kimura M, Saito K, Motoda H (2009) Blocking links to minimize contamination spread in a social network. In: ACM transactions on knowledge discovery from data. https://doi.org/10.1145/1514888.1514892
+Kottasov I (2017) Facebook targets 30,000 fake accounts in France. CNN media Web. http://money.cnn.com/2017/04/14/media/facebook-fake-news-france-election/index.html. Accessed 24 June 2017
+Kwon S, Cha M, Jung K, Chen W, and Wang Y (2013) Prominent features of rumor propagation in online social media. In: Proceeding of IEEE 13th international conference on data mining. https://doi.org/10.1109/ICDM.2013.61
+Leskovec, J; Adamic, LA; Huberman, BA. The dynamics of viral marketing. ACM Trans Web ; 2007; [DOI: https://dx.doi.org/10.1145/1232722]
+Leskovec J, Kleinberg J, Faloutsos C (2005) Graphs over time: densification laws, shrinking diameters and possible explanations. In: Proceeding of ACM SIGKDD international conference on knowledge discovery and data mining. https://doi.org/10.1145/1081870.1081893
+Leskovec, J; Kleinberg, J; Faloutsos, C. Graph evolution: densification and shrinking diameters. ACM Trans Knowl Discov Data ; 2007; 1 , 1 2. [DOI: https://dx.doi.org/10.1145/1217299.1217301]
+Liu B, Cong G, Xu D, Zheng Y (2012) Time constrained influence maximization in social networks. In: Proceeding of IEEE 12th international conference on data mining, Belgium, Brussels, pp 439–448
+Nguyen, H; Zheng, R. On budgeted influence maximization in social networks. IEEE J Sel Areas Commun ; 2013; 31 , 6 pp. 1084-1094. [DOI: https://dx.doi.org/10.1109/JSAC.2013.130610]
+Nguyen, NP; Yan, G; Thai, MT. Analysis of misinformation containment in online social networks. Comput Netw ; 2013; 57 , 21332146. [DOI: https://dx.doi.org/10.1016/j.comnet.2013.04.002]
+Qazvinian V, Rosengren E, Radev DR, Mei Q (2011) Rumor has it: identifying misinformation in microblogs. In: Proceedings of the conference on empirical methods in natural language processing, Edinburgh, pp 1589–1599
+Richardson M, Agrawal R, Domingos P (2003)Trust management for the semantic web. In: Proceeding of international semantic web conference. https://doi.org/10.1007/978-3-540-39718-2_23
+Sutter JD (2017) How bin Laden news spread on Twitter. CNN Web. http://edition.cnn.com/2011/TECH/social.media/05/02/osama.bin.laden.twitter/index.html. Accessed 23 June 2017
+Valiant, LG. The complexity of enumeration and reliability problems. SIAM J Comput ; 1979; 8 , 3 pp. 410-421.539258 [DOI: https://dx.doi.org/10.1137/0208032] 0419.68082
+Wolfsfeld, G; Segev, E; Sheafer, T. Social media and the Arab Spring: politics comes first. Int J Press Polit ; 2013; 18 , 2 pp. 115-137. [DOI: https://dx.doi.org/10.1177/1940161212471716]
+Yadron D (2017) Twitter deletes 125,000 Isis accounts and expands anti-terror teams. The Guardian Web. https://www.theguardian.com/technology/2016/feb/05/twitter-deletes-isis-accounts-terrorism-online. Accessed 24 June 2017
+Zhang H, Alim M, Li X, My TT, Nguyen H (2016a) Misinformation in online social networks: catch them all with limited budget. ACM Trans Inf Syst 34(3):18
+Zhang Y, Adigay A, Saha S, Vullikanti A, Prakash A (2016b) Near-optimal algorithms for controlling propagation at group scale on networks. IEEE Trans Knowl Data Eng. https://doi.org/10.1109/TKDE.2016.2605088
+Zhang H, Dinh TN, Thai MT (2013) Maximizing the spread of positive influence in online social networks. In: Proceeding IEEE 33rd international conference on distributed computing systems, Philadelphia, PA, pp 317-326
+Zhang H, Kuhnle A, Zhang H, Thai MT (2016c) Detecting misinformation in online social networks before it is too late. In: Proceeding IEEE/ACM international conference on advances in social networks analysis and mining (ASONAM). https://doi.org/10.1109/ASONAM.2016.7752288
+Zhang Y, Prakash B (2015) Data-aware vaccine allocation over large networks. ACM Trans Knowl Discov Data. https://doi.org/10.1145/2803176
+Zhang Y, Prakash BA (2014) Scalable vaccine distribution in large graphs given uncertain data. In: Proceeding of the ACM international conference on information and knowledge management, Shanghai, pp 1719–1728

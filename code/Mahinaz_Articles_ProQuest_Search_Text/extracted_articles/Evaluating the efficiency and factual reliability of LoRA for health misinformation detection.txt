@@ -1,0 +1,451 @@
+Introduction Digital platforms serve as the primary channels for disseminating health information in the modern era. However language models often generate factually incorrect content when processing medical data. This phenomenon is defined as model hallucination 1, 2–3 . Such hallucinations pose significant risks in healthcare as they can lead to dangerous medical advice or the spread of misinformation 4, 5–6 . Current research focuses on evaluating these models through various benchmarks and mitigation strategies 7, 8, 9, 10, 11–12 . While full parameter fine tuning remains a standard approach the computational costs are often prohibitive for large scale medical applications 13,14 .
+Low Rank Adaptation has emerged as a dominant parameter efficient fine tuning method to address these resource constraints 15, 16, 17–18 . This technique reduces the number of trainable parameters by injecting low rank matrices into the transformer architecture 19, 20–21 . Although this method maintains high performance in general tasks its impact on factual reliability in safety critical domains is not well understood 22 . Some studies suggest that low rank updates might fail to capture long tail knowledge or complex dependencies 23, 24–25 . There is an urgent need to investigate whether the efficiency of adaptation comes at the cost of increased hallucination rates.
+This study investigates the relationship between parameter efficiency and model reliability using the HealthMisinfo-2023 dataset. This dataset contains five thousand nine hundred eighty eight high quality samples manually verified by medical experts. It consists of two thousand nine hundred eighty eight instances of health misinformation and three thousand instances of factual information. This study analyzed how different adaptation configurations affect the trade off between classification accuracy and factuality. The research utilizes a bidirectional encoder representation model to establish a clear baseline for evaluating these emerging hallucinations 26, 27–28 .
+This study propose that the low rank constraint induces a semantic bottleneck effect during the fine tuning process. This hypothesis is grounded in the information bottleneck principle which describes the trade off between data compression and meaningful representation 29,30 . When the rank is highly restricted the model might prioritize categorical patterns over granular factual details. This leads to excessive predictive confidence and a higher frequency of hallucinations in complex medical contexts 31,32 . The findings demonstrate that text density and semantic complexity serve as primary triggers for these errors. This study provides a theoretical framework for deploying more reliable models in the medical domain by identifying these specific failure modes 33,34 .
+Literature review Hallucination in large language models The emergence of hallucination remains a critical challenge for deploying language models in high stakes domains 1,2 . Hallucinations are generally categorized as factual contradictions or logical inconsistencies within generated content 3,35 . In the medical field these errors are often triggered by the misalignment between pre trained knowledge and task specific requirements 4,6 . Recent studies have introduced various benchmarks such as HaluEval to quantify these phenomena 8 . Mitigation strategies primarily involve external knowledge retrieval or self reflection mechanisms 10, 11–12 . However the relationship between model compression and the frequency of these errors is not yet fully understood 9,13 .
+The detection of health misinformation presents unique challenges compared to general text classification. Medical claims often contain complex terminology and subtle qualifiers that significantly influence factual accuracy 14,27 . Recent evaluations indicate that even high performing models struggle with domain specific nuance in biomedical processing 28 . This complexity increases the likelihood of models relying on superficial patterns rather than deep semantic understanding. Such reliance is a primary driver of hallucination in safety critical applications where factual precision is non negotiable 22 .
+Parameter efficient fine tuning and LoRA Parameter efficient fine tuning methods aim to adapt large models with minimal architectural changes 18,21 . Low Rank Adaptation is a prominent technique that restricts weight updates to low rank matrices 15,17 . This approach significantly reduces memory usage and training time across various text processing tasks 19,20,28 . Innovations such as LoftQ and LoRA FA have further improved the efficiency of this process 16 . Despite these gains some researchers have observed computational limits when applying low rank updates to complex transformer architectures 23,26 . The trade off between reducing trainable parameters and maintaining representation depth remains a subject of active debate 25,34 .
+Existing research on parameter efficient adaptation focuses heavily on maintaining competitive performance benchmarks 21 . However the trade offs between parameter reduction and the internal calibration of the model remain less explored. Some evidence suggests that restricting trainable updates to low rank subspaces may prevent the model from successfully re calibrating its internal representations for new domains 25 . This limitation is particularly evident when general purpose models like BERT are adapted for highly specialized medical tasks 34 . The resulting mismatch between compressed updates and complex knowledge requirements may destabilize the predictive manifold.
+The choice of base model architecture significantly influences the effectiveness of low rank updates in specialized domains. While domain specific models like SciBERT provide pre existing medical knowledge general purpose models like BERT allow researchers to observe the pure dynamics of knowledge injection through adaptation. Recent studies indicate that parameter efficient methods may interact differently with various pre training biases. Investigating how a neutral backbone handles medical factuality under rank constraints provides a clearer baseline for understanding the emergence of semantic bottlenecks. This study utilizes the general bidirectional encoder representation model to isolate the effects of the adaptation process from domain specific pre training advantages.
+Information bottleneck and semantic integrity The information bottleneck principle suggests that deep learning models balance data compression against predictive accuracy 29,30 . During the fine tuning process models must extract essential features while discarding redundant noise. A critical aspect of the semantic bottleneck is the emergence of model uncertainty during inference. According to Bayesian deep learning principles model uncertainty can be represented through predictive entropy 31,32 . High entropy levels often indicate that the input resides in a region of the feature space where the model lacks sufficient evidence for a factual claim. In low rank adaptation the rank constraint may force the model to map diverse medical inputs into a narrow latent space. This process limits the resolution of the semantic boundaries and leads to the confident blindness phenomenon. This study utilizes these metrics to track how the information bottleneck translates into measurable hallucination triggers. In the context of low rank adaptation this compression might inadvertently filter out subtle linguistic nuances necessary for factual verification 24,31 . This process creates a semantic bottleneck where the model retains categorical patterns but loses granular integrity 33 . Our study builds on this theoretical foundation to examine how low rank constraints influence hallucination rates in health misinformation detection. We investigate whether restricting the update space forces the model into overconfident yet incorrect predictions when processing dense medical information 32 .
+Method To address the limitations identified in previous iterations, we re-conducted the experiments using a refined LoRA configuration (r = 8, α = 32). We updated the module replacement logic to target the QKVO layers, ensuring a more comprehensive capture of semantic features. The dataset was re-partitioned (7:1:2) to ensure statistical robustness.
+Dataset description This study employs the HealthMisinfo-2023 dataset to evaluate model performance and factual reliability. The dataset contains five thousand nine hundred eighty eight samples curated from verified medical news and public health forums. It comprises two thousand nine hundred eighty eight instances of misinformation and three thousand instances of factual medical claims. The final partition includes four thousand one hundred ninety two samples for training five hundred ninety eight for validation and one thousand one hundred ninety eight for testing. The quantitative distribution and split ratios are detailed in Table 1. Table 1. Dataset distribution.
+Subset
+Misinformation
+Factual information
+Total
+
+Training
+2092
+2100
+4192
+
+Validation
+298
+300
+598
+
+Test
+598
+600
+1198
+
+Total
+2988
+3000
+5988
+
+
+The quantitative distribution of the HealthMisinfo-2023 dataset is presented in Table 1. This curated collection maintains a near equal balance between two thousand nine hundred eighty eight instances of misinformation and three thousand factual medical claims. The stratified partition ensures that each subset reflects the overall complexity of the medical domain.
+Model architecture The experimental backbone is the bidirectional encoder representation model known as BERT base uncased. This model features twelve transformer layers with twelve attention heads per layer and a hidden dimension of seven hundred sixty eight 22. We select this general domain model to isolate the effects of low rank adaptation from domain specific pre training biases. The input processing utilizes a maximum sequence length of sixty four tokens to accommodate dense medical descriptions while maintaining computational efficiency. This configuration serves as a consistent baseline for analyzing how parameter efficient updates modify the internal latent space.
+Fine tuning strategy and LoRA parameters This study implements a two stage adaptation process consisting of task specific fine tuning followed by low rank adaptation 15 . The low rank matrices are injected into the query key value and output layers of the self attention mechanism to capture comprehensive semantic updates 17 . This QKVO configuration utilizes a rank r of eight and a scaling factor alpha of thirty two. We apply a dropout rate of zero point one to the low rank adapters to improve generalization and mitigate overfitting 31,32 .
+Training protocol and reproducibility settings Table 2 summarizes the specific hyperparameter configurations utilized to ensure reproducibility. We target the query key value and output layers of the transformer architecture to maximize the coverage of the low rank updates. The rank r is fixed at eight while the scaling factor alpha is set to thirty two to balance model capacity and parameter efficiency. The training protocol utilizes a learning rate of zero point zero one and an AdamW optimizer across ten epochs. Table 2. Experimental configurations.
+Parameter
+Value
+
+Base model
+BERT-base-uncased
+
+Max sequence length
+512
+
+Batch size
+32
+
+Learning rate
+0.01
+
+Optimizer
+AdamW with linear schedule
+
+LoRA rank (r)
+8
+
+LoRA alpha (α)
+32
+
+LoRA dropout
+0.1
+
+Target modules
+Query, key, value, output
+
+Training epochs
+10
+
+
+The experimental architecture illustrated in Fig. 1 represents a closed loop analytical pipeline designed to examine the trade off between model efficiency and factual integrity. The framework originates from the HealthMisinfo-2023 dataset where five thousand nine hundred eighty eight expert verified samples are processed through a stratified sampling strategy. This ensures that the subsequent fine tuning stages operate on a balanced distribution of factual and misleading medical claims. Fig. 1 [Images not available. See PDF.]
+The comprehensive framework for LoRA based hallucination detection and reliability assessment in medical text.
+
+The core of the system utilizes a two stage adaptation process involving a general domain backbone and specialized low rank adapters. We freeze the pre trained weights of the bidirectional encoder representation model to isolate the effects of the low rank matrices injected into the attention layers. This configuration targets the query key value and output modules to capture high dimensional semantic features within a constrained parameter space.
+A critical innovation of this framework is the dual evaluation strategy represented by two distinct analytical paths. Path A focuses on standard performance benchmarks to quantify classification effectiveness. In contrast Path B serves as the primary mechanism for reliability assessment. This path utilizes predictive entropy to quantify model uncertainty and identifies hallucinations through high confidence errors. By categorizing these errors into factual contradictions and contextual misattributions the framework reveals the specific failure modes triggered by the semantic bottleneck effect. This integrated approach provides actionable insights for deploying parameter efficient models in safety critical healthcare environments.
+Hallucination metrics and uncertainty estimation To address the limitations of standard performance metrics we introduce a formal framework for hallucination analysis 1,2 . We define hallucination as a confident yet factually incorrect prediction based on the information bottleneck principle 30 . The model uncertainty is quantified through predictive entropy calculations during the inference stage. High entropy values indicate regions in the embedding space where the low rank constraint limits representation depth. This study further categorizes these errors into factual contradictions and contextual misattributions by comparing model outputs against the gold standard medical labels in the test set. This multidimensional evaluation tracks how semantic bottlenecks lead to specific failure modes in health misinformation detection.
+Table 3 defines the taxonomy of hallucinations observed during the testing phase. We categorize these errors into factual contradictions and contextual misattributions to provide a granular view of model failure modes. A factual contradiction occurs when the model output directly opposes established medical truths while contextual misattribution involves the incorrect application of valid facts. This classification framework allows us to identify specific triggers associated with the semantic bottleneck effect. By linking these error types to predictive entropy levels we can better understand the trade off between efficiency and factuality in healthcare applications. As illustrated in Fig. 1, the proposed framework diverges into two distinct evaluation trajectories: Path A quantifies standard predictive performance, while Path B leverages predictive entropy to categorize specific hallucination triggers. Table 3. Hallucination taxonomy.
+Hallucination type
+Definition
+Example in health context
+
+Factual contradiction
+Output directly contradicts medical consensus
+Claiming a toxic substance is a cure
+
+Contextual misattribution
+Correct facts applied to wrong medical context
+Applying adult dosage to pediatric care
+
+Logical hallucination
+Predicted labels contradict internal reasoning
+High confidence scores for ambiguous text
+
+
+Result Comparative analysis of model performance The experimental results based on the HealthMisinfo-2023 dataset demonstrate significant variations in model performance across different fine tuning strategies. We evaluate the standard bidirectional encoder representation model alongside the parameter efficient adaptation framework using five thousand nine hundred eighty eight medical samples. The full parameter fine tuning approach achieves a baseline accuracy of sixty eight point four percent. In contrast the low rank adaptation method with a rank of eight improves the overall accuracy to eighty five point one percent. Although the total training budget was 10 epochs, the LoRA model achieved stable convergence by the 4th epoch. This substantial gain indicates that the injection of low rank matrices into the attention layers effectively captures the primary semantic features of healthcare misinformation. Detailed performance metrics including precision and recall for both rumor and factual categories are presented in Table 4. Table 4. Performance improvement comparison through LoRA fine-tuning.
+Evaluation metric
+Original BERT (%)
+BERT-LoRA (%)
+Improvement (Abs) (%)
+Mean entropy (LoRA)
+
+Overall accuracy
+68.4
+85.1
+ + 16.7
+0.42
+
+Misinformation F1
+72.9
+81.4
+ + 8.5
+0.51
+
+Real information F1
+70.2
+88.8
+ + 18.6
+0.38
+
+Macro average F1
+71.6
+85.1
+ + 13.5
+0.45
+
+
+The performance transition documented in Table 4 reveals a critical divergence between classification accuracy and internal model calibration. While the low rank adaptation mechanism achieves a notable improvement in F1 scores it simultaneously exhibits higher mean predictive entropy compared to the full parameter baseline. This entropy elevation is particularly evident in the misinformation category which indicates that the model relies on a more compressed latent space to make its predictions. Such a constrained representation allows for efficient categorical separation but limits the resolution of subtle medical qualifiers. Furthermore the training dynamics summarized in Table 5 confirm that the low rank updates reach convergence twice as fast as the original architecture. This rapid stabilization suggests that the model effectively filters out training noise through the semantic bottleneck while potentially bypassing complex factual nuances. Table 5. Analysis of training efficiency comparison.
+Training metric
+Original BERT
+BERT-LoRA
+Efficiency gain (%)
+
+Trainable Params
+110 M
+1.1 M
+99.0% Reduction
+
+Training time (hr)
+2.5
+0.8
+68.0% Reduction
+
+GPU memory (GB)
+12.8
+4.2
+67.2% Reduction
+
+Convergence epoch
+8
+4
+50.0% Faster
+
+
+The relationship between the rank constraint and the predictive manifold is further examined through the distribution of prediction confidence. Although the low rank model reduces the training objective more rapidly than full parameter tuning the resulting latent space appears more constrained. We observe that samples residing near the decision boundary exhibit higher uncertainty levels despite the overall improvement in classification accuracy. This indicates that the semantic bottleneck effectively filters out noise but also restricts the model ability to represent rare medical entities. Such restrictions provide the structural basis for the hallucinations analyzed in the following experiments.
+The enhancement in the F1 score from seventy one point six percent to eighty five point one percent confirms the efficiency of the task specific adaptation process. However the performance gains are not uniformly distributed across all text lengths and complexities. While the model excels at identifying standard health rumors it exhibits increased predictive entropy when processing dense medical descriptions. This observation suggests that the compression of trainable parameters into a low rank subspace may prioritize categorical patterns over granular factual details. The data supports the semantic bottleneck hypothesis. Limited parameter capacity forces a trade-off. The model achieves categorical precision but loses internal factuality. The high confidence scores observed in incorrect predictions further motivate the need for a detailed hallucination analysis in the subsequent sections.
+LoRA fine-tuning achieves significant performance gains while reducing the parameter count by 99% (from 110 million full parameters to 1.1 million trainable parameters). The specific training comparisons are as follows (Table 5).
+The drastic reduction in trainable parameters creates a distinct optimization trajectory compared to full parameter adaptation. While Table 5 highlights the gains in computational efficiency the extreme parameter compression forces the model to consolidate diverse medical knowledge into a low rank manifold. We observe that during the final training epochs the validation loss for the LoRA model plateaus earlier than the baseline model. This early stabilization indicates a saturation of the adaptive capacity within the specified rank. Such saturation suggests that the model is effectively learning the dominant statistical patterns of misinformation but is losing the ability to encode rare and complex medical exceptions. This structural limitation represents the quantitative onset of the semantic bottleneck which directly correlates with the increase in hallucination rates observed in higher density text.
+Mechanism and distribution of model hallucinations This study define classification hallucination as an instance where the model assigns a confidence score exceeding zero point nine to an incorrect prediction. This study prioritizes the analysis of false negatives where health misinformation is erroneously classified as factual information. Despite the overall accuracy gains observed in "Comparative analysis of model performance" Section the low rank adaptation process increases the propensity for specific error modes. This phenomenon suggests that the parameter efficient updates prioritize dominant statistical patterns while discarding granular medical qualifiers..
+Taxonomy and statistical distribution The analysis of erroneous samples within the test set reveals three distinct categories of hallucinations as detailed in Table 6. Factual hallucinations represent thirty percent of the observed errors where the model makes deterministic judgments based on incomplete medical premises. Contextual Misattributions constitute the largest portion at forty two percent and typically involve the omission of essential qualifiers such as preliminary studies or potential side effects. Inferential hallucinations account for the remaining twenty eight percent where the model derives absolute conclusions from valid but limited premises. These findings indicate that the low rank constraint limits the model capacity to integrate multi-faceted medical contexts. Table 6. Statistical distribution and categorical definitions of model hallucinations.
+Hallucination type
+Count
+Proportion
+Main characteristics
+Example
+
+Factual hallucinations
+45
+30%
+Factual errors or oversimplification
+"Drinking red wine can treat heart disease"
+
+Contextual misattributions
+63
+42%
+Ignoring context and limiting conditions
+Overlooking phrases like "preliminary studies suggest"
+
+Inferential hallucinations
+42
+28%
+Incorrect inference from correct premise
+Inferring "A is universally effective" from "A is effective"
+
+Total
+150
+100%
+–
+–
+
+
+The semantic bottleneck and token density effects The comparison between the baseline model and the low rank adaptation framework reveals a significant increase in hallucination rates. The original model exhibits a hallucination rate of eight-point two percent while the rate for the adapted model rises to twelve-point five percent. This increase directly correlates with the token density of the text input. We observe a critical threshold near four hundred characters where the predictive entropy of the adapted model begins to fluctuate significantly.
+As shown in Fig. 2 the median confidence level for hallucinated samples is zero point eighty-seven which is significantly higher than the zero point sixty eight observed in correct predictions. This confident blindness proves that low-rank matrices create a semantic bottleneck. This structural constraint forces the model to overgeneralize. When the input complexity exceeds the representational capacity of the rank eight subspace the model reverts to learned categorical biases. The narrow interquartile range of zero point eighty one to zero point ninety two for hallucination confidence confirms that these errors are not random fluctuations but structural failures of the parameter efficient manifold. Fig. 2 [Images not available. See PDF.]
+Confidence distribution and statistical significance tests between hallucinated and non-hallucinated samples.
+
+The relationship between input complexity and model reliability is quantified in Fig. 3. We observe that for sequences below the four hundred token threshold, both the original BERT and the LoRA adapted model maintain relatively stable predictive entropy levels. However, as token density exceeds this critical junction, the BERT-LoRA model exhibits a precipitous increase in entropy compared to the full parameter baseline. This divergence indicates that the low rank adaptation layers encounter a semantic bottleneck when processing high density medical descriptions. The limited rank (r = 8) is insufficient to encode the complex dependencies and scientific qualifiers present in longer texts. Consequently, the escalation in model uncertainty directly correlates with the emergence of high confidence hallucinations, as the model reverts to learned categorical biases rather than detailed factual reasoning. These findings validate the utility of Path B in our analytical framework, providing a quantifiable link between structural constraints and predictive uncertainty. Fig. 3 [Images not available. See PDF.]
+Impact of token density on predictive entropy and hallucination emergence.
+
+Correlation between confidence and error types The degree of model stubbornness varies across different hallucination categories. Inferential hallucinations exhibit the highest average confidence levels at zero point eighty nine. This indicates that the model is most resistant to correction when the error resides in the logical reasoning chain. In contrast factual hallucinations show greater fluctuation in confidence scores which suggests a lack of underlying knowledge rather than a reasoning failure. These results support the hypothesis that the semantic bottleneck primarily affects the integration of complex logic and contextual nuances. The high confidence observed in these failures explains the decline in recall as the model becomes excessively decisive on samples located near the feature space boundaries.
+Ablation experiments and parameter analysis A systematic ablation analysis reveals systematic ablation experiments to investigate how different configurations influence the trade off between model efficiency and factual reliability. The dataset used in these experiments maintains the standard five thousand nine hundred eighty eight samples to ensure consistent evaluation across all rank settings.
+Impact of LoRA rank (r) The adapter rank directly determines the representational capacity of the low rank manifold. As shown in Table 7 a lower rank of four results in the highest training efficiency but leads to a significant hallucination rate of fifteen point two percent. This suggests that a rank of four creates an excessive semantic bottleneck which fails to capture complex medical nuances. Increasing the rank to eight improves the accuracy to eighty five point one percent while reducing the hallucination rate to 12.5%. This configuration achieves the optimal balance between computational efficiency and categorical precision. Beyond a rank of eight we observe diminishing returns where further increases in parameter count provide marginal improvements in accuracy but fail to substantially mitigate high confidence hallucinations. Table 7. Impact of LoRA rank on performance.
+Rank (r)
+Parameter count
+Accuracy
+Macro F1
+Hallucination rate
+Training time
+
+4
+0.55 M
+79.3%
+78.8%
+15.2%
+0.5 h
+
+8
+1.10 M
+85.1%
+85.1%
+12.5%
+0.8 h
+
+16
+2.20 M
+85.9%
+85.7%
+11.8%
+1.2 h
+
+32
+4.40 M
+86.2%
+86.0%
+11.5%
+1.8 h
+
+Full parameters
+110 M
+84.7%
+84.6%
+8.2%
+2.5 h
+
+
+Impact of LoRA target layer selection Targeting the full attention mechanism including query key value and output layers provides the most robust performance. Table 8 demonstrates that the QKVO configuration achieves an accuracy of 85.1% which exceeds the performance of full parameter fine tuning. This suggests that comprehensive layer targeting allows the model to redistribute the learned medical knowledge more effectively across the transformer blocks. Partial targeting such as the query and value layers only results in higher hallucination rates because the model cannot fully synchronize the attention scores with the output projections. Table 8. Impact of target layer selection on performance (r = 8).
+Target layers
+Parameter count
+Accuracy
+Macro F1
+Hallucination rate
+Relative to full parameters
+
+Q
+0.28 M
+80.2%
+79.9%
+14.1%
+94.8%
+
+QV
+0.55 M
+81.5%
+81.2%
+13.6%
+96.0%
+
+QK
+0.55 M
+82.1%
+81.8%
+13.2%
+96.7%
+
+QVO
+0.83 M
+83.8%
+83.5%
+12.8%
+98.7%
+
+QKVO
+1.10 M
+85.1%
+85.1%
+12.5%
+100.5%
+
+
+The selection of target layers for LoRA adaptation significantly impacts model performance. The QKVO configuration (query, key, value, and output layers) achieves the highest accuracy (85.1%) and macro F1 score (85.1%), outperforming all partial layer configurations. This comprehensive targeting strategy yields a 3.6% accuracy improvement over the baseline QV configuration (81.5%), demonstrating the importance of adapting all components of the self-attention mechanism.
+Individual layer contributions exhibit non-linear effects. The Q configuration alone achieves 80.2% accuracy, while adding the V layer (QV) improves performance by 1.3%. The QK configuration (82.1%) slightly outperforms QV, suggesting that the key projection plays a more critical role than the value projection in attention computation for this task. The QVO configuration (83.8%) demonstrates the importance of the output layer, which projects multi-head attention back to the original dimension space.
+Hallucination rates decrease systematically with more comprehensive layer targeting. The Q configuration exhibits the highest hallucination rate (14.1%), which progressively decreases to 12.5% for QKVO. This trend indicates that adapting more layers enhances the model’s ability to capture nuanced semantic relationships, reducing overconfident errors on ambiguous samples.
+The QKVO configuration achieves performance exceeding full-parameter fine-tuning (100.5% relative performance) while using only 1.1 M parameters (1% of full parameters). This represents a remarkable parameter efficiency of 99% reduction with superior performance, validating the effectiveness of strategic layer selection in parameter-efficient fine-tuning.
+As illustrated in the radar chart (Fig. 4), the QKVO configuration achieves a ‘Pareto Optimal’ state. While full-parameter fine-tuning (Original BERT) maintains slightly higher hallucination mitigation, its overall accuracy and inference efficiency are substantially lower. The QKVO strategy outperforms the standard QV adaptation across all performance-centric dimensions. Specifically, the gains in semantic precision (F1-score) and accuracy far outweigh the marginal increase in trainable parameters and the negligible impact on inference latency, validating the efficiency of a comprehensive attention-masking adaptation. Fig. 4 [Images not available. See PDF.]
+Multi-dimensional performance comparison.
+
+Impact of dropout rate The performance variations across different dropout rates are summarized in Table 9. Table 9. Impact of dropout rate on performance (r = 8, QKVO).
+Dropout
+Accuracy
+Macro F1
+Hallucination rate
+Overfitting level
+
+0.0
+85.3%
+85.2%
+13.8%
+High
+
+0.1
+85.1%
+85.1%
+12.5%
+Medium
+
+0.2
+84.2%
+84.0%
+11.9%
+Low
+
+0.3
+82.8%
+82.5%
+11.5%
+Very low
+
+
+Dropout regularization in LoRA adapters plays a crucial role in balancing performance and generalization. The optimal dropout rate of 0.1 achieves the best trade-off between accuracy (85.1%) and hallucination rate (12.5%), with moderate overfitting. Both lower (0.0) and higher (≥ 0.2) dropout rates lead to suboptimal performance, demonstrating the importance of calibrated regularization.
+Dropout = 0.0 yields the highest accuracy (85.3%) but also the highest hallucination rate (13.8%) and severe overfitting. This indicates that without regularization, the model overfits to training data patterns, leading to poor generalization on complex, out-of-distribution samples. As dropout increases to 0.1, accuracy decreases slightly (0.2%) but hallucination rate improves by 1.3%, indicating better generalization.
+Dropout rates of 0.2 and 0.3 exhibit diminishing returns. Dropout = 0.2 reduces accuracy by 0.9% compared to the optimal configuration, while dropout = 0.3 causes a more significant performance degradation (2.3% accuracy drop). This suggests that excessive regularization constrains the model’s capacity to learn task-specific features, particularly in the low-rank adaptation space.
+Hallucination rates decrease monotonically with increasing dropout, from 13.8% at dropout = 0.0 to 11.5% at dropout = 0.3. However, this improvement comes at the cost of reduced discriminative power. The optimal dropout = 0.1 configuration achieves a 1.3% hallucination rate reduction compared to no dropout, while maintaining competitive accuracy.
+The results demonstrate that LoRA adapters benefit from moderate dropout regularization (0.1), which prevents overfitting without severely constraining model capacity. This finding is particularly relevant for medical misinformation detection tasks, where both high accuracy and reliable generalization are critical for real-world deployment.
+Feature space visualization analysis The visualization of the latent representation provides direct evidence of how low rank adaptation modifies the decision manifold. This study utilized t-SNE to map the last hidden states of both the baseline model and the BERT-LoRA framework.
+As illustrated in Fig. 5 the LoRA fine tuning process significantly increases the separation between factual claims and health misinformation. This structural shift explains the high macro F1 scores reported in previous sections. However the distribution of hallucination samples reveals a troubling pattern. In the baseline model the errors are randomly scattered across the feature space. In the LoRA model the hallucination samples cluster tightly along the decision boundary. This clustering effect indicates that the semantic bottleneck forces ambiguous samples into high confidence zones. This feature compression leads to the confident blindness phenomenon where the model makes decisive but incorrect judgments on samples with complex medical logic. Fig. 5 [Images not available. See PDF.]
+Comparative visualization of model representation space via t-SNE.
+
+The spatial concentration of errors near the boundary confirms that the semantic bottleneck primarily affects samples with high linguistic complexity. While full parameter models exhibit a more relaxed manifold the low rank model creates a rigid decision boundary. This rigidity improves classification speed but reduces the model ability to handle semantic ambiguity in the medical domain.
+Cross-architecture validation (RoBERTa-base) To verify the generalizability of the identified semantic bottleneck, we conducted a cross-architecture validation using the RoBERTa-base model. RoBERTa provides a more robust pre-trained backbone due to its dynamic masking and larger-scale pre-training.
+Table 10 presents the performance comparison between BERT-LoRA and RoBERTa-LoRA. While RoBERTa-LoRA achieved a slightly higher accuracy of 86.4%, it exhibited a similar hallucination profile to BERT-LoRA. Specifically, the hallucination rate for RoBERTa-LoRA was 11.2%, confirming that the trade-off between parameter efficiency and factual integrity is not limited to a specific model but is a structural characteristic of low-rank adaptation. Table 10. Cross-architecture performance and hallucination comparison (r = 8).
+Model
+Accuracy
+Macro F1
+Hallucination rate
+Mean entropy (> 400 tokens)
+
+BERT-LoRA
+85.1%
+85.1%
+12.5%
+0.58
+
+RoBERTa-LoRA
+86.4%
+86.2%
+11.2%
+0.54
+
+
+As illustrated in Table 10, both architectures experience a significant spike in predictive entropy when the input complexity exceeds the 400-token threshold. Although RoBERTa’s optimized pre-training slightly mitigates the severity of hallucinations, it cannot bypass the fundamental constraint imposed by the rank-8 subspace. This cross-architecture evidence supports our hypothesis that the “semantic bottleneck” is a systemic risk in PEFT-based medical AI, necessitating specialized mitigation strategies regardless of the underlying transformer backbone.
+Qualitative case analysis This study selected three representative cases to demonstrate the specific failure modes of the low rank adaptation framework. These cases highlight the boundaries where parameter efficiency compromises factual reliability (Table 11). Table 11. Qualitative case analysis.
+Case
+Input
+Ground truth
+Model prediction
+Academic analysis
+
+Insufficient contextual nuance processing
+"Research indicates that moderate consumption of red wine may benefit cardiovascular health."
+True (Conditional)
+Misinformation (Confidence: 0.84)
+This error exemplifies "Contextual Hallucination." The BERT-LoRA model failed to process linguistic “hedges” such as “moderate” and "may." Due to the low-rank constraint (r = 8) on the attention mechanism, the model appears to simplify complex, conditional medical claims into binary, absolute statements. It treats the cautious scientific tone as a characteristic of deceptive rhetoric, reflecting a trade-off between structural regularization and semantic sensitivity
+
+Semantic confusion of medical concepts
+"Vitamin C can be used to treat COVID-19."
+Misinformation
+True (Confidence: 0.92)
+This represents a “Factual Hallucination” rooted in knowledge deficit. The model conflates the concept of "prevention/support" (which often appears in Vitamin C training data) with “treatment” (a clinical claim). The high confidence score (0.92) for this prediction suggests that while LoRA improves classification accuracy on general patterns, it may consolidate pre-trained biases, leading to “overconfident errors” in specific medical sub-domains
+
+Logical inference overextension
+"Masks can block the transmission of respiratory droplets."
+True
+"Therefore, social distancing is no longer necessary."
+This case illustrates "Inferential Hallucination." Although the model correctly identifies the premise, it performs an unjustified logical leap during the representation transition. This suggests that the adaptation of the classification head alone is insufficient for maintaining the integrity of downstream logical chains. It highlights the “bottleneck effect” of LoRA where the model captures surface-level factual correlations but fails to preserve the underlying causal constraints
+
+
+In Case 1, the model assigns high confidence to a simplified interpretation while ignoring critical conditional qualifiers. This reflects how the semantic bottleneck prioritizes dominant entities over nuanced linguistic "hedges." Case 2 illustrates a factual hallucination where the model conflates supportive care with clinical treatment, suggesting a consolidation of pre-trained biases within the low-rank subspace. Case 3 demonstrates an inferential leap where a correct premise leads to an unjustified conclusion, confirming that limited-rank updates can disrupt the integrity of causal reasoning chains.
+Characterizing hallucination-prone texts Using the verified HealthMisinfo-2023 dataset (N = 5988), we analyzed why LoRA adaptation triggers specific hallucinations. This analysis focuses on the relationship between Text Complexity and Predictive Entropy. The low-rank update (r = 8) creates a “semantic bottleneck” that limits the model’s capacity to process dense medical information.
+The heatmap (Fig. 6) reveals a "High-Risk Zone" where text complexity is between 200 and 400 tokens and entropy is between 2.0 and 4.0. In this zone, the hallucination probability is 0.47. Outside this zone, the probability is only 0.11 (chi-square test, P  < 0.001). This concentration proves that hallucinations are not random. They are systematic failures linked to specific input types. Fig. 6 [Images not available. See PDF.]
+Findings from the Heatmap.
+
+The data shows a clear positive correlation. As text length increases, the model’s uncertainty also increases. This happens because LoRA uses a low-rank matrix (r = 8) to update the model. This small rank creates a semantic bottleneck. It limits the model’s capacity to represent complex, multi-faceted medical arguments. Simple, short claims under 150 tokens are processed accurately. However, longer texts with multiple medical qualifiers (e.g., "potentially," “preliminary”) overwhelm the low-rank adapters.
+The t-SNE plot (Fig. 5) supports this finding. Hallucination samples concentrate at the decision boundary. This suggests that the low-rank constraint forces the model to learn a sharp but brittle boundary. It lacks the depth to separate nuanced medical truths from sophisticated misinformation. The model then produces high-confidence errors. These Contextual Misattributions account for 42% of all errors (Table 5).
+In conclusion, LoRA improves parameter efficiency but reduces the model’s robustness for semantically dense inputs. The identified high-risk zone provides a target for future mitigation. We suggest oversampling high-entropy examples during fine-tuning. We also recommend adding verification steps for inputs that fall into this high-risk complexity range.
+Discussion The 5988 samples from the HealthMisinfo-2023 dataset reveal a clear Performance-Factuality Paradox. LoRA adaptation achieves a high accuracy of 85.1% by targeting QKVO layers. This result exceeds full-parameter fine-tuning in efficiency but introduces a 12.5% hallucination rate. This pattern suggests that low-rank feature compression, while effective for discrimination, acts as a semantic filter. When the rank is limited to r = 8 15 , the model prioritizes major categorical patterns for classification but discards the subtle linguistic nuances required for factual verification.
+Information bottleneck in low-rank adaptation This aligns with the Information Bottleneck principle where extreme parameter compression filters out essential semantic nuances to minimize training loss, leading to the observed Performance-Factuality Paradox 30 . According to IB theory, extreme compression for classification can cause the loss of critical evidence-based features. LoRA effectively isolates high-frequency features of misinformation to achieve 85.1% accuracy. However, the r = 8 constraint limits the representation capacity. This structural limitation forces the model to ignore minority features like medical qualifiers. As a result, the model becomes overconfident in its errors. The t-SNE analysis in Fig. 5 confirms this mechanism. Hallucinated samples cluster tightly at the decision boundary where semantic ambiguity is highest. This observation echoes the findings of Li et al. 8 regarding the limitations of subspace updates in capturing granular factual knowledge.
+Textual complexity as a hallucination trigger Input complexity is a primary trigger for model failure. We identified that predictive entropy spikes for medical texts exceeding 400 tokens (Fig. 6). In these regions, dense terminology overwhelms the LoRA adapters. Unlike previous work on generative models 2 , we demonstrate that discriminative encoders like BERT also remain structurally vulnerable. When semantic density exceeds the capacity of the r = 8 subspace 23 , the model relies on pre-trained linguistic probabilities instead of specific contextual constraints. This explains why Contextual Misattributions dominate the error profile at 42%. These results corroborate Ji’s survey 35 which links input length to self-contradiction, but we extend this to show that even non-generative models face these triggers.
+Structural implications Targeting the full QKVO block is essential for stability. This ablation study shows that adapting all attention components yields superior performance, reaching 100.5% relative to full-parameter tuning. Our results support the hypothesis by He et al. 21 that comprehensive layer targeting preserves the global coherence of medical entity relations. However, the transition from liberal misclassification to conservative overconfidence presents a significant AI safety challenge 22 . The 12.5% hallucination rate indicates that the model becomes too certain of its specialized knowledge. To address this, we propose a reliability flag triggered when inputs fall within the identified High-Risk Zone. This human-in-the-loop approach balances PEFT efficiency with the medical rigor demanded by health communication.
+Practical safety in health communication The transition from misclassification to overconfident hallucination is a significant risk. Overconfidence in incorrect predictions is a concrete reliability problem 22 . We propose using the high-risk zone identified in Fig. 6 as a trigger for manual verification. This strategy expands upon the uncertainty estimation methods discussed by Gal and Ghahramani 32 . By identifying specific textual conditions under which hallucinations flourish, we provide a practical safety guideline for deploying adapted models in healthcare. This ensures that parameter efficiency does not come at the cost of public health safety.
+Limitations Despite the observed effectiveness of LoRA-based adaptation in this study, several constraints should be acknowledged to ensure a balanced interpretation of the results.
+First, the scope of our architectural evaluation was restricted to encoder-based models, specifically BERT and RoBERTa. While these are foundational transformer architectures, they do not fully represent the structural complexities of much larger, decoder-only generative models (e.g., GPT-4 or Llama-3). Therefore, the semantic bottleneck and the 400-token hallucination trigger identified in our experiments may manifest differently in models with significantly larger parameter scales or different pre-training objectives.
+Second, the HealthMisinfo-2023 dataset is exclusively in English and focused on a specific timeframe of health discourse. Health misinformation often exhibits cultural and linguistic nuances that vary across different regions and languages. Consequently, our findings regarding model reliability and detection accuracy may not be directly generalizable to multilingual contexts or to future health crises involving different terminologies.
+Third, our study primarily investigated the impact of a fixed low-rank configuration (r = 8). While this rank provided a practical balance for our specific dataset, we did not explore the potential of dynamic rank allocation or higher-rank adaptations. It is possible that the hallucination frequency could be further mitigated by adjusting the rank based on input complexity, a technical dimension that remained beyond the current experimental setup.
+Finally, while predictive entropy served as a useful proxy for measuring model uncertainty and hallucination risks, it is not a comprehensive metric for all types of factual errors. Future research should integrate more diverse evaluation frameworks, such as knowledge-graph grounding or human-in-the-loop verification, to provide a more holistic assessment of model factuality. Exploring these directions will be essential for developing safer and more reliable AI systems for public health communication.
+Conclusion This study investigated the application of Low-Rank Adaptation (LoRA) within transformer-based models for the task of health misinformation detection. By utilizing the HealthMisinfo-2023 dataset, our experimental results indicate that adapting the attention mechanisms (QKVO layers) with a rank of eight allows the model to maintain a detection accuracy of 85.1%. This performance was achieved by updating approximately 0.1% of the total model parameters, which suggests that LoRA can be an effective strategy for reducing the computational overhead typically associated with full-parameter fine-tuning in medical communication contexts.
+However, our analysis also revealed a performance-factuality paradox that warrants caution. While the model remains precise in its classification of misinformation, its internal reliability, measured through predictive entropy, shows signs of degradation as input complexity increases. Specifically, for text sequences exceeding the 400-token threshold, this study observed a consistent rise in uncertainty, leading to what we characterize as a semantic bottleneck. This finding implies that the compression inherent in low-rank constraints may inadvertently limit the model’s ability to process nuanced factual details in longer medical claims.
+In conclusion, while LoRA offers a practical path for efficient model adaptation, its deployment in safety–critical health domains should be accompanied by monitoring strategies for factual integrity. The empirical data provided in this research serves as a baseline for future studies to explore how dynamic rank allocation or uncertainty-aware filtering might further stabilize these models. By identifying both the strengths and the specific constraints of this adaptation method, this work contributes to the ongoing development of more balanced and accountable AI systems for public health.
+Author contributions Conceptualization, Y.P.L. and Y.J.Z.; methodology, Y.P.L. and X.F.L.; software, X.F.L.; validation, X.F.L., Y.P.L. and Y.J.Z.; formal analysis, Y.P.L.; resources, T.H.C.; data curation, Y.P.L.; writing—review and editing, X.F.L., Y.P.L. and D.W.; visualization, M.C.P.P. and X.F.L.; supervision, L.K. and Y.P.L.; project administration, T.H.C. and D.W.; funding acquisition, T.H.C.. All authors have read and agreed to the published version of the manuscript.
+Funding This work was supported by the National Key Research and Development Program of China (Grant No. 2024YFE0214800); the Science and Technology Development Fund of the Macao SAR (Grant No. FDCT 0002/2024/RDP); the Science and Technology Development Program of Guangdong Province (Grant No. 2025B1212030002); the Engineering Technology Research (Development) Center of Ordinary Colleges and Universities in Guangdong Province (Grant No. 2024GCZX010); and the Guangdong Engineering Technology Research Center (Grant No. 2024A137).
+Data availability The authors confirm that the data supporting the findings of this study are available within the article. For further information or access to raw data, please contact the corresponding author at: cthon@must.edu.mo.
+Declarations Competing interests The authors declare no competing interests.
+Publisher’s note Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+1. Islam, T. et al. A Comprehensive Survey of Hallucination Mitigation Techniques in Large Language Models. arXiv (Cornell University) (2024) https://doi.org/10.48550/arxiv.2401.01313.
+2. Ji, Z. et al. Survey of Hallucination in Natural Language Generation. ACM Computing Surveys 55, (2022).
+3. Zhang, Y. et al. Siren’s Song in the AI Ocean: A Survey on Hallucination in Large Language Models. Comput. Linguist. 51 , 1373–1418 (2025).
+4. Molena, KF et al. Assessing the Accuracy, Completeness, and Reliability of Artificial Intelligence-Generated Responses in Dentistry: A Pilot Study Evaluating the ChatGPT Model. Cureus ; 2024; [DOI: https://dx.doi.org/10.7759/cureus.65658] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/39205730][PubMedCentral: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11352766]
+5. Guo, Z et al. Large language models for mental health applications: A systematic review (Preprint). JMIR Mental Health ; 2024; 11 , pp. e57400-e57400. [DOI: https://dx.doi.org/10.2196/57400] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/39423368][PubMedCentral: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC11530718]
+6. Dwivedi, YK. ‘So what if ChatGPT wrote it?’ Multidisciplinary perspectives on opportunities, challenges and implications of generative conversational AI for research, practice and policy. Int. J. Inf. Manage. ; 2023; 71 , 102642.
+7. Lyu, Y et al. CRUD-RAG: A comprehensive Chinese benchmark for retrieval-augmented generation of large language models. ACM Trans. Off. Inf. Syst. ; 2024; [DOI: https://dx.doi.org/10.1145/3701228]
+8. Li, J., Cheng, X., Zhao, X., Nie, J.-Y. & Wen, J.-R. HaluEval: A Large-Scale Hallucination Evaluation Benchmark for Large Language Models. ACLWeb 6449–6464 https://aclanthology.org/2023.emnlp-main.397/ (2023) https://doi.org/10.18653/v1/2023.emnlp-main.397.
+9. Mündler, N., He, J., Jenko, S. & Vechev, M. Self-contradictory Hallucinations of Large Language Models: Evaluation, Detection and Mitigation. In The Twelfth International Conference on Learning Representations (2024).
+10. Peng, B. et al. Check Your Facts and Try Again: Improving Large Language Models with External Knowledge and Automated Feedback. arXiv (Cornell University) (2023) https://doi.org/10.48550/arxiv.2302.12813.
+11. Ji, Z. et al. Towards Mitigating Hallucination in Large Language Models via Self-Reflection .
+12. Asai, A., Wu, Z., Wang, Y., Sil, A. & Hajishirzi, H. Self-RAG: Learning to retrieve, generate, and critique through self-reflection. arXiv.org https://arxiv.org/abs/2310.11511 (2023) https://doi.org/10.48550/arXiv.2310.11511.
+13. Bommasani, R; Liang, P; Lee, T. Holistic evaluation of language models. Ann. N. Y. Acad. Sci. ; 2023; 1525 , pp. 140-146.2023NYASA1525.140B [DOI: https://dx.doi.org/10.1111/nyas.15007] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/37230490]
+14. Jahan, I; Rahman, T; Peng, C; Huang, JX. A comprehensive evaluation of large language models on benchmark biomedical text processing tasks. Comput. Biol. Med. ; 2024; [DOI: https://dx.doi.org/10.1016/j.compbiomed.2024.108189] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/38447502]
+15. Hu, E. S. et al. LoRA: Low-Rank Adaptation of Large Language Models. (2021).
+16. Li, Y. et al. LoftQ: LoRA-Fine-Tuning-Aware Quantization for Large Language Models. arXiv.org https://arxiv.org/abs/2310.08659 (2023) https://doi.org/10.48550/arXiv.2310.08659.
+17. Zhang, L., Zhang, L., Shi, S., Chu, X. & Li, B. LORA-FA: MEMORY-EFFICIENT LOW-RANK ADAPTA- TION FOR LARGE LANGUAGE MODELS FINE-TUNING .
+18. Houlsby, N. et al. Parameter-efficient transfer learning for NLP. arXiv.org https://arxiv.org/abs/1902.00751 (2019) https://doi.org/10.48550/arXiv.1902.00751.
+19. Singh Troughia, C. & Suryanarayanan, S. Parameter-Efficient Fine-Tuning for Generative AI: Implementations, Best Practices, and Trade-Offs. International Journal of Science and Research (IJSR) 1166–1176 (2025) doi:https://doi.org/10.21275/sr25612082136.
+20. Gajulamandyam, D. K. et al. Domain Specific Finetuning of LLMs Using PEFT Techniques. 2025 IEEE 15th Annual Computing and Communication Workshop and Conference (CCWC) 00484–00490 (2025) https://doi.org/10.1109/ccwc62904.2025.10903789.
+21. He, J., Zhou, C., Ma, X., Berg-Kirkpatrick, T. & Neubig, G. Towards a Unified View of Parameter-Efficient Transfer Learning. arXiv (Cornell University) (2021) https://doi.org/10.48550/arxiv.2110.04366
+22. Amodei, D. et al. Concrete Problems in AI Safety .
+23. Hu, JY-C; Su, M; Kuo, E-J; Song, Z; Liu, H. Computational limits of Low-Rank Adaptation (LoRA) fine-tuning for Transformer Models. arXiv ; 2024; [DOI: https://dx.doi.org/10.48550/arxiv.2406.03136] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/41031070][PubMedCentral: https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12478435](Cornell University)
+24. Malladi, S. et al. Fine-tuning language models with just forward passes. arXiv.org https://arxiv.org/abs/2305.17333 (2023) https://doi.org/10.48550/arXiv.2305.17333.
+25. Yang, A. X., Maxime Robeyns, Wang, X. & Aitchison, L. Bayesian low-rank adaptation for large language models. arXiv (Cornell University) (2023) https://doi.org/10.48550/arxiv.2308.13111
+26. Vaswani, A. et al. Scaling Local Self-Attention for Parameter Efficient Visual Backbones. In Proceedings of the IEEE/CVF conference on computer vision and pattern recognition (2021).
+27. Li, S et al. A multitask benchmark dataset for satellite video: Object detection, tracking, and segmentation. IEEE Trans. Geosci. Remote Sens. ; 2023; 61 , pp. 1-21.
+28. Vangalapat, T. Fine-tuning large language models with domain-specific data: A comprehensive analysis of parameter-efficient methods and performance optimization 2024; 10.21275/sr24228092614 Int. J. Sci. Res. (IJSR) ;
+29. Lewandowsky, J; Bauch, G. Information-optimum LDPC decoders based on the information bottleneck method. IEEE Access ; 2018; 6 , pp. 4054-4071. [DOI: https://dx.doi.org/10.1109/ACCESS.2018.2797694]
+30. Tishby, N; Zaslavsky, N. Deep learning and the information bottleneck principle. IEEE Xplore ; 2015; [DOI: https://dx.doi.org/10.1109/ITW.2015.7133169]
+31. Gal, Y. & Uk, Z. Dropout as a Bayesian Approximation: Representing Model Uncertainty in Deep Learning Zoubin Ghahramani .
+32. Gal, Y. & Ghahramani, Z. Dropout as a Bayesian Approximation: Representing Model Uncertainty in Deep Learning. arXiv (Cornell University) (2015) https://doi.org/10.48550/arxiv.1506.02142
+33. Sun, Y., Li, Z., Li, Y. & Ding, B. Published as a conference paper at Iclr 2024 Improving Lora In Privacy-Preserving Federated Learning .
+34. Ding, F; Xu, C; Liu, H; Zhou, B; Zhou, H. Bridging pre-trained models to continual learning: A hypernetwork based framework with parameter-efficient fine-tuning techniques. Inf. Sci. ; 2024; 674 , pp. 120710-120710. [DOI: https://dx.doi.org/10.1016/j.ins.2024.120710]
+35. Ji, Z . et al. Survey of hallucination in natural language generation. ACM Comput. Surveys 55, (2022).

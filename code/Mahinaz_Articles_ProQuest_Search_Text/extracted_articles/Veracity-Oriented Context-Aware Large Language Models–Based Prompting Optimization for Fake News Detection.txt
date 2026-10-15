@@ -1,0 +1,490 @@
+This is an open access article under the terms of the Creative Commons Attribution License, which permits use, distribution and reproduction in any medium, provided the original work is properly cited.
+1. Introduction
+The proliferation of misinformation and deceptive content on digital platforms has made fake news detection (FND) an essential task in natural language processing (NLP). FND aims to identify false or misleading information disseminated through news outlets and social media, which can significantly impact public opinion and societal well-being. Unlike general rumor detection and analysis techniques, FND requires a fine-grained understanding of not only the superficial contents but also the interest conflicts and the implicit intents behind the information presented. This complexity necessitates advanced methods capable of discerning subtle cues that differentiate fake news from authentic reporting.
+Traditional approaches to FND have predominantly relied on machine learning and deep learning models, such as support vector machines, random forests, and small-scale neural networks [1–3]. These models often depend on handcrafted features or shallow textual representations, limiting their ability to capture the nuanced linguistic and contextual patterns inherent in deceptive content. Moreover, they typically require large amounts of labeled data for training, which is challenging to obtain due to the rapidly evolving nature of fake news. These limitations underscore the need for more sophisticated and scalable solutions that can effectively handle the complexities of FND.
+The advent of large language models (LLMs) such as GPT-3, Llama, and Claude [4–7] has opened new avenues for addressing these challenges. LLMs have demonstrated exceptional capabilities in understanding the context, generating coherent narratives, and performing logical reasoning. Their extensive pretraining on diverse datasets enables them to capture intricate patterns in language, making them well-suited for tasks requiring deep semantic comprehension.
+Prompt engineering techniques have become integral in harnessing the full potential of LLMs. By crafting effective prompts, we can guide LLMs to produce more accurate and contextually appropriate responses. Techniques such as chain-of-thought (CoT) [8, 9], in-context learning (ICL) [10, 11], and reasoning and acting (ReAct) [12] have shown promise in enhancing LLM performance across various complex tasks. CoT encourages LLMs to perform step-by-step reasoning, improving transparency and robustness in decision-making. ICL enhances model understanding by providing contextual examples without the need for gradient updates, while ReAct combines reasoning with actionable steps for dynamic task interaction.
+Figure 1 illustrates the performance and decision-making processes of three prompting methods, direct prediction, CoT, and ICL, on GSM8K Math Problems, showcasing how these techniques enable LLMs to manage complex queries. GSM8K [13] is a linguistically diverse collection of grade-school–level math problems aimed at evaluating and enhancing language models’ multistep reasoning capabilities. In this case, GPT-3.5-turbo ‡ serves as the core engine for all interactions. Upon observation, we find that CoT and ICL are more effective at breaking down complex problem steps, organizing the reasoning flow, and standardizing the response format, thereby addressing logical reasoning challenges that direct prediction struggles to resolve.
+[figure(s) omitted; refer to PDF]
+Despite these advancements, significant challenges remain. LLMs are prone to hallucinations, generating plausible but incorrect information, which can lead to inaccuracies in FND. In addition, existing FND methods often fail to fully leverage the rich prior knowledge embedded within LLMs, resulting in less effective classification outcomes. The reliance on static prompts and lack of contextual adaptation limit the models’ ability to handle the nuanced and evolving nature of fake news.
+In human cognition, understanding the context and drawing upon background knowledge are crucial for discerning truth from falsehood. Humans naturally incorporate contextual cues, background information, and analogical reasoning when evaluating the credibility of information.
+Inspired by this, we propose incorporating veracity-oriented context-aware strategies into LLM prompting for FND tasks. As a result, we introduce the context-aware prompt engineering for FND (CAPE–FND) framework, context-aware prompt engineering, designed to enhance FND tasks by addressing LLM hallucinations and underutilization of prior knowledge. Our approach integrates veracity-oriented context-aware constraints, background enrichment, and analogical reasoning to improve the reasoning process of LLMs. Specifically, we conduct exploratory research on integrating the following crucial veracity-oriented context-aware factors into LLM prompting–based FND tasks as follows: • Developed veracity-oriented context-aware constraints: Constructing and integrating linguistic variations of the original content and employing a consistency alignment mechanism to evaluate intermediate LLM responses, reducing ambiguity and enhancing reliability.
+• Enriched veracity-oriented context-aware backgrounds: Prompt LLMs to generate concise background information about key entities or events in the news content, providing additional context for accurate classification.
+• Leveraged veracity-oriented context-aware analogies: Encourage LLMs to produce analogical examples that are contextually relevant, leveraging similar past scenarios to improve reasoning and understanding.
+
+Furthermore, we enhance the performance and robustness of CAPE–FND by implementing a self-adaptive bootstrap prompting optimization method. This technique fine-tunes the prompts and examples provided to LLMs through an iterative random search, ensuring they generate more accurate and reliable veracity predictions for various semantic complex scenarios.
+Our contributions to this work can be summarized as follows: • We analyze the limitations of current LLM prompting methods in FND tasks and propose a novel framework that incorporates veracity-oriented context-aware strategies to improve reasoning processes and mitigate hallucinations. Specifically, we introduce emotion-oriented context-aware constraints, background enrichment, and analogical reasoning into LLM prompting.
+• We implement a self-adaptive bootstrap prompting optimization method to refine LLM prompts, further enhancing performance and robustness.
+• We validate our approach through extensive zero-shot and few-shot experiments using GPT-3.5-turbo across multiple public datasets, demonstrating its effectiveness and robustness, even surpassing advanced GPT-4.0 and human performance in certain cases.
+• We provide our code implementation § publicly to facilitate further research in LLM–based FND.
+
+The remainder of this paper is organized as follows. In Section 2, we review related work in FND, LLMs, and prompt engineering. Section 3 presents the preliminaries of our approach, including FND task formulation and LLM prompting techniques. In Section 4, we detail our CAPE–FND framework and its components. Section 5.1 presents the comprehensive experimental settings, including adopted datasets, baselines, evaluation metrics, and key hyperparameters. Section 5.2 discusses experimental results and evaluations. Section 6 presents several representative case studies to enhance the readers’ understanding. Section 7 offers a comprehensive discussion on the implications, limitations, and potential areas for future research. Finally, Section 8 concludes the paper and outlines potential improvements and future directions for further work.
+2. Related Work
+Given that this work primarily focuses on using LLMs for prompt engineering and instruction tuning to accomplish the task of FND, the review of related work will cover the following key areas: recent advancements in FND, the development of LLMs, and LLM–based prompt engineering.
+2.1. FND Backgrounds
+The surge of misinformation on digital platforms has made FND a critical area of research in NLP. The FND task [2, 3, 14] focuses on identifying false information by analyzing the textual content of news articles, utilizing both latent features and handcrafted attributes extracted from the content [15–19]. As research continues to evolve, it is crucial to focus on developing scalable, interpretable, and adaptive frameworks that can keep pace with the dynamic nature of misinformation in the digital age.
+Early methods in FND primarily utilized machine learning algorithms that relied on manually crafted features extracted from the textual content, user behavior, and metadata [2, 20]. Shu et al. [2] provided a comprehensive survey of FND techniques, categorizing them into knowledge-based, style-based, and propagation-based models. They highlighted the challenges posed by the dynamic and multifaceted nature of fake news, emphasizing the need for models that can adapt to new forms of misinformation. Shamardina et al. [21] introduced the Corpus of Artificial Texts (CoAT), a large-scale dataset of human-written and machine-generated texts in the Russian language, spanning six domains and outputs from 13 text generation models. They also conducted a comprehensive linguistic analysis and evaluated artificial text detection methods. Setiawan, Dharmawan, and Halim [22] investigated automatic FND in Indonesian news using hybrid LSTM and transformer models, comparing the effectiveness of mainstream pretrained language models (PLMs). Ameli et al. [23] proposed an AI-based framework for detecting and classifying fake news, focusing on how AI can be utilized to combat the spread of misinformation while addressing the challenges posed by its misuse. This framework includes three tiers: feature extraction, classification and detection, and defense mechanism. Ruchansky, Seo, and Liu [20] proposed the CSI model, which integrates content, social context, and user behavior to detect fake news. Their approach captures the complex interplay between content and the way it spreads through social networks. Similarly, Zhou and Zafarani [24] focused on the characterization and detection of fake news, discussing various machine learning strategies and the importance of interpretability in model predictions. Moraes, Oliveira Sampaio, and Charles [25] performed an analysis of fake Brazilian news, identifying writing patterns through linguistic and semantic analysis, leveraging the NLP, machine learning techniques, and the large training dataset.
+Despite these advancements, traditional FND approaches face significant limitations [3, 26]: Data Scarcity . The constant evolution of fake news makes it challenging to maintain large, up-to-date labeled datasets for training. Generalization . Models trained on specific datasets or topics often struggle to generalize to unseen domains or emerging misinformation trends. Contextual Understanding . Conventional models may lack the ability to comprehend subtle linguistic cues and contextual nuances essential for distinguishing fake news from legitimate reporting. In response to these challenges, recent advances in LLMs and prompt engineering techniques offer promising solutions to enhance the robustness and adaptability of FND systems.
+2.2. FND Progress
+In the long-term FND research, traditional mainstream methods can be categorized into knowledge-based, style-based, linguistic-based, and social context network–based approaches [14, 24], alongside the more recent surge in popularity of PLMs–based methods [27–30] and LLMs–based conversational prompting approaches [4, 9, 11, 31] driven by deep learning technique advancements over the past few years. To provide readers with a systematic and comprehensive overview of mainstream FND methods, we provide a corresponding summarization detailing these primary FND approaches, as shown in Table 1.
+Table 1
+Comprehensive overview of mainstream fake news detection (FND) methods.
+Fake news detection (FND) categories Related FND works
+Traditional FND methods Knowledge-based LIAR [32], FakeNewsNet [33], CREDBANK [34]
+Style-based Sadia et al. [35], Potthast et al. [36], Horne et al. [37]
+Linguistic-based Mohammad et al. [15], Zhou et al. [38], Hakak et al. [39], Despoina et al. [40], Gravanis et al. [41], Shu et al. [42], Perez et al. [43], Karimi et al. [44], Liu et al. [45], Shamardina et al. [21]
+Social context network-based Shu et al. [33, 46–48], Prompt-and-Aligh [27], Bodaghi et al. [49], Wu et al. [50], Ruchansky et al. [20], SentGCN [51], SentGAT [51], dEFEND [52], GCNFN [30], GraphSAGE [53], Ruchansky et al. [20]
+Others (like temporal-/credibility features- based) Att-RNN [54], MKEMN [55], DeClarE [56], FakeDetector [57], SAME [58], Zhou and Zafarani et al. [24]
+
+Emerging FND techniques Pretrained LMs–based (small LMs [SLMs]) BERT – FT [59], RoBERTa – FT [29], PET [30], KPT [28], FakeBERT [60], Setiawan et al. [22], Ameli et al. [23], Moraes et al. [25]
+Large language models (LLMs)–based Zaheer et al. [61], Zellers et al. [62], Jin et al. [63], direct ask GPT -3.5-turbo [5, 11], Xu et al. [64], Wang et al. [65], Su et al. [66], in-context learning [10, 11, 67], chain-of-thought [8, 9, 31, 68], GPT-4.0 4
+Specifically, knowledge-based approaches [2, 24] rely on factual verification by comparing claims with external sources, which include LIAR [32], FakeNewsNet [33], and CREDBANK [34]. Style-based methods analyze the distinguishing characteristics of writing styles between legitimate users and anomalous accounts to detect fake news, which contains several works [35–37]. Linguistic-based approaches [15, 38] focus on textual features such as lexical, syntactic, and semantic elements [39–45]. Social context network–based FND techniques [33] analyze the structure and propagation of information in social networks, such as user profiles, friendship, tweet–retweet, and post–repost networks, to detect fake news. It detects who spreads the fake news, relationships among the spreaders, and how fake news propagates on social networks [20, 27, 33, 46–50]. Social context network–based FND methods are widely used and highly effective, demonstrating excellent performance in FND. Notable examples include the use of SentGCN [51], a graph-based methodology that employs graph convolutional networks (GCNs) to capture relational information effectively; SentGAT [51], which utilizes graph attention networks (GATs) to focus on significant features within the graph structure; dEFEND [52], an adaptation of the hierarchical attention model originally designed for FND; GCNFN [30], a deep geometric learning–based method to model the dissemination patterns of news; and GraphSAGE [53], a heterogeneous social graph–based relational analysis model. In addition to these categories, social context–based methods also include temporal-based and credibility features–based approaches. Temporal-based methods study the propagation and evolution of fake news on social networks, including multimodal fusion with recurrent neural networks (Att-RNNs) [54], multimodal knowledge–aware event memory network (MKEMN) [55], and graph representation–based FANG [53]. Credibility features–based methods focus on evaluating the credibility of the news source, spreaders, and content, including debunking fake news and false claims using evidence-aware deep learning (DeClarE) [56], FakeDetector [57], and sentiment-aware multimodal embedding (SAME) [58].
+Furthermore, the PLM–based FND methods leverage powerful language representation models to enhance the classification performance of FND tasks. These methods include bidirectional encoder representations from transformers (BERT)–FT [59], which utilizes BERT with a task-specific multilayer perceptron (MLP) for predicting the veracity of news articles. RoBERTa – FT [29] is similar to BERT – FT but uses RoBERTa as the underlying PLM, offering improved performance due to enhanced training techniques. PET [30] employs prompt-tuning with cloze-style questions and verbalizers, providing task descriptions to pretrained models for supervised learning. KPT [28] expands the label word space by incorporating class-related tokens with different granularities and perspectives, further improving the effectiveness of fake news classification. These PLM–based methods have demonstrated strong capabilities in tackling the challenges of FND by leveraging the knowledge encoded in PLMs. Kaliyar et al. [60] proposes a BERT–based FND approach (FakeBERT), combining parallel blocks of a single-layer deep convolutional neural network (CNN) with BERT to handle linguistic ambiguity. However, these approaches often require fine-tuning the LLMs on specific datasets, which may not fully exploit the models’ extensive prior knowledge.
+Moreover, the emergence of LLMs has revolutionized NLP tasks by enabling models to learn from vast amounts of data and capture intricate language patterns, including OpenAI GPTs, Google’s Gemini, Anthropic’s Claude, and Meta AI’s Llama [4, 6, 7, 69, 70]. LLMs, represented by the GPT series [4, 11], have demonstrated proficiency in tasks requiring deep semantic understanding, making them promising candidates for FND.
+Recent studies have explored leveraging LLMs for FND. Zaheer, Asim, and Kamil [61] provided a detailed review of machine learning techniques, including LLMs, used in FND. They discuss the effectiveness of various models in identifying linguistic patterns and deceptive content. Zellers, Holtzman, and Rashkin [62] introduced GROVER, an LLM designed both to generate and detect fake news. Their work demonstrated that models capable of producing realistic fake news could also be effective in identifying it. Jin et al. [63] explores the use of adversarial and contrastive learning with LLMs such as GPT-3.5 [4, 11] for FND, particularly in low-resource settings. Xu and Li [64] compared offline FND models with real-time LLM–based solutions, examining how LLMs can improve the efficiency of detecting fake news in dynamic environments. Wang et al. [65] introduces LLM–GAN, a generative adversarial network powered by LLMs for explainable and more effective FND. Su et al. [66] proposed a novel FND approach, namely, dynamic analysis and adaptive discriminator (DAAD), combining domain-specific LLM insights with the Monte Carlo tree search (MCTS) algorithm to leverage the LLM’s self-reflective capabilities and improve detection accuracy.
+Looking ahead, future LLM–based FND research may focus on improving the generalization capabilities of LLMs for FND, reducing the need for extensive fine-tuning and enhancing model performance in low-resource settings. Real-time and adaptive FND, capable of responding dynamically to evolving misinformation trends, will likely be a key area of exploration.
+2.3. LLM–Based Prompt Engineering
+Along with the impressive complex problem capabilities of LLMs, prompt engineering has emerged as a key technique for effectively utilizing LLMs without extensive fine-tuning [8–12, 67]. By designing appropriate prompts, we can guide LLMs to perform specific tasks more accurately.
+LLMs have made breakthroughs in ICL and few-shot learning [71], using advanced prompt engineering techniques such as CoT [8, 9], ICL [10, 11, 67], and so on. Wei et al. [8] introduced CoT prompting to encourage LLMs to generate intermediate reasoning steps, enhancing problem-solving capabilities and decision-making transparency. Brown et al. [11] demonstrated that providing examples within prompts enables LLMs to learn tasks without gradient updates. ICL leverages the model’s ability to generalize from examples presented in the prompt. Yao et al. [12] proposed ReAct, which combines reasoning with actionable steps, allowing LLMs to interact dynamically with tasks and environments. Few-shot learning with active prompts [72] provided LLMs with a limited number of task-relevant examples (few-shot) through dynamic, actively modified prompts. These prompts evolve to match the context, allowing the model to generalize more effectively from fewer data points. Prompt augmentation with external knowledge (PAEK) [73] involves enriching prompts with external knowledge sources, such as structured data or factual databases, to improve task-specific performance. The augmented prompts guide LLMs to more accurate and context-aware outputs. The contextual calibration [74] prompting strategy adjusts the prompt dynamically by refining the initial input, ensuring that the model’s output remains stable across various prompt formats. Instruction tuning [75] involves fine-tuning LLMs on a dataset with human-readable instructions. It provides clearer guidance on how tasks should be approached, leading to better task-specific performance without extensive retraining. The nonparametric prompting (NPPrompt) [1] technique is introduced as a fully zero-shot approach for extending LLMs to various language understanding tasks without the need for labeled data, additional unlabeled corpora, or manual prompt construction. Unlike existing methods that rely on fine-tuning or manually created prompt words, NPPrompt solely utilizes the capabilities of pretrained models to handle diverse NLP tasks, including text classification, entailment, paraphrasing, and question answering.
+In the context of FND, prompt engineering techniques have not been extensively explored. Incorporating context-aware strategies and leveraging LLMs’ prior knowledge through advanced prompting can potentially address the limitations of existing methods.
+3. Preliminary
+In this work, we focus on FND and LLM–based prompt engineering, which are critical components in NLP aimed at enhancing the accuracy and contextual appropriateness of responses generated by LLMs.
+3.1. FND
+FND aims to accurately determine the veracity of a given news article, identifying whether it is real or fake. FND can be formulated as a binary classification problem, where the goal is to develop a predictive function that classifies news content based on its authenticity.
+Given a news article a , which is a sequence of textual information conveying arguments about a specific event or viewpoint, the objective is to determine its authenticity using a function F as follows: (1) F a = 1 , if  a  is identified as fake or misleading , 0 , if  a  is verified as real or true , where F denotes the predictive algorithm intended to be learned and modeled. The task involves analyzing the textual content to identify deceptive patterns, manipulations, or misinformation deliberately crafted to mislead the audience.
+For example, given a news article stating, “ Scientists discover a cure for the common cold using herbal remedies ,” the task is to analyze the content to determine if this information is credible or misleading (i.e., real or fake). The model must assess linguistic features, factual consistency, and dissemination patterns to make an informed classification.
+3.2. LLM–Based Prompt Engineering
+LLM–based prompt engineering involves designing and optimizing input prompts to enhance the performance of LLMs in generating accurate and contextually appropriate responses for FND tasks. This process can be categorized based on the amount of example data provided: zero-shot and few-shot prompting.
+3.2.1. Zero-Shot Prompting
+In zero-shot prompting, the model is provided with a problem statement x (e.g., a news article) without any additional examples or context. The prompt ϕ directly yields x : ϕ x = x . This technique relies on the LLM’s internal pre-existing knowledge to generate a prediction y ^ : y ^ = LLM ϕ x . For FND, a zero-shot prompt might present the news article to the LLM and ask for a veracity judgment:   # Prompt:
+  “ Read the following news article and determine whether it is real or fake: [Article Text]. ”
+
+In this setting, the LLM is expected to analyze the article and provide a classification without further guidance.
+To further enhance performance, zero-shot prompting can be combined with CoT, instructing the model to reason step-by-step. This is achieved by appending a general prompting instruction: ϕ x = x , please think step by step . . This approach encourages the model to generate intermediate reasoning steps before arriving at the final answer, improving accuracy and explainability.   # Prompt:
+  “ Read the following news article and think step by step to determine whether it is real or fake: [Article Text]. ”
+
+3.2.2. Few-Shot Prompting
+Few-shot prompting provides the LLM with several labeled examples to guide its understanding of the task. The method ϕ supplements the problem statement x with K labeled examples, each consisting of a news x i and its corresponding label y i : ϕ x = x 1 , y 1 , x 2 , y 2 , … , x K , y K , x . This approach allows the LLM to learn from the examples and apply similar reasoning to the new problem x : y ^ = LLM ϕ x . For example, the prompt might include the following:   # Given:
+  Example 1: “ Government announces new tax reforms ” (Label: Real).
+  Example 2: “Celebrity spotted in two places at once, defying physics ” (Label: Fake).
+  Example 3: “ Local man wins lottery twice in one week ” (Label: Fake).
+  # Prompt:
+  “ Based on the above examples, read the following news article and determine whether it is real or fake: [Article Text]. ”
+
+By providing these examples, the LLM can better understand the patterns associated with real and fake news.
+Adding CoT to few-shot prompting involves instructing the model to provide reasoning steps for each example and the new problem as (2) ϕ x = x 1 , r 1 , y 1 , x 2 , r 2 , y 2 , … , x K , r K , y K , x ,  please think step by step , where r i represents the reasoning steps, for example i . This helps LLMs generate intermediate reasoning steps, improving their ability to detect subtle cues indicative of fake news.
+By employing these prompting strategies, we aim to enhance the LLM’s capability to accurately detect fake news by leveraging both its pretrained knowledge and contextual understanding derived from carefully designed prompts.
+4. Our Proposed Methodology
+Here, we further introduce our proposed methodology in detail. In this work, the key contribution lies in proposing the incorporation of veracity-oriented context-aware knowledge into LLMs–based prompt engineering for the task of FND. Drawing inspiration from the human capacity to detect deception through nuanced contextual understanding and subtle cues, we introduce CAPE–FND, a novel prompting framework designed to enhance LLMs’ ability to assess the veracity of news articles by emulating sophisticated human-like comprehension of context and misinformation patterns. The code is available at the following website: https://github.com/albert-jin/CAPE-FND.
+4.1. Overall Structure
+Our methodology integrates veracity-oriented context-aware constraints, background knowledge, and analogical reasoning to tackle challenges such as LLM hallucinations and to improve the effectiveness of FND. As depicted in Figure 2, CAPE–FND constructs and optimizes LLM prompts primarily through the following several stages: 1. Veracity-Oriented Context-Aware Knowledge Acquisition (Section 4.2)
+2. Veracity-Oriented Context-Aware Knowledge Infusion and FND (Section 4.3)
+3. Self-Adaptive Bootstrap Prompting Optimization (Section 4.4)
+
+[figure(s) omitted; refer to PDF]
+In the first stage, we engage the LLM in iterative querying to enable it to generate relevant veracity contextual information autonomously. We begin by creating multiple linguistic variations of the original article and interact with the LLM to collect its feedback. This feedback, combined with a consistency alignment mechanism, forms the veracity-oriented context-aware constraints.
+For example, consider the article A stating: “ A recent study claims that consuming lemon juice cures cancer without the need for chemotherapy .” We design and obtain responses to linguistic variations of the query as folows: • “ # Based on A , can we conclude that the claim is real/fake? ”
+
+Note: In constructing the CAPE–FND prompts, the use of “#” symbols in prompts (e.g., “# relevant background information”) helps improve the structure of the LLM’s responses. For simplicity in Figure 2, the actual prompts used might differ slightly from those shown. Detailed explanations are provided in the following sections.
+Subsequently, we provide background information to establish veracity-oriented context-aware backgrounds . Finally, we guide the LLM to produce relevant veracity-oriented context-aware analogies , enhancing its understanding of misinformation patterns.
+In the second stage, the acquired veracity-oriented context-aware information is utilized to assist the LLM in making accurate veracity predictions. This is achieved by employing the ICL prompting technique, which can be referred back to Figure 2. With this enriched context, the LLM is better equipped to make nuanced judgments regarding the truthfulness of the news article.
+After integrating the previously generated prompts, in the third also final stage, we introduced a strategy called self-adaptive bootstrap prompting optimization, aimed at dynamically adjusting and refining the structure of prompts through iterative feedback. It continually optimizes the prompt selection to enhance the generated prompts and execution efficiency of the LLMs.
+Successively, we will delve into the specific prompting designs for each component of the CAPE–FND framework.
+4.2. Veracity-Oriented Context-Aware Knowledge Acquisition
+This section details the implementation of the first stage of CAPE–FND, known as veracity-oriented context-aware knowledge acquisition . We outline the inputs and outputs of each module in this stage and describe the strategies used for LLM prompting.
+4.2.1. Veracity-Oriented Context-Aware Constraints Infusion Strategy
+Recent advancements in prompt engineering for LLMs have highlighted the models’ emergent ability to perform multistep reasoning tasks using techniques such as CoT. While CoT encourages step-by-step reasoning akin to human thought processes, the reasoning chain remains a static black box, and its rationality is often uncontrollable due to reliance on internally generated ideas. This can result in issues such as factual hallucinations and the propagation of errors.
+In FND tasks, LLMs may be influenced by various factors that lead to misclassifications, especially when misinformation is subtle or context-dependent. To address this, we introduce the context-aware constraints . Specifically, we design multiple linguistic variations of the original articles or claims that require verification, along with corresponding semantic mapping rules. By leveraging linguistic features, we aim to mitigate error propagation and hallucination during the FND process.
+For instance, given the article A stating: “ A recent study claims that consuming lemon juice cures cancer without the need for chemotherapy ,” we create and pose the following queries to the LLM: • “ Based on A , can we conclude that the claim is real? ”
+• “ Based on A , can we conclude that the claim is fake? ”
+
+We interact with the LLM using these prompts to gather its feedback on each variation. The responses indicate whether the veracity hypothesis for the news article is supported or not. These responses serve as veracity-oriented context-aware constraints for the next stage.
+To ensure the reliability of the LLM’s responses, we employ a consistency alignment mechanism . This mechanism evaluates the intermediate responses for logical consistency. For example, • If the LLM responds No/Yes to the queries, it suggests the claim is likely fake.
+• If the responses are Yes/No , it indicates the claim might be real.
+
+This approach ensures that the responses align logically with the content of the original article. The process is guided by CoT prompting, which directs the LLM through a systematic reasoning pathway. In addition, we utilize symbolic representations, such as first-order logic, to enhance the consistency and reliability of the reasoning process by reducing ambiguity.
+4.2.2. Veracity-Oriented Context-Aware Backgrounds Infusion Strategy
+ICL has shown promise in downstream natural language understanding (NLU) tasks by providing input-label pairs within prompts to offer valuable references without requiring gradient updates. However, ICL has limitations which are as follows: • The LLM’s performance does not heavily depend on the accuracy of input-label mappings in the demonstrations, leading to marginal performance drops when labels are randomized.
+• The performance is significantly influenced by the distribution of the input text; using out-of-distribution (OOD) text in demonstrations causes notable declines in performance.
+
+In the context of FND, these limitations are particularly challenging due to the subtlety of misinformation and the dependence on context. Therefore, we introduce the veracity-oriented context-aware backgrounds infusion strategy to overcome these issues.
+This strategy involves prompting the LLM to generate brief background information about key topics or entities within the article, termed veracity-oriented context-aware backgrounds . By incorporating external knowledge, we enhance the LLM’s ability to assess the veracity of the content more effectively.
+For example, with the article A , we prompt the LLM as follows:   #
+  # Given the article ${A}:
+  “ A recent study claims that consuming lemon juice cures cancer without the need for chemotherapy. ”
+  # Please provide brief background information on the key topics, focusing on factual details that can aid in verifying the claim.
+  # Response format:
+  …
+
+The LLM might respond as follows:   #
+  % “ Cancer treatment: Chemotherapy is a widely accepted and effective treatment for cancer, supported by extensive clinical research. ”
+  % “ Lemon juice: While lemons contain vitamin C and antioxidants, there is no scientific evidence that lemon juice can cure cancer. ”
+
+These background snippets help the LLM understand the factual landscape surrounding the claim, providing a more informed basis for assessing its truthfulness. The generated background information is integrated into the LLM’s context using ICL, enhancing its capability to perform nuanced FND.
+4.2.3. Veracity-Oriented Context-Aware Analogies Infusion Strategy
+Human reasoning often involves drawing parallels from past experiences to tackle new challenges, a process known as analogical reasoning. We aim to replicate this mechanism in LLMs through the veracity-oriented context-aware analogies infusion strategy . By prompting the LLM to generate relevant analogies, we enrich its understanding of misinformation patterns and improve its problem-solving abilities in FND.
+Given the article A , we prompt the LLM as follows:   #
+  # Given the article ${A}:
+  “ A recent study claims that consuming lemon juice cures cancer without the need for chemotherapy. ”
+  # Please recall similar cases and provide analogies where unverified natural remedies were claimed to cure serious diseases.
+  # Describe the situations and the outcomes.
+  # Response format:
+
+The LLM might respond as follows:   #
+  % “ An article suggested that drinking aloe vera juice can eliminate diabetes without medication. ”
+  %% “ Assessment: Misleading. ”
+  % “ A report claimed that turmeric can completely replace antibiotics for bacterial infections. ”
+  %% “ Assessment: False. ”
+
+By integrating these analogies into the context, the LLM can draw parallels and apply learned knowledge to the new situation, enhancing its ability to make informed judgments about the veracity of the article.
+4.3. Veracity-Oriented Context-Aware Knowledge Infusion and FND
+In the second stage, the context-aware information acquired earlier is utilized to assist the LLM in predicting the veracity of the news article.
+To ensure consistent reasoning, we apply the symbolic CoT (SymbCoT) module, which uses first-order logic to process the context-aware constraints and convert them into coherent veracity judgments. For example, • True/real veracity logical expression: V true ∧ ¬ V misleading
+• Misleading/fake veracity logical expression: ¬ V true ∧ V misleading
+
+These logical expressions help in verifying the truth values of the constraints and in deriving a unified veracity prediction, ensuring consistency and accuracy.
+We combine these veracity-oriented constraints, background information, and analogies to form a comprehensive prompt. For instance, for the following news article A  = “A recent study claims that consuming lemon juice cures cancer without the need for chemotherapy.” we construct the following:   # ${ARTICLE}:
+  “ A recent study claims that consuming lemon juice cures cancer without the need for chemotherapy. ”
+  # ${Constraints}:
+- Based on the article, can we conclude that the claim is real? No
+- Can we conclude that the claim is fake? Yes
+  # Based on this:
+  V_true := false; V_false := true.
+  # Logical Evaluation:
+  Real: V_true & & !V_false := false;
+  Fake: !V_true & & V_false := true;
+  Therefore, the claim is likely false.
+  # ${Backgrounds}:
+- “ Cancer treatment ”: Chemotherapy is a standard and effective treatment for cancer, with substantial scientific backing.
+- “ Lemon juice ”: There is no credible scientific evidence supporting lemon juice as a cure for cancer.
+  # ${Analogies}:
+- Similar claim: “ Herbal teas can completely replace antiviral medications. ”
+  # ${Query}:
+  Given the above contexts − ${Constraints}, ${Backgrounds}, and ${Analogies} − determine the veracity of the claim in ${ARTICLE}. Is it True/Real, or Misleading/Fake?
+
+By providing this enriched context, we enhance the LLM’s ability to make accurate and reliable veracity assessments, leading to more effective FND.
+4.4. Self-Adaptive Bootstrap Prompting Optimization
+To further improve the performance and robustness of the CAPE–FND framework, in the final stage, we employ a method called self-adaptive bootstrap prompting optimization . This technique systematically refines the prompts and demonstrations provided to the LLM, ensuring that it generates more accurate veracity predictions.
+As shown in Algorithm 1, the self-adaptive bootstrap prompting optimization operates through the following steps: • First, we initialize the necessary configuration parameters, including the number of bootstrapped demonstrations and candidate programs to be generated and evaluated.
+• In each trial, the training set is shuffled to create a diverse set of examples, and a temporary program is generated as a copy of the original. For each stage, a subset of labeled examples is extracted from the shuffled training set, and the current model is used to predict their outputs. These outputs are validated against performance metrics, and the top predictions are selected.
+• The bootstrapped demonstrations are then combined with labeled examples to form the few-shot examples for the current stage, and the corresponding prompts and examples are updated.
+• Finally, each candidate program is evaluated based on the specified performance metric, scores are recorded, and the highest-scoring program is selected as the optimized program for future tasks or deployment.
+
+This optimization strategy ensures that the LLM receives the most effective and contextually relevant prompts, which leads to enhanced FND performance within our CAPE–FND framework.
+To standardize and optimize the design of prompts and the information processing workflow, we utilize Stanford University’s open-source toolkit called DSPy. DSPy provides a programming model that abstracts LLM pipelines as text transformation graphs. A key feature of DSPy is its parameterization capability, allowing it to learn how to apply a combination of prompting, fine-tuning, data augmentation, and reasoning techniques by creating and collecting demonstrations.
+By integrating context-aware constraints, background knowledge, analogical reasoning, and self-adaptive optimization, our CAPE–FND framework significantly enhances LLMs’ ability to detect fake news. This approach aligns machine reasoning more closely with human evaluative processes, leading to more reliable and accurate assessments of news veracity.
+Algorithm 1: Self-adaptive bootstrap prompting optimization.
+  Input: DSPy program P , training set T , validation set
+  V , performance metric M , number of trials N
+  Output: Optimized program P ∗
+1.  Initialize configuration parameters: maximum bootstrapped prompts/demonstrations, maximum labeled prompts/
+2.  demonstrations, number of candidate programs, etc
+3.  Create an empty list to store candidate programs and their scores
+4.   for i = 1 to N do
+5.   Shuffle the training set T
+6.   Initialize a temporary program P i as a copy of P
+7.    for each stage in P i do
+8.    1. Extract a subset of labeled examples from the shuffled training set
+9.    2. Generate bootstrapped prompts/demonstrations by:
+10.     (1) Using the current model to predict outputs for the extracted examples
+11.     (2) Validating the predicted outputs against the performance metric M
+12.     (3) Selecting the top predictions that meet the metric criteria
+13.    3. Combine the bootstrapped demonstrations with labeled demonstrations to form the few-shot examples
+14.  for this stage
+15.    4. Update the prompts and examples for the current stage with the newly formed few-shot examples
+16.    end for
+17.   Evaluate P i on the validation set V using metric M
+18.   Record the score of P i and add it to the list of candidate programs
+19.   end for
+20.  Select the program P ∗ with the highest score from the list of candidate programs. Return optimized program P ∗
+
+5. Experiments
+To demonstrate the significance of our proposed CAPE–FND framework compared to previous state-of-the-art (SOTA) FND methods in zero-shot and data-scarce scenarios, we provide in detail the experimental procedures, results, and corresponding analysis.
+5.1. Experimental Settings
+This section introduces several experimental preliminaries, including the adopted datasets, SOTA baselines, and hyperparameters.
+5.1.1. Datasets
+For our experimental evaluation, we use three widely used real-world benchmark datasets, each meticulously curated for FND, making them ideal for assessing the effectiveness of our model. The following is an overview of these benchmarks:
+FakeNewsNet [33]: Provided by Shu et al. ¶ , this dataset includes two subsets, PolitiFact and GossipCop , which are widely used in FND research. PolitiFact focuses on political news articles, while GossipCop targets entertainment news [53].
+FANG : Introduced by Wang et al. # , this dataset consists of news articles sourced from reputable fact-checking websites, accompanied by corresponding social user engagement data from Twitter, including repost user IDs.
+These datasets are among the most frequently cited benchmarks for FND, capturing news articles and their associated social media engagements. The datasets include news articles from trusted fact-checking websites.
+To ensure consistency and reproducibility of results, we followed the same data partitioning method and few-shot setting (with K-shot, where K ranges from 16 to 128) as in previous studies. Table 2 summarizes the statistical details of these datasets. For each dataset, the zero-shot column indicates that no training examples are provided, whereas the few-shot column shows the number of training examples used in few-shot learning scenarios (where, for example, K  = 16, 32, 64, or 128).
+Table 2
+Adopted benchmark dataset statistics for experimental evaluation.
+Dataset Train Test
+Zero-shot Few-shot Real Samples Fake Samples Total
+FakeNewsNet PolitiFact 0 16 32 64 128 171 172 343
+GossipCop 0 16 32 64 128 801 796 1597
+
+FANG 0 16 32 64 128 262 267 529
+5.1.2. Baselines
+To assess the performance of our CAPE–FND framework in zero-/few-shot FND, we compare it against a range of existing methods tailored for this task. These methods are categorized into two groups: “train-from-scratch” approaches, which employ specialized neural architectures built specifically for FND, and “PLMs–based” approaches, which leverage PLMs to mitigate the scarcity of labeled data through rich contextual knowledge.
+The “Train-from-Scratch” baselines encompass the following: 1. dEFEND variant [52]: An adaptation of the hierarchical attention model originally designed for FND, modified to suit our evaluation.
+2. SentGCN [51]: A graph-based methodology that utilizes GCNs to capture relational information in data.
+3. SAFE variant [18]: An updated version of the SAFE model, excluding its visual component and incorporating a TextCNN module for processing the textual content of news articles.
+4. SentGAT [51]: Similar to SentGCN but employs GATs to focus on important features within the graph structure.
+5. GCNFN [30]: This method uses deep geometric learning to model the dissemination patterns of news, integrating textual node embedding features for enhanced representation.
+6. GraphSAGE [53]: Constructs a heterogeneous social graph that includes news articles, sources, and social media users to detect fake news through relational analysis.
+
+The mainstream “PLM–based” baseline methods include the following: 1. BERT–FT [59]: Utilizes BERT with a task-specific MLP to predict the veracity of news articles.
+2. RoBERTa–FT [29, 76]: Similar to BERT – FT but employs RoBERTa as the underlying PLM.
+3. PET [30]: Provides task descriptions to PLMs for supervised prompt-tuning using cloze questions and verbalizers.
+4. KPT [28]: Expands the label word space by incorporating class-related tokens of varying granularities and perspectives to improve classification performance.
+
+The leading “utilizing LLMs prompting” SOTA approaches contain the following: 1. Direct ask on GPT-3.5-turbo [5, 11]: Employs GPT-3.5-turbo directly for FND tasks without any additional prompting techniques.
+2. CoT on GPT-3.5-turbo [8, 9, 31, 68]: Applies CoT prompting to guide the language model through systematic reasoning steps, enhancing accuracy and explainability.
+3. ICL on GPT-3.5-turbo [10, 11, 67]: Provides example input-label pairs to GPT-3.5-turbo during inference, offering valuable references for the model to perform similar tasks
+4. Direct prediction using GPT-4.0 [4]: Leverages the advanced capabilities of GPT-4.0 for direct predictions in FND, benefiting from its improved contextual understanding and ability to handle complex queries more accurately.
+
+By benchmarking our CAPE–FND framework against these diverse methods, we aim to demonstrate its effectiveness and robustness in addressing the challenges associated with FND.
+5.1.3. Evaluation Metric
+In this study, accuracy is selected as the primary evaluation metric, ensuring consistency with prior work in FND. Accuracy is often regarded as a standard performance indicator, particularly for classification tasks, as it effectively measures the model’s ability to correctly predict labels. It is calculated by dividing the number of correct predictions ( CountT ) by the total number of predictions ( CountN ), as shown in the following equation: (3) accuracy = CountT CountN .
+A prediction is considered accurate if the model’s assigned label corresponds with the actual label. Higher accuracy values reflect a more effective model, particularly for tasks such as label classification where the objective is to maximize the proportion of correct predictions relative to the overall sample size. This metric has been widely adopted for benchmarking model performance in detecting fake news.
+5.1.4. Experimental Settings
+To ensure the transparency and reproducibility of our experiments, we utilized the Google Colab platform || , which provides a cloud-based environment for running code and sharing results.
+The experimental configuration for our setup is as follows: Operating system: Ubuntu 22.04.3 LTS; CPU: Intel(R) Xeon(R) CPU @ 2.00 GHz; GPU: Tesla T4 with 16 GB memory; and CUDA Version: 12.2. This hardware setup ensures that our approach, focused on veracity-oriented prompt optimization, is executed efficiently. Most stages of the LLM–based prompting process, except for the self-adaptive bootstrap prompting optimization phase that requires CPU involvement for the bootstrap optimization, are categorized as direct API calls to the LLM. Therefore, the experimental hardware requirements are not stringent.
+Regarding the execution details of self-adaptive bootstrap prompting optimization, the maximum number of bootstrapped demonstrations is set to 4, while the maximum number of labeled demonstrations is set to 16, ensuring efficient exploration of different prompt combinations. The experiments are conducted with 1 training and evaluation round, and the number of candidate programs is set to 16. We allowed a maximum of 10 errors during the optimization process. No specific score threshold or metric was set for early stopping. For the selection of few-shot examples, to maintain the experimental fairness and the balance of sample labels, we fixed the first K training samples from each class label for the K -shot settings K ∈ 16 , 32 , 64 , 128 . It is important to note that the experimental results are influenced by the current performance and version of the officially released LLMs, as well as the inherent stochasticity of LLMs’ responses. However, this variation is expected to fall within acceptable limits. While slight variations in prompt definitions may occur due to experimental differences, the overall prompting structure remains consistent.
+For detailed construction of prompts, please refer to the Colab Jupyter Notebooks available in the released code. All code implementations and experimental records, including the LLM queries and comparison between predicted and gold labels, are available in our public GitHub repository ∗∗ .
+5.2. Main Results
+We present and analyze the performance results of our CAPE–FND framework compared to various SOTA baselines on the benchmark datasets in both zero-shot and few-shot settings. This comparison allows us to highlight the strengths and weaknesses of CAPE–FND, providing a comprehensive understanding of its characteristics.
+5.2.1. Zero-Shot Performance
+Table 3 presents a comparative summary of the performance of our CAPE–FND framework against baseline methods under the zero-shot setting. In this Table 3, all models under the train-from-scratch and PLM–based fine-tuning paradigms are trained on data-scarce scenarios under 16-shot learning, aligning with the same data distribution. Therefore, their predictive performance is superior but not directly comparable to LLM prompting in a zero-shot setting. Consequently, the following analysis focuses on the comparisons and conclusions drawn from different models based on the LLM prompting paradigm.
+Table 3
+Zero-shot performance comparison between CAPE – FND and baseline methods.
+Methods/datasets PolitiFact GossipCop FANG
+Acc (%) Correct/total Acc (%) Correct/total Acc (%) Correct/total
+Train-from-scratch approaches (few-Shot K  = 16)
+dEFEND variant 51.8 177/343 50.4 805/1597 50.2 266/529
+SentGCN 56.3 193/343 49.6 792/1597 51.4 271/529
+SentGAT 56.1 192/343 49.5 791/1597 51.0 270/529
+SAFE variant 57.7 198/343 51.4 820/1597 51.9 275/529
+GraphSAGE 57.9 199/343 51.7 826/1597 53.3 282/529
+GCNFN 55.4 190/343 52.2 833/1597 52.4 277/529
+
+PLM – based approaches (few-shot K  = 16)
+BERT – FT 61.3 210/343 52.5 838/1597 53.3 282/529
+RoBERTa – FT 54.8 188/343 52.5 840/1597 51.5 272/529
+PET 64.2 220/343 53.7 858/1597 55.8 295/529
+KPT 68.3 234/343 54.0 861/1597 56.9 301/529
+
+LLM – based prompting (zero-shot reasoning, K  = 0)
+Direct ask on GPT-3.5-turbo 70.2 241/343 54.7 874/1597 58.1 307/529
+Chain-of-thought on GPT-3.5-turbo 72.5 249/343 56.6 905/1597 59.6 316/529
+In-context learning on GPT-3.5-turbo 73.8 253/343 57.9 925/1597 60.8 322/529
+Direct prediction using GPT-4.0 75.0 257/343 59.5 951/1597 62.1 328/529
+
+Our model (zero-shot reasoning, K  = 0)
+CAPE – FND (GPT-3.5-turbo) 78.1 268/343 63.0 1007/1597 66.5 352/529
+Note: The highest performance is highlighted in bold.
+From the zero-shot results in Table 3, our proposed CAPE–FND framework demonstrates a significant advantage over other baselines on all datasets. CAPE–FND consistently achieves the highest accuracy, surpassing even the advanced GPT-4.0 model.
+On the PolitiFact dataset, CAPE–FND achieves an accuracy of 78.1% , which is a notable improvement over GPT-4.0’s 75.0%. This indicates a 3.1% increase, highlighting the effectiveness of our context-aware prompting in political news, which often contains complex and subtle misinformation.
+For the GossipCop dataset, CAPE–FND attains an accuracy of 63.0% , outperforming GPT-4.0’s 59.5% by 3.5%. Given that entertainment news can be rife with sensationalism and rumors, CAPE–FND’s incorporation of background knowledge and analogies aids in discerning the veracity of such content.
+On the FANG dataset, CAPE–FND achieves an accuracy of 66.5% , exceeding GPT-4.0 by 4.4%. The FANG dataset includes social engagement data, and CAPE–FND’s ability to utilize context-aware knowledge enhances its performance in understanding dissemination patterns.
+5.2.1.1. In-Depth Analysis
+The consistent outperformance of CAPE–FND over GPT-4.0, despite GPT-4.0’s larger parameter size and superior language understanding capabilities, underscores the importance of carefully designed prompts and the integration of veracity-oriented context-aware knowledge. While GPT-4.0 relies on its extensive pretrained knowledge, CAPE–FND leverages optimized prompting strategies to guide the model toward more accurate veracity judgments.
+The superior performance of CAPE–FND can be attributed to several key factors. First, the incorporation of veracity-oriented context-aware constraints effectively mitigates the impact of LLM hallucinations and error propagation, ensuring that the model’s reasoning process is logically coherent and aligned with factual content. Second, the infusion of background knowledge about key topics or entities enriches the model’s understanding of the context, enabling more informed decision-making. Lastly, prompting the LLM to draw analogies with similar known cases enhances its ability to identify patterns of misinformation, improving detection accuracy.
+5.2.2. Few-Shot Performance
+To evaluate the performance variation of our CAPE–FND framework under limited labeled data scenarios, we conducted few-shot learning experiments. We compared the actual performance of CAPE–FND against other baseline models, dEFEND variant, SentGCN, SentGAT, SAFE variant, GraphSAGE, GCNFN, BERT – FT, RoBERTa – FT, PET, and KPT, across the datasets under few-shot settings of K = 16 ,   32 ,   64 , and 128.
+5.2.2.1. Analysis
+The results in Table 4 indicate that CAPE–FND consistently outperforms all other baselines across all datasets and K -shot settings. Notably, CAPE–FND shows significant performance gains even with a small number of labeled examples.
+Table 4
+Few-shot performance comparison under different few-shot settings of CAPE – FND with other baselines.
+Methods/datasets K -shot PolitiFact GossipCop FANG
+Acc (%) Correct/total Acc (%) Correct/total Acc (%) Correct/total
+Train-from-scratch approaches
+dEFEND variant 16 51.8 178/343 50.4 805/1597 50.2 266/529
+32 54.6 187/343 50.4 804/1597 50.9 269/529
+64 61.1 209/343 51.5 822/1597 50.9 269/529
+128 66.3 227/343 52.7 841/1597 54.6 289/529
+
+SentGCN 16 56.3 193/343 49.6 792/1597 51.4 271/529
+32 52.0 178/343 49.3 787/1597 50.6 268/529
+64 56.8 195/343 50.0 799/1597 52.6 279/529
+128 56.2 193/343 53.9 860/1597 54.5 288/529
+
+SentGAT 16 56.1 192/343 49.5 791/1597 51.0 270/529
+32 53.0 182/343 50.1 800/1597 51.6 273/529
+64 55.6 191/343 50.5 807/1597 54.1 286/529
+128 58.4 200/343 54.7 873/1597 56.3 298/529
+
+PLM – based approaches
+BERT – FT 16 61.3 210/343 52.5 838/1597 53.3 282/529
+32 67.5 231/343 52.7 842/1597 54.7 289/529
+64 73.5 252/343 55.0 878/1597 57.0 302/529
+128 77.4 266/343 59.3 947/1597 58.4 309/529
+
+RoBERTa – FT 16 54.8 188/343 52.5 839/1597 51.5 272/529
+32 61.2 210/343 54.2 865/1597 54.6 289/529
+64 79.0 271/343 54.1 864/1597 56.9 301/529
+128 81.4 279/343 61.4 979/1597 60.9 322/529
+
+PET 16 64.2 220/343 53.7 858/1597 55.8 295/529
+32 68.1 233/343 55.1 880/1597 56.5 299/529
+64 79.4 272/343 59.8 955/1597 59.1 313/529
+128 80.5 276/343 63.0 1006/1597 59.8 316/529
+
+KPT 16 68.3 234/343 54.0 861/1597 56.9 301/529
+32 70.2 241/343 54.7 874/1597 55.8 295/529
+64 80.4 276/343 60.1 960/1597 60.4 319/529
+128 83.2 285/343 62.2 993/1597 61.4 325/529
+
+LLM – based prompting approaches
+Direct ask on GPT-3.5-turbo 16 70.0 240/343 55.0 878/1597 59.9 317/529
+32 72.0 247/343 56.0 894/1597 61.1 323/529
+
+Chain-of-thought on GPT-3.5-turbo 16 72.0 247/343 56.9 910/1597 61.1 323/529
+32 74.1 254/343 57.9 926/1597 62.0 328/529
+
+In-context learning on GPT-3.5-turbo 16 73.2 251/343 57.9 926/1597 62.0 328/529
+32 74.9 257/343 58.8 942/1597 63.0 333/529
+
+Direct prediction using GPT-4.0 16 74.9 257/343 59.7 958/1597 64.0 338/529
+32 75.8 260/343 60.7 974/1597 64.9 343/529
+
+Our model (few-shot reasoning)
+CAPE – FND (GPT-3.5-turbo) 16 79.2 272/343 64.4 1028/1597 68.0 359/529
+32 81.2 278/343 66.4 1060/1597 70.0 370/529
+Note: The highest performance in each setting is highlighted in bold.
+On the PolitiFact dataset, with only 16 examples, CAPE–FND achieves an accuracy of 79.1% (272/343 correct predictions), surpassing the best PLM–based approach (KPT) by approximately 10.9%. As the number of examples increases to 32, CAPE–FND reaches 81.2% accuracy (278/343 correct predictions), maintaining a consistent lead over the baselines. This consistent improvement highlights the model’s ability to effectively utilize additional data.
+For the GossipCop dataset, CAPE–FND improves from 64.4% accuracy at 16 shots (1028/1597 correct predictions) to 66.4% at 128 shots (1060/1597 correct predictions), demonstrating its ability to leverage additional data effectively. The consistent margin over the baselines highlights the robustness of our approach in handling entertainment news, which often contains ambiguous or sensational content.
+On the FANG dataset, CAPE–FND achieves 68.0% accuracy at 16 shots (359/529 correct predictions), outperforming the best baseline by over 11%. The performance further improves to 70.0% at 32 shots (370/529 correct predictions), indicating CAPE–FND’s effectiveness in leveraging social engagement data and understanding dissemination patterns.
+5.2.2.2. Comparison With Mainstream Baselines
+The train-from-scratch approaches generally show modest improvements as the number of training examples increases but lag behind PLM–based methods and CAPE–FND. The PLM–based approaches, while benefiting from pretrained contextual knowledge, do not incorporate the specialized veracity-oriented context that CAPE–FND provides.
+Our CAPE–FND framework, by integrating veracity-oriented context-aware knowledge, including constraints, background information, and analogies, enhances the model’s reasoning process, enabling it to make more accurate veracity judgments even with limited data. The self-adaptive bootstrap prompting optimization further refines the prompts and demonstrations provided to the LLM, ensuring that it generates more accurate predictions.
+5.2.2.3. Comparison With LLM–Based Prompting Baselines
+While LLM–based prompting approaches such as direct ask, CoT, and ICL on GPT-3.5-turbo show improvements over traditional methods, they still lag behind CAPE–FND. The integration of veracity-oriented context-aware knowledge in CAPE–FND significantly enhances the model’s reasoning process, leading to higher accuracy even with fewer training examples.
+CAPE–FND’s superior performance over GPT-4.0, particularly in few-shot settings, underscores the importance of optimized prompt design and context infusion. Despite GPT-4.0’s advanced capabilities, our framework demonstrates that a smaller model such as GPT-3.5-turbo can achieve better results when guided effectively.
+5.2.2.4. In-Depth Analysis
+To further understand the performance characteristics of CAPE–FND, we conducted an error analysis on the PolitiFact dataset under the 16-shot setting. We observed that CAPE–FND effectively identifies fake news articles that contain explicit misinformation or are inconsistent with known background information. The model’s use of analogies helps in detecting subtle patterns of misinformation by relating them to known false claims.
+However, CAPE–FND occasionally misclassifies articles that require deep domain-specific knowledge not covered in the provided background information. This limitation suggests that incorporating external knowledge bases or domain-specific experts could further enhance the model’s performance. In addition, the model’s performance could be affected by the inherent biases in the LLM’s pretraining data, which may not fully represent the diversity of real-world misinformation.
+5.2.3. Our CAPE–FND P.K. With Advanced GPT-4.0
+In this section, we present a detailed comparative analysis of the performance and advantages of the CAPE–FND framework in contrast to the SOTA GPT-4.0, particularly in the domain of FND. The comparative results, depicted in Figure 3, are derived from experiments conducted on the PolitiFact, GossipCop, and FANG datasets.
+[figure(s) omitted; refer to PDF]
+From the heatmaps, it is evident that the CAPE–FND framework consistently outperforms GPT-4.0 across multiple metrics, especially in few-shot (16-shot and 32-shot) scenarios. CAPE–FND demonstrates a superior ability to minimize misclassification rates, particularly in detecting subtle and nuanced cases of fake news.
+In the case of the PolitiFact dataset, CAPE–FND (16-shot) achieves a higher true positive rate, correctly classifying 136 instances of real news, compared to GPT-4.0’s 140. Furthermore, CAPE–FND displays a more balanced distribution between false negatives and false positives, leading to fewer misclassifications of fake news. This suggests that CAPE–FND is more accurate in identifying both real and fake news. The 32-shot results further illustrate CAPE–FND’s improved precision, successfully identifying a greater proportion of real and fake news. Although GPT-4.0 is a powerful model, it tends to misclassify a higher number of fake news articles as real, as reflected by the increased false negative and false positive rates.
+For the GossipCop dataset, CAPE–FND showcases a clear advantage in few-shot scenarios, demonstrating the ability to handle larger datasets with increased accuracy. In the 16-shot setup, CAPE–FND correctly classifies 698 instances of real news, significantly outperforming GPT-4.0, which identifies only 485. The heatmaps reveal that CAPE–FND excels in filtering out fake news in entertainment content, a domain often filled with sensationalized stories, thanks to the incorporation of veracity-aware constraints and background knowledge. Conversely, GPT-4.0, while performing reasonably well, exhibits a higher propensity to misclassify fake news as real, as evidenced by the larger number of false positives.
+On the FANG dataset, CAPE–FND’s capabilities are further highlighted, particularly in dealing with news disseminated via social media, where contextual patterns and dissemination behavior play a crucial role. In the 32-shot setup, CAPE–FND accurately identifies 294 instances of fake news, markedly outperforming GPT-4.0, which only correctly classifies 236. GPT-4.0’s struggles on the FANG dataset, as indicated by the higher rates of false negatives and false positives, suggest a gap in its ability to handle socially influenced misinformation with the same level of precision as CAPE–FND.
+The key factors contributing to CAPE–FND’s superiority are as follows: 1. Veracity-oriented context awareness: CAPE–FND’s integration of veracity-aware constraints and background knowledge greatly enhances its ability to differentiate between real and fake news. These constraints help reduce ambiguity in predictions and align the model’s outputs with factual content, a dimension that GPT-4.0’s direct predictions tend to underemphasize.
+2. Adaptive prompting optimization: CAPE–FND employs a self-adaptive bootstrap prompting optimization technique that allows it to iteratively refine its predictions. This dynamic adjustment ensures that CAPE–FND not only makes accurate predictions but also improves by learning from its previous mistakes, an advantage that GPT-4.0 does not fully capitalize on.
+3. Robustness across varied datasets: CAPE–FND exhibits superior generalization across all datasets, effectively adapting to different forms of misinformation, whether politically motivated (PolitiFact), entertainment-driven (GossipCop), or socially influenced (FANG). This versatility is a result of CAPE–FND’s ability to incorporate analogical reasoning and background knowledge infusion, enabling it to handle a broader range of misinformation patterns more effectively than GPT-4.0.
+
+In conclusion, the comparative analysis between CAPE–FND and GPT-4.0 underscores the importance of context-aware strategies and optimized prompting for the task of FND. While GPT-4.0 demonstrates its competence in handling complex queries, CAPE–FND’s meticulous use of background knowledge, analogical reasoning, and adaptive prompting provides it with a clear edge in both accuracy and robustness. The results demonstrate that CAPE–FND surpasses even the advanced GPT-4.0 model, particularly in few-shot learning environments, making it a highly effective and practical tool for combating misinformation.
+6. Case Study
+As depicted in Table 5, we selected several representative cases from these public datasets, PolitiFact, Gossip, and FANG, applying CAPE–FND for further analysis. This Table 5 compares the performance of our CAPE–FND, direct prediction using GPT-4.0, ICL (GPT-3.5-turbo), and CoT (GPT-3.5-turbo) on the six provided examples across PolitiFact, Gossip, and FANG datasets. It provides a valuable insight into how these models fare in the challenging FND task, with particular emphasis on their ability to differentiate between real and fake news.
+Table 5
+Case study: The FND task performances on specific typical cases of our CAPE – FND framework, GPT-4.0, GPT-3.5-turbo (in-context learning and chain-of-thought driven) on PolitiFact, GossipCop, and FANG datasets.
+Claim/news Veracity gold label CAPE-FND (Ours) Direct prediction (GPT-4.0) In-context learning (GPT-3.5-turbo) Chain-of-thought (GPT-3.5-turbo)
+PolitiFact: This material may not be published, broadcast, rewritten, or redistributed. © 2021 FOX News Network, LLC. All rights reserved Fake ✓ ✓ ✓ ✓
+PolitiFact: The Republican National Committee announced a new web video today on President Obama’s healthcare taxes Fake ✓ ✓ × ×
+Gossip: No, Donald Trump was not photographed wearing “adult diapers,” contrary to a speculative report claiming otherwise Real ✓ × × ×
+Gossip: Adam Rippon has dropped off his skates and picked up some new dance moves in the opening episode of Season 26 of Dancing with the Stars Fake ✓ ✓ × ×
+FANG: Twelve people were killed in a shooting Wednesday after masked gunmen shouted “Allahu Akbar!” Fake ✓ ✓ × ✓
+FANG: We have just received information that one of the women accusing Alabama senatorial candidate Roy Moore of sexual misconduct Real ✓ × ✓ ×
+6.1. Predicted Case Overview
+First of all, CAPE–FND demonstrates a remarkable consistency in predicting all cases accurately across the three datasets. This robustness highlights this framework’s superior adaptability and ability to generalize across various types of misinformation, whether political (PolitiFact), entertainment-related (Gossip), or socially sensitive content (FANG). The successful implementation of veracity-aware constraints and background knowledge infusion plays a critical role in this performance, allowing CAPE–FND to effectively contextualize information and adapt its predictions accordingly.
+6.2. Comparing With Advanced GPT-4.0
+In contrast, GPT-4.0, while showing impressive overall performance, falls short of CAPE–FND’s consistent accuracy. Out of the six examples, GPT-4.0 correctly classifies four cases, primarily excelling in identifying fake news. Although GPT-4.0’s direct prediction capability is effective for FND, its struggle with real cases reflects a tendency to overfocus on sensational or exaggerated claims, potentially misclassifying legitimate reports.
+6.3. Comparing With Prompting CoT and ICL
+When examining the performance of GPT-3.5-turbo via ICL, the limitations of this approach become more apparent. The model correctly identifies only two out of the six examples, further indicating that it lacks the depth of reasoning required for complex fact-verification tasks. ICL generally relies on example-driven prompts to infer the correct outcome but without a robust mechanism for integrating context-aware constraints or background knowledge, it struggles to achieve high accuracy. Similarly, CoT reasoning in GPT-3.5-turbo shows limited success, correctly identifying two cases, mirroring the performance of ICL. While LLM–based CoT aims to emulate human-like reasoning by breaking down the problem-solving process into smaller steps, it still falls short in handling the complexity of distinguishing between real and fake news. This is particularly true for socially or politically charged content, where misinformation often requires deeper contextual understanding, fact-checking, and reasoning across multiple layers of information.
+In summary, the overall results of this case study clearly underline the superior performance of CAPE–FND in the domain of FND. CAPE–FND’s integration of veracity-aware constraints and adaptive prompting allows it to navigate the complex terrain of misinformation with a higher degree of accuracy than both GPT-4.0 and GPT-3.5-turbo. CAPE–FND stands out as a highly effective solution for detecting both real and fake news, outperforming not only the most advanced GPT models but also demonstrating the necessity of more context-sensitive and knowledge-driven approaches in combating misinformation.
+7. Limitation and Discussion
+While our proposed CAPE–FND framework demonstrates significant improvements in FND tasks, there are limitations that need to be addressed in future research. These limitations are categorized as follows.
+7.1. Dependency on Context-Aware Knowledge Quality
+The effectiveness of CAPE–FND relies heavily on the quality and comprehensiveness of the context-aware information it utilizes, such as veracity-related constraints, background knowledge, and analogies. These context-aware data are integral to enhancing the model’s ability to differentiate between real and fake news. If this information is incomplete, irrelevant, or inaccurate, it can significantly degrade CAPE–FND’s performance, leading to higher rates of misclassification. Inaccurate background knowledge, for example, might result in the model forming incorrect associations, which could cause it to erroneously classify legitimate news as fake or vice versa.
+This challenge is particularly acute in real-time FND tasks, where the quality and availability of contextual information may vary. In dynamic environments, it can be difficult to quickly gather and validate the necessary context-aware data, such as the credibility of news sources, recent developments related to the topic, or relevant analogical examples. The absence of comprehensive context can lead to reduced model robustness, especially when the misinformation is subtle or involves emerging narratives that lack established background data.
+Moreover, maintaining high-quality context-aware knowledge involves constant updating and validation, which is resource-intensive and may require human expertise. This reliance on comprehensive and up-to-date context thus introduces scalability issues, as CAPE–FND must continuously adapt to the evolving landscape of misinformation. Ensuring reliable performance in diverse contexts requires mechanisms to assess and integrate high-quality, current contextual knowledge, which remains a significant challenge in deploying CAPE–FND at scale.
+7.2. Sensitivity to Prompt Engineering
+CAPE–FND’s performance is significantly influenced by the quality and design of the prompts, including the structure, phrasing, and specificity of veracity-oriented constraints and analogies. The prompt formulation process is critical, as even slight variations in wording can dramatically impact the LLM’s output quality. Suboptimal prompt designs can lead to several issues, such as generating irrelevant or inconsistent responses, failing to capture the nuances necessary for effective FND, or even producing hallucinations, where the model generates convincing but incorrect or fabricated information. This sensitivity underscores the challenge of maintaining consistency and reliability across different prompts, particularly when adapting the model to new domains or content types.
+In addition, the iterative process of prompt optimization introduces considerable complexity to the implementation. Each iteration often requires testing, evaluating, and refining prompts to achieve desired outcomes, which can be resource-intensive in terms of both time and computational effort. This dependency on precise prompt engineering means that achieving optimal model performance necessitates a high level of expertise and careful experimentation, which may limit the scalability or ease of adaptation of CAPE–FND to varied real-world scenarios.
+7.3. Absence of Sensitivity and Specificity Analysis
+The absence of sensitivity and specificity analysis in the current evaluation framework limits the depth of understanding regarding the model’s performance. While accuracy provides an overarching measure of classification effectiveness, it does not differentiate between the ability to correctly identify fake news (sensitivity) and the ability to correctly classify real news (specificity). This distinction is crucial, as misclassifying fake news as real (low sensitivity) poses significant societal risks, potentially allowing harmful misinformation to spread unchecked. Conversely, misclassifying real news as fake (low specificity) can undermine trust in legitimate sources and suppress credible journalism. Sensitivity and specificity analysis would offer valuable insights into CAPE–FND’s strengths and weaknesses in handling these two critical error types. For instance, a high sensitivity but low specificity model might excel in catching fake news but at the cost of overflagging legitimate content, leading to issues such as perceived censorship or reduced trust in the system. On the other hand, a model with high specificity but low sensitivity might overly favor real news, risking the proliferation of unflagged fake content.
+Incorporating these metrics into future evaluations would allow for a more nuanced performance assessment and help align CAPE–FND’s behavior with the specific priorities of different application contexts. By systematically analyzing sensitivity and specificity, we can refine the model to address the asymmetric costs of misclassification, ultimately enhancing its utility and reliability in real-world scenarios.
+7.4. Ethical and Social Challenges
+The deployment of CAPE–FND in real-world scenarios raises ethical concerns, such as potential biases in the training data that could affect the detection outcomes. Biases may arise from imbalanced datasets that overrepresent certain perspectives, regions, or topics, leading to skewed predictions that could unintentionally favor or disfavor specific narratives. Such biases can undermine the credibility of the system and erode public trust, particularly if its outputs disproportionately mislabel content from certain communities or political affiliations.
+Furthermore, the societal implications of labeling news as “fake” or “real” require careful consideration to avoid unintended consequences. A simplistic binary classification could oversimplify complex cases, such as satire, incomplete but truthful reporting, or opinion pieces, potentially leading to unjust censorship of legitimate voices or journalistic expressions. This may also trigger legal or reputational challenges for platforms and organizations deploying the system. Moreover, there is a risk that labeling content as “fake” could inadvertently amplify its reach by drawing attention to it or causing individuals to double down on their belief in the misinformation due to cognitive biases such as the backfire effect. Such consequences highlight the need for nuanced, transparent, and explainable outputs, ensuring that the system supports informed decision-making without overstepping ethical boundaries or undermining freedom of expression.
+8. Conclusion and Future Work
+In conclusion, our proposed CAPE–FND framework significantly enhances the performance of LLMs in FND tasks, particularly in zero-shot and few-shot settings. By integrating veracity-oriented context-aware knowledge, including constraints, background information, and analogies, our approach enables the model to make more informed and accurate veracity judgments. The experimental results demonstrate that CAPE–FND outperforms SOTA baselines, including advanced LLMs such as GPT-4.0, highlighting the effectiveness of our prompting strategies. The success of CAPE–FND underscores the importance of prompt engineering and context infusion in leveraging the full potential of LLMs for complex reasoning tasks. Our findings suggest that carefully designed prompts and the incorporation of domain-specific knowledge can significantly enhance model performance, even when using smaller or less powerful models.
+For future work, we plan to extend our framework to handle multimodal FND by incorporating visual and social context information, drawing on insights from recent studies by Comito et al. [77] that emphasizes the importance of multimodal approaches in FND. In particular, we aim to explore deep learning methods that effectively combine text, images, and video for a comprehensive understanding of misinformation. Such an extension would allow us to address the increasingly media-rich nature of misinformation on social platforms. In addition, we aim to explore the application of our context-aware prompting techniques to other domains requiring nuanced reasoning, such as rumor detection and disinformation analysis. Building on recent work in graph neural networks (GNNs) by Phan et al. [78] for FND, we also plan to investigate using GNN-based approaches for capturing complex relationships between different modalities and social interactions. Further research could also investigate the combination of CAPE–FND with parameter-efficient fine-tuning methods to enhance adaptability to specific datasets and domains. Moreover, we plan to address challenges in explainability by developing techniques to make the decision-making process of the LLM more interpretable, thereby enhancing user trust in automated misinformation detection systems. We hope to contribute to more effective and reliable methods for detecting fake news, ultimately supporting efforts to combat misinformation and promote informed discourse.
+Ethics Statement
+This study does not involve any ethical concerns, as it neither includes human participants nor animal subjects, and no sensitive or confidential data were used.
+Author Contributions
+Weiqiang Jin conceived the experiments and was responsible for the methodology, formal analysis, software, visualization, validation, project administration, investigation, and the drafting and revision of the original manuscript. Yang Gao handled the visualization aspects and was responsible for validation. Ningwei Wang and Baohai Wu were involved in the writing, review, and editing of the manuscript and oversaw the investigation. Tao Tao, Xiujun Wang, and Biao Zhao were responsible for funding acquisition. All authors reviewed the manuscript.
+Funding
+This research was supported in part by the Key Program of the Natural Science Foundation of the Educational Department of Anhui Province of China (Grant no. 2022AH050319) and the University Synergy Innovation Program of Anhui Province (Grant no. GXXT-2023-021) from Prof. Tao.
+[1] X. Zhao, S. Ouyang, Z. Yu, M. Wu, L. Li, "Pre-trained Language Models Can Be Fully Zero-Shot Learners," pp. 15590-15606, .
+[2] K. Shu, A. Sliva, S. Wang, J. Tang, H. Liu, "Fake News Detection on Social Media: A Data Mining Perspective," SIGKDD Explorations Newsletter, vol. 19 no. 1, pp. 22-36, DOI: 10.1145/3137597.3137600, 2017.
+[3] L. Hu, S. Wei, Z. Zhao, B. Wu, "Deep Learning for Fake News Detection: A Comprehensive Survey," AI Open, vol. 3, pp. 133-155, DOI: 10.1016/j.aiopen.2022.09.001, 2022.
+[4] OpenAI, "GPT-4 Technical Report," 2023. https://arxiv.org/abs/2303.08774
+[5] R. Mao, G. Chen, X. Zhang, F. Guerin, E. Cambria, "GPTEval: A Survey on Assessments of ChatGPT and GPT-4," Proceedings of the 2024 Joint International Conference on Computational Linguistics, Language Resources and Evaluation (LREC-COLING 2024)ELRA and ICCL 2024, pp. 7844-7866, .
+[6] H. Touvron, T. Lavril, G. Izacard, "LLaMA: Open and Efficient Foundation Language Models," 2023.
+[7] A. Ai, "The Claude 3 Model Family: Opus, Sonnet, Haiku," Anthropic AI LAB, 2023.
+[8] J. Wei, X. Wang, D. Schuurmans, "Chain-of-thought Prompting Elicits Reasoning in Large Language Models," NIPS ’22. NIPS, 2024.
+[9] T. Kojima, S. S. Gu, M. Reid, Y. Matsuo, Y. Iwasawa, Large Language Models Are Zero-Shot Reasoners, 2022.
+[10] Q. Dong, L. Li, D. Dai, A Survey on In-Context Learning, 2024.
+[11] T. B. Brown, B. Mann, N. Ryder, "Language Models Are Few-Shot Learners," NIPS ’20. NIPS, 2020.
+[12] S. Yao, J. Zhao, D. Yu, "ReAct: Synergizing Reasoning and Acting in Language Models," ICLR, 2023.
+[13] K. Cobbe, V. Kosaraju, M. Bavarian, Training Verifiers to Solve Math Word Problems, 2021.
+[14] S. Hangloo, B. Arora, "Fake News Detection Tools and Methods – A Review," 2021. https://arxiv.org/pdf/2112.11185
+[15] M. H. Goldani, S. Momtazi, R. Safabakhsh, "Detecting Fake News with Capsule Neural Networks," Applied Soft Computing, vol. 101,DOI: 10.1016/j.asoc.2020.106991, 2021.
+[16] J. Zeng, Y. Zhang, X. Ma, "Fake News Detection for Epidemic Emergencies via Deep Correlations between Text and Images," Sustainable Cities and Society, vol. 66,DOI: 10.1016/j.scs.2020.102652, 2021.
+[17] D. Khattar, J. S. Goud, M. Gupta, V. Varma, MVAE: Multimodal Variational Autoencoder for Fake News Detection, 2019.
+[18] X. Zhou, J. Wu, R. Zafarani, "SAFE: Similarity-Aware Multi-Modal Fake News Detection," Advances in Knowledge Discovery and Data Mining, pp. 354-367, 2020.
+[19] Z. Jin, J. Cao, Y. Zhang, J. Zhou, Q. Tian, "Novel Visual and Statistical Image Features for Microblogs News Verification," IEEE Transactions on Multimedia, vol. 19 no. 3, pp. 598-608, DOI: 10.1109/TMM.2016.2617078, 2017.
+[20] N. Ruchansky, S. Seo, Y. Liu, "CSI: A Hybrid Deep Model for Fake News Detection," CIKM ’17. ACM CIKM, pp. 797-806, 2017.
+[21] T. Shamardina, M. Saidov, A. Fenogenova, "CoAT: Corpus of Artificial Texts," Natural Language Processing,DOI: 10.1017/nlp.2024.38, 2024.
+[22] E. Setiawan, W. Dharmawan, K. Halim, "Indonesian News Stance Classification Based on Hybrid Bidirectional LSTM and Transformer-Based Embedding," Journal of Intelligent Systems, 2024.
+[23] L. Ameli, M. S. A. Chowdhury, F. Farid, A. Bello, F. Sabrina, A. Maurushat, "AI and Fake News: A Conceptual Framework for Fake News Detection," CSW ’22, pp. 34-39, 2023.
+[24] X. Zhou, R. Zafarani, "A Survey of Fake News: Fundamental Theories, Detection Methods, and Opportunities," ACM Computing Surveys, vol. 53 no. 5,DOI: 10.1145/3395046, 2020.
+[25] M. P. Moraes, dJ. Oliveira Sampaio, A. C. Charles, "Data Mining Applied in Fake News Classification through Textual Patterns," WebMedia ’19, pp. 321-324, 2019.
+[26] K. Sharma, F. Qian, H. Jiang, N. Ruchansky, M. Zhang, Y. Liu, "Combating Fake News: A Survey on Identification and Mitigation Techniques," ACM Trans. Intell. Syst. Technol, vol. 10 no. 3,DOI: 10.1145/3305260, 2019.
+[27] J. Wu, S. Li, A. Deng, M. Xiong, B. Hooi, "Prompt-and-Align: Prompt-Based Social Alignment for Few-Shot Fake News Detection," CIKM ’23, pp. 2726-2736, 2023.
+[28] S. Hu, N. Ding, H. Wang, "Knowledgeable Prompt-Tuning: Incorporating Knowledge into Prompt Verbalizer for Text Classification," pp. 2225-2240, .
+[29] Y. Liu, M. Ott, N. Goyal, "RoBERTa: A Robustly Optimized BERT Pretraining Approach," 2019. https://arxiv.org/abs/1907.11692
+[30] T. Schick, H. Schütze, "Exploiting Cloze-Questions for Few-Shot Text Classification and Natural Language Inference," pp. 255-269, .
+[31] J. Xu, H. Fei, L. Pan, Q. Liu, M. L. Lee, W. Hsu, "Faithful Logical Reasoning via Symbolic Chain-Of-Thought," Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), pp. 13326-13365, DOI: 10.18653/v1/2024.acl-long.720, 2024.
+[32] W. Y. Wang, "Liar, Liar Pants on Fire: A New Benchmark Dataset for Fake News Detection," pp. 422-426, .
+[33] K. Shu, D. Mahudeswaran, S. Wang, D. Lee, H. Liu, FakeNewsNet: A Data Repository With News Content, Social Context and Spatialtemporal Information for Studying Fake News on Social Media, 2019.
+[34] T. Mitra, E. Gilbert, CREDBANK: A Large-Scale Social Media Corpus with Associated Credibility Annotations, 2015.
+[35] S. Afroz, M. Brennan, R. Greenstadt, "Detecting Hoaxes, Frauds, and Deception in Writing Style Online," 2012 IEEE Symposium on Security and Privacy, pp. 461-475, DOI: 10.1109/sp.2012.34, 2012.
+[36] M. Potthast, J. Kiesel, K. Reinartz, J. Bevendorff, B. Stein, "A Stylometric Inquiry into Hyperpartisan and Fake News," pp. 231-240, .
+[37] B. D. Horne, S. Adali, "This Just in: Fake News Packs a Lot in Title, Uses Simpler, Repetitive Content in Text Body, More Similar to Satire Than Real News," Proceedings of the International AAAI Conference on Web and Social Media, vol. 11 no. 1, pp. 759-766, DOI: 10.1609/icwsm.v11i1.14976, 2017.
+[38] X. Zhou, A. Jain, V. V. Phoha, R. Zafarani, "Fake News Early Detection: A Theory-Driven Model," Digital Threats, vol. 1 no. 2,DOI: 10.1145/3377478, 2020.
+[39] S. Hakak, M. Alazab, S. Khan, T. R. Gadekallu, P. K. R. Maddikunta, W. Z. Khan, "An Ensemble Machine Learning Approach through Effective Feature Extraction to Classify Fake News," Future Generation Computer Systems, vol. 117, pp. 47-58, DOI: 10.1016/j.future.2020.11.022, 2021.
+[40] D. Mouratidis, M. N. Nikiforos, K. L. Kermanidis, "Deep Learning for Fake News Detection in a Pairwise Textual Input Schema," Computation, vol. 9 no. 2,DOI: 10.3390/computation9020020, 2021.
+[41] G. Gravanis, A. Vakali, K. Diamantaras, P. Karadais, "Behind the Cues: A Benchmarking Study for Fake News Detection," Expert Systems with Applications, vol. 128, pp. 201-213, DOI: 10.1016/j.eswa.2019.03.036, 2019.
+[42] K. Shu, D. Mahudeswaran, H. Liu, "FakeNewsTracker: a Tool for Fake News Collection, Detection, and Visualization," Computational & Mathematical Organization Theory, vol. 25 no. 1, pp. 60-71, DOI: 10.1007/s10588-018-09280-3, 2019.
+[43] V. Pérez-Rosas, B. Kleinberg, A. Lefevre, R. Mihalcea, "Automatic Detection of Fake News," pp. 3391-3401, .
+[44] H. Karimi, J. Tang, "Learning Hierarchical Discourse-Level Structure for Fake News Detection," pp. 3432-3442, .
+[45] Y. Liu, Y. F. B. Wu, "Early Detection of Fake News on Social Media through Propagation Path Classification with Recurrent and Convolutional Networks," AAAI’18/IAAI’18/EAAI’18, 2018.
+[46] K. Shu, S. Wang, H. Liu, "Understanding User Profiles on Social Media for Fake News Detection," 2018 IEEE Conference on Multimedia Information Processing and Retrieval (MIPR), pp. 430-435, DOI: 10.1109/mipr.2018.00092, 2018.
+[47] K. Shu, S. Wang, H. Liu, Beyond News Contents: The Role of Social Context for Fake News Detection, 2018.
+[48] K. Shu, H. R. Bernard, H. Liu, Studying Fake News via Network Analysis: Detection and Mitigation, 2019.
+[49] A. Bodaghi, J. Oliveira, "The Characteristics of Rumor Spreaders on Twitter: A Quantitative Analysis on Real Data," Computer Communications, vol. 160, pp. 674-687, DOI: 10.1016/j.comcom.2020.07.017, 2020.
+[50] K. Wu, S. Yang, K. Q. Zhu, "False Rumors Detection on Sina Weibo by Propagation Structures," 2015 IEEE 31st International Conference on Data Engineering, pp. 651-662, DOI: 10.1109/icde.2015.7113322, 2015.
+[51] V. Vaibhav, R. Mandyam, E. Hovy, "Do Sentence Interactions Matter? Leveraging Sentence Level Representations for Fake News Classification," pp. 134-139, .
+[52] K. Shu, L. Cui, S. Wang, D. Lee, H. Liu, "dEFEND: Explainable Fake News Detection," KDD ’19, pp. 395-405, 2019.
+[53] V. H. Nguyen, K. Sugiyama, P. Nakov, M. Y. Kan, "FANG: Leveraging Social Context for Fake News Detection Using Graph Representation," CIKM ’20, pp. 1165-1174, 2020.
+[54] Z. Jin, J. Cao, H. Guo, Y. Zhang, J. Luo, "Multimodal Fusion with Recurrent Neural Networks for Rumor Detection on Microblogs," MM ’17, pp. 795-816, 2017.
+[55] H. Zhang, Q. Fang, S. Qian, C. Xu, "Multi-modal Knowledge-Aware Event Memory Network for Social Media Rumor Detection," MM ’19, pp. 1942-1951, 2019.
+[56] K. Popat, S. Mukherjee, A. Yates, G. Weikum, "DeClarE: Debunking Fake News and False Claims Using Evidence-Aware Deep Learning," pp. 22-32, .
+[57] J. Zhang, B. Dong, P. S. Yu, FakeDetector: Effective Fake News Detection with Deep Diffusive Neural Network, 2020.
+[58] L. Cui, S. Wang, D. Lee, "SAME: Sentiment-Aware Multi-Modal Embedding for Detecting Fake News," Proceedings of the 2019 IEEE/ACM International Conference on Advances in Social Networks Analysis and Mining, pp. 41-48, DOI: 10.1145/3341161.3342894, 2019.
+[59] J. Devlin, M. W. Chang, K. Lee, K. Toutanova, BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding, 2019.
+[60] R. K. Kaliyar, A. Goswami, P. Narang, "FakeBERT: Fake News Detection in Social Media with a BERT-Based Deep Learning Approach," Multimedia Tools and Applications, vol. 80 no. 8, pp. 11765-11788, DOI: 10.1007/s11042-020-10183-2, 2021.
+[61] O. Zaheer, K. Asim, M. A. U. Kamil, Detecting Deception: A Comprehensive Review of Machine Learning Approaches to Fake News Detection, 2024.
+[62] R. Zellers, A. Holtzman, H. Rashkin, Defending against Neural Fake News, 2019.
+[63] W. Jin, N. Wang, T. Tao, "A Veracity Dissemination Consistency-Based Few-Shot Fake News Detection Framework by Synergizing Adversarial and Contrastive Self-Supervised Learning," Scientific Reports, vol. 14 no. 1,DOI: 10.1038/s41598-024-70039-9, 2024.
+[64] R. Xu, G. Li, A Comparative Study of Offline Models and Online LLMs in Fake News Detection, 2024.
+[65] Y. Wang, Z. Gu, S. Zhang, LLM-GAN: Construct Generative Adversarial Network through Large Language Models for Explainable Fake News Detection, 2024.
+[66] X. Su, Y. Cui, A. Liu, DAAD: Dynamic Analysis and Adaptive Discriminator for Fake News Detection, 2024.
+[67] S. Min, X. Lyu, A. Holtzman, "Rethinking the Role of Demonstrations: What Makes In-Context Learning Work?," pp. 11048-11064, .
+[68] Q. Lyu, S. Havaldar, A. Stein, "Faithful Chain-Of-Thought Reasoning," Association for Computational Linguistics, pp. 305-329, 2023.
+[69] G. Team, Gemini: A Family of Highly Capable Multimodal Models, 2024.
+[70] T. Glm, A. Zeng, B. Xu, "ChatGLM: A Family of Large Language Models from GLM-130B to GLM-4 All Tools," 2024.
+[71] P. Liu, W. Yuan, J. Fu, Z. Jiang, H. Hayashi, G. Neubig, "Pre-Train, Prompt, and Predict: A Systematic Survey of Prompting Methods in Natural Language Processing," ACM Computing Surveys, vol. 55 no. 9,DOI: 10.1145/3560815, 2023.
+[72] J. Chen, L. Ma, X. Li, "Relation Labeling in Product Knowledge Graphs with Large Language Models for E-Commerce," International Journal of Machine Learning and Cybernetics, vol. 15 no. 12, pp. 5725-5743, DOI: 10.1007/s13042-024-02274-5, 2024.
+[73] P. Lewis, E. Perez, A. Piktus, "Retrieval-augmented Generation for Knowledge-Intensive NLP Tasks," NIPS ’20, 2020.
+[74] T. Zhao, E. Wallace, S. Feng, D. Klein, S. Singh, "Calibrate before Use: Improving Few-Shot Performance of Language Models," pp. 12697-12706, 2021.
+[75] V. Sanh, A. Webson, C. Raffel, "Multitask Prompted Training Enables Zero-Shot Task Generalization," 2022.
+[76] L. Zhuang, L. Wayne, S. Ya, Z. Jun, "A Robustly Optimized BERT Pre-training Approach with Post-training," pp. 1218-1227, .
+[77] C. Comito, L. Caroprese, E. Zumpano, "Multimodal Fake News Detection on Social Media: a Survey of Deep Learning Techniques," Social Network Analysis and Mining, vol. 13 no. 1,DOI: 10.1007/s13278-023-01104-w, 2023.
+[78] H. T. Phan, N. T. Nguyen, D. Hwang, "Fake News Detection: A Survey of Graph Neural Network Methods," Applied Soft Computing, vol. 139,DOI: 10.1016/j.asoc.2023.110235, 2023.

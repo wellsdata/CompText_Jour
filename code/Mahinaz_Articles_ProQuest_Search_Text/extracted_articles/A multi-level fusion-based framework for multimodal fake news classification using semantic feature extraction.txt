@@ -1,0 +1,1319 @@
+Introduction
+The problem of fake news has become a pressing concern in recent years, posing a significant threat to community discourse, human society, and democracy [43]. The term “fake news” refers to news content that has been deliberately manipulated so as to mislead people. It is spread in two forms: as disinformation, which is deliberately spread by users with malicious intentions, and as misinformation, which spreads despite being deceptive [23]. Unfortunately, even well-intentioned people often republish news without verifying its veracity, intensifying the harm caused by its dissemination and eroding trust in reliable information. This can have grave consequences, including leading people to disregard vital warnings and undermining the ability of journalists to report accurately on significant events [30].
+Comprehensive studies have been conducted to identify patterns in disseminating fake news via online media platforms. However, pragmatic analysis of its classification, source authentication, and prevention of its spread is still needed. Figure 1 shows the stages of fake news spread, from the operator to the spreading stage. It is essential to stop the spread of deception and misinformation. This can primarily be achieved through human intercession using the Universal Fast Check Network (UFCN) and other manual quick check sites – for instance, Truth or Fiction, the Washington Post, and Prompt Checker [12] – to verify the authenticity of information. These sites are legitimate and productive but have extensibility concerns when dealing with extensive data. Intelligent fact-checking tools have been introduced to solve this challenge. These involve three stages: validation, authentication, and correction. Applying these three stages to media platforms can help identify false allegations, verify authenticity, and forward truthful information. These intelligent fast checkers can handle large volumes of news generated across media platforms. In addition to developing custom web extensions, such as Decodex, print media organizations have developed custom web extensions to distinguish fact from fiction. Employing an antidote framework can aid in identifying both the source and content of fabricated news. There are three categories of advanced frameworks: content-based, message-propagation-based, and hybrid. Despite previous attempts, existing methods and tools are limited by the need for comprehensive datasets with multi-level information to identify fake news accurately. Current disinformation detection methods either analyze the text and attributes of posts or their interactions to distinguish authentic content from fake content using supervised and traditional deep learning techniques, which require a large volume of labeled data. [See PDF for image]
+Fig. 1 Stages of the spread of fake news
+
+
+Conventional methods have primarily been tailored for discerning purely textual news. Though, the surge in fake news accompanied by images online has spurred interest in techniques that can accommodate multi-modal inputs [41]. Numerous methods have been proposed in recent years [20], 41, 42 to address the evolution of fake news from text-only to multimedia posts, incorporating photos [44]. Despite these advancements, several challenges persist in current detection methodologies: Numerous multi-modal detection models [8, 11, 35] presently rely on extracting graphic attributes from news using pre-existing models such as VGG-19 [36] on ResNet. This reliance limits their capacity to produce superior transitional attributes and precise location information, leading to suboptimal detection outcomes. Existing methods for cross-modal fake news classification [19], 44, 44, primarily rely on the amalgamation of text and image features to classify fake news, overlooking the significance of distinct modalities within the news. Moreover, current methods for cross-modal fake news identification [11, 20, 32] fail to account for the extent of feature similarity across multiple modalities despite acknowledging the combined impact of various framework features.
+Based on the literature, and to the extent of the author’s knowledge, no studies consider a multi-level fusion-based (CNN with dual Conv layers, RNN, and classification module) framework for classifying manipulated information and disinformation online using textual and visual feature extraction by incorporating multi-modal fusion mechanism.
+To address existing gaps, this study proposes a multi-level fusion-based framework to classify disinformation published on social platforms. In the proposed fusion-based framework, CNN (with dual Conv layers) and RNN were fused to boost classification ability. This makes it possible to identify manipulated text and image inconsistencies and to fuse high-quality features. We conducted experiments with different approaches for integrating textual and visual modes through both early and late integration. In our framework, the early fusion mechanism involves a straightforward concatenation of features. On the other hand, the late fusion variant employs techniques such as mean fusion, weighted-mean fusion, maximum fusion, and sum fusion to combine the CNN (with dual Conv layers) and RNN models. Finally, the classification module was utilized with a polynomial kernel to categorize the obtained components as real or fake. To validate the CDLR framework’s classification and identification capabilities, 75% of the datasets were used for training and 25% for testing. To justify the legitimacy of our framework, a comparison was made with baseline approaches by employing extensively used datasets (ISOT, WELFake, Real vs. Fake, FA-KES, and Twitter), considering various efficiency metrics: for instance, accuracy, precision, F1-score, recall, area under the curve (AUC) and receiver operating characteristics (ROC) accuracy. The proposed fusion-based framework provides a platform people can use to safely perform activities on social platforms, helping them to identify content authenticity. Finally, we give recommendations based on the proposed framework to stop the spread of disinformation. The main contributions of our framework are summarized as follows:
+- We propose a multi-level fusion-based framework to classify multimodal fake news published on social platforms using semantic feature extraction.
+
+- Fused CNN (with dual Conv layers) to extract and learn deep visual features and an RNN for semantic feature extraction from textual data for classification. We analytically tuned our framework parameters to identify and maximize the feature quality and classification accuracy.
+
+- We introduce a multimodal fusion mechanism to cross-validate the execution of the CDLR framework by considering different variants such as mean fusion, weighted-mean fusion, maximum fusion, and sum fusion. Empirical analysis demonstrates that the weighted-mean fusion strategy consistently outperforms others across diverse evaluation metrics.
+
+- Finally, we employed a classification module with a polynomial kernel to categorize the taken components as deepfake or real.
+
+
+
+The remainder of the study is organized as follows: Sect. 2 discusses related work, Sect. 3 describes the research methodology and analysis of the proposed framework, Sect. 4 reports the implementation and results validation with analysis, Sect. 5 presents a discussion and recommendations, and Sect. 6 concludes the paper.
+Related work
+False information spread on online media platforms significantly impacts society, policymakers, governments, and political leaders. As these platforms continue to grow, nearly all news is now spread through them, instead of via traditional media channels. In response to this challenge, researchers have proposed several approaches using machine learning and AI techniques to classify fake news. For instance, Singh et al. [37] introduced a machine learning-based ensemble framework called SEMI-FND to classify fake news on online media platforms. The framework uses deep unimodal analysis to improve performance and classifies fake news based on the length of the text and its various characteristics. However, the framework has not demonstrated its effectiveness in predicting fake news through semantic features. Another study [19] developed a fusion-based Mlp mixer framework to identify multi-modal fake news. Using a progressive fusion policy, the framework obtains information at different levels of representation for each modality. The framework achieves high accuracy rates of 99.8% with Twitter and 99.9% with the ISOT dataset. However, it lacks inclusiveness and flexibility. The work [34] introduced a CNN-based detection model that uses enhanced feature engineering to identify fake news. Experiments were conducted by the authors on different datasets to identify fake news. However, the model needs to achieve higher accuracy rates, which limits its application for fake news classification.
+Vishwakarma et al. [40] developed a method to recognize fake news using ConvNet. They integrated two CNN models to identify linguistic similarities in fake news content. Likewise, they employed a fully connected layer to classify the extracted features. Their model achieved an accuracy level of 85.06% on multimedia dataset and 86.32% for the content model compared to the baseline method Bi-LSTM; however, the authors only used a limited dataset in their study and did not apply AI. In contrast, Choudhury & Acharjee [5] proposed an improved method to classify disinformation using a genetic technique. The authors employed bio-inspired algorithms to develop a resilient process. In addition, they employed four machine learning classifiers (Support Vector Machine (SVM), Logistic Regression (LR), Naïve Bayes (NB), and Random Forest (RF)) as fitness functions. The model achieves 96% accuracy on the Liar dataset. Another work [27] proposed a dual LSTM framework with group augmentation for text classification. The authors used a combination of BiLSTM and GRU to determine past and future settings. Likewise, they used a group augmentation procedure to drive deep features using bidirectional and pooling layers. The results show that BiLSTM achieves 89% accuracy, but we found that the authors only considered text-based feature classification. Jarrahi & Safari [17] proposed a CNN-based framework with 3D input (SL-CNN) for textual data classification. The authors develop a CreditRank multi-modal framework to evaluate the reliability of publishers on social platforms. This framework can effectively detect fake news on social platforms with early detection capabilities, however, it can only classify textual data.
+The advancements made in deep learning have significantly improved the automatic detection of fake news. For instance, a study [11] presented an FNR (Fake News Revealer) method to identify misinformation on social media platforms. The authors employed a transformer model to extract semantic visual features from images. Likewise, they computed the resemblance among textual and image data using the loss function. The model attains 78.9% accuracy with Twitter and 87.9% with the Weibo dataset but lacks inclusiveness and flexibility. Kumari & Ekbal [20] introduced an attention-assisted stacked framework to identify features from text data and ABM-CNN-RNN to extract visual features. The AMFB framework performs better than benchmark models, but semantic alignments of text and images were not considered. In [42], the authors proposed a multi-model technique called event adversarial neural network (E-ANN) to classify fake news—the EANN comprises different levels which are used to extract visual features.
+Hayawi et al. [14] presented a hybrid machine learning-based technique to identify user profile data. The method is based on an LSTM classifier that processes mixed input categories. The authors evaluated the model based on publicly available datasets. The proposed model achieves 97% accuracy but fails to distinguish disinformation based on unseen data. A hybrid framework containing RNN and SVM was proposed by Albahar [2] to classify real and fake information. This study employed an RNN technique to encrypt news content into a feature representation. Afterward, the features were transformed into SVM as input to identify fake or real news. The framework was assessed based on existing datasets for fake news only. The proposed technique achieves 91% accuracy and a 93% FI score. Another hybrid framework designed to identify fake news was developed by Tembhurne et al. [38]. The authors introduced an Mc-DNN-based framework using a multi-channel deep neural network to identify disinformation online. They evaluated the efficiency of the Mc-DNN model using CNN and BiLSTM. The test accuracy of the proposed technique was 99% with the ISOT dataset. However, the study could only classify fake news using text-based features. In [18], the authors proposed a similarity-aware multi-model prompt learning (SAMPLE) framework for fake news classification —the SAMPLE framework incorporates prompt learning within multi-model to classify fake news. Another multi-model framework was developed by [44] to identify fake news on social media using multi-grained information fusion (MMFN) [4] presented a cross-model ambiguity learning called CAFE to classify multi-model fake news.
+These approaches show that deep learning and AI techniques can be used to effectively identify fake news. However, more research is needed to improve existing methods' classification accuracy and reliability. Additionally, there is a need to develop multi-level fusion-based frameworks that can classify both textual and non-textual data to identify fake news on media platforms effectively. A comparative summary of approaches to fake news and disinformation classification is presented in Table 1. Table 1. A comparative overview of studies on fake news and disinformation classification
+Authors/study
+Models
+Basic idea/focus
+Performance analysis of models/results
+Datasets used
+Remarks/limitations
+
+[19]
+MPFN
+Classified multi-modal fake news using Mlp
+Acc = 0.8338 Weibo
+F1-Score = 0.88
+Acc = 0.833
+F1-Score = 0.89 Twitter
+The framework lacks inclusiveness and flexibility
+
+[37]
+SEMI-FND
+Employed unimodal analysis to classify fake news
+Acc = 0.8580 Twitter
+F1-Score = 0. 8363
+Acc = 0.8683
+F1-Score = 0.8685 Weibo
+The method has not demonstrated its effectiveness in predicting fake news using semantic features
+
+[1, 35]
+LSTM-RNN
+Investigated the LSTM-RNN model to detect rumors
+Acc = 0.869
+F1-Score = 0.87 Pheme-non-rumor
+Acc = 0.76
+F1-Score = 0.74 Pheme-rumor
+The model is appropriate for rumor prediction only and has shown limited performance on imbalanced datasets
+
+[8]
+DSS
+Studied feature extraction using hybrid model
+Acc = 0.984 Gossipcop
+F1-Score = 0. 983
+Acc = 0.963
+F1-Score = 0.965 PolitiFact
+The framework has shown limited performance on unseen datasets
+
+[41]
+FinD
+Examined fine-grained features using FinD
+Acc = 0.933 Topic_112
+F1-Score = 0.9336
+Acc = 0.837 Topic_34
+F1-Score = 0.8848
+Acc = 0.9157 Topic_271
+F1-Score = 0.9141
+The model needs training on weak labels to identify fake content
+
+[32]
+ARCNN
+Studied multi-modal fake news using ARCNN
+Acc = 0.9539 CoAID
+F1-Score = 0.9444
+Acc = 0.8483
+F1-Score = 0.9444 MedoaEval
+There is a lack of infodemic datasets and detection methods
+
+[26]
+CNN-RNN
+Classified fake news and disinformation by employing deep learning models
+Acc = 0.990 ISOT
+F1-Score = 0.99
+Acc = 0.60
+F1-Score = 0.59 FA-KES
+The model needs to demonstrate better performance on unseen datasets
+
+[20]
+AMFB
+Identified textual and visual features using an attention-based multi-modal framework
+Acc = 0.8830 Twitter
+F1-Score = 0. 92
+Acc = 0.832
+F1-Score = 0.86 Weibo
+Semantic alignments of text and images were not considered
+
+[3]
+BiLSTM_RNN
+Identified fake news using BiLSTM and RNN methods
+Train Acc = 0.999 ISOT
+Val acc = 0.8974
+Test acc = 0.9108
+Train Acc = 0.998 DS2
+Val acc = 0.9825
+Test acc = 0.9875
+The model has shown limited performance on imbalanced datasets
+
+[13]
+BLD-GRU
+Identified fake news using machine learning models
+Acc = 0.6081
+F1-Score = 0.682
+AUC = 0.668 Liar-n-gram
+Acc = 0.984
+F1-Score = 0.997 ISOT
+AUC = 0.997
+Fake news is classified only using text-based features
+
+
+Research methodology and analysis
+Proposed framework
+This framework was developed to identify disinformation within news content and manipulated media. Our multi-level fusion-based framework for disinformation classification is a multi-level process and is depicted in Fig. 2. The process consists of several stages: pre-processing, high-quality semantic feature extraction, fusion-based framework selection, hyperparameter balancing, training of our framework, and classification. This section explains the individual components of the proposed multi-level fusion-based framework. In the proposed framework, we hybridize CNN (with dual Conv layers) and RNN to boost classification ability and extract high-quality semantic features from text and image content. The developed fusion-based framework comprises three main modules: CNN (with dual Conv layers), RNN, and classification module. In the fusion-based framework, RNN and CNN (dual-Conv layers) characteristics are categorized into multi-level sets to boost the feature's learning ability and to combine the attributes from text and images to classify fake news. In the CDLR framework, CNN with dual Conv layers was employed to obtain deep features from images, and RNN was employed to obtain features from textual data. Afterward, the extracted attribute vectors were combined to form a single vector for final classification using the fusion method variants: mean fusion, weighted-mean fusion, maximum fusion, and sum fusion to combine the CNN (with dual Conv layers) and RNN models. Lastly, we employed a classification module with a polynomial kernel to categorize the obtained taken input as fake or real, as shown in Fig. 2. [See PDF for image]
+Fig. 2 Generic workflow of the proposed multi-level fusion-based framework
+
+
+The first essential step of our framework is to detect and identify manipulated data in the text and images comprising fake news, for further pre-processing to get data from input. The extracted frame vectors will be transferred to CNN (with parallel Conv layers)-RNN models to extract high-quality semantic features from an input, then inputted to a classification model to differentiate whether the content is real or fake, as depicted in Fig. 3. [See PDF for image]
+Fig. 3 Feature extraction workflow of the multi-level fusion-based framework with early fusion
+
+
+Visual feature extractor design
+In the proposed multi-level fusion-based framework, CNN with two parallel Conv layers are employed to identify semantic features from images (comprises news) and news content, as illustrated in Fig. 3. CNN architecture has been shown to exhibit exceptional performance in computer vision and image processing, due to its ability to understand spatial and sequential dependencies in text and images, facilitating better extraction of data from content. In order to extract visual attributes from images comprising news, firstly we extracted the resolution of images to form a feature vector; after that, we employed parallel Conv layers to drive high-quality features for classification. In the parallel Conv layers, filters are recreated over the whole visual process to form a feature map. Assume parallel Conv layers have W size of feature maps ( W α , W β ) and filter ( F α , F β ) is transferred over the entire domain of images. The length of the output feature map is classified as: 1
+W α j = W α j - 1 - F α j + 1 2
+W β j = W β j - 1 - F β j + 1
+The workflow of high-quality feature extraction using parallel Conv layers is depicted in Fig. 3, where the max-pooling layer was associated with the Conv layers. The max-pooling layer minimizes the convolved feature map's spatial extent, reducing the need for additional computational power by enabling the model to learn dominant features. In the max-pooling layer, maximum activation was applied over the filter ( F α , F β ) to the output of the max-pooling layer. The max-pooling layer down samples the input with factor F α and F β with every track, which helps our framework extract high-quality features. The CNN (with parallel Conv layers) comprises different dominant layers, such as batch normalization, Dense, ReLU, max-pooling, and fully connected layers. The batch normalization process mitigates the effect of uncertain input distributions and initializations on the actual output, while ReLU maps all negative values in the feature map to 0 and solves the gradient vanishing problem [28] as follows: 3
+l = max 0 , ∑ n = 1 m u n θ n + c
+ReLU advances the CNN training process. Gradient estimation is either 0 or 1 for all positive inputs, depending on the sign of u . The fully connected layer in our fusion-based framework is a dominant layer that compresses the matrix within the vector and forwards it to a SoftMax layer. The data is extracted from the images using two parallel Conv layers to obtain high-quality semantic features, which are then fused to a single feature vector for final classification. The proposed multi-level fusion-based framework offers better flexibility to handle various data types, including text and image, and can identify differentiating features in text and images of distinct classes.
+The use of dual Conv layers in our framework offers several advantages over single-branch Conv layers for visual-based fake news classification. Specifically, dual Conv layers facilitate the simultaneous extraction of features from multiple levels of abstraction. Each layer captures different aspects of the input image, such as low-level features like edges and textures and high-level features like shapes and objects, which results in more comprehensive feature representations that capture a wider range of visual cues relevant to fake news classification. By incorporating dual Conv layers, the framework’s capacity to learn complex patterns and relationships in the visual data is increased, enabling the framework to capture features more effectively, leading to improved discrimination between fake and real news images. The dual Conv layers provide redundancy in feature extraction, making the framework more robust to variations in the input data. By learning diverse feature representations from dual conv layers, the framework can better classify different types of fake news images, including those with varying levels of complexity, noise, or distortion.
+Textual feature extractor design
+We employed RNN in our framework to derive superior attributes from text and news content. An RNN is a kind of artificial neural network (ANN) that is used to model sequential input. RNNs create a directed graph through the interconnections between neurons, allowing for the processing of input sequences based on their internal states, thereby rendering them appropriate for natural language processing (NLP) applications [22]. In the CDLR framework, RNNs were utilized to extract features from textual data. RNN outputs were computed by applying a similar function repeatedly in every case, as shown in Fig. 3. This involved computing the efficiency based on all of the preceding calculations. In an RNN architecture, the period length was computed based on the text length. Let the input to the architecture at period n be denoted as g n and v n the hidden state at period n . It is possible to calculate the hidden state v n using Eq. (4) by considering the actual data and the latent state of the previous time span [16] as follows: 4
+v n = U X g n + Y v n - 1 where U represents the transfer function (sigmoid), which is generally identified as the ReLU function. In each case, X and Y represent the weights that are shared from one stage to the next.
+The motivation to choose RNN to process textual information in our fake news classification task is due to its ability to capture sequential dependencies and temporal relationships in textual data effectively. RNNs are well-suited for modeling sequences, making them particularly suitable for tasks where context and order of words matter, such as natural language processing tasks. Some vital advantages of RNN over transformer networks [31] are as follows:
+- RNNs process input data sequentially, allowing them to capture long-range dependencies in sequential data more effectively than transformer networks, which process input data in parallel.
+
+- RNNs maintain a hidden state that encodes contextual information from previous tokens, enabling them to generate contextually rich representations of input sequences, which is essential for understanding the meaning and context of textual data.
+
+- Likewise, RNNs naturally have fewer parameters than Transformer networks, making them computationally more efficient, especially for tasks with limited training data.
+
+
+
+Multi-modal fusion mechanism design
+In the multi-level fusion-based framework, we employed a combination of CNN with dual Conv layers and an RNN to obtain superior semantic attributes from both textual and visual data using a multi-modal fusion method. The multi-level fusion-based framework classifies manipulated textual and visual features from input data. Extracting semantic features from the image is auxiliary data, and the image weight matrix needs to be measured by the degree of constancy during the hybridization of CNN (dual Conv layer) with RNN for classification. The concatenation process to extract features from visual data using CNN with dual Conv layers is described in the CNN design section. After extracting fused features processed by CNN (dual Conv layers) and RNN, the final achieved features are fed to the classification module for classification. Figure 3 illustrates the proposed fusion-based framework's detailed semantic feature extraction workflow with the early fusion method.
+We considered (Glove) pre-trained models to represent text data. We utilized a pre-processed GloVe.6B.200 [29] embedding matrix within the embedding layer to produce data embeddings from the textual data. By transforming every word within its matching Z-dimensional array, we extracted the embedding data array Z = [ z 1 , z 2 , z 3 . . . . . , z n ] ∈ X n × V for multi-dimensional text. After that, we employed CNN with two parallel Conv layers and RNN models, batch normalization, ReLU, flattening, convolution, and max-pooling layers. We used filters and convolution operations in the parallel convolution layer as defined in Eqs. 1 and 2. The max-pooling layer filters the high-quality attributes from the input attribute array. After that, the generated data from the max-pooling layer is integrated, and the resulting attribute array is subsequently supplied within the fully connected (FC) layer. The SoftMax activation function is applied to the preceding layer after the FC. In order to avoid excessive complexity, we employed a dropout coefficient of 0.20 within SoftMax. For loss value calculation, we utilized the binary cross-entropy metric. The CDLR framework classifies manipulated textual and visual features from input data. We used the PyTorch library to extract data from the input. Several datasets were employed to test the validity of our framework. Algorithm 1 is proposed for high-quality feature extraction from data for classification.
+Algorithm 1
+CDLR framework semantic feature extraction algorithm
+The fusion mechanisms employed by our framework, including mean fusion, weighted-mean fusion, maximum fusion, and sum fusion, offer distinct advantages over cross-modal attention [7], 21 mechanisms for fake news classification. These fusion mechanisms provide a simpler and more computationally efficient approach to integrating information from different modalities. Unlike cross-modal attention mechanisms, which necessitate iterative attention calculations, fusion mechanisms directly combine feature representations from multiple modalities without additional computational overhead. Additionally, the variants of fusion mechanisms, such as mean, weighted-mean, maximum, and sum fusion, offer flexibility in handling modality relevance and importance, ensuring robust performance across diverse datasets and scenarios. In summary, the fusion mechanisms used by our framework offer a scalable, interpretable, and effective solution for fake news classification compared to cross-modal attention mechanisms. The fusion methodology employed in the CDLR framework are described as follows:
+CDLR Early fusion
+In the realm of multi-modal frameworks, the integration of various multimedia modalities poses a formidable challenge. Early fusion, also known as input-level integration or attribute space fusion, involves the incorporation of attributes retrieved from diverse data transmission prior to the training of the framework. Given that data from these channels exhibit varying attributes, a key step involves scaling or normalizing them to a fixed dimension. We employed a flattened layer to achieve this, normalizing the features onto a similar scale. Attribute sequences X i and X t originating from distinct data channels were amalgamated within a comprehensive sequence X c . This unified sequence encapsulated all multi-modal features, streamlining the training process into a single iteration. The amalgamation of vectors was executed through an operation between X i and X t , which, in our case, entailed a straightforward concatenation operation. The ensuing operation is illustrated as follows: 5
+X c = X i ⊕ X t whereas ⊕ represents the operator connecting the two entities. Early fusion stands out as a favorable method, as it facilitates learning features in a cooperative setting, creating an incorporated illustration of data channels. Notably, every data channel does not need distinct training stages. Instead, attributes across all data channels are merged, streamlining the procedure into a single training stage. This characteristic enhances the speed and efficiency of the overall procedure. Figure 4 illustrates the detailed feature extraction workflow of the multi-level fusion-based framework with the late fusion method. [See PDF for image]
+Fig. 4 Feature extraction workflow of the multi-level fusion-based framework with late fusion
+
+
+CDLR late fusion
+Late fusion, commonly known as decision-level integration, is carried out after categorizing decisions across all data channels. It is a more straightforward procedure and offers a straightforward and scalable design. Feature learning takes place prior to integration, distinguishing it from early fusion, whereas attributes are integrated first before undergoing training. Every data channel of diverse modes is input into a training framework, from which decisions are derived in relation to probability predictions. These estimation sequences are then amalgamated through an appropriate combination procedure. In the multi-level fusion-based framework, we utilized outcome-level scores from textual and visual channels, merging in accordance with them.
+The fusion function, denoted as y , that combines outcomes from textual and visual channel is represented as y : G i , G t → G c , where G i and G t are distinct feature maps indicating the decisions of every channel in likelihood score. The resulting integrated probability values, represented as G c , yield the conclusive outcomes after late integration. The final amalgamation assessments attained are identified as: G a ( a v e r a g e ) , G m ( m a x i m u m ) , G s ( s u m ) , G w ( weighted average )
+CDLR mean fusion
+This method integrates modes by computing a mean of prediction sequences. Statistically, mean fusion is expressed as: 6
+G a = G i + G t 2 Here, in order to calculate the joint prediction G a , all channels of data are summed up and divided by the number of channels. In the case of integrating only textual and visual attributes, there are two data channels in this scenario, which are utilized to split the sum of G i and G t .
+CDLR maximum fusion
+To determine the highest contributing score between the attribute maps, this method uses the highest probability value and prioritizes the decision. This is achieved through the highest function represented below: 7
+G m = Maximum(G i ,G t )
+CDLR sum fusion
+This approach combines the attribute map values from both dataset channels by simple summation, as defined below: 8
+G s = G i + G t
+CDLR weighted mean fusion
+With this approach, feature maps from both streams are assigned random weights, denoted as u i and u t . This approach holds an advantage over alternative methods, serving to determine the extent to which each data category enhances classification efficacy. Experimentation within the assigned weight coefficients offers a flexible avenue to ascertain the combination that yields optimal model performance. Statistically, the arbitrary weights, varying between 0.0 and 1.0 and tailored to complement one another, are multiplied with corresponding likelihood estimated arrays and subsequently summed. This calculation is expressed as: 9
+G u = G i ∗ u i + G t ∗ u t Herein, u i and u t represent the allocated weights to textual and visual channels correspondingly. CDLR framework fusion algorithm is described as.
+Algorithm 2
+Multi-level fusion-based framework fusion algorithm
+Classification module design
+The classification module is an extensively used supervised machine learning classification module that enables data classification and prediction. The main motivation behind using a classification module in a multi-level fusion-based framework is to construct a distinct hyperplane in a multi-dimensional space to predict and classify different data types, such as real or fake. The hyperplane can be iteratively generated to minimize errors. The data points near the hyperplane that affect its position are referred to as support vectors. The hyperplane represents the optimal decision boundary for separating classes within a u-dimensional space. To classify input data into the desired form, the classification module is combined with a Gaussian kernel to enhance prediction, and classification[6] is defined as follows: 10
+R ( u , u - ) = e x p - u - u - 2 2 σ 2
+We considered different content formats to compute the volume of the attribute vector and determined words. To classify featured vectors as real or fake, feature extracted data vector was fed to classification module as input containing J attribute trajectories categorized as ( e ( s ) , h ( s ) ) , s = 1 , 2 , 3 . . . . , J , where h ( s ) ∈ 1 , - 1 represents fake and real types. For every attribute vector, classification module creates a hyperplane that distinguishes two types (real, and fake), expressed as follows: 11
+w g . e s + κ ≥ 1 i f h s = + 1 12
+w g . e s + κ ≤ 1 i f h s = - 1 where w is density trajectory and κ is bias value. The essential purpose is to extend the space among support trajectories by a benchmark w that can be measured as a quadratic programming problem defined in Eq. (13): 13
+min w , s ∈ h s ( w g . e ( s ) + κ ) ≥ 1
+A discriminant function q ( e ) = s i g n w g . e ( s ) + κ to determine the real and fake is expressed as follows: 14
+real, q(e ( s ) ) = + 1 fake, q(e ( s ) ) = - 1
+After extracting high-quality features, Algorithm 3 was proposed to predict and classify data. The information was separated into testing and training sets. The training data was given to the classification module for the final classification as real and fake.
+Algorithm 3
+Classification algorithm
+Evaluation and experiments analysis
+The proposed multi-level fusion-based framework has been executed in Python 3.6 on the Jupiter Notebook with Keras, which offers GPUs for substantial data computation to estimate performance. We used the NLTK toolkit in the multi-level fusion-based framework for word segmentation. As described earlier, a pre-processed word vector was utilized at the embedding layer to transform words into their matching vectors. In the experiment context, a 200-dimensional GloVe.6B vector was used. For unknown words, we initialized them from a balanced distribution within the interval of [−0.001, 0.001]. The number of filters for parallel Conv blocks is 12, and the fully connected layer size is 128. To avoid excessive complexity because of the limited sample size in the data, we set both dropout rates to 0.2 and tuned these network parameters accordingly. The Adam optimizer trains the framework parameters initialized with a hyperparameter of 0.001, and we set the batch size to 12 in the early fusion method.
+In the late fusion iteration of our framework, wherein visual and textual modes underwent distinct training, we employed the Adam optimizer for the visual classifier and the RMSprop optimizer for the text classifier. Conversely, within the initial fusion iteration, the Adam optimization was utilized. Training encompassed different unique combinations of RNN and CNN (with dual Conv layers) models. Early fusion models underwent separate training and evaluation, following a distinct training trajectory compared to late integration. Late fusion modes were individually executed over the entire datasets, assessing entire late integration modes through a training epoch and validation run for every dataset. Therefore, for the evaluation of our framework on a specific dataset, we derived five sets of results.
+Our study addresses the challenge of inconsistent feature dimensions obtained by RNN and CNN (dual Conv layers) through appropriate data preprocessing, feature extraction and optimization techniques. We begin by standardizing and normalizing the input data to establish uniformity in scale and dimensionality across both modalities. Additionally, we applied dimensionality reduction techniques, such as principal component analysis (PCA), to align the feature spaces obtained from RNN and CNN (dual conv layers), which allows us to effectively integrate the textual and visual features while mitigating the impact of dimensionality discrepancies. By carefully managing feature representations and employing PCA and normalization strategies, we ensure that both modalities contribute significantly to the overall classification task, thereby enhancing the robustness and effectiveness of our proposed framework. Figure 5( a , b ) summarizes the modules that were incorporated while executing the multi-level fusion-based framework in the Python Jupiter Notebook. In this framework, CNN (with parallel Conv layers) and RNN are hybridized for high-quality feature extraction and analysis. [See PDF for image]
+Fig. 5 The proposed incorporated module
+
+
+Datasets
+We performed experiments to analyze and validate the execution of our framework with benchmark approaches on five datasets. Five extensively used datasets for fake news classification (ISOT, Fake vs Real, WELFake, FA-KES, and Twitter) were used to test and validate the efficiency of our framework. The ISOT [1] is a large and comprehensive fake news dataset comprising 458,754 media articles, with 21,417 real articles and 23,481 fake articles. The Fake vs Real [10] dataset is composed of 6,335 media articles, with 3,168 real and 3,166 fake articles; the WELFake [39] dataset is composed of 72,144 media articles, with 35,038 real and 37,206 fake news; the FA-KES [33] dataset is composed of 806 media articles, with 374 forged articles, and the Twitter [24] dataset is composed of 7,021 fake and 5,974 real posts. Table 2 summarizes the different dataset distributions. Table 2. Datasets distributions
+Datasets
+Total news
+Real news
+Fake news
+
+ISOT
+458,754
+21,417
+23,481
+
+Fake vs Real
+6,335
+3,168
+3,166
+
+WELFake
+72,144
+35,038
+37,206
+
+FAKES
+8,06
+4,31
+3,74
+
+Twitter
+12,995
+5,974
+7,021
+
+
+The Twitter dataset was proposed by Ma et al. [24] for the auto-verification of media tasks to distinguish between real and fake news on Twitter. The dataset contains only tweets with text and visual content (images) and primarily consists of tweets written in English (tweets written in languages other than English were decoded into English). The training and test datasets consist of distinct news activities, comprising 15 activities in the training dataset and 16 in the test dataset. In addition, these activities are not entirely fake or real,the aim was to identify fake or real tweets associated with them. Figure 6 shows word cloud representations of different fake news datasets. [See PDF for image]
+Fig. 6 Word cloud representations of different datasets
+
+
+Data pre-processing
+Data pre-processing in the proposed multi-level fusion-based framework aims to convert data into a suitable format for all frameworks. Python libraries, such as PyTorch, have been employed for this purpose. Fake news classification pre-processing includes several levels: punctuation elimination, stopword elimination, and stemming. Tokenization is also performed to speed up processing by breaking down sentences into individual words. Additionally, case folding is used to transform every word token to lowercase, and non-alphabetic characters are removed from the token to eliminate any impact on the analysis process. Stop words are mapped to scale down the computational load, and lemmatization is performed to transform every token into its public source word. Similarly, pre-processing to extract data from images involves several stages, including retrieving image URLs, extracting text from images, cleaning the extracted text, and performing entity extraction. The ISOT and Twitter datasets were employed to analyze the number of fake and real news stories based on the subject; it is observed that political news and world news hold the maximum dominance scores in the dataset.
+During training, our framework assumes that each news instance contains visual and textual information, allowing the framework to learn robust representations from both modalities and effectively leverage the complementary nature of visual and textual cues for fake news classification. However, we acknowledge the practical scenario where news instances may only sometimes contain information from both modalities. To address the problem of modality absence during inference, we employ a flexible inference strategy, so-called multi-modal fusion with mean fusion, that enables our framework to determine the news category even with a single modality present. Specifically, during inference, if only textual information is available for a news instance, our framework utilizes the learned textual representation to make a classification decision using an early fusion mechanism. Similarly, if only visual information is available, the framework relies on the visual representation for classification using a late fusion mechanism. In cases where textual and visual information is available, the framework integrates both modalities to make a more informed classification decision using a late fusion mechanism with CDLR weighted mean fusion. Figure 7 illustrates the usage of ISOT and Twitter datasets to calculate the number of real and fake news stories. This is based on subject and Twitter hashtag counts. [See PDF for image]
+Fig. 7 The number counts based on the subject and hashtag on ISOT and Twitter datasets
+
+
+Comparative approaches
+In this section, we describe how we employed existing deep learning and AI approaches to achieve our objectives. We used benchmark approaches (BiLSTM_RNN [3], BiLSTM-CNN [26], BLD-GRU [13], LSTM-RNN [35], EANN (Y. [42]), AMFB [20], MPFN [19] and FNR [11]) to assess the performance of the multi-level fusion-based framework for fake news or disinformation classification. Comparative approaches were discussed and described in the prior work section.
+Experiments and comparative analysis
+In this section, we report on experiments and comparative analyses carried out to verify the execution of the multi-level fusion-based framework with benchmark methods while using various datasets. ISOT [1], Fake vs Real [10], WELFake [39], FAKES [33], and Twitter datasets were employed for disinformation or fake news classification. The framework was trained and validated on NVIDIA GeForce RTX with Intel (TM) i9-12900H Core 2.50 GHz (4.1 GHz Turbo) CPU and 128 GB of memory.
+Evaluation metrics
+Different evaluation metrics were used – true positive ( T P ) , true negative ( T N ) , false positive ( F P ) , false negative FN , and ROC – to test the validity of our framework. Accuracy is measured based on the rate of true predictions out of the total number of predictions: 15
+a c c u r a c y (A) = T P + T N T P + T N + F N + F P × 100 wherein ( T P ) denotes a true positive, showing that a real text or image is perceived as real, ( T N ) represents a true negative, showing that a fake text or image is perceived as fake, FN illustrates a false negative, showing that a real text or image is perceived as fake, and ( F P ) represents a false positive, showing that a fake text or image is perceived as real. The precision is the rate of true positive predictions out of the sum of positive predictions: 16
+P r e c i s i o n (P) = TP T P + F P × 100
+Recall or sensitivity measures the proportion of true positive predictions out of the total number of positive estimated results: 17
+r e c a l l (R) = TP T P + F N × 100
+The F1-score estimates the accuracy of the framework. 18
+F 1 S c o r e = 2 ∗ R ∗ P R + P
+The AUC is defined as an accurate integral curve showing classification variations. 19
+A U C = 1 2 TP T P + F N + TN T N + F P
+Performance evaluation for use on ISOT and fake vs real news datasets
+This section compares the multi-level fusion-based framework with baseline approaches for detecting fake news and disinformation using the ISOT and Fake vs Ral news datasets.
+We computed the accuracy, precision, recall, F1-score, and AUC to compare the implementation of our developed framework with benchmark approaches. Table 3 compares the proposed framework with benchmark methods using the ISOT [1] and Fake vs Real News [10] datasets. The pre-trained GloVe.6B.200 [29] word embedding was employed to analyze real or fake information. The motivation behind employing pre-trained word embedding was to achieve better accuracy as this has been trained on a massive amount of data. Table 3 shows that our framework outperforms benchmark approaches, with a maximum accuracy of 0.9725 using the ISOT dataset and 0.9108 using the Fake vs Real News dataset. Integrating CNN (parallel Conv layers)-RNN with the classification module truly improves the performance of our framework. More explicitly, adding parallel Conv layers, max-pooling, fully connected, and more drop-out layers improves the performance. Figure 8( a , b ) illustrates an overview of predicted outcomes on the classification problem. The confusion matrix summarizes accurate and invalid predictions with number values. Likewise, it highlights the type of error that occurred during classification. The confusion matrix demonstrates the efficiency of our framework in identifying real and fake news using both datasets. Figure 9( a , b ) depicts all models' loss and accuracy analysis using both datasets. The blue line corresponds to training accuracy/loss values, and the orange line signifies validation accuracy/loss values over 25 epochs. Table 3. Performance evaluation of our framework against benchmark approaches using ISOT and Fake vs Real datasets
+Datasets
+Models/frameworks
+AUC
+Acc
+Precision
+Recall
+F1 score
+
+ISOT [1]
+CNN
+0.8412
+0.8425
+0.84
+0.84
+0.84
+
+LSTM
+0.7327
+0.7312
+0.81
+0.73
+0.72
+
+BLD-GRU [13]
+0.8909
+0.8889
+0.89
+0.89
+0.89
+
+BiLSTM_RNN [3]
+0.9233
+0.9220
+0.92
+0.92
+0.92
+
+LSTM-RNN [35]
+0.8891
+0.8860
+0.90
+0.89
+0.89
+
+BiLSTM-CNN [26]
+0.9693
+0.9685
+0.97
+0.98
+0.97
+
+CAFÉ [4]
+0.9685
+0.9673
+0.96
+0.96
+0.95
+
+SAMPLE [18]
+0.9713
+0.9704
+0.96
+0.97
+0.96
+
+Our CDLR framework
+0.9728
+0.9725
+0.97
+0.97
+0.97
+
+Fake vs real news [10]
+CNN
+0.7764
+0.7760
+0.79
+0.78
+0.78
+
+LSTM
+0.6397
+0.6408
+0.64
+0.64
+0.64
+
+BLD-GRU [13]
+0.6953
+0.6961
+0.71
+0.70
+0.69
+
+BiLSTM_RNN [3]
+0.6181
+0.6203
+0.70
+0.62
+0.58
+
+LSTM-RNN [35]
+0.6793
+0.6795
+0.68
+0.68
+0.68
+
+BiLSTM-CNN [26]
+0.8397
+0.8389
+0.85
+0.84
+0.84
+
+CAFÉ [4]
+0.9685
+0.9673
+0.96
+0.96
+0.95
+
+SAMPLE [18]
+0.9024
+0.9056
+0.90
+0.89
+0.88
+
+Our CDLR framework
+0.9107
+0.9108
+0.91
+0.91
+0.91
+
+Bold values indicate superior predictive efficiency compared to benchmark methods, based on AUC, accuracy, precision, recall, and F1 score
+[See PDF for image]
+Fig. 8 Confusion matrix of approaches using ISOT [1] and Fake vs Real [10] datasets
+
+[See PDF for image]
+Fig.9 ( a ) Accuracy and loss value of approaches on ISOT dataset [1]. ( b ) Accuracy and loss value of approaches using Fake vs Real News [10]
+
+
+The comparative analysis of the multi-level fusion-based framework with benchmark approaches can be visualized via the ROC curves in Fig. 10( a , b ) using the ISOT [1] and Fake vs Real News [10] datasets. These results indicate that the CDLR framework can efficiently identify fake news or disinformation due to fusion mechanism. It is essential to recognize that fake news threatens the validity of using digital evidence in legal proceedings. Therefore, fast and efficient identification of real media is vital in all illegal inquiries. The CDLR framework can be used as a rapid solution to detect fake information in legal proceedings. [See PDF for image]
+Fig. 10 Performance analysis through ROC curves using ISOT [1] and Fake vs Real News [10] datasets
+
+
+Performance evaluation using WELFake and FA-KES datasets
+This section presents a comparison of the proposed multi-level fusion-based framework with the benchmark approaches using the WELFake and FA-KES datasets to assess its efficiency.
+To validate the execution of the proposed multi-level fusion-based framework with the benchmark approaches, we computed the accuracy, precision, recall, F1 score, and AUC. Table 4 shows the comparative results of the multi-level fusion-based framework and the benchmark methods using the WELFake [39] and FA-KES [33] datasets. It is apparent from Table 4 that our framework outperforms the benchmark approaches, with an accuracy level of 98.16% using the WELFake dataset and an accuracy level of 54.03% using the FA-KES dataset. Table 4. Performance evaluation of our framework with benchmark approaches using WELFake and FA-KES datasets
+Datasets
+Models
+AUC
+Acc
+Precision
+Recall
+F1 score
+
+WELFake [39]
+CNN
+0.8741
+0.8747
+0.87
+0.87
+0.87
+
+LSTM
+0.8327
+0.8323
+0.87
+0.83
+0.83
+
+BLD-GRU [13]
+0.9583
+0.9582
+0.96
+0.96
+0.96
+
+BiLSTM_RNN [3]
+0.9008
+0.8986
+0.91
+0.90
+0.90
+
+LSTM-RNN [35]
+0.7636
+0.7654
+0.77
+0.77
+0.76
+
+BiLSTM-CNN [26]
+0.9567
+0.9573
+0.96
+0.98
+0.96
+
+CAFÉ [4]
+0.9589
+0.9573
+0.96
+0.94
+0.95
+
+SAMPLE [18]
+0.9613
+0.9632
+0.95
+0.96
+0.96
+
+Our CDLR Framework
+0.9816
+0.9817
+0.98
+0.98
+0.98
+
+FA-KES [33] datasets
+CNN
+0.5143
+0.5155
+0.52
+0.52
+0.50
+
+LSTM
+0.5037
+0.5044
+0.51
+0.50
+0.51
+
+BLD-GRU [13]
+0.5084
+0.5031
+0.54
+0.51
+0.52
+
+BiLSTM_RNN [3]
+0.5038
+0.5031
+0.50
+0.50
+0.50
+
+LSTM-RNN [35]
+0.5082
+0.5093
+0.53
+0.51
+0.51
+
+BiLSTM-CNN [26]
+0.5152
+0.5155
+0.53
+0.52
+0.50
+
+CAFÉ [4]
+0.5213
+0.5201
+0.52
+0.53
+0.52
+
+SAMPLE [18]
+0.5387
+0.5321
+0.53
+0.54
+0.53
+
+Our CDLR Framework
+0.5408
+0.5403
+0.54
+0.54
+0.53
+
+Bold values indicate superior predictive efficacy compared to benchmark methods, based on AUC, accuracy, precision, recall, and F1 score
+
+Combining CNN (dual Conv layers)-RNN with the classification module improves the classification performance of our framework. The accuracy remains relatively high during training and testing, specifically the validation loss when using the FA-KES dataset. Figure 11( a , b ) illustrates an overview of predicted outcomes in the classification problem. The confusion matrix summarizes accurate and invalid predictions with numerical values. It also highlights the types of errors occurring during classification. Figure 12( a , b ) depicts all models' loss and accuracy analysis using both datasets. The blue line corresponds to training accuracy, and the orange line represents validation accuracy for the multi-level fusion-based framework over 25 epochs. A comparative analysis of our framework and the benchmark approaches can be seen via the ROC curves in Fig. 13 for the WELFake dataset [39]. [See PDF for image]
+Fig.11 Confusion matrix of approaches using the WELFake [39] and FA-KES [33] datasets
+
+[See PDF for image]
+Fig. 12 ( a ) Accuracy and loss value of approaches using the WELFake dataset [39]. ( b ) Accuracy and loss value of approaches using the FA-KES dataset [33]
+
+[See PDF for image]
+Fig. 13 Performance analysis through ROC curves for the WELFake dataset [39]
+
+
+Performance analysis of our framework using Twitter dataset
+This section compares the proposed multi-level fusion-based framework with the benchmark approaches using the Twitter dataset to assess its efficiency.
+The experiment results shown in Table 5 show that the proposed fusion-based framework achieves superior performance compared to the baseline approaches regarding classification accuracy, scoring 0.9163 and having an AUC of 0.9169 when using the Twitter dataset. Our framework also outperforms compared to the benchmark approaches in terms of precision and recall. It achieves F1-scores of 0.88, 0.91 precision, and 0.86 recall on real news and 0.90 precision and 0.92 recall on fake news, respectively. Figure 14 provides an overview of predicted outcomes on the classification problem. The confusion matrix summarizes accurate and invalid predictions with numerical values. It also highlights the types of errors occurring during classification. The confusion matrix demonstrates the efficiency of our framework in identifying real and fake news when using the Twitter dataset. Considering the experimental results for accuracy, AUC, precision, and recall, the CDLR framework shows the most precise and improved performance in detecting fake news as compared with the benchmark approaches. Table 5. Performance evaluation of our fusion-based framework against benchmark approaches using the Twitter dataset
+Datasets
+Methods
+Accuracy
+AUC
+Real news
+Fake news
+
+Precision
+Recall
+F1 Score
+Precision
+Recall
+F1 Score
+
+Twitter[24]
+CNN
+0.6953
+0.6956
+0.65
+0.64
+0.69
+0.75
+0.63
+0.69
+
+SVM
+0.6824
+0.6724
+0.62
+0.74
+0.68
+0.74
+0.62
+0.67
+
+Bi-LSTM [27]
+0.6721
+0.6745
+0.65
+0.58
+0.59
+0.69
+0.78
+0.73
+
+EANN (Y. [42])
+0.8232
+0.8114
+0.75
+0.84
+0.82
+0.84
+0.74
+0.78
+
+AMFB [20]
+0.8167
+0.8126
+0.81
+0.78
+0.79
+0.83
+0.84
+0.84
+
+FNR [11]
+0.8664
+0.8734
+0.86
+0.82
+0.86
+0.87
+0.85
+0.84
+
+MPFN [19]
+0.8783
+0.8769
+0.85
+0.83
+0.88
+0.86
+0.87
+0.85
+
+Our CDLR framework
+0.9163
+0.9169
+0.91
+0.86
+0.89
+0.90
+0.89
+0.89
+
+Bold values indicate significant improvements in predictive efficiency over benchmark methods on the Twitter dataset
+[See PDF for image]
+Fig.14 Confusion matrix of approaches using the Twitter dataset
+
+
+The proposed multi-level fusion-based framework uses CNN with parallel Conv layers to extract high-quality features from images and an RNN to obtain features from text data or news content. The hybridization of CNN (with parallel Conv layers)-RNN with classification module improves its feature extraction and classification abilities. As a result, this framework is a rapid solution that can be used to mitigate the dissemination of fake news. The comparative analysis of the CDLR framework with benchmark approaches can be seen via the ROC curves in Fig. 15 for the Twitter dataset: the CDLR framework achieves an AUC of 0.9169, which is high when compared with the benchmark approaches. [See PDF for image]
+Fig. 15 Performance analysis through ROC curves for the Twitter dataset
+
+
+Comparative analysis of our framework with different fusion operations
+The section compares the proposed multi-level fusion-based framework variants with different fusion operations on five datasets.
+Table 6 presents the performance validation results of our multi-level fusion-based framework variants with different fusion operations on five extensive datasets. We used the combination of CDLR variants and fusion operations for each dataset to measure the performance of every dataset. The experiments were performed using various fusion operations: early fusion, mean fusion, maximum fusion, sum fusion, weighted fusion, and Cross-modal attention mechanism. It can be observed from Fig. 16 that the classification accuracy of CDLR performance is better with the weighted fusion operation compared to other fusion operations on all datasets with variant 2 of the fusion-based CDLR framework. Table 6. Performance validation of our multi-level fusion-based framework with fusion operations on five datasets
+CDLR variants
+Datasets
+Early fusion of CDLR
+Mean fusion of CDLR
+Maximum fusion of CDLR
+Sum Fusion of CDLR
+Weighted Fusion of CDLR
+Cross-modal attention mechanism
+
+CNN with a single layer for images) + RNN (for textual data)
+ISOT
+0.8443
+0.8476
+0.8421
+0.8475
+0.8672
+0.8573
+
+WELFake
+0.8173
+0.8294
+0.8304
+0.8379
+0.8467
+0.8406
+
+Fake vs real news
+0.7863
+0.7890
+0.7941
+0.7986
+0.8045
+0.7961
+
+FA-KES
+0.4862
+0.4891
+0.4805
+0.4932
+0.4906
+0.4892
+
+Twitter
+0.7764
+0.7795
+0.7804
+0.7967
+0.8032
+0.7924
+
+CNN (dual-conv layer for images) + RNN (for textual data)
+ISOT
+0.9153
+0.9164
+0.9213
+0.9265
+0.9753
+0.9286
+
+WELFake
+0.8967
+0.9143
+0.9260
+0.9347
+0.9842
+0.9293
+
+Fake vs real news
+0.8561
+0.8696
+0.8761
+0.8854
+0.9116
+0.8937
+
+FA-KES
+0.5196
+0.5295
+0.5301
+0.5372
+0.5442
+0.5346
+
+Twitter
+0.8516
+0.8615
+0.8694
+0.8721
+0.9168
+0.8213
+
+RNN with Bi-LSTM (textual data) + CNN with VGG19 for images)
+ISOT
+0.9232
+0.9376
+0.9464
+0.9542
+0.9842
+0.9408
+
+WELFake
+0.9276
+0.9371
+0.9462
+0.9591
+0.9869
+0.9355
+
+Fake vs real news
+0.8674
+0.8712
+0.8852
+0.8976
+0.9186
+0.8821
+
+FA-KES
+0.5291
+0.5302
+0.5385
+0.5391
+0.5487
+0.5237
+
+Twitter
+0.8602
+0.8691
+0.8752
+0.8871
+0.9189
+0.8644
+
+CNN (triple-conv layer for images) + RNN (for textual data)
+ISOT
+0.9281
+0.9276
+0.9308
+0.9323
+0.9789
+0.9275
+
+WELFake
+0.9015
+0.9179
+0.9320
+0.9398
+0.9871
+0.9308
+
+Fake vs real news
+0.8642
+0.8752
+0.8780
+0.8931
+0.9153
+0.8873
+
+FA-KES
+0.5204
+0.5321
+0.5341
+0.5395
+0.5486
+0.5380
+
+Twitter
+0.8620
+0.8674
+0.8752
+0.8790
+0.9193
+0.8834
+
+[See PDF for image]
+Fig. 16 Cross-validation of our framework with different fusion operations on five datasets
+
+
+To strengthen the effectiveness of dual Conv layers, we have conducted comparative experiments between frameworks with single-branch and frameworks with dual Conv layers. The results in Table 6 show that the performance of our framework with single-branch Conv layers is reduced compared to dual Conv layers due to a single layer's limited capacity to capture complex patterns and hierarchical features in the data. To see the impact of more Conv layers, we have conducted comparative experiments between frameworks with triple-branch Conv layers and frameworks with dual Conv layers. The results in Table 6 show that our framework's performance with triple-branch conv layers is improved in the case of early fusion, mean fusion, and maximum fusion on the WELFake and FA-KED datasets, though with higher computational costs. However, the performance of our framework with triple conv layers is reduced when using weighted fusion and the cross-modal attention mechanism, as shown in Table 6. Likewise, we have comprised comparative results of cross-modal attention fusion methods [7], 21. These results demonstrate the performance of our fusion mechanisms compared to cross-modal attention mechanisms, providing empirical evidence of the advantages offered by the CDLR model's fusion approach.
+To reinforce the validation of our framework for real-world applicability, we conducted cross-domain testing to assess its efficacy alongside benchmark approaches using ISOT and Twitter datasets. The findings in Table 7 demonstrate that our framework exhibits competitive performance, achieving an AUC score of 97.20% compared to baseline methods. This study underscores the capacity of our multi-level fusion-based framework to acquire adaptable representations, facilitating consistent classification of fake news. Through training and evaluation across diverse datasets, we substantiate the framework's ability to generalize effectively alongside benchmark approaches. Table 7. Cross-validation of our framework with benchmark approaches on ISOT and Twitter datasets
+Frameworks
+Training datasets
+Testing datasets
+AUC
+Accuracy
+Precision
+Recall
+F1
+
+MPFN [19]
+ISOT
+ISOT
+0.8460
+0.8456
+0.82
+0.83
+0.84
+
+Twitter
+0.8631
+0.8670
+0.84
+0.84
+0.85
+
+Twitter
+ISOT
+0.8515
+0.8537
+0.82
+0.84
+0.82
+
+Twitter
+0.8790
+0.8732
+0.84
+0.84
+0.85
+
+FNR [11]
+ISOT
+ISOT
+0.8451
+0.8436
+0.82
+0.81
+0.82
+
+Twitter
+0.8378
+0.8312
+0.81
+0.80
+0.82
+
+Twitter
+ISOT
+0.8512
+0.8487
+0.83
+0.83
+0.84
+
+Twitter
+0.8564
+0.8451
+0.84
+0.83
+0.85
+
+SAMPLE [18]
+ISOT
+ISOT
+0.9752
+0.9716
+0.95
+0.96
+0.96
+
+Twitter
+0.9635
+0.9618
+0.94
+0.95
+0.95
+
+Twitter
+ISOT
+0.9530
+0.9581
+0.93
+0.94
+0.93
+
+Twitter
+0.9406
+0.9412
+0.92
+0.92
+0.93
+
+Our CDLR framework
+ISOT
+ISOT
+0.9705
+0.9694
+0.97
+0.96
+0.97
+
+Twitter
+0.9720
+0.9660
+0.96
+0.97
+0.96
+
+Twitter
+ISOT
+0.9587
+0.9620
+0.95
+0.96
+0.95
+
+Twitter
+0.9602
+0.9594
+0.94
+0.96
+0.95
+
+
+We conducted training and cross-evaluation of our fusion-based CDLR framework alongside benchmark methods (MPFN [19], FNR [11], and SAMPLE [18]) using ISOT and Twitter datasets to assess its classification ability. As depicted in Table 7, our CDLR framework, trained on ISOT and Twitter datasets, demonstrates superior performance in fake news classification compared to baseline methods when tested on different datasets. While it is common to achieve the best AUC when training and testing datasets align, we observed that metrics such as accuracy, precision, recall, and F1 surpass benchmark methods, particularly when employing the Twitter dataset for testing.
+Ablation study
+We conducted ablation study experiments on ISOT, Fake vs Real, FA-KES, WELFake, and Twitter datasets to assess the effectiveness of various key features and designs within our proposed multi-level fusion-based framework. These experiments involved evaluating the complete CDLR framework, as well as variations:
+Case 1: The framework without (W/o) the concatenation of CNN (dual Conv layers) and RNNs.
+Case 2: The framework evaluation without (W/o) inclusion of the weight's matrix in CNN and RNN.
+Case 3: The framework's performance without (W/o) the classification module.
+Case 4: The framework's performance with RNN in the classification module.
+Case 5: The framework's performance without (RNN) in the classification module.
+The findings from the ablation study experiments are summarized in Table 8. Table 8. Ablation study experiments on different datasets
+Datasets
+CDLR framework variants
+AUC
+Acc
+Precision
+Recall
+F1 score
+
+ISOT
+Full CDLR framework
+0.9728
+0.9725
+0.97
+0.97
+0.97
+
+W/o Concatenation
+0.9501
+0.9536
+0.96
+0.95
+0.95
+
+W/o weights
+0.9602
+0.9537
+0.95
+0.94
+0.93
+
+W/o Classification module
+0.9443
+0.9465
+0.94
+0.95
+0.94
+
+Classification with RNN
+0.9736
+0.9745
+0.96
+0.97
+0.96
+
+Classification W/o RNN
+0.9280
+0.9293
+0.92
+0.93
+0.91
+
+Fake vs Real
+Full MLDH framework
+0.9107
+0.9108
+0.91
+0.91
+0.91
+
+W/o Concatenation
+0.8937
+0.8879
+0.88
+0.89
+0.88
+
+W/o weights
+0.9014
+0.9012
+0.89
+0.90
+0.89
+
+W/o Classification module
+0.9064
+0.9012
+0.90
+0.89
+0.88
+
+Classification with RNN
+0.9085
+0.9102
+0.91
+0.92
+0.91
+
+Classification W/o RNN
+0.8635
+0.8629
+0.85
+0.84
+0.84
+
+FA-KES
+Full CDLR framework
+0.5408
+0.5403
+0.54
+0.54
+0.53
+
+W/o Concatenation
+0.5273
+0.5267
+0.53
+0.52
+0.51
+
+W/o weights
+0.5335
+0.5316
+0.52
+0.53
+0.52
+
+W/o Classification module
+0.5289
+0.5236
+0.53
+0.52
+0.51
+
+Classification with RNN
+0.5387
+0.5320
+0.53
+0.54
+0.52
+
+Classification W/o RNN
+0.5154
+0.5282
+0.51
+0.52
+0.51
+
+WELFake
+Full CDLR framework
+0.9816
+0.9817
+0.98
+0.98
+0.98
+
+W/o Concatenation
+0.9676
+0.9635
+0.96
+0.94
+0.95
+
+W/o weights
+0.9559
+0.9612
+0.94
+0.95
+0.96
+
+W/o Classification module
+0.9514
+0.9562
+0.95
+0.94
+0.95
+
+Classification with RNN
+0.9754
+0.9736
+0.97
+0.98
+0.97
+
+Classification W/o RNN
+0.9480
+0.9515
+0.94
+0.93
+0.94
+
+Twitter
+Full CDLR framework
+0.9163
+0.9169
+0.91
+0.86
+0.88
+
+W/o Concatenation
+0.8924
+0.8917
+0.88
+0.85
+0.86
+
+W/o weights
+0.8876
+0.8832
+0.87
+0.84
+0.85
+
+W/o Classification module
+0.8943
+0.8912
+0.89
+0.85
+0.84
+
+Classification with RNN
+0.9123
+0.9132
+0.90
+0.87
+0.87
+
+Classification W/o RNN
+0.8620
+0.8641
+0.85
+0.83
+0.84
+
+
+The results in Table 8 highlight that the fusion of CNN with dual Conv layers and RNN, along with weights and the classification module, significantly enhances the performance of our proposed framework across all datasets. Notably, without concatenation (CNN with dual Conv layers-RNN) resulted in a decrease in AUC, accuracy, precision, recall, and F1-score by 0.0227, 0.0189, 0.02, 0.02, and 0.02 points, respectively, on the ISOT dataset, which impact classification of fake news. Similarly, excluding the weight matrix reduced AUC, accuracy, precision, recall, and F1-score by 0.0126, 0.0188, 0.02, 0.03, and 0.03 points, respectively. Furthermore, eliminating the classification module decreased performance, reducing AUC, accuracy, precision, and F1-score by 0.0285, 0.026, 0.03, 0.02, and 0.03 points, respectively. Furthermore, we validate the performance of our multi-level fusion-based framework by eliminating the RNN module, which decreased performance, reducing AUC, accuracy, precision, and F1-score by 0.0448, 0.0432, 0.05, 0.04, and 0.06 points, respectively.
+Comparable trends were observed in the Fake vs Real, WELFake, FA-KES, and Twitter datasets, as presented in Table 7. These consistent outcomes affirm that the fusion of CNN (with dual Conv layers), RNN, weights, and classification module significantly contributes to the efficacy of our framework compared to the benchmark approaches.
+Discussion and recommendations
+The spread of disinformation and fake news on media platforms has become a critical concern, threatening the reliability and trustworthiness of information and weakening society’s commitment to seeking accurate information worldwide. This study aims to provide a comprehensive multi-level fusion-based framework that can assess the authenticity of data in news articles disseminated on media platforms. The study proposes a multi-level framework that employs high-quality feature extraction and data sentiment analysis to achieve this goal. The study aims to build a framework that can help people safely navigate social platforms by providing accurate information. The proposed multi-level fusion-based framework hybridizes CNN (with parallel Conv layers), RNN, and a classification module, which improves disinformation classification accuracy and validity. Likewise, our framework introduced a multimodal fusion mechanism within the multi-level fusion-based framework to cross-validate its efficacy through various variants, including mean fusion, weighted-mean fusion, maximum fusion, and sum fusion. We also provide recommendations to stop disinformation spreading using developed multi-level fusion-based framework. Fake news classification requires comprehensive testing and training using different AI methods with extensive datasets.
+Our proposed fusion-based multi-level framework for fake news classification offers several advantages over existing methods. Although conventional approaches analyze textual news exclusively, they neglect the need for multi-modal inputs, as fake news often includes images. These methods typically used predefined models to extract visual features, potentially limiting their ability to capture nuanced transitional features and precise location information, which leads to suboptimal detection outcomes. Likewise, some contemporary approaches to cross-modal fake news classification overlook the significance of individual modalities within news items, resulting in incomplete feature utilization. In contrast, our framework addresses these challenges by employing advanced techniques, including the fusion of CNN (dual Conv layers) with RNN, a classification module, and a fusion mechanism, which allows our framework to capture and utilize features across various modalities efficiently, enhancing classification accuracy and robustness. Furthermore, our framework explicitly addresses feature similarity across different modalities, ensuring a more comprehensive and precise identification of fake news.
+Application of our framework
+The proposed fusion-based multi-level framework can assist individuals in identifying authentic content and performing online activities safely. Furthermore, it can be used to classify disinformation and fake news that is spread online. The fusion-based multi-level framework utilizes novel methods for identifying fake news and ensuring the authenticity of social media. At the same time, fake news undermines the validity of using digital evidence in legal proceedings, and so rapid and efficient classification of real media is essential in such proceedings. The fusion-based framework can be used as a rapid solution to detect fake information in legal proceedings.
+Implications of the framework
+The fusion-based multi-level framework for disinformation classification can be used to effectively overcome the challenges related to the spread of disinformation on media platforms. With its ability to identify and categorize manipulated visual and textual content, the multi-level fusion-based framework can combat disinformation that harms individuals, communities, and nations. The fusion-based framework is a multi-level process that comprises pre-processing, the extraction of high-quality semantic attributes, fusion-based framework selection, hyperparameter balancing, training, and classification to ensure robust and reliable disinformation classification. By combining CNN with parallel Conv layers and RNN, the framework extracts high-quality attributes from textual and visual content, enhancing its accuracy in identifying disinformation. Additionally, utilizing a classification module with a polynomial kernel for the final classification step provides a dependable and effective way of categorizing input as fake or real. The multi-level fusion-based framework has the ability to improve the authenticity of media content and to counteract the spread of misinformation.
+Limitations of our framework
+
+- Since the proposed multi-level fusion-based framework combines multiple AI techniques, it may take time to interpret and explain how it has made a particular decision. The need for more transparency could limit its applicability in specific contexts.
+
+- Although our framework performs well using specific datasets, its generalization to different contexts is crucial. Performance may differ when it is applied to news articles in languages and domains not considered in the evaluation.
+
+- Employing CNN (with dual conv layers), RNN, and classification module jointly can be computationally expensive. Significant computational resources will likely be required, making it difficult for researchers and organizations with limited computing power to employ these methods effectively.
+
+- The effectiveness of our fusion-based framework relies heavily on the quality and diversity of its training data. Consider a situation where the training data needs to accurately characterize fake news spreading online. In such a situation, our framework may struggle to detect newly emerged or highly context-specific fake news stories.
+
+
+
+Recommendations to stop the spread of fake news
+The following recommendations are given to counter the spread of fake news and disinformation, using the experience gained from developing a multi-level fusion-based framework in this study.
+- There is a need to collaborate with major social media platforms to integrate the fusion-based framework into their systems so they can automatically identify and flag potentially fake news stories.
+
+- Standardizing tools for detecting fake news is essential to combat the spread of disinformation online. For example, various tools such as Truth or Fiction, The Washington Post, and Prompt Checker [12] have all been applied to verify the authenticity of information.
+
+- There is a need to maintain the fusion-based framework's capabilities by investing in ongoing research to improve its capabilities.
+
+- There is a need for educators, journalists, and government agencies to educate people about misinformation trends and to set goals regarding assessing the accuracy, significance, and quantity of data. It is possible to counteract these trends to some degree, by raising awareness of the issue [15].
+
+- Media platforms distributing online content must take a more proactive approach in identifying and flagging fake content. Additionally, media platforms need to prioritize transparency about their strategies, and be held accountable for their preferences [25].
+
+- Political and business leaders should enact regulations to inform people of their vulnerability to cognitive trends, which refer to pattern or shift in how people think and, where possible, prohibit using these trends for fake business practices and other disruptive activities.
+
+- In conclusion, it is imperative for governments to promote the development of fake news classification frameworks to detect misinformation on media platforms. Automated tools for producing fake content and methods for detecting them are constantly evolving. In the US, the Defense Advanced Research Projects Agency (DARPA) supports the development of fake news classification methods [9]. Given the increasing sophistication of disinformation algorithms, it is crucial to continuously invest in developing these techniques.
+
+
+
+Conclusions and future works
+This work aimed to propose a multi-level fusion-based framework that can be used to identify and classify manipulated content and text. In this study, we designed a fusion-based framework by fusing CNN (with dual Conv layers) and an RNN to extract high-quality attributes from the input. To extract high-quality features from visual data comprising fake news, CNN with dual Conv layers were utilized, and RNN was used to extract features from textual data and a classification module for multi-model fake news classification. In the same way, a fusion mechanism was designed to cross-validate the execution of our framework, considering different variants such as mean fusion, weighted-mean fusion, maximum fusion, and sum fusion. we used a classification module with a polynomial kernel for the final classification. The efficiency of the proposed multi-level fusion-based framework was measured by combining early and late fusion mechanisms against benchmark approaches using five extensive, fair, and diverse datasets. The results reveal that our framework is robust and consistent in identifying manipulated content due to its integration of CNN (with dual Conv layers)-RNN with the classification module. Moreover, we used a classification module with a polynomial kernel for the final classification. One prominent characteristic of the multi-level fusion-based framework is its accuracy in classifying fake content in progressive datasets. Likewise, our empirical analysis demonstrates that the weighted-mean fusion strategy consistently outperforms others across diverse evaluation metrics. The proposed multi-level fusion-based framework can help people identify the authenticity of content and manipulated data, allowing them to perform activities safely online and providing assistance in stopping the propagation of fake news and disinformation.
+Several directions could be explored to advance the research in this area further. Firstly, one potential extension of this study could be categorizing news articles based on their topics and investigating the effectiveness of the multi-level fusion-based framework's extraction attributes when applied to detecting independent fake news on every topic. This approach would allow for more targeted and specific analysis, enabling the identification of the critical features that impact the spread of fake news in different contexts. Another area of future work could be constructing a social platform users could use to participate in spreading news articles. User scores could be analyzed based on past activities, and a stance network could be created to extract high-quality features and examine their efficacy for detecting fake news within media platforms. This approach would provide valuable insights into the dynamics of the spread of fake news and make it possible to identify key influencers and sources of disinformation. Furthermore, additional deep learning models, like transformer-based models such as BERT or GPT, could enhance the accuracy of CDLR's fake news classification framework. The multi-level fusion-based framework could be further improved by incorporating these models to identify and classify fake news, which has shown promise in other NLP tasks.
+Author contributions
+Fakhar Abbas: Conceptualization, Data curation, Investigation, Methodology, Formal analysis, Validation, Visualization, Writing-original draft. Araz Taeihagh: Conceptualization, Supervision, Formal analysis, Writing-review & editing, resources, project administration, and funding acquisition.
+Funding
+This research was supported by National University of Singapore, Centre for Trusted Internet and Community, Project CTIC-RP-20–02, Grant Number: A-0003503–08-00 and the Ministry of Education, Singapore, under its MOE AcRF TIER 3 Grant (Award Number: MOE-MOET32022-0001).
+Data availability
+No datasets were generated or analysed during the current study.
+Declarations
+Conflicts of interest
+The authors declare no competing interests.
+References
+1. Ahmed, H; Traore, I; Saad, S. Detecting opinion spams and fake news using text classification. Security Privacy ; 2018; 1 , 1 [DOI: https://dx.doi.org/10.1002/spy2.9] e9.
+2. Albahar, M. A hybrid model for fake news detection: Leveraging news content and user comments in fake news. IET Inf Secur ; 2021; 15 , 2 pp. 169-177. [DOI: https://dx.doi.org/10.1049/ise2.12021]
+3. Bahad, P; Saxena, P; Kamal, R. Fake news detection using Bi-directional LSTM-RECURRENT NEURAL NETWORK. Proc Comput Sci ; 2019; 165 , pp. 74-82. [DOI: https://dx.doi.org/10.1016/j.procs.2020.01.072]
+4. Chen, Y; Li, D; Zhang, P; Sui, J; Lv, Q; Tun, L; Shang, L. Cross-modal ambiguity learning for multimodal fake news detection. Proceedings of the ACM Web Conference ; 2022; 2022 , pp. 2897-2905. [DOI: https://dx.doi.org/10.1145/3485447.3511968]
+5. Choudhury, D; Acharjee, T. A novel approach to fake news detection in social networks using genetic algorithm applying machine learning classifiers. Multimed Tools Appl ; 2022; 82 , 6 pp. 9029-9045. [DOI: https://dx.doi.org/10.1007/s11042-022-12788-1]
+6. Cortes, C; Vapnik, V. Support-vector networks. Mach Learn ; 1995; 20 , 3 pp. 273-297. [DOI: https://dx.doi.org/10.1007/BF00994018]
+7. Das R, Singh TD (2023) Multimodal sentiment analysis: a survey of methods, trends, and challenges. ACM Computing Surveys 55 (13s): 270:1–270:38. https://doi.org/10.1145/3586075
+8. Davoudi, M; Moosavi, MR; Sadreddini, MH. DSS: A hybrid deep model for fake news detection using propagation tree and stance network. Expert Syst Appl ; 2022; 198 , [DOI: https://dx.doi.org/10.1016/j.eswa.2022.116635] 116635.
+9. Engler A (2019). Fighting deepfakes when detection fails. Brookings . https://www.brookings.edu/research/fighting-deepfakes-when-detection-fails/
+10. Fake or Real. (2019). Fake or real news balanced dataset . https://kaggle.com/code/yogeshpm/fake-or-real-news
+11. Ghorbanpour, F; Ramezani, M; Fazli, MA; Rabiee, HR. FNR: A similarity and transformer-based approach to detect multi-modal fake news in social media. Soc Netw Anal Min ; 2023; 13 , 1 56. [DOI: https://dx.doi.org/10.1007/s13278-023-01065-0]
+12. Gravanis, G; Vakali, A; Diamantaras, K; Karadais, P. Behind the cues: A benchmarking study for fake news detection. Expert Syst Appl ; 2019; 128 , pp. 201-213. [DOI: https://dx.doi.org/10.1016/j.eswa.2019.03.036]
+13. Hansrajh A, Adeliyi TT, Wing J (2021) Detection of online fake news using blending ensemble learning. Scientific Programming , 2021 . Scopus. https://doi.org/10.1155/2021/3434458
+14. Hayawi K, Mathew S, Venugopal N, Masud MM, Ho P-H (2022) DeeProBot: A hybrid deep neural network model for social bot detection based on user profile data. Social Network Analysis and Mining , 12 (1). Scopus. https://doi.org/10.1007/s13278-022-00869-w
+15. Hine E, Floridi L (2022) New deepfake regulations in China are a tool for social stability, but at what cost? Nature Machine Intelligence , 4 (7), Article 7. https://doi.org/10.1038/s42256-022-00513-4
+16. Hochreiter, S; Schmidhuber, J. Long short-term memory. Neural Comput ; 1997; 9 , 8 pp. 1735-1780. [DOI: https://dx.doi.org/10.1162/neco.1997.9.8.1735]
+17. Jarrahi, A; Safari, L. Evaluating the effectiveness of publishers’ features in fake news detection on social media. Multimed Tools Appl ; 2023; 82 , 2 pp. 2913-2939. [DOI: https://dx.doi.org/10.1007/s11042-022-12668-8]
+18. Jiang, Y; Yu, X; Wang, Y; Xu, X; Song, X; Maynard, D. Similarity-aware multimodal prompt learning for fake news detection. Inf Sci ; 2023; 647 , [DOI: https://dx.doi.org/10.1016/j.ins.2023.119446] 119446.
+19. Jing, J; Wu, H; Sun, J; Fang, X; Zhang, H. Multimodal fake news detection via progressive fusion networks. Inf Process Manage ; 2023; 60 , 1 [DOI: https://dx.doi.org/10.1016/j.ipm.2022.103120] 103120.
+20. Kumari, R; Ekbal, A. AMFB: Attention based multimodal Factorized Bilinear Pooling for multimodal Fake News Detection. Expert Syst Appl ; 2021; 184 , [DOI: https://dx.doi.org/10.1016/j.eswa.2021.115412] 115412.
+21. Li J, Li D, Savarese S, Hoi S (2023) BLIP-2: Bootstrapping language-image pre-training with frozen image encoders and large language models. Proceedings of the 40th International Conference on Machine Learning , 202 , 19730–19742.
+22. Li X, Wu X (2015). Constructing long short-term memory based deep recurrent neural networks for large vocabulary speech recognition. 2015 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP) , 4520–4524. https://doi.org/10.1109/ICASSP.2015.7178826
+23. Elhadad MK, Fun Li K, Gebali F (2019) Fake news detection on social media: a systematic survey. 2019 IEEE Pacific Rim Conference on Communications, Computers and Signal Processing (PACRIM) , 1–8. https://doi.org/10.1109/PACRIM47961.2019.8985062
+24. Ma J, Gao W, Wong K-F (2017). Detect Rumors in Microblog Posts Using Propagation Structure via Kernel Learning. Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , 708–717. https://doi.org/10.18653/v1/P17-1066
+25. Meskys DE, Kalpokiene J, Jurcys P (2020). Regulating deep fakes: legal and ethical considerations. J Intellect Prop Pract . https://www.academia.edu/41172157/Regulating_Deep_Fakes_Legal_and_Ethical_Considerations
+26. Nasir JA, Khan OS, Varlamis I (2021). Fake news detection: A hybrid CNN-RNN based deep learning approach. Int J Informat Manag Data Insights , 1 (1). Scopus. https://doi.org/10.1016/j.jjimei.2020.100007
+27. Onan, A. Bidirectional convolutional recurrent neural network architecture with group-wise enhancement mechanism for text sentiment classification. J King Saud University - Computer and Information Sciences ; 2022; 34 , 5 pp. 2098-2117. [DOI: https://dx.doi.org/10.1016/j.jksuci.2022.02.025]
+28. Pascanu R, Mikolov T, Bengio Y (2013). On the difficulty of training recurrent neural networks. Proceedings of the 30th International Conference on International Conference on Machine Learning - Volume 28 , III-1310-III–1318.
+29. Pennington J, Socher R, Manning CD (2014). GloVe: Global Vectors for Word Representation. Empirical Methods in Natural Language Processing (EMNLP) , 1532–1543. http://www.aclweb.org/anthology/D14-1162
+30. Qayyum, A; Qadir, J; Janjua, MU; Sher, F. Using blockchain to rein in the new post-truth world and check the spread of fake news. IT Professional ; 2019; 21 , 4 pp. 16-24. [DOI: https://dx.doi.org/10.1109/MITP.2019.2910503]
+31. Radford A, Kim JW, Hallacy C, Ramesh A, Goh G, Agarwal S, Sastry G, Askell A, Mishkin P, Clark J, Krueger G, Sutskever I (2021). Learning transferable visual models from natural language supervision. The 38th International Conference on Machine Learning, PMLR , 8748–8763.
+32. Raj, C; Meel, P. ARCNN framework for multimodal infodemic detection. Neural Netw ; 2022; 146 , pp. 36-68. [DOI: https://dx.doi.org/10.1016/j.neunet.2021.11.006]
+33. Salem, FKA; Feel, RA; Elbassuoni, S; Jaber, M; Farah, M. FA-KES: a fake news dataset around the Syrian War. Proceedings of the International AAAI Conference on Web and Social Media ; 2019; 13 , pp. 573-582. [DOI: https://dx.doi.org/10.1609/icwsm.v13i01.3254]
+34. Samadi, M; Momtazi, S. Fake news detection: Deep semantic representation with enhanced feature engineering. Int J Data Sci Anal ; 2023; [DOI: https://dx.doi.org/10.1007/s41060-023-00387-8]
+35. Sedik, A; Abohany, AA; Sallam, KM; Munasinghe, K; Medhat, T. Deep fake news detection system based on concatenated and recurrent modalities. Expert Syst Appl ; 2022; 208 , [DOI: https://dx.doi.org/10.1016/j.eswa.2022.117953] 117953.
+36. Simonyan K, Zisserman A (2015). Very deep convolutional networks for large-scale image recognition. In Y. Bengio & Y. LeCun (Eds.), 3rd International Conference on Learning Representations, ICLR 2015, San Diego, CA, USA, May 7–9, 2015, Conference Track Proceedings . http://arxiv.org/abs/1409.1556
+37. Singh, P; Srivastava, R; Rana, KPS; Kumar, V. SEMI-FND: Stacked ensemble based multimodal inferencing framework for faster fake news detection. Expert Syst Appl ; 2023; 215 , [DOI: https://dx.doi.org/10.1016/j.eswa.2022.119302] 119302.
+38. Tembhurne, JV; Almin, MM; Diwan, T. Mc-DNN: Fake news detection using multi-channel deep neural networks. Int J Semant Web and Informat Sys (IJSWIS) ; 2022; 18 , 1 pp. 1-20. [DOI: https://dx.doi.org/10.4018/IJSWIS.295553]
+39. Verma, PK; Agrawal, P; Amorim, I; Prodan, R. WELFake: Word embedding over linguistic features for fake news detection. IEEE Trans Comput Soc Syst ; 2021; 8 , 4 pp. 881-893. [DOI: https://dx.doi.org/10.1109/TCSS.2021.3068519]
+40. Vishwakarma, DK; Meel, P; Yadav, A; Singh, K. A framework of fake news detection on web platform using ConvNet. Soc Netw Anal Min ; 2023; 13 , 1 24. [DOI: https://dx.doi.org/10.1007/s13278-023-01026-7]
+41. Wang, J; Gao, M; Huang, Y; Shu, K; Yi, H. FinD: Fine-grained discrepancy-based fake news detection enhanced by event abstract generation. Comput Speech Lang ; 2023; 78 , [DOI: https://dx.doi.org/10.1016/j.csl.2022.101461] 101461.
+42. Wang Y, Ma F, Jin Z, Yuan Y, Xun G, Jha K, Su L, Gao J (2018). EANN: Event Adversarial Neural Networks for Multi-Modal Fake News Detection. Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining , 849–857. https://doi.org/10.1145/3219819.3219903
+43. Westerlund M (2019) The emergence of deepfake technology: a review. Technology Innovation Management Review 9 (11): 40–53. https://doi.org/10.22215/timreview/1282
+44. Zhou Y, Yang Y, Ying Q, Qian, Z, Zhang X (2023). Multi-modal Fake News Detection on Social Media via Multi-grained Information Fusion. Proceedings of the 2023 ACM International Conference on Multimedia Retrieval , 343–352. https://doi.org/10.1145/3591106.3592271

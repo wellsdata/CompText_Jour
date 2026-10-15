@@ -1,0 +1,792 @@
+Introduction
+The rapid growth of social media and online platforms has amplified the dissemination of fake news, posing serious risks to public trust and societal harmony (Sharma et al. 2019; Zhou and Zafarani 2020; Hu et al. 2022). As false information spreads at unprecedented speeds, it influences public opinion, disrupts democratic processes, and exacerbates societal polarization. This challenge calls for robust and effective fake news detection (FND) techniques that go beyond surface-level analysis, delving into the linguistic, contextual, and psychological aspects of misinformation (Phan et al. 2023; Comito et al. 2023).
+To address these challenges, researchers are leveraging advancements in natural language processing (NLP) and machine learning to develop systems capable of identifying deceptive content and reducing its harmful effects on individuals and communities (Shu et al. 2017). For example, various FND approaches have been proposed (Hu et al. 2022; Comito et al. 2023), focusing on analyzing the dynamics of information propagation and utilizing network structures, such as the processes of information dissemination or the underlying social structures that influence the spread of misinformation (Nguyen et al. 2020; Wu et al. 2023; Wu and Hooi 2023; Mehta et al. 2022; Jin et al. 2025). Despite their promising results, these methods substantially face limitations when social contextual information is incomplete or inaccessible due to evolving network dynamics and stringent privacy regulations (Ma et al. 2024).
+In response to the challenges posed by incomplete or inaccessible social contextual information, text-mining-based fake news detection methods have emerged as a viable alternative (Jin et al. 2024). These approaches focus on analyzing the textual characteristics of news articles, delving into sentence- and document-level semantics to classify content without relying on external social data (Nan et al. 2021; Sheng et al. 2022; Wu et al. 2019). While such methods offer a promising solution to circumvent the limitations of social context dependency, their effectiveness is often constrained by the complexity and subtlety of fake news, which require more nuanced and comprehensive analysis (Ma et al. 2024).
+Traditional fake news detection methods, including machine learning and deep learning models (Choras et al. 2020; Goldani et al. 2021; Iceland 2023), have primarily relied on handcrafted features or shallow textual representations. Although these methods have shown potential in specific scenarios, they struggle to capture the intricate linguistic and contextual patterns inherent in deceptive content (Sharma et al. 2019). Moreover, their reliance on large labeled datasets for training creates additional barriers, particularly in the face of the rapidly evolving nature of fake news (Ma et al. 2024). These limitations underscore the need for scalable, sophisticated solutions capable of adapting to the dynamic and multifaceted challenges in FND tasks (Shu et al. 2017).
+The emergence of large language models (LLMs), such as GPT-3, Llama, Claude, and Gemini, has revolutionized the field by providing exceptional capabilities in understanding context, logical reasoning, and generating coherent narratives (OpenAI 2023; Brown et al. 2020; Touvron et al. 2023; Anthropic 2023; Team 2024). LLMs’ extensive pretraining on diverse datasets enables them to identify intricate patterns in language, positioning them as powerful tools for tackling tasks requiring deep semantic comprehension. Recent innovations in prompt engineering-such as Chain-of-Thought (CoT) (Wei et al. 2024; Kojima et al. 2022; Xu et al. 2024; Lyu et al. 2023), Self-Reflect (Shinn et al. 2023; Madaan et al. 2023), and In-Context Learning (ICL) (Dong et al. 2024; Brown et al. 2020)-further enhance LLMs’ ability to handle complex reasoning. These methods allow LLMs to iteratively refine their outputs, better understand contextual cues, and provide actionable insights, making them particularly suited for the dynamic and multifaceted nature of FND.
+Despite advancements in LLMs, challenges persist in effectively leveraging them for fake news detection. One significant issue is their tendency to hallucinate, generating plausible but inaccurate arguments that can undermine the credibility of their conclusions. More specifically, CoT, which involves prompting LLMs to articulate their reasoning steps, performs well on tasks requiring logical deduction and multi-step reasoning. However, its reliance on static reasoning pathways can sometimes lead to incomplete or biased outputs. For FND task, the structured nature of CoT can limit the model’s ability to adjust dynamically to the fluid and unpredictable nature of fake news, where the context evolves over time. ICL, which allows the model to adapt its responses based on provided examples or prior context, offers greater flexibility compared to traditional prompting methods. However, its final performance is highly sensitive to the quality and relevance of the examples used in the prompt, leading to unstable results with significant fluctuations. If the examples are poorly chosen or do not adequately represent the complexity of the news content, ICL can produce unreliable or skewed results.
+Moreover, existing FND approaches often lack mechanisms to thoroughly interrogate competing viewpoints, leading to unbalanced or overly confident outputs. Traditional methods also struggle to adapt dynamically to the nuanced and evolving nature of fake news content, as they typically rely on static prompts or single-pass evaluations.
+These limitations highlight the need for frameworks that actively promote critical thinking, robust reasoning, and adaptability. Addressing these challenges requires a shift from static evaluations to interactive, iterative processes where models are required to rigorously defend or contest claims. Debate-inspired frameworks (Liang et al. 2024; Feng et al. 2024) provide an ideal foundation for tackling these issues, as they enable LLMs to engage in structured argumentation, exposing and resolving biases, inconsistencies, and errors through controlled adversarial interactions (Aryan 2024; Motwani et al. 2024).
+To address these gaps (Hu et al. 2022; Shu et al. 2017; Ma et al. 2024; Liang et al. 2024), we propose a novel multi-role detection framework, Courtroom-FND, inspired by courtroom debates. This framework introduces a multi-role approach in which LLMs take on the roles of prosecution, defense, and judge to simulate a structured debate on the authenticity of news, which harnesses the strengths of argumentation and introspection to facilitate a more comprehensive evaluation of news authenticity. By engaging in this process:
+- The prosecution argues that the news is false, while the defense counters with arguments supporting its truthfulness;
+
+- The judge evaluates the evidence and arguments presented by both sides to reach an initial verdict;
+
+- Roles are then switched, forcing the prosecution and defense to argue from the opposite standpoint, which helps uncover potential biases or gaps in the initial arguments;
+
+- The judge reviews the outcomes of both rounds to deliver a balanced and robust final decision.
+
+
+This debate-based framework addresses key challenges by encouraging divergent thinking, ensuring critical examination of multiple perspectives, and leveraging the reasoning capabilities of LLMs in a dynamic, role-driven setting. By incorporating argument switching and iterative evaluations, Courtroom-FND promotes more accurate and comprehensive assessments of news authenticity, offering a significant improvement over existing FND methods.
+Our contributions in this work can be summarized as follows:
+- We introduce a courtroom debate-based approach to FND namely Courtroom-FND, incorporating multi-role interactions to enhance reasoning and decision-making processes. To the best of our knowledge, this is the first work to systematically integrate the principles of courtroom debates into the domain of fake news detection;
+
+- Courtroom-FND incorporates a novel argument-switching mechanism, forcing opposing roles to argue from alternative perspectives, which reduces bias, exposes hidden inconsistencies, and enhances the robustness of conclusions, further improving adaptability to the nuanced and evolving nature of fake news;
+
+- Extensive experiments validate the effectiveness of Courtroom-FND on multiple challenging datasets, including cases of controversial and misleading news. The results highlight its superior performance in both accuracy and reliability, surpassing existing state-of-the-art methods, including advanced LLMs such as GPT-4;
+
+- Courtroom-FND demonstrates that the structured debate process effectively balances accuracy and scalability in FND tasks, confirming the positive impact of multi-perspective argumentation on fake news detection. Moreover, Courtroom-FND enhances the explainability of FND tasks by simulating human-like reasoning processes in structured debates.
+
+
+Our proposed Courtroom-FND represents a significant step toward building more reliable, scalable, and adaptive solutions for fake news detection, leveraging the strengths of LLMs and debate-inspired methodologies to navigate the complexities of modern information ecosystems.
+Organization of the paper
+The remainder of this paper is organized as follows. In Section 2, we review the related work on fake news detection, and large language models-based prompting engineering methods. Section 3 introduces the preliminaries of our approach, including the FND task formulation and LLM prompting techniques. In Section 4, we present our Courtroom-FND framework and discuss its components in detail. Section 5 delves into our experimental results, in-depth ablated evaluations, and several representative cases. Section 6 discusses the deeper significances and features of Courtroom-FND, findings the implications in the broadest context possible, and future research directions also be highlighted. Finally, Section 7 concludes the paper and proposes potential improvements and future directions for further work.
+Related works
+Given that this work primarily focuses on using large language models (LLMs) for prompt engineering (Liu et al. 2022; Sanh et al. 2022; Farinetti and Canale 2024; Soygazi and Oguz 2024) and instruction tuning (Ouyang et al. 2022; Khattab et al. 2023; Singh et al. 2024) to accomplish the task of Fake News Detection (FND) (Shu et al. 2017; Sharma et al. 2019), the review of related work will cover the following key areas: recent advancements in Fake News Detection (Sharma et al. 2019; Hu et al. 2022), the development of LLMs (OpenAI 2023; Touvron et al. 2023), and LLM-based prompt engineering (Wei et al. 2024; Liu et al. 2022; OpenAI 2024).
+Fake news detection: task overview and mainstream approaches
+The FND task (Sharma et al. 2019; Hu et al. 2022) has become increasingly critical with the proliferation of misinformation on digital platforms. With the success of deep learning (DL) (Devlin et al. 2019; Liu et al. 2019), DL-based FND methods have gained significant attention (Hu et al. 2022). These methods can be categorized into the following categories: Knowledge-based Approaches which rely on factual verification by comparing claims in news articles with external sources (Nguyen et al. 2020; Wang 2017; Shu et al. 2019; Mitra and Gilbert 2015); Style-based Methods which focus on distinguishing linguistic, syntactic, and stylistic differences between fake and real news (Liu and Wu 2018; Shu et al. 2019; Goldani et al. 2021); and Social Context Propagation-based Models which leverage network structures (Wu et al. 2023; Jin et al. 2025), such as dissemination patterns in social media, to detect fake news, like graph convolutional networks (GCNs) (Kipf and Welling 2017) and heterogeneous graphs (Nguyen et al. 2020; Wu and Hooi 2023; Mehta et al. 2022).
+Moreover, the small pre-trained language models (SLMs)-based FND methods leverage powerful PLMs to enhance the classification performance of fake news detection tasks. These methods include BERT-FT (Devlin et al. 2019), RoBERTa-FT (Liu et al. 2019), PET (Schick and Schütze 2021), KPT (Hu et al. 2022). These PLM-based methods have demonstrated strong capabilities in tackling the challenges of fake news detection by leveraging the knowledge encoded in pre-trained language models. For example, Kaliyar et al. (2021) propose FakeBERT, a fake news detection method based on BERT, which integrates parallel blocks of a single-layer CNN with BERT to address linguistic ambiguity in fake news. However, these methods typically necessitate fine-tuning the LMs on specialized datasets, which may not completely leverage the models’ vast prior knowledge. The advent of LLMs has significantly transformed NLP tasks by enabling models to learn from extensive datasets and grasp complex language patterns. Notable examples include OpenAI’s GPTs, Google’s Gemini, and Meta AI’s Llama (OpenAI 2023; Touvron et al. 2023; Team 2024). These LLMs, particularly the GPT series (OpenAI 2023; Brown et al. 2020), have shown remarkable capabilities in tasks that require a deep understanding of semantics, positioning them as promising tools for FND. Recent research has examined the potential of LLMs in fake news detection, with notable works like DAAD (Su et al. 2024) and LLM-GAN (Wang et al. 2024). To offer readers a structured and thorough understanding of the mainstream FND methods, correspondingly, we present a systematic summary of representative approaches in Table 1. Table 1. Categorization of mainstream Fake News Detection (FND) techniques
+FND Method Categories
+Representative Outstanding Works & Datasets
+
+Machine Learning & Traditional Neural Networks-based FND Methods
+Knowledge-Based
+Zhou and Zafarani et al. (2020), Shu et al. [FakeNewsNet] (2019),
+
+Mitra et al. [CREDBANK] (2015), Zhang et al. [FakeDetect-or] (2020), Cui et al. [SAME] (2019), Wang et al. [LIAR] (2017)
+
+Style-Based
+Potthast et al. [BuzzFeed-Webis] (2018), Horne et al. [SVM & ELM] (2017), Jin et al. [Att-RNN] (2017), Zhang et al. [MK EMN] (2019), Popat et al. [DeClarE] (2018)
+
+Linguistic-Based
+Mohammad et al. [CapsuleNN] (2021), Zhou et al. [Theory-Driven Model] (2020), Hakak et al. [Ensemble Learning] (2021), Despoina et al. [Pairwise NNs] (2021), Gravanis et al. [UN- Biased (UNB)] (2019), Shu et al. [FakeNewsTracker] (2019), Perez et al. [FakeNewsAMT] (2018), Karimi et al. [HDSF] (2019), Shamardina et al. (2024)
+
+Social Context Network-Based
+Shu et al. [USER PROFILES & Big Five] (2018), Shu et al. [NetworkAnalysis] (2019), Shu et al. [TriFN] (2018), Liu et al.[PropagationPath] (2018), Wu et al. [Prompt-and-Aligh] (2023), Bodaghi et al. [Macro Rumor Spreading] (2020), Wu et al. [Propagation Structure] (2015), Ruchansky et al. [CSI] (2017), Vaibhav et al. [SentGCN & SentGAT] (2019), Shu et al. [dEFEND] (2019), Schick et al. [GCNFN] (2021), Nguyen et al. [GraphSAGE] (2020)
+
+Language Model-based FND Technques
+Small Pre -trained LMs (SPLMs) -based
+BERT-FT (Devlin et al. 2019), RoBERTa-FT (Liu et al. 2019), Schick et al. [PET] (2021), Hu et al. [KPT] (2022), Kaliyar et al. [FakeBERT] (2021), Setiawan et al. [BiLSTM&Transformer] (2024), Ameli et al. [Conceptual Framework] (2023), Moraes et al. (2019)
+
+large language models (LLMs) -based
+Zaheer et al. (2024), Zellers et al. [Grover] (2019), Jin et al. [PM TL-Disco] (2024), Brown et al [Direct Ask GPTs] (2020; 2024), Xu et al. [Offline Learning] (2024), Wang et al. [LLM-GAN] (2024), Su et al. [DAAD] (2024), In-Context Learning (Brown et al. 2020; Dong et al. 2024), Min et al. [Re-thinking] (2022), Chain-of-Thought (Kojima et al. 2022; Wei et al. 2024; Lyu et al. 2023; Xu et al. 2024), GPT -4.0 (OpenAI 2023), Llama (Touvron et al. 2023), Gemini (Team 2024), DeepSeek (DeepSeek-AI et al. 2024)
+
+
+Among them, several notable research achievements have emerged. Wu et al. (2023) developed Prompt-and-Align (P&A), a few-shot detection method combining prompt-tuning with social context topology through news proximity graphs. Wu et al. (2023) also proposed DECOR, refining noisy social graphs using a Degree-Corrected Stochastic Blockmodel (DCSBM) to improve Graph Neural Network (GNN)-based (Kipf and Welling 2017) veracity predictions. Mehta et al. (2022) proposed a graph-based approach for fake news detection by reasoning over relationships between sources, articles, and user interactions on social media. Nan et al. (2021) proposed MDFEND, a multi-expert framework for multi-domain fake news detection, releasing the Chinese dataset "Weibo21". Sheng et al. (2022) introduced the News Environment Perception Framework (NEP), incorporating both micro and macro news environments to enhance detection. FakeBERT (Kaliyar et al. 2021) is a Bidirectional Encoder Representations from Transformers (BERT) (Devlin et al. 2019; Liu et al. 2019) -based deep learning approach designed for fake news detection, combining BERT with parallel single-layer CNN (Kim 2014) blocks to improve classification by capturing semantic and long-distance dependencies in sentences. Ding et al. proposed Divide and Denoise (Ding et al. 2024), a framework for robust semi-supervised node classification in graphs with noisy labels. Xie et al. proposed HGNNR4FD (Xie et al. 2023), a Heterogeneous GNN (Kipf and Welling 2017) framework leveraging knowledge relations for fake news detection. While these methods offer promising results, their limitations, including data scarcity, poor generalization to unseen domains, and reliance on static features, underscore the need for more adaptive and robust frameworks (Sharma et al. 2019; Hu et al. 2022; Sharma et al. 2019).
+Large language models and prompt engineering
+The rapid advancement of NLP has been significantly driven by the development of LLMs and innovative prompt engineering techniques (Liu et al. 2022; Sanh et al. 2022). Models (Shu et al. 2017; Brown et al. 2020; Team 2024) such as Generative Pre-trained Transformer (GPT) (OpenAI 2023), Llama (Touvron et al. 2023), and Claude (Anthropic 2023) have set new benchmarks in understanding and generating human-like text, revolutionizing applications from machine translation to content creation. LLMs has revolutionized NLP tasks, offering powerful capabilities for semantic understanding, reasoning, and decision-making (Aryan 2024; Wang et al. 2024; Lai et al. 2024; Li et al. 2024). Unlike traditional methods, which often focus on static feature extraction or shallow models, LLMs (OpenAI 2023; Mao et al. 2024) excel in dynamically adapting to diverse contexts, reasoning through complex scenarios, and incorporating external knowledge seamlessly.
+Simultaneously, prompt engineering (Liu et al. 2022; Kang et al. 2024) has emerged as a crucial technique to maximize the potential of LLMs without extensive fine-tuning. By carefully crafting input prompts, users can guide LLMs to perform specific tasks more effectively. For example, In-Context Learning (ICL) (Brown et al. 2020; Dong et al. 2024), involves embedding task-specific examples directly within the input prompt, allowing LLMs to infer desired behaviors from limited demonstrations, making it efficient for tasks with scarce labeled data. Chain-of-Thought (CoT) prompting (Wei et al. 2024; Kojima et al. 2022; Xu et al. 2024; Lyu et al. 2023) encourages LLMs to generate intermediate reasoning steps before arriving at a final answer, enhancing their capability to handle complex, multi-step problems. Variants like Zero-shot CoT (Kojima et al. 2022) and Self-Consistency CoT (Chen et al. 2024; Zhang et al. 2023; Wang et al. 2023) have further refined this approach, improving reasoning accuracy and transparency. Retrieval-Augmented Prompting (RAP) (Kang et al. 2024; Han et al. 2024; Hu et al. 2024; Chen et al. 2024) integrates external information retrieval systems with LLMs to enrich the context provided to the model, ensuring access to up-to-date and pertinent information. Yao et al. (2023) proposed ReAct , in which LLMs generate reasoning traces and task-specific actions in an interleaved manner. The reasoning traces assist the model in guiding, tracking, and updating its action plans, as well as handling exceptions, while the actions enable it to interface with external sources, such as knowledge bases or environments, to gather additional information. To provide readers with a comprehensive and organized understanding of the mainstream LLM prompting methods, we provide a systematic overview of key approaches in Table 2.
+Beyond foundational methods, advanced techniques like meta-prompting (OpenAI 2024) and prompting ensembles (Tonolini et al. 2024; Tran and Matsui 2024; Huang et al. 2024; Jiang et al. 2023), utilize prompts that instruct the model on generating effective prompts for specific tasks, enhancing overall flexibility and performance. Instruction tuning (Ouyang et al. 2022; Khattab et al. 2023; Singhvi et al. 2024; Gururangan et al. 2020) trains LLMs on a variety of instructions to better follow complex and nuanced directives, enhancing generalizability and responsiveness to diverse user intents. Lastly, it is worth noting that the interplay between LLMs and prompt engineering is a cornerstone of modern NLP advancements (Farinetti and Canale 2024; Soygazi and Oguz 2024; Singh et al. 2024; Liu and Xiong 2024). By continuously evolving these techniques, researchers and practitioners can unlock new potentials, driving forward the frontier of intelligent, language-driven applications. Table 2. Categorization of Mainstream Fake News Detection (FND) Techniques
+LLM Prompt Engineering Techniques / Representative Methods
+
+Single Prompt Techniques
+Zero-shot
+Directly Ask with OpenAI GPTs (Mao et al. 2024; OpenAI 2023)
+DeepSeek (2024), Claude (2023), Gemini (2024), & Llama (2023)
+
+Few-shot(In- contextLearning)
+Brown et al. (2020), Min et al. (2022), Li et al. (2024)
+Dong et al. (2024), Bai et al. (2023), Chatterjee et al. (2024)
+
+Chain-of Thought (CoT)
+Wei, Kojima, Xu, Lyu et al. (2024; 2022; 2024; 2023), Wang [Chain-of-Table] (2024)
+Chen, Zhang, Wang et al. (2024; 2023; 2023), Wang et al., Yu et al. [BetterCoT] (2023; 2023)
+
+LLM with External Tools
+RAG (ExternalDatabase)
+Kang et al.[PromptRAG] (2024), Han et al.[ReviewRAG] (2024)
+Hu [PerturbationRAG] (2024), Chen [CounterfactualRAG] (2024)
+
+ReAct(External Search,Calculator)
+Yao et al. [ReAct] (2023), Shinn et al. [Reflexion] (2023)
+Besta et al. [Graph of thoughts] (2024), Gao et al. [Pal] (2023)
+
+
+LLMs in fake news detection
+The emergence of LLMs has revolutionized NLP tasks by enabling advanced semantic understanding and contextual reasoning (OpenAI 2023; Anthropic 2023; Touvron et al. 2023). Especially, LLMs have shown exceptional potential in addressing the limitations of traditional FND methods (Brown et al. 2020; Zhou and Zafarani 2020; Hu et al. 2022). Many notable works have explored the use of LLMs for fake news detection task. Li et al. (2024) proposed STEEL , the first framework leveraging LLMs for automated information retrieval to detect fake news. This approach improves the accuracy of fake news detection through a multi-round Retrieval-Augmented Generation (RAG) mechanism. Qi et al. (2024) developed Sniffer , a multimodal large language model (MLLM) designed to detect out-of-context (OOC) misinformation by assessing image-text consistency and providing interpretable explanations. Through two-stage instruction tuning and integration with external tools, Sniffer significantly improves detection accuracy and outperforms state-of-the-art methods. FactAgent (Li et al. 2024) is an automated fake news detection system that utilizes LLMs in an agentic manner, breaking down complex verification tasks into manageable sub-steps. LLM-GAN (Wang et al. 2024) utilizes prompting mechanisms to enable an LLM to function as both a generator and detector for realistic fake news generation and detection. The approach demonstrates effectiveness in both prediction performance and explanation quality. RumorLLM (Lai et al. 2024) is fine-tuned with rumor writing styles and content to address the challenges of fake news detection. It introduces a data-augmentation method for small categories, effectively mitigating the issue of category imbalance in real-world fake-news datasets. A novel retrieval-augmented LLM framework, called Re-Search for The Truth (Li et al. 2024), automatically and strategically extracts key evidence from web sources for claim verification.
+These advancements illustrate the versatility of LLMs in tackling the evolving challenges of fake news detection (Hu et al. 2022; Goldani et al. 2021; Raza et al. 2024). Beyond improving accuracy and scalability, they also enhance interpretability, which is crucial for building trust in automated systems (Hu et al. 2022; Shu et al. 2017; Li et al. 2024). As misinformation continues to evolve, the adaptability and reasoning capabilities of LLMs will undoubtedly play a central role in mitigating its societal impact.
+Preliminaries
+In this section, we present the foundational concepts that inform our Courtroom-FND framework. We first formalize the FND task and examine its challenges (Hu et al. 2022; Shu et al. 2017). Next, we introduce LLMs (OpenAI 2023; Touvron et al. 2023) and their prompting paradigms (Brown et al. 2020; Wei et al. 2024), emphasizing how prompt engineering can help build more reliable FND solutions.
+Fake News Detection (FND)
+The FND seeks to classify a given news piece or claim as real (authentic) or fake (misleading) (Zhou and Zafarani 2020; Hu et al. 2022; Shu et al. 2017). Let a news article be represented by x , containing textual content such as headlines, main body text, or quotes. We assign a label y ^ ∈ { 0 , 1 } , where y ^ = 1 indicates fake content, and y ^ = 0 indicates authentic content. Let F( · ) represent the fake news detection algorithm or the information processing framework. Formally, a detection function can be defined as: y ^ ← F ( x ) = 1 , if x is judged to be fake , 0 , otherwise . Despite the apparent simplicity of a binary classification task, detecting fake news is complicated by several issues. First, linguistic ambiguity —articles sometimes appear legitimate while subtly embedding distortions or sensational claims. Second, limited labeled data —collecting and verifying large amounts of training data is time-consuming and prone to subjective biases. Third, rapid content evolution —misinformation sources adapt their tactics, rendering static features (e.g., fixed keywords or style cues) less effective over time.
+Earlier FND approaches often relied on external structures (e.g., social graphs or knowledge bases) to bolster textual analysis (Nguyen et al. 2020; Wu et al. 2023; Wu and Hooi 2023; Jin et al. 2025). While valuable, these methods are hindered if the social or factual context is missing or intentionally obfuscated. Consequently, leveraging more adaptive and semantically robust models—such as LLMs—has become a natural progression for tackling FND with fewer domain constraints (Ma et al. 2024; OpenAI 2023; Lai et al. 2024).
+LLM-based prompt engineering
+LLMs like GPT (OpenAI 2023; Brown et al. 2020) or Llama (2023) have reshaped natural language processing by capturing complex language patterns and contextual cues through massive pretraining. However, their outputs can still be erroneous or misleading if prompts are too vague or biased. Prompt engineering addresses this limitation by guiding the model’s responses through carefully designed instructions or examples, with the goal of eliciting more accurate, relevant, and interpretable outputs. We categorize the main prompting techniques commonly utilized in LLM-based systems as follows:
+- Zero-Shot Prompting. (Kojima et al. 2022; Dubois et al. 2024; Zhang et al. 2024; Hussain et al. 2024) In zero-shot prompting, the model receives only a task description and the text x . The expectation is that the LLM will use its pretraining to infer the appropriate label y ^ . Although straightforward, zero-shot methods can miss crucial context if the prompt is poorly phrased or if the model’s training data lacks similar examples.
+
+- Few-Shot Prompting. (Jin et al. 2025; Brown et al. 2020; Jiang et al. 2025) In few-shot prompting, a small set of labeled examples { ( x i , y i ) } is prepended to the query, showing the LLM how to map similar content to the desired labels. This often leads to better generalization—particularly when the examples highlight deceptive language patterns relevant to FND. Yet, if the examples are unrepresentative, the model’s performance may degrade.
+
+- Multi-Step (Chain-of-Thought) Prompting. (Wei et al. 2024; Kojima et al. 2022; Xu et al. 2024; Lyu et al. 2023) Instead of directly demanding an answer, multi-step or chain-of-thought prompts encourage the model to show intermediate reasoning. These intermediate steps can mitigate hasty conclusions, but they also risk propagating flawed logic if the model’s internal reasoning is incorrect.
+
+- Other Prompting Techniques. Beyond these three categories, there exist additional prompting strategies-such as Retrieval-Augmented Prompting (Han et al. 2024; Hu et al. 2024; Kang et al. 2024; Chen et al. 2024), Self-Consistency Prompting (Chen et al. 2024; Zhang et al. 2023; Wang et al. 2023), Meta-Prompting (OpenAI 2024), and Instruction Tuning (Ouyang et al. 2022; Khattab et al. 2023; Singh et al. 2024)-that further expand the design space for eliciting specific reasoning paths, contextual nuances, or structured outputs from LLMs.
+
+
+
+Our approach: courtroom-FND
+Our proposed Courtroom-FND is a multi-role framework inspired by courtroom-style debates, designed to enhance fake news detection by addressing challenges such as cognitive biases, hallucinations, and incomplete logic, while also improving reasoning depth and ensuring transparency (Aryan 2024; Li et al. 2024). As shown in Fig. 1, this framework leverages large language model (LLM) agents, assigning them distinct roles as the Prosecution, Defense, and Judge. Through role switching and iterative debate, the framework systematically uncovers hidden inconsistencies, produces comprehensive analyses, thereby improving overall reasoning explainability and arrives at more reliable conclusions. Figure 1 provides a clear overview of the Courtroom-FND, illustrating how the process first initializes meta-prompts, assigns roles, and then conducts two rounds of debate. [See PDF for image]
+Fig. 1 An overview of our Courtroom-FND framework. The system first initializes meta-prompts, assigns roles, and conducts two rounds of debate. In the second round, Prosecution and Defense switch roles. The Judge issues verdicts at the end of each round, culminating in a final decision
+
+
+Framework overview
+Courtroom-FND consists of three principal components: (1) Prosecution - Argues that the input news is fake, presenting reasons such as inconsistencies, unreliable sources, or contradictory evidence; (2) Defense - Argues that the input news is genuine, citing verifiable data, contextual information, and logical consistency; (3) Judge - Evaluates both sides’ arguments and issues a verdict. After the first round, roles are switched (Prosecution ↔ Defense) to ensure a more rigorous and balanced analysis.
+Correspondingly, as outlined in Fig. 1, which illustrates the multi-role debate process in Courtroom-FND, the entire process unfolds in two rounds of debate:
+- Round 1: Prosecution argues the news is fake, while Defense argues it is genuine.
+
+- Round 2: Roles are switched to ensure each side tackles the opposing perspective.
+
+
+A Judge evaluates both rounds of arguments to deliver a final verdict. This multi-round, adversarial mechanism helps mitigate superficial or biased reasoning that may arise from single-pass evaluations.
+By design, Courtroom-FND fosters divergent thinking -each side must construct or refute arguments from different angles, effectively simulating a courtroom debate. The iterative, adversarial nature of the framework counteracts common pitfalls in single-pass classification models, such as cognitive biases , hallucinations , and overconfidence in outputs.
+Detailed courtroom debate process
+In this section, we provide a more detailed explanation of the principles and overall operational process of Courtroom-FND, along with the specific construction of its prompts. As depicted in Fig. 1, the courtroom debate process begins with the input of a suspicious news article or statement. At this stage, meta prompts are carefully crafted to guide each role.
+For instance, in Round 1, the Prosecution is instructed to argue that the news is fake by examining the content for logical inconsistencies, deceptive claims, or questionable sources, while the Defense is prompted to defend the news by presenting counter-evidence, reliable references, and contextual clarification. The Judge’s role is to neutrally evaluate the strength of arguments from both sides and deliver an interim verdict that may identify unresolved contradictions or suggest areas requiring further exploration.
+Afterwards, in Round 2, role-switching compels the new Prosecution to critique the news from a fresh perspective, leveraging insights from the first round to strengthen its arguments. Simultaneously, the new Defense builds a robust case for the news’s credibility, addressing critiques raised earlier and offering additional explanations or evidence. The Judge evaluates these renewed arguments and issues a revised verdict, incorporating new insights and cross-referencing inconsistencies or confirmations between the two rounds.
+Finally, the Judge synthesizes the outcomes of both rounds to provide a conclusive verdict, stating whether the news is fake or genuine and explaining the rationale with reference to critical evidence and arguments.
+Systematically, the detailed courtroom debate process can be divided into the following procedures. - Initial News Input
+- A suspicious news article or statement is given as the debate topic.
+
+- Meta prompts initialize roles and instruct how each role should respond, as shown below.
+
+
+
+
+General Meta Prompt - Round 1: Debate Start. Before the debate begins, the system prepares by assigning roles ( Prosecution , Defense , and Judge ) to the LLM agents and generating meta prompts to guide their responsibilities, as shown below.
+- (a) Prosecution’s Argument: The Prosecution agent reads the news and attempts to prove its falsehood. It scrutinizes the text for contradictions, logical gaps, misleading claims, or unreliable sources.
+
+- (b) Defense’s Counterargument: The Defense agent responds by defending the news item as genuine. It offers supporting context, verifiable sources, and coherent explanations, aiming to counter the Prosecution’s accusations.
+
+- (c) Judge’s Interim Verdict: The Judge summarizes both perspectives, weighing the validity of evidence. The Judge then issues an interim decision, explaining which arguments seem stronger. If a clear winner emerges (fake vs. genuine), the Judge may state it. Otherwise, the verdict highlights unresolved issues.
+
+
+
+
+Prosecution Meta Prompt (Round 1) Defense Meta Prompt (Round 1)
+Judge Meta Prompt (Round 1, Interim Verdict) - Round 2: Role Switching. After Round 1, the Prosecution and Defense swap their roles. The new Prosecution (previously Defense) now asserts the news is fake, while the new Defense (previously Prosecution) defends it as true. This reversal compels each side to explore alternative viewpoints and helps reveal hidden biases or overlooked details. Similarly, we have designed meta prompts to guide their responsibilities in this stage, as illustrated below.
+- (a) New Revised Prosecution’s Argument: The new Prosecution (previously Defense) shifts its focus to discrediting the news, but each approaches it from an entirely fresh and distinct vantage point. Uses the knowledge and insights gained from the first round to formulate additional counterclaims.
+
+- (b) New Revised Defense’s Counterargument: The newly assigned Prosecution critiques the news from the opposing perspective, highlighting potential biases, inaccuracies, or omissions, while the newly assigned Defense responds by reinforcing the credibility of the news, presenting new evidence or offering clarifications to address the misinterpretations or criticisms raised by the Prosecution.
+
+- (c) Judge’s Revised Verdict: The Judge again evaluates both sides in light of the new arguments. This second verdict may confirm the initial verdict or contradict it, depending on how compelling the arguments are in the second round.
+
+
+
+
+- Final Decision
+- The Judge reviews the outcomes from both rounds comprehensively.
+
+- By comparing contradictions and consistencies across arguments, the Judge delivers a final determination on whether the news is fake or genuine.
+
+- The final output includes a verdict (“Fake” or “Genuine”) and a concise explanation summarizing the most decisive arguments and evidence.
+
+
+
+
+Role-Switching Prompt (Round 2) Judge Meta Prompt (Round 2, Revised Verdict)
+Judge Meta Prompt (Final Decision)
+In summary, Courtroom-FND offers a structured, role-based mechanism to tackle the complexities of modern fake news detection. By leveraging carefully crafted meta prompts and iterative debates—complete with role switching—it systematically uncovers hidden contradictions, thereby improving reliability, transparency, and overall performance in tasks requiring nuanced reasoning. [See PDF for image]
+Fig. 2 An intuitive visualization of the Courtroom-FND methodology flow
+
+
+Courtroom-FND methodology flow
+In this section, we provide a detailed explanation of the Courtroom-FND Methodology Flow in Fig. 2 to guide the reader through the step-by-step process of the Courtroom-FND framework. The figure visually summarizes the methodology, illustrating the key phases and role assignments within the framework.
+- Initial News Input & Meta Prompts Generation: The process begins with the introduction of a suspicious news article or statement. At this stage, meta prompts are generated to assign roles to the participants: Prosecution, Defense, and Judge;
+
+- Round 1: Argument and Interim Verdict: In this round, the Prosecution argues that the news is fake, pointing out inconsistencies, unreliable sources, and contradictory evidence. Conversely, the Defense argues that the news is genuine, presenting verifiable data and logical reasoning;
+
+- Round 2 (Role Switching): To ensure a more balanced and rigorous analysis, roles are switched in this round. The Prosecution now argues that the news is genuine, while the Defense argues that it is fake;
+
+- Final Prediction: The final phase of the process involves the Judge synthesizing the findings from both rounds. By comparing the arguments and evidence from both rounds, the Judge delivers a conclusive ruling, determining whether the news is Fake or Genuine.
+
+
+Overall, this figure illustrates the iterative, adversarial nature of the Courtroom-FND methodology, ensuring a more thorough, transparent, and reliable evaluation of news credibility.
+LLM selection for prosecution, defense, and judge roles
+To reduce cognitive biases and enhance the fairness of courtroom debates, the framework employs diverse LLMs for the roles of prosecution, defense, and judge. Using different models helps mitigate the risk of single-model biases and ensures a more balanced evaluation.
+For first Prosecution role and second Defense role, we choose DeepSeek-V2 (DeepSeek-AI et al. 2024). DeepSeek-V2 is an advanced Mixture-of-Experts (MoE) language model with 236 billion parameters, of which only 21 billion are activated per token for efficient inference. Featuring innovative architectures like Multi-head Latent Attention (MLA) and DeepSeekMoE, it achieves high performance with reduced training costs, efficient memory usage, and enhanced generation throughput, making it a strong candidate for the debate role, which requires critical scrutiny of the news content.
+For first round’s Defense role and second round’s Prosecution role, we choose Llama3-70B (Grattafiori et al. 2024; Touvron et al. 2023). Llama3-70B is a cutting-edge foundation model developed by Meta AI (Grattafiori et al. 2024) as part of the Llama 3 series. With 70 billion parameters, it supports multilinguality, advanced reasoning, and programming tasks. This model is designed for high versatility and robust performance across diverse AI applications while benefiting from extensive training on a high-quality, multi-source corpus. With its strong contextual understanding and nuanced reasoning abilities, Llama3-70B adopts a balanced approach to information analysis, allowing it to deliver well-founded counterarguments that align perfectly with the demands of the defense role.
+For the Judge role, we choose GPT-4 (OpenAI 2023; Brown et al. 2020). GPT-4 is an advanced large language model that excels in logical reasoning, critical evaluation, and complex argument synthesis. With extensive pretraining on diverse and high-quality datasets, it demonstrates superior capabilities in assessing intricate debates and providing well-reasoned judgments. Its ability to integrate and analyze multifaceted arguments while remaining impartial makes it an ideal candidate for the Judge role, ensuring fair and transparent evaluations of the evidence and arguments presented by other LLM courtroom debaters.
+The rationale for selecting distinct LLM agents for each role in the Courtroom-FND framework lies in the need to ensure diversified perspectives and balanced adjudication. By assigning different LLMs to the prosecution and defense roles, the framework incorporates diverse viewpoints, reducing the risk of systemic biases that could arise from relying on a single model. This strategic selection of models not only enhances the reliability and robustness of the debate process but also ensures transparency and minimizes potential biases in the assessment of fake news, ultimately improving the overall credibility of the Courtroom-FND framework.
+Experiments
+This section first introduces experimental preliminaries, including adopted datasets, state-of-the-art (SOTA) baselines, evaluation metric, and hyperparameters. Then, we present and analyze the performance results of our Courtroom-FND framework compared to various competitive baselines on the above benchmarks.
+Compared methods
+Generally, we compare our Courtroom-FND framework with multiple competitive baselines. Specifically, we incorporate LLM-based prompting engineering methods such as Direct Prediction, ICL, CoT, Self-Consistency, Self-Reflect, and Analogical Prompting. To broaden the experimental comparisons and strengthen the persuasiveness of our findings, in addition to the LLM-based prompting methods, we also incorporate traditional PLM-based approaches (both fine-tuning and zero-shot). Below, we provide detailed descriptions of these compared methods.
+- Direct Prediction with GPT-4.0, DeepSeek-V2, and Llama3-70B (OpenAI 2023; DeepSeek-AI et al. 2024; Touvron et al. 2023): These comparative baselines harness the advanced reasoning and contextual understanding capabilities of GPT-4.0, DeepSeek-V2, and Llama3-70B to make direct predictions. GPT-4.0 excels in handling nuanced queries and complex information processing. DeepSeek-V2 employs mixture-of-experts mechanisms for efficient and precise outputs, while Llama3-70B combines multilingual and context-sensitive reasoning capabilities for robust performance across tasks.
+
+- Chain-of-thought (CoT) (Kojima et al. 2022; Wei et al. 2024; Xu et al. 2024): LLM-based Chain-of-thought implements chain-of-thought (CoT) prompting by adding the phrase “Let’s think step by step” to guide reasoning. This technique helps models break down complex problems into intermediate logical steps, significantly improving their performance on reasoning-intensive tasks;
+
+- In-Context Learning (ICL) (Dong et al. 2024; Brown et al. 2020): LLM-based In-Context Learning provides example input-label pairs during inference, allowing LLMs to draw direct parallels and apply learned patterns to similar tasks. In experiments, we randomly selected three examples from the training set to serve as references, ensuring that LLMs could effectively utilize contextual information to improve accuracy;
+
+- Self-Consistency (Wang et al. 2023; Chen et al. 2024; Zhang et al. 2023): LLM-based Self-consistency introduces a mechanism to sample multiple plausible answers and determine the final prediction through majority voting, which reduces noise in reasoning processes and increases robustness by exploring diverse reasoning paths;
+
+- Self-Reflect (Shinn et al. 2023; Madaan et al. 2023): LLM-based Self-reflect requires the language model to iteratively refine its outputs until achieving a self-evaluated satisfactory result. This introspective approach enhances the overall quality of predictions by allowing the model to identify and correct its own errors;
+
+- Analogical Prompting (Yasunaga et al. 2024; Webb et al. 2023): LLM-based Analogical prompting introduces analogical reasoning, enabling the model to generate its own task-relevant exemplars based on past patterns. Inspired by human reasoning experience, this method enhances adaptability and mitigates the reliance on labeled data;
+
+
+Moreover, we also introduce traditional PLM-based fine-tuning approaches. Specifically, we incorporate three variations of the Bidirectional Encoder Representations from Transformers (BERT) model1: BERT B a s e - U n c a s e d , DistilBERT B a s e - U n c a s e d , and RoBERTa B a s e - U n c a s e d .
+- BERT B a s e - U n c a s e d (Devlin et al. 2019): We implement a fine-tuned variant and a zero-shot prompting variant of BERT B a s e - U n c a s e d . In the fine-tuning scenario, the model parameters are updated using labeled examples from the training set. In the zero-shot prompting scenario, we utilize natural-language prompts (without parameter updates) to directly infer predictions.
+
+- DistilBERT B a s e - U n c a s e d (Sanh et al. 2020): Following the same procedure, we train a fine-tuned DistilBERT model on the training data and compare it against a zero-shot prompting version. Although DistilBERT has fewer parameters and is more computationally efficient, including both its fine-tuned and zero-shot variants provides valuable insights into performance trade-offs between model size and training/fine-tuning strategies.
+
+- RoBERTa B a s e - U n c a s e d (Liu et al. 2019): We similarly evaluate a fine-tuned RoBERTa-Base model alongside a zero-shot prompting variant. RoBERTa tends to leverage more extensive pre-training optimizations and tokenization strategies. By comparing its fine-tuned and zero-shot prompting outcomes, we obtain a more holistic perspective on how different pre-trained language models perform under various experimental conditions.
+
+
+It is worth to note that our experimental setup-covering these LLM prompting methods-assumes no information from the training set (i.e., zero-shot usage). Therefore, it is expected that zero-shot results for smaller PLMs would generally be outperformed by their fine-tuned counterparts. Nevertheless, to ensure fairness, we also adopt a prompting-based zero-shot approach (Liu et al. 2022) for the three PLMs described below. In our experiments, we denote their zero-shot learning variants as BERT Uncased (zero), DistilBERT Uncased (zero), and RoBERTa Uncased (zero), allowing us to ensure that each baseline is evaluated under comparable conditions.
+These additions allow us to gauge the performance disparities between traditional PLM-based methods (with and without fine-tuning) and the LLM-based prompting methods discussed earlier, thus enhancing the overall comprehensiveness and fairness of our experimental comparisons.
+Moreover, to give a more systematic understanding of the baseline methods, We have organized and summarized their respective strengths and weaknesses in Table 3. This is a comprehensive comparison of various models and approaches, highlighting key characteristics to provide readers with a clearer overview of each state-of-the-art method’s performance and limitations. Table 3. Comparison of mainstream FND methods: an overview of their strengths and weaknesses
+Methods
+Strengths
+Weaknesses
+
+Direct Pred (e.g. GPT-4.0, Llama3)
+Strong reasoning and contextual understanding, suitable for complex tasks
+Relies on large models, high computational cost, limited scalability
+
+CoT
+Breaks down complex tasks into intermediate steps, significantly improves performance on reasoning tasks
+May not work well for tasks requiring deep domain-specific knowledge
+
+ICL
+Utilizes contextual examples to enhance model generalization ability without fine-tuning
+Highly dependent on the quality of examples, requires careful selection of examples
+
+Self-Consistency
+Increases robustness and reduces reasoning noise by sampling multiple plausible answers and majority voting
+Requires multiple rounds of reasoning, increasing computational resource consumption
+
+Self-Reflect
+Allows the model to self-correct and iteratively optimize its outputs, improving prediction quality
+Complex reasoning process, may have slow convergence
+
+Analogical Prompting
+Mimics human analogical reasoning, enhances adaptability, reduces reliance on labeled data
+Quality of analogical generation is not guaranteed, limited generalization
+
+BERT-Base
+Fine-tuned for specific tasks, stable performance
+Prediction accuracy is limited, struggles with complex tasks
+
+DistilBERT
+Fewer parameters, higher computational efficiency, suitable for resource-constrained environments
+Poor support for reasoning tasks, weaker performance
+
+RoBERTa
+Slightly better generalization than BERT, well-optimized pre-training
+Fine-tuning still requires a lot of labeled data, limited flexibility
+
+
+Evaluation metrics
+In this study, Accuracy and Macro-F1-score both are chosen as the primary evaluation metrics to align with previous research in fake news detection. As widely accepted standards for classification tasks, these metrics effectively assess the model’s capability to predict labels correctly while ensuring a balanced evaluation of precision and recall.
+Accuracy is determined by dividing the number of accurate predictions ( Count T ) by the total predictions made ( Count N ), as expressed in the following formula: 1
+Accuracy = Count T Count N A prediction is deemed accurate when the label assigned by the model matches the true label. Higher Accuracy values indicate a more reliable model, particularly in classification tasks where the goal is to maximize the ratio of correct predictions to the total dataset. This metric is commonly utilized as a benchmark for evaluating model performance in fake news detection tasks.
+F1-score, on the other hand, is incorporated to provide a more comprehensive assessment by balancing precision and recall, particularly in scenarios where class distribution may be imbalanced. It is defined as the harmonic mean of precision and recall: 2
+F1-score = 2 × Precision × Recall Precision + Recall Where precision measures the proportion of correctly predicted positive instances among all predicted positives; recall measures the proportion of correctly predicted positive instances among all actual positives.
+Macro-F1 is obtained by calculating the F1-score for each class separately and then taking the average across all classes: 3
+Macro-F1 = 1 C ∑ i = 1 C F1-score i where C is the number of classes, and F1-score i represents the F1-score of class i .
+Macro-F1-score is especially valuable in fake news detection, where both false positives and false negatives can have significant consequences. By averaging the F1-score across classes, this metric ensures a balanced evaluation even when the dataset is imbalanced2.
+By considering both Accuracy and Macro-F1-score, this study ensures a robust evaluation of model performance, accounting for both overall correctness and the balance between precision and recall.
+Adopted datasets
+We conduct experiments on four challenging FND benchmarks, namely, FakeNewsClassification 3, NELA-GT-2022 4, LIAR 5, and Counter-Intuitive AR v1 6. The statistical details of the five datasets are summarized in Table 4.
+- FakeNewsClassification (Raza et al. 2024): The FakeNewsClassification dataset is a meticulously curated resource for binary classification of fake and real news, comprising 10,000 political news articles annotated using a hybrid approach of GPT-4 Turbo and human expert review. The integration of AI-driven annotations with rigorous human verification ensures both efficiency and reliability. This dataset is designed to support advanced research in fake news detection, with a well-structured 80-10-10 split for training, validation, and testing.
+
+- NELA-GT-2022 (Gruppi et al. 2023): The NELA-GT-2022 dataset is a large-scale, multi-labeled benchmark corpus for the study of misinformation in news articles. It contains 1,778,361 articles collected from 361 outlets between January 1, 2022, and December 31, 2022. The dataset uses distant supervision for labeling, inferring article veracity from source reliability ratings provided by the Media Bias/Fact Check (MBFC) database. Furthermore, following previous work (Raza et al. 2024), we extracted a sample of 10,00 articles from NELA-GT-2022, carefully maintaining a balance between fake and real labels and ensuring that each article contained at least 50 words to guarantee sufficient content for a meaningful analysis.
+
+- Counter-Intuitive AR v1 (CIAR v1) (Kong et al. 2024): The Counter-Intuitive Arithmetic Reasoning (CIAR) dataset is designed to evaluate the deep reasoning capabilities of LLMs. It comprises 200 questions sourced from elicitation questions, web data, and hand-generated examples. The questions in CIAR are crafted with hidden traps that prompt intuitive yet incorrect answers, assessing an LLM’s ability to resist superficial cues. Each question necessitates a rigorous, multi-step reasoning process, testing the model’s capacity for complex problem-solving. Building upon CIAR, Counter-Intuitive AR v1 (CIAR v1) (Kong et al. 2024; Wu et al. 2019) is a specialized binary classification dataset tailored for determining the veracity of propositions that require intricate reasoning. This dataset challenges models to engage in deep logical analysis to accurately classify statements as true or false.
+
+- LIAR (Wang 2017): The LIAR dataset is a benchmark for fake news detection, consisting of 12,836 short statements labeled for truthfulness, subject, context, speaker, and party affiliation, collected over a decade from PolitiFact.com. It features six fine-grained truthfulness labels and includes rich metadata for each statement, making it suitable for both linguistic and metadata-based machine learning approaches in misinformation research.
+
+
+Table 4. Summary of datasets with fake and real entries
+Dataset
+#Fake
+#Real
+#Total
+
+FakeNewsClassification
+5,000
+5,000
+1,0000
+
+NELA-GT-2022
+5,00
+5,00
+1,000
+
+CIAR v1
+76
+12,4
+200
+
+LIAR
+1,595
+1,346
+2,941
+
+
+It is worth noting that the issue of class imbalance in the adopted datasets should be considered to ensure a more balanced and comprehensive evaluation. Initially, we recognized that accuracy alone is insufficient for imbalanced datasets. To address this, we introduced the macro-F1 score, which averages the F1-scores of both classes, offering a more nuanced and effective assessment. Additionally, our approach utilizes zero-shot learning, ensuring that the model remains unaffected by class imbalance during training, as it does not rely on biased training data.
+Hyperparameter settings and LLM backbones
+In Courtroom-FND, the underlying mechanism is based on LLMs engaging in a structured dialogue to solve the problem of fake news detection. These models, acting in distinct roles ( Prosecution, Defense , and Judge ), rely on a set of key hyperparameters to guide their performance during the debate process. As this framework is primarily focused on LLM-driven question-answering and reasoning tasks, the critical hyperparameters involve settings that govern the behavior of these models during inference. Table 5 summarizes the hyperparameters used in the Courtroom-FND framework, along with their settings during the experiment. Table 5. Some core hyperparameter settings for Courtroom-FND framework
+Parameter
+Description
+Value/Setting
+
+Top-k Sampling
+Limits model output to the top k most probable words
+Prosecution/Defense: 60, Judge: 40 (balances between coherence and diversity)
+
+Top-p (Nucleus Sampling)
+Randomly selects the next word from the set of words where the cumulative probability reaches ’p’
+Prosecution/Defense: 0.95, Judge: 0.8 (balances creativity with coherence)
+
+Temperature
+Degree of control over creative vs. deterministic responses
+Prosecution/Defense: 0.7, Judge: 0.5 (balances creativity with accuracy)
+
+Maximum Token Length
+Maximum number of tokens the model can process per round
+2048 tokens per input to allow detailed argumentation and rebuttals
+
+Maximum Debate Length
+Number of rounds the debate can last before a final ruling is given
+10 rounds (ensures thorough exploration of arguments)
+
+
+The most important parameters include Temperature, Top-k, Top-p, Maximum Token Length, and Maximum Debate Length, which control the creativity, diversity, and coherence of the model outputs, as well as the debate length and the final verdict constraints.
+(1) Temperature , for instance, determines the level of randomness in the model’s output. A lower temperature (e.g., 0.3) leads to more deterministic, consistent responses, making the arguments more structured and focused. Conversely, a higher temperature (e.g., 0.8) increases the diversity of responses, encouraging more varied but less predictable reasoning.
+(2) Top-k Sampling is used to control the diversity of generated responses by restricting the model’s choices to the top k most likely words. By adjusting this, we balance between generating highly plausible, coherent arguments and fostering a more creative exploration of counterarguments.
+(3) Top-p (Nucleus Sampling): Top-p randomly selects the next word from the set of words where the cumulative probability reaches p . The value of Top-p is dynamic and adapts to each context, as opposed to Top-k , which uses a fixed number of top candidates. We followed a typical setting of 0.95 for Prosecution/Defense and 0.8 for Judge to balance creativity with coherence in the debate process.
+(4) Maximum Token Length: Given the nature of the debate and the necessity for a structured evaluation of arguments, the Maximum Token Length is set to 2048 tokens per round to ensure each side can present detailed and thorough arguments. This is particularly important as each round in the debate can involve complex reasoning and citation of multiple pieces of evidence.
+(5) Maximum Debate Length: To further ensure rigorous and balanced reasoning, the framework enforces a Maximum Debate Length of 10 rounds, after which the Judge is mandated to issue a final verdict, synthesizing the arguments from both rounds. This ensures that the debate process is comprehensive and mitigates any over-reliance on a single round of reasoning.
+In Courtroom-FND, we utilize three LLM agents for distinct roles: two debaters (Prosecution and Defense) and a Judge. The first Prosecution (and second Defense) role employs DeepSeek-V27 (DeepSeek-AI et al. 2024), a 236B Mixture-of-Experts (MoE) model activating 21B parameters per token for efficient inference. The first Defense (and second Prosecution) role uses Llama3-70B8 (Touvron et al. 2023), a highly versatile foundation model supporting multilinguality and advanced reasoning. For the Judge role, we leverage GPT-49 (OpenAI 2023), known for its superior logical reasoning and impartial evaluations. These models are selected to ensure diverse perspectives and minimize systemic biases in fake news detection. In the ablation study, we additionally incorporate GPT-3.5 Turbo10 (Brown et al. 2020; OpenAI 2023) and Qwen2-72B11 (Qwen et al. 2025) to compare their performance across different roles on the testbed.
+Main results
+Baseline comparisons
+The performance comparison experiments, summarized in Table 6, evaluate our proposed Courtroom-FND framework against conventional LLM-based prompting strategies and state-of-the-art models across four widely-used fake news detection datasets: FakeNewsClassification, LIAR, NELA-GT-2022, and CIAR v1. These experiments include both direct prediction methods (e.g., GPT-4.0, DeepSeek-V2, Llama3-70B) and advanced prompting techniques (e.g., Chain-of-Thought, Self-Consistency, Self-Reflect), highlighting the effectiveness of our multi-round debate. The results in Table 6 demonstrate that Courtroom-FND consistently outperforms all baseline methods, showcasing its superiority in handling complex fake news detection tasks. Table 6. Performance comparison of Different LLMs and prompting strategies in Fake News Detection across four adopted benchmarks
+FakeNewsClassification
+LIAR
+NELA-GT-2022
+CIAR v1
+
+Supervised Learning Methods (trained on training set)
+
+Small PLM-based Fine-tuning
+BERT B a s e - U n c a s e d
+91.9 [85.2]
+59.1 [57.4]
+78.7 [78.8]
+58.0 [56.4]
+
+RoBERTa B a s e - U n c a s e d
+89.6 [89.7]
+65.9 [63.7]
+83.5 [83.6]
+59.5 [60.6]
+
+DistilBERT B a s e - U n c a s e d
+84.1 [84.1]
+54.8 [55.3]
+76.9 [76.8]
+57.0 [57.1]
+
+Language Model Prompting Methods (zero-shot prediction)
+
+Small PLM-based Zero-shot Learning
+BERT Uncased (zero)
+59.3 [57.2]
+54.0 [53.5]
+57.5 [56.8]
+56.0 [53.3]
+
+RoBERTa Uncased (zero)
+63.6 [62.6]
+55.4 [55.0]
+58.5 [57.3]
+57.1 [57.8]
+
+DistilBERT Uncased (zero)
+-
+-
+-
+-
+
+LLM-based Pure Capabilities
+Direct Prediction with GPT-4.0
+71.3 [70.8]
+66.7 [66.6]
+63.2 [61.5]
+51.0 [46.5]
+
+Direct Prediction with DeepSeek-V2
+66.1 [65.6]
+62.3 [59.5]
+64.7 [62.2]
+59.0 [ 58.9 ]
+
+Direct Prediction with Llama3-70B
+60.5 [60.2]
+56.9 [55.5]
+55.8 [55.6]
+48.5 [47.9]
+
+Superior Prompting Strategies
+In-Context Learning (ICL)
+73.4 [71.8]
+67.3 [63.5]
+62.5 [61.3]
+54.0 [52.8]
+
+Chain-of-thought (CoT)
+68.7 [67.9]
+64.4 [62.0]
+60.1 [58.5]
+51.5 [51.0]
+
+Self-Consistency
+75.1 [ 75.1 ]
+68.5 [68.0]
+66.3 [59.4]
+56.0 [55.9]
+
+Self-Reflect
+74.2 [73.2]
+70.2 [ 69.9 ]
+68.1 [ 68.0 ]
+57.0 [53.3]
+
+Analogical Prompting
+69.8 [68.3]
+64.0 [63.0]
+61.7 [61.2]
+53.5 [50.5]
+
+Our Method
+Courtroom-FND (Multi-Rounds Debate)
+78.6 [ 77.5 ]
+74.3 [ 74.3 ]
+75.6 [ 74.6 ]
+67.0 [ 64.9 ]
+
+The values "X [Y]" represent Accuracy percentage (%) with [ Macro-F1 percentage %] for the respective methods on these datasets. Bold indicates the highest Accuracy (%) achieved by any method on a given dataset, same with Macro-F1 . Underlined indicates the second-highest Accuracy (%) on a given dataset
+
+From the performance of baseline methods, we find that in Direct Prediction with LLMs , among the direct prediction methods, GPT-4.0 performs the best, achieving 71.3% acc [70.8% macro-f1] on FakeNewsClassification and 66.7% acc [66.6 % macro-f1] on LIAR, surpassing DeepSeek-V2 (66.1% acc [65.6% macro-f1], 62.3% acc [59.5% macro-f1]) and Llama3-70B (60.5% acc [60.2% macro-f1], 56.9% acc [55.5% macro-f1]). However, even GPT-4.0 struggles with datasets requiring advanced reasoning, such as CIAR v1 (51.0% acc [46.5% macro-f1]), reflecting the inherent limitations of direct prediction without iterative evaluation or argument switching. In various advanced Prompting Strategies , self-consistency and self-reflect deliver the highest performance among advanced prompting techniques. Specifically, self-consistency achieves strong results on FakeNewsClassification (75.1% acc [75.1% macro-f1]) and LIAR (68.5% acc [68.0% macro-f1]), demonstrating the robustness of sampling-based reasoning. And self-reflect achieves the second-highest accuracy on NELA-GT-2022 (68.1% acc [68.0% macro-f1]) and CIAR v1 (57.0% acc [48.3% macro-f1]) by refining outputs iteratively. Other methods, such as In-Context Learning (ICL) (73.4% acc [71.8% macro-f1] on FakeNewsClassification) and Chain-of-Thought (CoT) (68.7% acc [67.9% macro-f1] on FakeNewsClassification), also perform well but are limited by their dependency on prompt quality and error propagation.
+As for the performance of our Courtroom-FND framework, it achieves the highest performance across all four datasets, consistently outperforming all baseline methods. On FakeNewsClassification, it achieves an accuracy of 78.6% [77.5% macro-f1], surpassing the best baseline, Self-Consistency (75.1% acc [75.1% macro-f1]), by increasing ↑ 3.5% acc [2.4% macro-f1]. For LIAR, Courtroom FND achieves 74. 3% acc [74. 3% macro-f1], marking a notable improvement of ↑ 4.1% acc [4.4% macro-f1] over Self-Reflect (70.2% acc [69.9% macro-f1]). On NELA-GT-2022, the framework records 75.6% [74.6% macro-f1], outperforming Self-Reflect (68.1% acc [68.0% macro-f1]) by an impressive increasing of ↑ 7.5% acc [6.6% macro-f1]. Finally, on the most challenging dataset, CIAR v1, Courtroom-FND demonstrates a significant advantage, achieving 67.0% acc [64.9% macro-f1], which is about acc ↑ 10.0% [macro-f1 11.6%] higher than the next-best method, Self-Reflect (57.0% acc [53.3% macro-f1]). Especially, Courtroom-FND achieves significant improvements over GPT-4.0, DeepSeek-V2, and Llama3-70B, demonstrating the limitations of direct prediction and the necessity of structured frameworks for handling complex datasets like CIAR v1.
+Moreover, we also compare the performance of PLM-based fine-tuning approaches ( BERT B a s e - U n c a s e d , RoBERTa B a s e - U n c a s e d , and DistilBERT B a s e - U n c a s e d ) against their zero-shot prompting counterparts and our Courtroom-FND. The results highlight a critical trade-off between training-set dependency and generalization capability, demonstrating the distinct advantages of Courtroom-FND in handling complex fake news detection tasks.
+Firstly, PLM-based fine-tuned models show strong performance across all datasets, outperforming zero-shot learning methods. For example, RoBERTa B a s e - U n c a s e d follows a similar trend, achieving 89.6% accuracy on FakeNewsClassification and 83.5% accuracy on NELA-GT-2022, while its zero-shot version only scores 63.6% and 58.5% accuracy respectively. This superior performance, however, comes with a major drawback-it benefits from the training set’s knowledge. In contrast, zero-shot learning methods (BERT Uncased ( zero ) , RoBERTa Uncased ( zero ) , DistilBERT Uncased ( zero ) ) operate without exposure to the training set. Since training and test sets come from same distribution, the fine-tuned models absorb dataset-specific biases, leading to an advantage that does not necessarily translate well to unseen, real-world data.
+Our Courtroom-FND outperforms both fine-tuned and zero-shot PLM-based approaches across all datasets, demonstrating its strength in balancing structured reasoning, iterative evaluation, and adaptability. On FakeNewsClassification , Courtroom-FND achieves 78.6% accuracy, significantly surpassing zero-shot PLM models (which range between 57%-64% ) and even outperforming advanced LLM prompting strategies (e.g., self-consistency at acc 75.1% ). Most notably, on CIAR v1 , Courtroom-FND achieves 67.0% accuracy, which is 10.0% higher than the best advanced prompting strategy (Self-Reflect at acc 57.0% ) and vastly superior to all zero-shot PLM baselines.
+This underscores that while fine-tuned PLMs perform well due to training-set exposure, they lack generalization, whereas zero-shot PLMs are more generalizable but less competitive in performance. Courtroom-FND successfully bridges this gap, offering higher generalization, adaptability, and superior reasoning capabilities, making it the most effective solution for real-world fake news detection.
+Overall, the results unequivocally demonstrate the superiority of the Courtroom-FND framework, which achieves state-of-the-art performance by combining multi-round debates, role switching, and iterative evaluations. These findings highlight the importance of structured, interactive methodologies in enhancing both the accuracy and reliability of fake news.
+Effect of role allocation on FND performance
+To evaluate the effect of role allocation on the performance of the Courtroom-FND framework, we conducted a comparative study against an alternative setting where three LLMs engaged in unstructured debates without predefined roles. The alternative method allowed the models to generate arguments freely for three rounds before reaching a final verdict through majority voting. This experiment aims to assess whether structured role allocation-assigning distinct prosecution, defense, and judge roles-contributes to improved accuracy and robustness in Fake News Detection (FND) tasks.
+As shown in Table 7, the experimental results highlight the effectiveness of Courtroom-FND in structured debate settings compared to unstructured discussions among multiple LLMs. Across all datasets, Courtroom-FND significantly outperforms the unstructured LLM discussions, where three independent models engage in three rounds of unconstrained argumentation before determining the final classification via majority voting. Table 7. Performance comparison of Courtroom-FND and unstructured LLM discussions (Accuracy % [Macro-F1 %])
+Dataset
+Courtroom FND (Structured Debate)
+Random LLM 1 (Unstructured, 3 Rounds)
+Random LLM 2 (Unstructured, 3 Rounds)
+Random LLM 3
+
+(Unstructured, 3 Rounds)
+Avg Random LLM (Majority Vote)
+
+FakeNewsClassification
+78.6 [ 77.5 ]
+71.5 [ 71.2 ]
+69.8 [64.8]
+66.1 [63.9]
+70.5 [68.6]
+
+LIAR
+74.3 [ 74.3 ]
+64.3 [62.2]
+65.9 [59.1]
+60.2 [58.5]
+68.1 [ 67.0 ]
+
+NELA-GT-2022
+75.6 [ 74.6 ]
+69.1 [66.2]
+67.5 [ 67.5 ]
+64.2 [63.9]
+68.3 [66.4]
+
+CIAR v1
+67.0 [ 64.9 ]
+58.0 [57.9]
+56.0 [54.8]
+55.0 [53.9]
+57.0 [ 55.3 ]
+
+Bold indicates the best result, while underlined represents the second-best
+Table 8. Effect of different LLM configurations on fake news detection (Accuracy % [Macro-F1 %])
+Configuration
+FakeNewsClassification
+LIAR
+NELA-GT-2022
+CIAR v1
+
+Courtroom-FND (Full: GPT-4 Judge, DeepSeek-V2 + Llama3 -70B Debaters)
+78.6 [ 77.5 ]
+74.3 [ 74.3 ]
+75.6 [ 74.6 ]
+67.0 [64.9]
+
+GPT-4 for All Roles
+76.1 [ 75.7 ]
+72.8 [ 72.1 ]
+72.9 [ 72.5 ]
+62.5 [60.9]
+
+Llama3-70B for All Roles
+70.8 [70.1]
+65.3 [64.9]
+66.7 [65.9]
+55.0 [53.8]
+
+DeepSeek-V2 for All Roles
+72.5 [71.9]
+67.0 [65.2]
+68.9 [68.9]
+64.5 [ 63.8 ]
+
+Bold indicates the best result, while underlined represents the second-best
+
+The most notable improvement is observed in CIAR v1, a dataset that requires deep logical reasoning. The structured debate framework achieves an accuracy of 67.0% [64.9% macro-f1], surpassing the average accuracy of the random LLM majority vote (57.0% acc [55.3% macro-f1]) by both Acc & F1-score about ↑ 10 percentage points. These results suggest that the role-based adversarial framework in Courtroom-FND enhances the model’s ability to reason through complex claims, mitigating the tendency of unstructured discussions to converge on oversimplified or heuristic-based conclusions.
+Across other datasets such as FakeNewsClassification, LIAR, and NELA-GT-2022, Courtroom-FND consistently outperforms the unstructured discussion approach by ↑ 6-8 percentage points on both Acc and F1 metrics. The lack of predefined roles in the random LLM setting appears to lead to inconsistencies in argument structure and logical coherence, potentially resulting in suboptimal decision-making when no clear guidance is provided for structured reasoning.
+Another key observation is the variability in predictions among the three independent LLMs in the unstructured setting. The standard deviation of accuracy across the three models are no more than 3% Acc and 5% Macro-F1, indicating that different models often arrive at diverging conclusions when left to engage in open-ended debates. This inconsistency further demonstrates the importance of well-defined prosecution, defense, and judge roles in ensuring logical progression and fairness in decision-making.
+The structured role allocation in Courtroom-FND appears to provide critical advantages in bias mitigation, as it systematically forces the models to argue from both perspectives before reaching a conclusion. In contrast, the unstructured LLM discussion approach may suffer from implicit bias reinforcement, where the initial stance taken by each model influences the overall consensus without a rigorous adversarial test.
+Overall, these findings underscore the necessity of explicit role allocation and structured adversarial debate in Fake News Detection (FND) tasks. By ensuring that both supporting and opposing arguments are systematically addressed, Courtroom-FND enhances decision robustness, consistency, and logical validity, leading to superior classification performance compared to unstructured discussion-based approaches.
+Ablated studies
+To further validate the effectiveness of Courtroom-FND, we conduct ablation studies by selectively disabling key components and analyzing their impact. These experiments help isolate the contribution of different model configurations and evaluate the importance of using diverse LLMs and robust judge models.
+Effect of different LLM configurations
+We compare the impact of using different LLMs for each courtroom role, examining how varying the models assigned to the Prosecution, Defense, and Judge affects overall accuracy. Table 8 presents the results across multiple datasets.
+The full Courtroom-FND configuration achieves the highest performance across all datasets, reinforcing the benefits of using multiple specialized LLMs for different roles. The all-GPT-4 setting performs well but is slightly worse than Courtroom-FND, suggesting that diverse debaters with different reasoning patterns improve adversarial robustness.
+Using Llama3-70B or DeepSeek-V2 exclusively for all roles leads to significant drops in accuracy, especially on datasets requiring nuanced reasoning. This confirms that relying on a single model limits perspective diversity and results in suboptimal verdicts.
+The performance gap is most noticeable in CIAR v1, a dataset that demands deep logical reasoning. Courtroom-FND outperforms the single-model setups by gap of ↑ 9-11% Acc [ ↑ 7-12% Macro-F1], highlighting the importance of argument diversity in improving fake news detection accuracy.
+Effect of judge language model choice
+Since the Judge plays a crucial role in evaluating arguments, we conduct experiments to assess how different LLMs impact the final decision quality. Table 9 shows the results of using different language models, i.e., GPT-3.5 Turbo (OpenAI 2023) and Qwen2-72B (Qwen et al. 2025), in the Judge role. Table 9. Effect of judge model choice on fake news detection (Accuracy % [Macro-F1 %])
+Judge Model
+FakeNewsClassification
+LIAR
+NELA-GT-2022
+CIAR v1
+
+GPT-4 (Ours)
+78.6 [77.5]
+74.3 [74.3]
+75.6 [74.6]
+67.0 [64.9]
+
+GPT-3.5 Turbo
+75.0 [74.3]
+70.6 [68.9]
+70.0 [68.9]
+61.0 [60.2]
+
+Qwen2-72B
+77.1 [76.5]
+72.2 [70.7]
+72.3 [71.1]
+63.0 [60.3]
+
+
+The results show that GPT-4 achieves the highest accuracy across all datasets, confirming its superiority in logical reasoning and judgment formulation. The performance drop with GPT-3.5 Turbo and Qwen2-72B suggests that weaker Judge models struggle to synthesize complex arguments effectively.
+In particularly challenging datasets such as CIAR v1, where deep reasoning is essential, GPT-4 outperforms GPT-3.5 Turbo by 6.0% acc increase [ ↑ 4.7% macro-f1] and Qwen2-72B by 4.0% acc increase [ ↑ 4.6% macro-f1], emphasizing the importance of strong judgment models in adversarial debate frameworks.
+Overall, these findings reinforce the idea that a highly capable Judge model is crucial to maintaining the effectiveness of Courtroom-FND , as it ensures rigorous evaluation and fair assessment of opposing arguments.
+Effect of debate rounds and role switching
+To further evaluate the contribution of role switching and multi-round debate in the Courtroom-FND framework, an ablation study was conducted comparing two configurations:
+- Single Debate Round : The framework executes only a single round of debate, wherein the prosecution argues that the news is fake, while the defense asserts its authenticity. The judge makes a decision based on this single debate.
+
+- Two Debate Rounds with Role Switching (Original Courtroom-FND) : The prosecution and defense switch roles for a second debate round, allowing both sides to argue from the opposite perspective. The judge then reevaluates the arguments before delivering the final ruling.
+
+
+Figure 3 presents the accuracy comparison of these two configurations across four benchmark datasets. [See PDF for image]
+Fig. 3 Comparison of accuracy between the single debate round and the two-round debate framework with role switching [Evaluation Metric: Accuracy %]
+
+
+The experimental results reveal that the two-round debate framework with role switching significantly enhances performance across all datasets. Specifically, the role-switching mechanism contributes to an average accuracy improvement of 3.1%, with the most notable gains observed in datasets requiring deeper logical reasoning, such as CIAR v1, where accuracy increases from 64.5% to 67.0%.
+The single debate round approach exhibits comparatively lower accuracy, suggesting that a single perspective is insufficient for comprehensive fake news detection. In contrast, role switching compels the model to critically analyze both perspectives, thereby facilitating a more balanced and robust final judgment.
+Moreover, the performance gap is particularly pronounced on the LIAR and NELA-GT-2022 datasets, which contain complex linguistic structures and implicit biases. The proposed Courtroom-FND framework effectively mitigates these challenges by incorporating adversarial evaluation through structured debates, ultimately leading to more reliable classification results.
+These findings emphasize the significance of argument diversity and iterative reasoning in enhancing the accuracy of fake news detection models. The role-switching mechanism ensures that potential biases are exposed, inconsistencies are identified, and conclusions are refined, further substantiating its necessity in our proposed framework.
+Case studies
+To help readers better understand the framework’s operation and reasoning details, we selected a classic case from the LIAR12 dataset, as shown in Fig. 4. This LLM reasoning case followed a structured, multi-role debate mechanism to assess the authenticity of news articles.
+Initially, a suspicious news claim is presented as input, and roles are assigned: the Prosecution argues that the news is fake, while the Defense contends that it is genuine. Both sides present their arguments, scrutinizing the claim for inconsistencies, misleading statements, or corroborative evidence. [See PDF for image]
+Fig. 4 A typical case from LIAR for illustrating Courtroom-FND’s multi-round debate process with role switching and final verdict
+
+
+In Round 1 , the Prosecution and Defense present their respective cases, after which the Judge evaluates both sides and issues an interim verdict. However, the case remains inconclusive, the roles are switched in Round 2 , where the previous Prosecution now defends the news, and the previous Defense argues against it. This role-switching ensures a more balanced analysis and exposes potential biases or overlooked points. The Judge evaluates the new arguments and synthesizes the information from both rounds to deliver a Final Verdict , determining whether the news is genuine or fake.
+This iterative process improves the robustness and transparency of fake news detection by encouraging critical thinking, revealing hidden contradictions, and ensuring that all perspectives are rigorously examined. Overall, this dynamic, adversarial approach ensures a comprehensive evaluation of the news’ authenticity, making the Courtroom-FND method a powerful tool in tackling fake news detection.
+Discussion
+The Courtroom-FND framework presents a novel approach to fake news detection by emulating the dynamics of courtroom debates, thereby leveraging the strengths of LLMs in a structured and interactive manner. This discussion elucidates the key findings from our experiments, contextualizes them within the existing body of research, explores the broader implications of our approach, and acknowledges the limitations and potential avenues for future investigation.
+Interpretation of experimental results
+Our extensive experiments across diverse and challenging datasets have consistently demonstrated that Courtroom-FND outperforms traditional fake news detection methods, including state-of-the-art LLM-based approaches like GPT-4. The superior performance can be attributed to several factors inherent in the courtroom debate framework:
+1. Enhanced Reasoning through Role Switching : By alternating the roles of prosecution and defense, Courtroom-FND facilitates a comprehensive exploration of both sides of a claim. This bidirectional argumentation mitigates the risk of model bias towards a single perspective, ensuring a more balanced and thorough evaluation of the news content.
+2. Robustness in Complex Scenarios : The framework’s ability to handle controversial and misleading media posts highlights its robustness. The iterative debate process allows for the dissection of nuanced and multifaceted misinformation, which static models might overlook or misinterpret.
+3. Improved Explainability : The structured debate provides clear and interpretable reasoning paths for the final verdict. This transparency is crucial for building trust in automated fake news detection systems, as stakeholders can trace the logical progression of arguments leading to the conclusion.
+Comparison with existing methods
+Traditional fake news detection approaches predominantly rely on static feature extraction, shallow textual analysis (Choras et al. 2020; Goldani et al. 2021; Jin et al. 2024), or propagation-based models (Nguyen et al. 2020; Wu et al. 2023; Wu and Hooi 2023; Mehta et al. 2022; Jin et al. 2025) that depend on social context. While these methods have achieved commendable results, they often fall short in scenarios where social contextual information is limited or rapidly evolving. In contrast, Courtroom-FND’s interactive debate mechanism circumvents the dependency on external social data, focusing instead on the intrinsic linguistic and semantic properties of the news content.
+Moreover, existing LLM-based methods such as Chain-of-Thought (CoT) (Wei et al. 2024; Kojima et al. 2022; Xu et al. 2024; Lyu et al. 2023) and In-Context Learning (ICL) (Dong et al. 2024; Brown et al. 2020) paradigms, despite their advanced reasoning capabilities, encounter challenges like error propagation and dependency on prompt quality. Courtroom-FND addresses these issues by incorporating multi-role interactions and argument switching, which enhance the depth and reliability of the reasoning process.
+Mitigating LLM hallucinations through structured role-based debates
+One of the known limitations of LLMs is their tendency to generate hallucinations-statements that are syntactically plausible but factually inaccurate or unverifiable. This presents a critical challenge for tasks such as fake news detection, which inherently demand high factual accuracy and interpretability. Our proposed Courtroom-FND incorporates several built-in mechanisms that collectively serve to mitigate the effects of LLM hallucinations.
+1. Structured Debate with Role-based Constraints : The core of our Courtroom-FND is a structured, multi-role debate setting in which different LLM agents take on the roles of prosecution, defense, and judge. Each role is guided by dedicated prompts with specific objectives-either to prove the news is fake, defend its authenticity, or provide an impartial assessment. This process ensures that each claim is critically examined from opposing perspectives. Consequently, hallucinated claims are more likely to be identified and rebutted, reducing the risk of unverified information influencing the final outcome.
+2. Unique Role-Switching Mechanism : To further reinforce robustness, we implement a role-switching mechanism in Courtroom-FND: the prosecution and defense roles are reversed after the first round of debate. This encourages each LLM agent to re-evaluate the same content from a completely new standpoint. By compelling the models to argue both for and against the same piece of news, Courtroom-FND promotes deeper reasoning and exposes potential inconsistencies, contradictions, or hallucinations that may have gone unnoticed in a single-pass evaluation.
+3. Multi-Model Diversity for Redundancy and Bias Reduction : To prevent hallucinations from being reinforced by a single model’s biases, we deliberately assign different LLMs to each role in the debate. For example, DeepSeek-V2 (DeepSeek-AI et al. 2024) is used for the Prosecution, Llama3-70B (Touvron et al. 2023; Grattafiori et al. 2024) for the Defense, and GPT-4 (OpenAI 2023; Mao et al. 2024) for the Judge. This model heterogeneity ensures that no single model’s generative tendencies dominate the decision-making process. This diversity acts as an additional safeguard against hallucinated information shaping the final verdict unchallenged.
+Through the combination of structured role-playing, adversarial debate, role switching, and model diversity, Courtroom-FND effectively reduces the likelihood and impact of hallucinated content in LLM-based fake news detection.
+Limitations
+Despite its promising advancements, Courtroom-FND is not without limitations:
+1. Computational Complexity : The multi-role and iterative nature of the framework inherently demands greater computational resources compared to single-pass detection models. This could pose challenges in real-time applications or deployment in resource-constrained environments. Specifically, the performance of CourtRoom-FND scales with the dataset volume, meaning that larger datasets will increase processing time and costs. Since CourtRoom-FND employs multiple rounds of debates ( prosecution, defense, and judge ), each fake-news instance processed adds to the computational load. Therefore, in the future, we will utilize parallelization or distributed computing to handle very large datasets in successive practical deployments for online real-time news detection applications with high frequency.
+2. Dependency on LLMs (Reasoning Time & Fee Cost) : The effectiveness of Courtroom-FND is closely tied to the capabilities of the underlying LLMs. Any limitations or biases present in the LLMs can propagate through the debate process, potentially affecting the detection outcomes. Simultaneously, each "round" of debate consumes computational resources, including time spent on the outputs and token consumption of LLMs. So, the computational demands of some "expensive" LLMs such as Llama3.1-405B (Touvron et al. 2023), DeepSeek-R1 (DeepSeek-AI et al. 2024), and GPT-4o (OpenAI 2023; Mao et al. 2024) can significantly increase processing time and (token fee) costs. Thus, in the future, we will consider techniques like model distillation (Sanh et al. 2020), more efficient LLMs, or limiting the maximum number of debate rounds to enhance detection efficiency without significantly sacrificing predictive quality.
+3. Role Allocation and Management : While role switching enhances argument diversity, it also introduces complexity in managing consistent and coherent role transitions. As each role of prosecution, defense, and judge, has its own specific objectives and argumentative style, ensuring that these roles maintain their argumentative integrity throughout the process is a challenge. This requires careful coordination to ensure that each role continues to fulfill its designated function, even as the agents switch positions. Managing the continuity of arguments and preventing any confusion or contradictions during the transitions between roles is crucial for maintaining the reliability of the overall reasoning process.
+4. Scalability to Multimodal Content : Currently, Courtroom-FND is primarily text-based, focusing on analyzing written content to detect fake news. However, to handle multimodal misinformation, which may involve a combination of text, images, videos, or audio content, would require significant methodological adaptations. In the future, we plan to extend Courtroom-FND to handle multimodal misinformation involving images, videos, or audio content requires significant methodological adaptations.
+Future work
+Building upon the foundations of Courtroom-FND, several directions merit further exploration:
+1. Multilingual and Multimodal Extensions : In the furute, we plan to expand Courtroom-FND to accommodate multiple languages and integrate non-textual data sources (Comito et al. 2023; Feng et al. 2024; Qi et al. 2024), which we believe will enhance its applicability across diverse and global contexts. Specifically, expanding Courtroom-FND to accommodate multiple languages will require addressing linguistic nuances and cultural context. We could achieve this by leveraging multilingual LLMs (MLLMs), such as Multilingual BERT (M-BERT) (Pires et al. 2019) or XLM-R (Conneau et al. 2020), which have been trained on diverse linguistic datasets. Developing a unified variant of Courtroom-FND that processes both textual and non-textual data could improve performance in scenarios where visual or audio misinformation is prevalent, such as deepfakes (Abbas and Taeihagh 2024) or manipulated images.
+2. Automated Role Allocation : Developing mechanisms for dynamic and context-aware role assignment could streamline the debate process, ensuring optimal argumentation strategies tailored to specific scenarios. Inspired by this idea, we aim to develop dynamic mechanisms that allocate roles based on the complexity of the debate topic or the expertise required for each role. Specifically, we plan to involve using topic modeling techniques to categorize news content and assigning the prosecution and defense roles to agents specialized in those topics. Integrating this adaptive role switching mechanism could allow agents to switch based on evolving arguments within the debate, further enhancing the framework’s robustness.
+3. Integration with Reinforcement Learning : We plan to incorporate reinforcement learning (RL) techniques with our Courtroom-FND’s LLM agents. This can enable the framework to adapt and refine its debate strategies based on feedback, thereby improving its resilience against evolving misinformation tactics. Specifically, we aim to create a robust RL-related reward function, drawing inspiration from DeepSeek’s Group Relative Policy Optimization (GPRO) (Shao et al. 2024) and OpenAI GPT’s Reinforcement Learning from Human Feedback (RLHF). This reward function will evaluates the effectiveness of arguments based on both the quality and persuasiveness of the claims made. Through this, agents could receive feedback that allows them to adapt their strategies in real time, improving their performance in future debates.
+4. Ethical Considerations and Bias Mitigation : In the further research, we also needed to systematically identify and mitigate any inherent biases within the debate process, ensuring fairness and impartiality in detection outcomes. Adversarial training techniques or bias correction algorithms could be integrated into the Courtroom-FND framework to actively mitigate any identified biases. These efforts could ensure that LLM agents used do not propagate harmful stereotypes or misinformation, particularly in sensitive topics like politics or public health.
+Conclusions
+In this paper, we introduced Courtroom-FND, a novel multi-role fake news detection framework inspired by courtroom debate principles. By assigning roles of prosecution, defense, and judge-and enabling role switching-our approach systematically uncovers potential biases and fosters comprehensive scrutiny of news authenticity. Through extensive experiments across diverse and challenging datasets, Courtroom-FND demonstrated substantial improvements over conventional FND methods and even advanced large language models such as GPT-4. Several key factors underpin its success. First, structured debate promotes divergent thinking and balances arguments, leading to deeper exploration of evidence and reasoning pathways. Second, argument switching forces opposing roles to contest each other’s claims from multiple standpoints, mitigating cognitive bias and refining the final verdict. Third, the multi-role design integrates the strengths of LLMs while maintaining transparency and explainability, as the judge must base its decisions on verifiable arguments presented by both sides. Overall, Courtroom-FND takes a significant stride toward more reliable, interpretable, and adaptive FND solutions. By leveraging debate-inspired methodologies and the powerful language understanding capabilities of LLMs, our approach offers a promising new avenue for addressing the persistent and ever-changing challenges posed by fake news.
+Acknowledgements
+This work was conducted by the first author, Weiqiang Jin, during his research at Xi’an Jiaotong University and Anhui University of Technology. The corresponding author is Tao Tao. This work was supported in part by the Key Program of the Natural Science Foundation of the Educational Department of Anhui Province of China (Grant No. 2022AH050319), and the University Synergy Innovation Program of Anhui Province (Grant No. GXXT-2023-021). The authors would like to express their appreciation for the valuable comments provided by the editors and anonymous reviewers.
+Code Availibility
+Source Code is available at https://github.com/SmileHappyEveryDay/Courtroom-FND, for anonymous peer-review process.
+Declarations
+Conflict of Interest/Competing Interests
+The authors declare no conflict of interest.
+Consent for Publication
+All authors have reviewed the manuscript and provided their consent for its publication.
+1 Huggingface BERT: https://huggingface.co/google-bert/bert-base-uncased [Accessed on 2024.03] .
+2 Generally, in binary classification tasks, we often compute the F1-score only for the positive class, treating it as the overall F1-score without considering the negative class separately. However, in this study, we calculate the F1-score for both classes individually and then compute the average to obtain the overall Macro-F1-score. This provides a more reliable performance metric under imbalanced class distributions.
+3 FakeNewsClassification: https://github.com/draip96/FakeNewsClas-sification [Accessed on 2024.12] .
+4 NELA-GT-2022: https://doi.org/10.7910/DVN/AMCV2H [Accessed on 2024.12] .
+5 LIAR: https://github.com/tfs4/liar_dataset [Accessed on 2024.12] .
+6 Counter-Intuitive AR v1: https://elicitation.info/questionnaire/1/ [Accessed on 2024.12] .
+7 DeepSeek-V2: https://github.com/deepseek-ai/DeepSeek-V2 [Accessed on 2024.12] .
+8 Llama3-70B: https://huggingface.co/meta-llama/Meta-Llama-3-70B [Accessed on 2024.12] .
+9 OpenAI GPT-4: https://openai.com/index/gpt-4/ [Accessed on 2024.12] .
+10 OpenAI GPT-3.5 Turbo: https://github.com/openai/gpt-3 [Accessed on 2024.12] .
+11 Qwen2-72B: https://huggingface.co/Qwen/Qwen2-72B [Accessed on 2024.12] .
+12 LIAR Examples: https://github.com/ekagra-ranjan/fake-news-detection-LIAR-pytorch/blob/master/val2.tsv.
+Publisher's Note
+Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References
+Abbas, F; Taeihagh, A. Unmasking deepfakes: a systematic review of deepfake detection and generation techniques using artificial intelligence. Exp Syst Appl ; 2024; 252 , 124260. [DOI: https://dx.doi.org/10.1016/j.eswa.2024.124260]
+Ameli L, Chowdhury MSA, Farid F, Bello A, Sabrina F, Maurushat A (2023) Ai and fake news: a conceptual framework for fake news detection. In: Proceedings of the 2022 international conference on cyber security. CSW ’22. Association for Computing Machinery, New York, NY, USA, pp 34–39. https://doi.org/10.1145/3584714.3584722
+Anthropic AI (2023) The Claude 3 Model Family: Opus, Sonnet, Haiku. https://claudeaihub.com/claude-3-opus-pricing-and-possibilities/
+Aryan P (2024) LLMs as debate partners: utilizing genetic algorithms and adversarial search for adaptive arguments. arXiv:2412.06229
+Bai Y, Chen F, Wang H, Xiong C, Mei S (2023) Transformers as statisticians: provable in-context learning with in-context algorithm selection. In: Oh A, Naumann T, Globerson A, Saenko K, Hardt M, Levine S (eds) Advances in neural information processing systems, vol. 36. Curran Associates, Inc., New Orleans, pp 57125–57211. https://doi.org/10.5555/3666122.3668620
+Besta, M; Blach, N; Kubicek, A; Gerstenberger, R; Podstawski, M; Gianinazzi, L; Gajda, J; Lehmann, T; Niewiadomski, H; Nyczyk, P et al. Graph of thoughts: solving elaborate problems with large language models. Proc AAAI Con Artif Intell ; 2024; 38 , pp. 17682-17690. [DOI: https://dx.doi.org/10.1609/aaai.v38i16.29720]
+Bodaghi, A; Oliveira, J. The characteristics of rumor spreaders on twitter: a quantitative analysis on real data. Comput Comm ; 2020; 160 , pp. 674-687. [DOI: https://dx.doi.org/10.1016/j.comcom.2020.07.017]
+Brown TB, Mann B, Ryder N, Subbiah M, Kaplan J, Dhariwal P (2020) Neelakantan: language models are few-shot learners. In: Proceedings of the 34th international conference on Neural Information Processing Systems. NIPS ’20. Curran Associates Inc., Red Hook, NY, USA. NIPS https://doi.org/10.5555/3495724.3495883
+Chatterjee A, Tanwar E, Dutta S, Chakraborty T (2024) Language models can exploit cross-task in-context learning for data-scarce novel tasks. In: Ku L-W, Martins A, Srikumar V (eds) Proceedings of the 62nd annual meeting of the association for computational linguistics (Volume 1: Long Papers). Association for Computational Linguistics, Bangkok, Thailand, pp 11568–11587. https://doi.org/10.18653/v1/2024.acl-long.621
+Chen A, Phang J, Parrish A, Padmakumar V, Zhao C, Bowman SR, Cho K (2024) Two failures of self-consistency in the multi-step reasoning of LLMs. Trans Mach Learn Res
+Chen L, Zhang R, Guo J, Fan Y, Cheng X (2024) Controlling risk of retrieval-augmented generation: a counterfactual prompting framework. In: Al-Onaizan Y, Bansal M, Chen Y-N (eds) Findings of the association for computational linguistics: EMNLP 2024. Association for Computational Linguistics, Miami, Florida, USA, pp 2380–2393. https://doi.org/10.18653/v1/2024.findings-emnlp.133
+Choras M, Demestichas K, Gielczyk A, Herrero A, Ksieniewicz P, Remoundou K, Urda D, Wozniak M (2020) Advanced machine learning techniques for fake news (online disinformation) detection: a systematic mapping study. arXiv:2101.01142
+Comito, C; Caroprese, L; Zumpano, E. Multimodal fake news detection on social media: a survey of deep learning techniques. Soc Netw Anal Mining ; 2023; 13 , 1 101. [DOI: https://dx.doi.org/10.1007/s13278-023-01104-w]
+Conneau A, Khandelwal K, Goyal N, Chaudhary V, Wenzek G, Guzmán F, Grave E, Ott M, Zettlemoyer L, Stoyanov V (2020) Unsupervised cross-lingual representation learning at scale. In: Proceedings of the 58th annual meeting of the association for computational linguistics. Association for Computational Linguistics, Online, pp 8440–8451. https://doi.org/10.18653/v1/2020.acl-main.747
+Cui L, Wang S, Lee D (2019) Same: Sentiment-aware multi-modal embedding for detecting fake news. In: 2019 IEEE/ACM international conference on Advances in Social Networks Analysis and Mining (ASONAM). pp 41–48. https://doi.org/10.1145/3341161.3342894
+DeepSeek-AI, Liu A, Feng B, Wang B, Wang B, Liu B, Zhao C, Dengr C, Ruan C, Dai D, Guo D, Yang D, Chen D, Ji D, Li E, et al. (2024) DeepSeek-V2: a strong, economical, and efficient mixture-of-experts language model. arXiv:2405.04434
+Devlin J, Chang M-W, Lee K, Toutanova K (2019) BERT: pre-training of deep bidirectional transformers for language understanding. In: Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers). Association for Computational Linguistics, Minneapolis, Minnesota, pp 4171–4186. https://doi.org/10.18653/v1/N19-1423
+Ding K, Ma X, Liu Y, Pan S (2024) Divide and denoise: empowering simple models for robust semi-supervised node classification against label noise. In: Proceedings of the 30th ACM SIGKDD conference on Knowledge Discovery and Data Mining. KDD ’24, pp. 574–584. Association for Computing Machinery, New York, NY, USA. https://doi.org/10.1145/3637528.3671798
+Dong Q, Li L, Dai D, Zheng C, Ma J, Li R, Xia H, Xu J, Wu Z, Chang B, Sun X, Li L, Sui Z (2024) A survey on in-context learning. arXiv:2301.00234
+Dubois M, Yvon F, Piantanida P (2024) Zero-shot machine-generated text detection using mixture of large language models. arXiv:2409.07615
+Farinetti L, Canale L (2024) Chatbot development using langchain: a case study to foster critical thinking and creativity. In: Proceedings of the 2024 on Innovation and Technology in Computer Science Education V. 1. ITiCSE 2024. Association for Computing Machinery, New York, NY, USA, pp 401–407. https://doi.org/10.1145/3649217.3653557
+Feng Z, Su J, Zheng J, Ren J, Zhang Y, Wu J, Wang H, Liu Z (2024) M-MAD: Multidimensional Multi-Agent Debate framework for fine-grained machine translation evaluation. arXiv:2412.20127
+Gao L, Madaan A, Zhou S, Alon U, Liu P, Yang Y, Callan J, Neubig G (2023) Pal: Program-aided language models. In: International conference on machine learning. PMLR, pp 10764–10799 https://proceedings.mlr.press/v202/gao23f.html
+Goldani, MH; Momtazi, S; Safabakhsh, R. Detecting fake news with capsule neural networks. Appl Soft Comp ; 2021; 101 , 106991. [DOI: https://dx.doi.org/10.1016/j.asoc.2020.106991]
+Grattafiori A, Dubey A, Jauhri A, Pandey A, Kadian A, Al-Dahle A, Letman A, Mathur A, Schelten A., Vaughan A, Yang A, Fan A, Goyal A, Hartshorn A, Yang A, et al. (2024) The Llama 3 Herd of models. arXiv:2407.21783
+Gravanis, G; Vakali, A; Diamantaras, K; Karadais, P. Behind the cues: a benchmarking study for fake news detection. Exp Syst Appl ; 2019; 128 , pp. 201-213. [DOI: https://dx.doi.org/10.1016/j.eswa.2019.03.036]
+Gruppi M, Horne BD, Adalı S (2023) NELA-GT-2022: a large multi-labelled news dataset for the study of misinformation in news articles. arXiv:2203.05659
+Gururangan S, Marasović A, Swayamdipta S, Lo K, Beltagy I, Downey D, Smith NA (2020) Don’t stop pretraining: adapt language models to domains and tasks. arXiv:2004.10964
+Hakak, S; Alazab, M; Khan, S; Gadekallu, TR; Maddikunta, PKR; Khan, WZ. An ensemble machine learning approach through effective feature extraction to classify fake news. Fut Gen Comput Syst ; 2021; 117 , pp. 47-58. [DOI: https://dx.doi.org/10.1016/j.future.2020.11.022]
+Han B, Susnjak T, Mathrani A (2024) Automating systematic literature reviews with retrieval-augmented generation: a comprehensive overview. Appl Sci 14(19). https://doi.org/10.3390/app14199103
+Horne BD, Adali S (2017) This just in: Fake news packs a lot in title, uses simpler, repetitive content in text body, more similar to satire than real news. In: Proceedings of the International AAAI conference on web and social media, vol. 11. pp. 759–766. https://ojs.aaai.org/index.php/ICWSM/article/view/14976
+Hu, L; Wei, S; Zhao, Z; Wu, B. Deep learning for fake news detection: a comprehensive survey. AI Open ; 2022; 3 , pp. 133-155. [DOI: https://dx.doi.org/10.1016/j.aiopen.2022.09.001]
+Huang, S; Wang, Y; Wong, EYC; Yu, L. Ensemble learning with soft-prompted pretrained language models for fact checking. Nat Lang Process J ; 2024; 7 , 100067. [DOI: https://dx.doi.org/10.1016/j.nlp.2024.100067]
+Hu S, Ding N, Wang H, Liu Z, Wang J, Li J, Wu W, Sun M (2022) Knowledgeable prompt-tuning: Incorporating knowledge into prompt verbalizer for text classification. In: Muresan S, Nakov P, Villavicencio A (eds) Proceedings of the 60th annual meeting of the association for computational linguistics (vol 1, Long Papers). Association for Computational Linguistics, Dublin, Ireland, pp 2225–2240. https://doi.org/10.18653/v1/2022.acl-long.158
+Hussain M, Rehman UU, Nguyen TDT, Lee S (2024) Cot-sts: a zero shot chain-of-thought prompting for semantic textual similarity. In: Proceedings of the 2023 6th Artificial Intelligence and Cloud Computing Conference. AICCC ’23. Association for Computing Machinery, New York, NY, USA, pp 135–139. https://doi.org/10.1145/3639592.3639611
+Hu Z, Wang C, Shu Y, Paik H-Y, Zhu L (2024) Prompt perturbation in retrieval-augmented generation based large language models. In: Proceedings of the 30th ACM SIGKDD conference on knowledge discovery and data mining. KDD ’24. Association for Computing Machinery, New York, NY, USA, pp 1119–1130. https://doi.org/10.1145/3637528.3671932
+Iceland M (2023) How good are SOTA fake news detectors. arXiv:2308.02727
+Jiang Y, Wang T, Xu X, Wang Y, Song X, Maynard D (2025) Cross-modal augmentation for few-shot multimodal fake news detection. Eng Appl Artif Intell 142(C). https://doi.org/10.1016/j.engappai.2024.109931
+Jiang M, Ruan Y, Huang S, Liao S, Pitis S, Grosse RB, Ba J (2023) Calibrating language models via augmented prompt ensembles. In: ICML workshop on deployment challenges for generative AI. https://openreview.net/forum?id=L0dc4wqbNs
+Jin, W; Wang, N; Tao, T; Shi, B; Bi, H; Zhao, B; Wu, H; Duan, H; Yang, G. A veracity dissemination consistency-based few-shot fake news detection framework by synergizing adversarial and contrastive self-supervised learning. Sci Rep ; 2024; 14 , 1 19470. [DOI: https://dx.doi.org/10.1038/s41598-024-70039-9]
+Jin Z, Cao J, Guo H, Zhang Y, Luo J (2017) Multimodal fusion with recurrent neural networks for rumor detection on microblogs. In: Proceedings of the 25th ACM international conference on multimedia. MM ’17. Association for Computing Machinery, New York, NY, USA, pp 795–816. https://doi.org/10.1145/3123266.3123454
+Jin W, Wang N, Tao T, Jiang M, Wang X, Zhao B, Wu H, Duan H, Yang G (2025) Disco-fend: social context veracity dissemination consistency-guided case reasoning for few-shot fake news detection. In: Barhamgi M, Wang H, Wang X (eds) Web Information Systems Engineering – WISE 2024. Springer, Singapore, pp 305–319. https://doi.org/10.1007/978-981-96-0576-7_23
+Kaliyar, RK; Goswami, A; Narang, P. Fakebert: fake news detection in social media with a bert-based deep learning approach. Multimed Tools Appl ; 2021; 80 , 8 pp. 11765-11788. [DOI: https://dx.doi.org/10.1007/s11042-020-10183-2]
+Kang B, Kim J, Yun T-R, Kim C-E (2024) Prompt-RAG: pioneering vector embedding-free retrieval-augmented generation in Niche domains, exemplified by Korean Medicine. arXiv:2401.11246
+Karimi H, Tang J (2019) Learning hierarchical discourse-level structure for fake news detection. In: Burstein J, Doran C, Solorio T (eds) Proceedings of the 2019 conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, Volume 1 (Long and Short Papers). Association for Computational Linguistics, Minneapolis, Minnesota, pp. 3432–3442. https://doi.org/10.18653/v1/N19-1347, https://aclanthology.org/N19-1347
+Khattab O, Singhvi A, Maheshwari P, Zhang Z, Santhanam K, Vardhamanan S, Haq S, Sharma A, Joshi TT, Moazam H, Miller H, Zaharia M, Potts C (2023) DSPy: compiling declarative language model calls into self-improving pipelines. arXiv:2310.03714
+Kim Y (2014) Convolutional neural networks for sentence classification. In: Moschitti A, Pang B, Daelemans W (eds) Proceedings of the 2014 conference on Empirical Methods in Natural Language Processing (EMNLP). Association for Computational Linguistics, Doha, Qatar, pp 1746–1751. https://doi.org/10.3115/v1/D14-1181
+Kipf TN, Welling M (2017) Semi-supervised classification with graph convolutional networks. arXiv:1609.02907
+Kojima T, Gu SS, Reid M, Matsuo Y, Iwasawa Y (2022) Large language models are zero-shot reasoners. In: ICML 2022 workshop on knowledge retrieval and language models. ICML. https://openreview.net/forum?id=6p3AuaHAFiN
+Kong Y, Li Y, Zhang Y, Huang Z, Wu J (2024) Eliciting thinking hierarchy without a prior. In: Proceedings of the 36th international conference on neural information processing systems. NIPS ’22. Curran Associates Inc., Red Hook, NY, USA. https://doi.org/10.5555/3600270.3601239
+Lai J, Yang X, Luo W, Zhou L, Li L, Wang Y, Shi X (2024) Rumorllm: a rumor large language model-based fake-news-detection data-augmentation approach. Appl Sci 14(8). https://doi.org/10.3390/app14083532
+Liang T, He Z, Jiao W, Wang X, Wang Y, Wang R, Yang Y, Shi S, Tu Z (2024) Encouraging divergent thinking in large language models through multi-agent debate. In: Al-Onaizan Y, Bansal M, Chen Y-N (eds) Proceedings of the 2024 conference on empirical methods in natural language processing. Association for Computational Linguistics, Miami, Florida, USA, pp 17889–17904. https://doi.org/10.18653/v1/2024.emnlp-main.992
+Li G, Lu W, Zhang W, Lian D, Lu K, Mao R, Shu K, Liao H (2024) Re-search for the truth: multi-round retrieval-augmented large language models are strong fake news detectors. arXiv:2403.09747
+Liu M, Ott M, Goyal N, Du J, Joshi M, Chen D, Levy O, Lewis M, Zettlemoyer L, Stoyanov V (2019) RoBERTa: a robustly optimized BERT pretraining approach. arXiv:1907.11692
+Liu Y, Wu Y-FB (2018) Early detection of fake news on social media through propagation path classification with recurrent and convolutional networks. In: Proceedings of the thirty-second AAAI conference on artificial intelligence. AAAI Press, New Orleans, Louisiana, USA. https://doi.org/10.5555/3504035.3504079
+Liu P, Xiong Y (2024) Enhanced chunk screening in langchain framework by supervised learning augmentation based on deep learning. In: Proceedings of the 4th International Conference on Artificial Intelligence and Computer Engineering. ICAICE ’23. Association for Computing Machinery, New York, NY, USA, pp 696–702. https://doi.org/10.1145/3652628.3652744
+Liu P, Yuan W, Fu J, Jiang Z, Hayashi H, Neubig G (2022) Pre-train, prompt, and predict: A systematic survey of prompting methods in natural language processing. ACM Comput Surv. Just Accepted https://doi.org/10.1145/3560815
+Li T, Zhang G, Do QD, Yue X, Chen W (2024) Long-context LLMs struggle with long in-context learning. arXiv:2404.02060
+Li X, Zhang Y, Malthouse EC (2024) Large language model agent for fake news detection. arXiv:2405.01593
+Lyu Q, Havaldar S, Stein A, Zhang L, Rao D., Wong E, Apidianaki M, Callison-Burch C (2023) Faithful chain-of-thought reasoning. In: Proceedings of the 13th international joint conference on natural language processing. Association for Computational Linguistics, Nusa Dua, Bali, pp 305–329. https://doi.org/10.18653/v1/2023.ijcnlp-main.20
+Madaan A, Tandon N, Gupta P, Hallinan S, Gao L, Wiegreffe S, Alon U, Dziri N, Prabhumoye S, Yang Y, Gupta S, Majumder BP, Hermann K, Welleck S, Yazdanbakhsh A, Clark P (2023) Self-refine: iterative refinement with self-feedback. In: Thirty-seventh conference on neural information processing systems. https://openreview.net/forum?id=S37hOerQLB
+Mao R, Chen G, Zhang X, Guerin F, Cambria E (2024) GPTEval: a survey on assessments of ChatGPT and GPT-4. In: Calzolari N, Kan M-Y, Hoste V, Lenci A, Sakti S, Xue N (eds) Proceedings of the 2024 Joint International Conference on Computational Linguistics, Language Resources and Evaluation (LREC-COLING 2024). ELRA and ICCL, Torino, Italia, pp. 7844–7866. https://aclanthology.org/2024.lrec-main.693
+Ma X, Zhang Y, Ding K, Yang J, Wu J, Fan H (2024) On fake news detection with LLM enhanced semantics mining. In: Al-Onaizan Y, Bansal M, Chen Y-N (eds) Proceedings of the 2024 conference on empirical methods in natural language processing. Association for Computational Linguistics, Miami, Florida, USA, pp 508–521. https://doi.org/10.18653/v1/2024.emnlp-main.31
+Mehta N, Pacheco ML, Goldwasser D (2022) Tackling fake news detection by continually improving social context representations using graph neural networks. In: Muresan S, Nakov P, Villavicencio A (eds) Proceedings of the 60th annual meeting of the association for computational linguistics (Volume 1: Long Papers). Association for Computational Linguistics, Dublin, Ireland, pp 1363–1380. https://doi.org/10.18653/v1/2022.acl-long.97
+Min S, Lyu X, Holtzman A, Artetxe M, Lewis M, Hajishirzi H, Zettlemoyer L (2022) Rethinking the role of demonstrations: What makes in-context learning work? In: Goldberg Y, Kozareva Z, Zhang Y (eds) Proceedings of the 2022 conference on empirical methods in natural language processing. Association for Computational Linguistics, Abu Dhabi, United Arab Emirates, pp. 11048–11064. EMNLP. https://doi.org/10.18653/v1/2022.emnlp-main.759
+Mitra T, Gilbert E (2015) Credbank: a large-scale social media corpus with associated credibility annotations. In: International conference on web and social media, AAAI. https://api.semanticscholar.org/CorpusID:4671797
+Moraes MP, Oliveira Sampaio J, Charles AC (2019) Data mining applied in fake news classification through textual patterns. In: Proceedings of the 25th brazillian symposium on multimedia and the web. WebMedia ’19. Association for Computing Machinery, New York, NY, USA, pp. 321–324. https://doi.org/10.1145/3323503.3360648
+Motwani SR, Smith C, Das RJ, Rybchuk M, Torr PHS, Laptev I, Pizzati F, Clark R, Witt CS (2024) MALT: improving reasoning with multi-agent LLM training. arXiv:2412.01928
+Mouratidis D, Nikiforos MN, Kermanidis KL (2021) Deep learning for fake news detection in a pairwise textual input schema. Computation 9(2). https://doi.org/10.3390/computation9020020
+Nan Q, Cao J, Zhu Y, Wang Y, Li J (2021) Mdfend: multi-domain fake news detection. In: Proceedings of the 30th ACM International Conference on Information & Knowledge Management. CIKM ’21. Association for Computing Machinery, New York, NY, USA, pp 3343–3347. https://doi.org/10.1145/3459637.3482139
+Nguyen V-H, Sugiyama K, Nakov P, Kan M-Y (2020) Fang: leveraging social context for fake news detection using graph representation. In: Proceedings of the 29th ACM international Conference on Information & Knowledge Management. CIKM ’20. Association for Computing Machinery, New York, NY, USA, pp 1165–1174. https://doi.org/10.1145/3340531.3412046
+OpenAI (2023) Gpt-4 technical report. arXiv:2303.08774
+OpenAI RT (2024) Enhance your prompts with meta prompting. https://cookbook.openai.com/examples/enhance_your_prompts_with_meta_prompting
+Ouyang L, Wu J, Jiang X, Almeida D, Wainwright CL, Mishkin P, Zhang C, Agarwal S, Slama K, Ray A, Schulman J, Hilton J, Kelton F, Miller L, Simens M, Askell A, Welinder P, Christiano P, Leike J, Lowe R (2022) Training language models to follow instructions with human feedback. arXiv:2203.02155
+Pérez-Rosas V, Kleinberg B, Lefevre A, Mihalcea R (2018) Automatic detection of fake news. In: Bender EM, Derczynski L, Isabelle P (eds) Proceedings of the 27th international conference on computational linguistics. Association for Computational Linguistics, Santa Fe, New Mexico, USA, pp. 3391–3401. https://aclanthology.org/C18-1287
+Phan, HT; Nguyen, NT; Hwang, D. Fake news detection: a survey of graph neural network methods. Appl Soft Comput ; 2023; 139 , 110235. [DOI: https://dx.doi.org/10.1016/j.asoc.2023.110235]
+Pires T, Schlinger E, Garrette D (2019) How multilingual is multilingual BERT? In: Proceedings of the 57th annual meeting of the association for computational linguistics. Association for Computational Linguistics, Florence, Italy, pp 4996–5001. https://doi.org/10.18653/v1/P19-1493
+Popat K, Mukherjee S, Yates A, Weikum G (2018) DeClarE: debunking fake news and false claims using evidence-aware deep learning. In: Riloff E, Chiang D, Hockenmaier J, Tsujii J (eds) Proceedings of the 2018 conference on empirical methods in natural language processing. Association for Computational Linguistics, Brussels, Belgium, pp 22–32. https://doi.org/10.18653/v1/D18-1003
+Potthast M, Kiesel J, Reinartz K, Bevendorff J, Stein B (2018) A stylometric inquiry into hyperpartisan and fake news. In: Gurevych I, Miyao Y (eds) Proceedings of the 56th annual meeting of the association for computational linguistics (Volume 1: Long Papers). Association for Computational Linguistics, Melbourne, Australia, pp 231–240. https://doi.org/10.18653/v1/P18-1022
+Qi P, Yan Z, Hsu W, Lee ML (2024) Sniffer: multimodal large language model for explainable out-of-context misinformation detection. In: 2024 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR). pp 13052–13062. https://doi.org/10.1109/CVPR52733.2024.01240
+Qwen, Yang A, Yang B, Zhang B, Hui B, Zheng B, Yu B, Li C, Liu D, Huang F, Wei H, Lin H, Yang J, et al. (2025) Qwen2.5 technical report. arXiv:2412.15115
+Raza S, Paulen-Patterson D, Ding C (2024) Fake news detection: comparative evaluation of BERT-like models and large language models with generative AI-annotated data. arXiv:2412.14276
+Ruchansky N, Seo S, Liu Y (2017) Csi: A hybrid deep model for fake news detection. In: Proceedings of the 2017 ACM on Conference on Information and Knowledge Management. CIKM ’17. ACM, pp 797–806. https://doi.org/10.1145/3132847.3132877
+Sanh V, Debut L, Chaumond J, Wolf T (2020) DistilBERT, a distilled version of BERT: smaller, faster, cheaper and lighter. arXiv:1910.01108
+Sanh V, Webson A, Raffel C, Bach S, Sutawika L, Alyafeai Z, Chaffin A, Stiegler A, Raja A, Dey M, Bari MS, Xu C (2022) Multitask prompted training enables zero-shot task generalization. In: International conference on learning representations. https://openreview.net/forum?id=9Vrb9D0WI4
+Schick T, Schütze H (2021) Exploiting cloze-questions for few-shot text classification and natural language inference. In: Merlo P, Tiedemann J, Tsarfaty R (eds) Proceedings of the 16th conference of the european chapter of the association for computational linguistics: main volume. Association for Computational Linguistics, Online, pp 255–269 https://doi.org/10.18653/v1/2021.eacl-main.20
+Setiawan EI, Dharmawan W, Halim KJ (2024) Indonesian news stance classification based on hybrid bidirectional lstm and transformer-based embedding. J Intell Syst https://doi.org/10.22266/ijies2024.1031.41. Accessed on 15 Sept 2024
+Shamardina T, Saidov M, Fenogenova A, Tumanov A, Zemlyakova A, Lebedeva A, Gryaznova E, Shavrina T, Mikhailov V, Artemova E (2024) Coat: corpus of artificial texts. Nat Lang Process 1–26. https://doi.org/10.1017/nlp.2024.38
+Shao Z, Wang P, Zhu Q, Xu R, Song J, Bi X, Zhang H, Zhang M, Li YK, Wu Y, Guo D (2024) DeepSeekMath: pushing the limits of mathematical reasoning in open language models. arXiv:2402.03300
+Sharma K, Qian F, Jiang H, Ruchansky N, Zhang M, Liu Y (2019) Combating fake news: a survey on identification and mitigation techniques. ACM Trans Intell Syst Technol 10(3). https://doi.org/10.1145/3305260
+Sharma K, Qian F, Jiang H, Ruchansky N, Zhang M, Liu Y (2019) Combating fake news: a survey on identification and mitigation techniques. ACM Trans Intell Syst Technol 10(3). https://doi.org/10.1145/3305260
+Sheng Q, Cao J, Zhang X, Li R, Wang D, Zhu Y (2022) Zoom out and observe: news environment perception for fake news detection. In: Muresan S, Nakov P, Villavicencio A (eds) Proceedings of the 60th annual meeting of the association for computational linguistics (Volume 1: Long Papers). Association for Computational Linguistics, Dublin, Ireland, pp 4543–4556. https://doi.org/10.18653/v1/2022.acl-long.311, https://aclanthology.org/2022.acl-long.311
+Shinn N, Cassano F, Gopinath A, Narasimhan KR, Yao S (2023) Reflexion: language agents with verbal reinforcement learning. In: Thirty-seventh conference on neural information processing systems. https://openreview.net/forum?id=vAElhFcKW6
+Shu, K; Sliva, A; Wang, S; Tang, J; Liu, H. Fake news detection on social media: a data mining perspective. SIGKDD Explor Newsl ; 2017; 19 , 1 pp. 22-36. [DOI: https://dx.doi.org/10.1145/3137597.3137600]
+Shu, K; Mahudeswaran, D; Liu, H. Fakenewstracker: a tool for fake news collection, detection, and visualization. Comput Math Org Theory ; 2019; 25 , 1 pp. 60-71. [DOI: https://dx.doi.org/10.1007/s10588-018-09280-3]
+Shu K, Bernard HR, Liu H (2019) In: Agarwal N, Dokoohaki N, Tokdemir S (eds) Studying fake news via network analysis: detection and mitigation. Springer, Cham, pp 43–65. https://doi.org/10.1007/978-3-319-94105-9_3
+Shu K, Cui L, Wang S, Lee D, Liu H (2019) defend: explainable fake news detection. In: Proceedings of the 25th ACM SIGKDD international conference on Knowledge Discovery & Data Mining. KDD ’19. Association for Computing Machinery, New York, NY, USA, pp 395–405. https://doi.org/10.1145/3292500.3330935
+Shu K, Mahudeswaran D, Wang S, Lee D, Liu H (2019) FakeNewsNet: a data repository with news content, social context and spatialtemporal information for studying fake news on social media
+Shu K, Wang S, Liu H (2018) Beyond news contents: the role of social context for fake news detection. arXiv:1712.07709
+Shu K, Wang S, Liu H (2018) Understanding user profiles on social media for fake news detection. In: 2018 IEEE conference on Multimedia Information Processing and Retrieval (MIPR). pp 430–435. https://doi.org/10.1109/MIPR.2018.00092
+Singh A, Ehtesham A, Mahmud S, Kim J-H (2024) Revolutionizing mental health care through langchain: A journey with a large language model. In: 2024 IEEE 14th annual Computing and Communication Workshop and Conference (CCWC). pp 0073–0078. https://doi.org/10.1109/CCWC60891.2024.10427865
+Singhvi A, Shetty M, Tan S, Potts C, Sen K, Zaharia M, Khattab O (2024) DSPy assertions: computational constraints for self-refining language model pipelines. arXiv:2312.13382
+Soygazi F, Oguz D (2024) An analysis of large language models and langchain in mathematics education. In: Proceedings of the 2023 7th International Conference on Advances in Artificial Intelligence. ICAAI ’23. Association for Computing Machinery, New York, NY, USA, pp 92–97. https://doi.org/10.1145/3633598.3633614
+Su X, Cui Y, Liu A, Lin X, Wang Y, Liang H, Li W, Yu Z (2024) DAAD: Dynamic Analysis and Adaptive Discriminator for fake news detection. arXiv:2408.10883
+Team G (2024) Gemini: a family of highly capable multimodal models. arXiv:2312.11805
+Tonolini F, Aletras N, Massiah J, Kazai G (2024) Bayesian prompt ensembles: model uncertainty estimation for black-box large language models. In: Ku L-W, Martins A, Srikumar V (eds) Findings of the Association for Computational Linguistics: ACL 2024. Association for Computational Linguistics, Bangkok, Thailand, pp 12229–12272. https://doi.org/10.18653/v1/2024.findings-acl.728
+Touvron H, Lavril T, Izacard G, Martinet X, Lachaux M-A, Lacroix T, Rozière B, Goyal N, Hambro E, Azhar F, Rodriguez A, Joulin A, Grave E, Lample G (2023) LLaMA: open and Efficient Foundation Language Models. arXiv:2302.13971
+Tran V, Matsui T (2024) Improving llm prompting with ensemble of instructions: a case study on sentiment analysis. In: Suzumura T, Bono M (eds) New Frontiers in artificial intelligence. Springer, Singapore, pp 299–305
+Vaibhav V, Mandyam R, Hovy E (2019) Do sentence interactions matter? leveraging sentence level representations for fake news classification. In: Ustalov D, Somasundaran S, Jansen P, Glavaš G, Riedl M, Surdeanu M, Vazirgiannis M (eds) Proceedings of the thirteenth workshop on graph-based methods for natural language processing (TextGraphs-13). Association for Computational Linguistics, Hong Kong, pp 134–139. https://doi.org/10.18653/v1/D19-5316
+Wang WY (2017) “liar, liar pants on fire”: a new benchmark dataset for fake news detection. In: Barzilay, R., Kan, M.-Y. (eds.) Proceedings of the 55th annual meeting of the association for computational linguistics (vol 2: Short Papers). Association for Computational Linguistics, Vancouver, Canada, pp 422–426. ACL. https://doi.org/10.18653/v1/P17-2067
+Wang Y, Gu Z, Zhang S, Zheng S, Wang T, Li T, Feng H, Xiao Y (2024) LLM-GAN: construct generative adversarial network through large language models for explainable fake news detection. arXiv:2409.01787
+Wang B, Min S, Deng X, Shen J, Wu Y, Zettlemoyer L, Sun H (2023) Towards understanding chain-of-thought prompting: an empirical study of what matters. In: Rogers A, Boyd-Graber J, Okazaki N (eds) Proceedings of the 61st annual meeting of the association for computational linguistics (Volume 1: Long Papers). Association for Computational Linguistics, Toronto, Canada, pp 2717–2739. https://doi.org/10.18653/v1/2023.acl-long.153
+Wang X, Wei J, Schuurmans D, Le QV, Chi EH, Narang S, Chowdhery A, Zhou D (2023) Self-consistency improves chain of thought reasoning in language models. In: The eleventh international conference on learning representations. https://openreview.net/forum?id=1PL1NIMMrw
+Wang Z, Zhang H, Li C-L, Eisenschlos JM, Perot V, Wang Z, Miculicich L, Fujii Y, Shang J, Lee C-Y, Pfister T (2024) Chain-of-table: evolving tables in the reasoning chain for table understanding. arXiv:2401.04398
+Webb, T; Holyoak, KJ; Lu, H. Emergent analogical reasoning in large language models. Nat Hum Behav ; 2023; 7 , 9 pp. 1526-1541. [DOI: https://dx.doi.org/10.1038/s41562-023-01659-w]
+Wei J, Wang X, Schuurmans D, Bosma M, Ichter B, Xia F, Chi EH, Le QV, Zhou D (2024) Chain-of-thought prompting elicits reasoning in large language models. In: Proceedings of the 36th international conference on Neural Information Processing Systems. NIPS ’22. Curran Associates Inc., Red Hook, NY, USA. NIPS. https://doi.org/10.5555/3600270.3602070
+Wu J, Hooi B (2023) Decor: degree-corrected social graph refinement for fake news detection. In: Proceedings of the 29th ACM SIGKDD Conference on Knowledge Discovery and Data Mining. KDD ’23. Association for Computing Machinery, New York, NY, USA, pp 2582–2593. https://doi.org/10.1145/3580305.3599298
+Wu J, Li S, Deng A, Xiong M, Hooi B (2023) Prompt-and-align: prompt-based social alignment for few-shot fake news detection. In: Proceedings of the 32nd ACM international Conference on Information and Knowledge Management. CIKM ’23. Association for Computing Machinery, New York, NY, USA, pp 2726–2736. https://doi.org/10.1145/3583780.3615015
+Wu L, Rao Y, Jin H, Nazir A, Sun L (2019) Different absorption from the same sharing: sifted multi-task learning for fake news detection. In: Inui K, Jiang J, Ng V, Wan X (eds) Proceedings of the 2019 conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP). Association for Computational Linguistics, Hong Kong, China. pp 4644–4653. https://doi.org/10.18653/v1/D19-1471
+Wu K, Yang S, Zhu KQ (2015) False rumors detection on sina weibo by propagation structures. In: 2015 IEEE 31st international conference on data engineering. pp 651–662. https://doi.org/10.1109/ICDE.2015.7113322
+Xie B, Ma X, Wu J, Yang J, Xue S, Fan H (2023) Heterogeneous graph neural network via knowledge relations for fake news detection. In: Proceedings of the 35th international conference on Scientific and Statistical Database Management. SSDBM ’23. Association for Computing Machinery, New York, NY, USA. https://doi.org/10.1145/3603719.3603736
+Xu J, Fei H, Pan L, Liu Q, Lee M-L, Hsu W (2024) Faithful logical reasoning via symbolic chain-of-thought. arXiv:2405.18357
+Xu R, Li G (2024) A comparative study of offline models and online LLMs in fake news detection. arXiv:2409.03067
+Yao S, Zhao J, Yu D, Du N, Shafran I, Narasimhan KR, Cao Y (2023) React: synergizing reasoning and acting in language models. In: The eleventh international conference on learning representations. ICLR. https://openreview.net/forum?id=WE_vluYUL-X
+Yasunaga M, Chen X, Li Y, Pasupat P, Leskovec J, Liang P, Chi EH, Zhou D (2024) Large language models as analogical reasoners. arXiv:2310.01714
+Yu Z, He L, Wu Z, Dai X, Chen J (2023) Towards better chain-of-thought prompting strategies: a survey. arXiv:2310.04959
+Zaheer O, Asim K, Kamil MAU (2024) Detecting deception: a comprehensive review of machine learning approaches to fake news detection. ResearchGate. https://doi.org/10.13140/RG.2.2.33132.78720
+Zellers R, Holtzman A, Rashkin H, Bisk Y, Farhadi A, Roesner F, Choi Y (2019) Defending against neural fake news. Curran Associates Inc., Red Hook, NY, USA. https://doi.org/10.5555/3454287.3455099
+Zhang M, Ahmed SR, Martin JH (2024) FtG-CoT at SemEval-2024 task 9: solving sentence puzzles using fine-tuned language models and zero-shot CoT prompting. In: Ojha AK, Doğruöz AS, Tayyar Madabushi H, Da San Martino G, Rosenthal S, Rosá A (eds) Proceedings of the 18th international workshop on Semantic Evaluation (SemEval-2024). Association for Computational Linguistics, Mexico City, Mexico, pp 1245–1251. https://doi.org/10.18653/v1/2024.semeval-1.181
+Zhang J, Dong B, Yu PS (2020) Fakedetector: Effective fake news detection with deep diffusive neural network. In: 2020 IEEE 36th International Conference on Data Engineering (ICDE). pp 1826–1829. https://doi.org/10.1109/ICDE48307.2020.00180
+Zhang H, Fang Q, Qian S, Xu C (2019) Multi-modal knowledge-aware event memory network for social media rumor detection. In: Proceedings of the 27th ACM international conference on multimedia. MM ’19. Association for Computing Machinery, New York, NY, USA, pp 1942–1951. https://doi.org/10.1145/3343031.3350850
+Zhang Z, Zhang A, Li M, Smola A (2023) Automatic chain of thought prompting in large language models. In: The eleventh international conference on learning representations. https://openreview.net/forum?id=5NTt8GFjUHkr
+Zhou X, Jain A, Phoha VV, Zafarani R (2020) Fake news early detection: a theory-driven model. Dig Threats 1(2). https://doi.org/10.1145/3377478
+Zhou X, Zafarani R (2020) A survey of fake news: fundamental theories, detection methods, and opportunities. ACM Comput Surv 53(5). https://doi.org/10.1145/3395046

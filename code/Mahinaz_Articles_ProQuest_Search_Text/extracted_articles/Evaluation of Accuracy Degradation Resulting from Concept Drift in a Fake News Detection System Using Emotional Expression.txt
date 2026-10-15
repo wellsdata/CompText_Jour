@@ -1,0 +1,210 @@
+1. Introduction
+Fake news on social media has become a social problem [1]. Fake news refers to false information that is deliberately intended to deceive people. The spread of misinformation causes confusion and can negatively impact society as a whole [2]. In one case, false posts on social media led to a decline in measles, mumps, and rubella vaccination rates, and in 2017, measles, which had been almost eradicated, became an epidemic again [3]. To prevent such cases, fact verification sites have been developed [4]. However, fact verification is time-consuming because it requires analysis by experts. As fake news spreads more quickly than normal news [5], the development of a system that can detect fake news is critical.
+Although many studies [6,7] have focused on improving the accuracy of fake news detection, a discussion on accuracy degradation is necessary. As the contents and expressions of fake news change with the passage of time, a model that achieves high accuracy may lose accuracy after a few years. This phenomenon, in which the characteristics of data change over time, is called concept drift [8]. In practice, detecting concept drift and coping with accuracy degradation by training only the most recent data are essential.
+In many conventional methods, word representations are used, but these methods are strongly affected by concept drift. Another approach for detecting fake news uses emotional expressions.
+In this method, the focus is on the malicious intent to incite people, which is a characteristic of fake news [9]. Incitement is the act of “stimulating people’s emotions to make them behave in a certain manner”. Aso et al. [10] revealed the usefulness of a detection method using emotional expressions. Methods based on word expressions exhibit accuracy degradation owing to changes in word fads and usage. By contrast, a method using the emotional information of words may be able to capture incitement, which is a characteristic of fake news, and reduce the performance degradation resulting from concept drift. In this study, we evaluated the resistance of methods using the emotional expressions in accuracy degradation caused by concept drift.
+2. Related Works
+2.1. Fake News
+Fake news has become a major social problem and fake news-related research is flourishing. Most studies focus either on the analysis of fake news or on the detection of fake news using machine learning and deep learning. Regarding the analysis of fake news, Vosoughi et al. studied a large corpus of tweets and found that fake news elicits fear, disgust, and surprise in replies, whereas real news elicits joy, sadness, trust, and expectation [5]. Several studies on the spread of fake news have revealed that it spreads faster and thus more widely than real news [11,12,13]. For fake news detection systems, many approaches use complex deep neural networks with CNNs and BiLSTM [14,15,16].
+In this study, we use a model based on emotional GloVe and a BiLSTM based on the model proposed by Aso et al. [10]. There are two reasons why GloVe was chosen as the embedding method here. The first is that the model is lightweight compared to BERT, and thus can be run at high speed. Second, it can be extended based on our own knowledge. Aso et al. proposed a fake news detection system using GloVe [17] that incorporates emotion based on the assumption that many fake news stories tend to incite people, and therefore tend to use emotional words. Aso et al. used the method proposed by Seyeditabari et al. [18] to incorporate emotion into word embedding. We refer to the GloVe trained by this method as emotional GloVe. To incorporate emotion, we reduced the angular distance among words with related emotion and increased the angular distance among words with opposite emotion based on the NRC emotion dictionary [19] for the pre-trained word vector space. This process was performed with a minimal loss of existing information to obtain emotion-embedded word embedding. Aso et al. compared the accuracy of the existing GloVe model with that of the emotional GloVe model on a dataset called LIAR that created from news articles [20], and concluded that the emotional GloVe model was more accurate.
+In this study, in the embedding layer of the BiLSTM model [21] used by Aso et al., we cite a model using only GloVe, a model using only emotional GloVe, and a model using both GloVe and emotional GloVe for comparison.
+2.2. Concept Drift
+An important problem in machine learning is concept drift. Concept drift refers to the unpredictable change in the underlying distribution of streaming data over time. Research on concept drift detection has been active mainly in the field of machine learning. Concept drift detection refers to techniques and mechanisms that characterize and quantify concept drift by identifying change points or change time intervals [22]. These techniques include error rate-based drift detection [23], data distribution-based drift detection [24], and multiple hypothesis testing drift detection [25]. Furthermore, the identification of the type of concept drift as well as the occurrence of concept drift have been studied [26]. As fake news is susceptible to trends, it is very important that the decision model is tolerant to concept drift. Therefore, in this study, we discuss tolerance to concept drift in machine learning models for fake news detection. Hang et al. [27] introduced multi-stream learning in training a real-time machine learning application to support the efficiency of urban rail networks. As a result, they achieved high accuracy in the face of concept drift and high generalization ability.
+Shaina et al. [28] proposed a fake news detection system based on Transformer [29], in which information from news articles and comments on the articles are used. They evaluated the effect of concept drift. Shaina et al. performed their experiments using the Fakeddit dataset in the following setup (Figure 1).
+For data posted after 1 January 2019, for span 1 in the Fakeddit dataset, we trained the model on data from weeks 1 and 2, and tested it using data from week 3. In the next span, we trained using data from the previous two weeks (weeks 1 and 2) and the data from the next two weeks (weeks 3 and 4), and tested using the data from week 5. This process was continued up to span 9, and the AUC scores for each span were used for evaluation.
+In this study, we evaluated the resistance of emotion-based machine learning models to concept drift, following the work of Shaina et al. Shaina et al. did not measure the concept drift under the condition of no re-training because the previous data were used for training. Therefore, in this study, the data handling method and the evaluation index were changed to measure the concept drift. We examined how well a model that is trained for a specific period of time maintains classification accuracy for future data. The AUC score is a value obtained by changing the threshold value that determines the output. Even if the AUC score cannot be classified by the threshold value determined in training, the value does not change if it can be classified by another threshold value. Therefore, in this study, the F score was used for evaluation.
+3. Materials and Methods
+According to the findings of Aso et al. [10], the accuracy of fake news detection is improved because it is based on emotion. In addition, it was hypothesized that the tendency to incite emotion would not change with changing trends, and thus would be resistant to concept drift. Therefore, we compared the resistance to accuracy degradation of methods using word representations and methods using emotion representations. The evolution of classification accuracy was observed under conditions in which no optimization, such as re-training, was performed.
+The dataset used was Fakeddit [30], which was created based on data posted on Reddit, a bulletin board social news site in the United States. Fakeddit is labeled with six values (Table 1).
+Fakeddit provides two-valued labels: True is true news and the other five labels are fake news. However, in this study, detecting posts with malicious intent and false information was critical, and we believed that a method using emotional expressions would be effective. Therefore, we classified misleading content, imposter content, and manipulated content as fake news, and true, satire/parody, and false connection as real news in the six-valued labels. True, satire/parody, and false connection were classified as real news (Table 2).
+As Fakeddit contains metadata about the date of creation, we evaluated concept drift by training and testing on chronologically ordered data using this metadata. Although some methods [28] for detecting fake news use comments on posted messages and information about the posters, for inference, the performance of these methods are inconsistent in terms of their fake news detection in the early stages. Therefore, in this study, the classification was based only on the posted texts.
+3.1. Model
+The model implemented in this study is described in this section. The model was trained for a sufficient amount of time, and the weights at the point in time when the model exhibited the highest percentage of correct responses to the validation data were used as the final weights.
+The parameters common to all models are listed below (Table 3).
+In this study, in the embedding layer of the BiLSTM model [21] used by Aso et al., we cite a model using only GloVe, a model using only emotional GloVe, and a model using both GloVe and emotional GloVe for comparison. The structure of BiLSTM with GloVe or emotional GloVe is shown in (Figure 2). Here, these models are referred to as the “word model” and “emotion model”, and are denoted as “word” and “emo”, respectively, in the graphs.
+The structure of BiLSTM, in which the GloVe and emotional GloVe features are combined, is illustrated in (Figure 3). We refer to it as a coupled model and denote it as “word+emo” in the graphs.
+The parameters common to the three models are presented in (Table 4).
+The emotion model proposed by Aso et al. includes not only emotion features, but also word features. Therefore, in this study, a model using only emotion features was prepared for comparison. This model is referred to as the emotion dictionary model and is denoted as “emo_lex” in graphs. The emotion dictionary model performs the classification using a 10-dimensional normalized vector that consists of eight basic emotions and the positive and negative information obtained from the NRC emotion dictionary [19]. Words that do not correspond to the emotion dictionary are considered as zero vectors. The structure of the emotion dictionary model is displayed in (Figure 4).
+The parameters of the sentiment dictionary model are presented in (Table 5).
+In this study, we used a fine-tuned version of the bert-base-uncased model, which is a learned BERT model [31]. The parameters of the BERT model are presented in (Table 6).
+3.2. Verification Method
+The training data were acquired from 1 January 2013 to 1 January 2015. The test data for each span were shifted by one month from 1 January 2015 to examine the change in accuracy up to span 46 (Figure 5).
+Here, the ratio of labels between the training and test data for each span were adjusted so that the ratio of True:False was 4:1. Approximately 70,000 training data points were obtained. The number of test data in each span are as follows (Figure 6).
+3.3. Evaluation Method
+The F-score is one of the evaluation indices in the binary classification task and is the harmonic mean of the precision and recall.
+The F-score, precision score, and recall score are obtained from the following equations: (1) p r e c i s i o n = T P T P + F P
+(2) r e c a l l = T P T P + F N
+(3) F - s c o r e = 2 · p r e c i s i o n · r e c a l l p r e c i s i o n + r e c a l l
+
+4. Results
+4.1. Comparison of the Methods Using Emotional Expressions and Methods Using Word Expressions
+The following figure details the trend of the accuracy of the coupled model, the sentiment dictionary model, and the BERT model (Figure 7). In addition, Table 7 shows the averages of these models (the detailed tabular data is provided in Appendix A).
+The three periods from spans 1 to 10, spans 10 to 40, and spans 40 to 46 are referred to as “Period 1”, “Period 2”, and “Period 3”, and the evaluation was conducted for each of these periods.
+First, in Period 1, the accuracy of all models deteriorates rapidly. Next, in Period 2, the accuracy of all models is relatively stable, but the change in the accuracy of the sentiment dictionary model is small. Then, in Period 3, the accuracy of the emotion dictionary model does not deteriorate, but the accuracy of the other models declines rapidly.
+4.2. Comparison of Aso et al.’s Model
+The following figure illustrates the transition in accuracy of the concatenation, the word, and the sentiment models (Figure 8). Furthermore, Table 8 shows the averages of these models (the detailed tabular data are provided in Appendix A).
+The transition in Aso et al.’s model shows no significant difference in accuracy degradation.
+5. Discussion
+First, we discuss the results of the comparison between the method using emotional expressions and the method using word expressions.
+The sentiment dictionary model exhibits significant accuracy degradation in some periods, such as in Period 1, while Period 3 is the only period in which it does not suffer significant accuracy degradation. The small degradation of accuracy in Period 2 indicates that the emotional dictionary model is more resistant to accuracy degradation than the coupled and BERT models, which use word representations, except for in some periods.
+Next, we discuss the sudden drift that occurred in Periods 1 and 3 in terms of the social context of those periods.
+First, in Period 1, the classification results using the coupled, sentiment dictionary, and BERT models reveal that the number of cases in which fake news was determined to be real news increased. This period coincided with a time when terrorist activities by Islamic extremist groups were a critical topic [32]. For such a controversial topic, neither emotional nor word-based methods could detect the news because the inciting words usually necessary for the news to spread widely were not used.
+Next, in Period 3, the classification results of the coupled and BERT models revealed an increase in the number of cases in which real news was determined as fake news. In this period, the hurricanes in the Atlantic Ocean caused considerable damage to the United States. The following cases are related to this topic [33].
+
+- Hurricane Florence: Power outages top 700,000, could reach 3 million.
+
+- Hurricane Florence nears Carolinas as 1 million-plus ordered to Evacuate.
+
+
+In the case of news on such a large-scale disaster, even if the news were true, the news was determined to be false if we focused on word expressions, resulting in a loss of accuracy. When we focused only on emotional expressions, no inciting features were observed, and the classification could be performed as before without any accuracy degradation.
+Next, we discuss the results of the comparison with Aso et al.’s model. The emotion model could not prevent performance degradation probably because the features of the words were more pronounced. As emotional GloVe is an embedding method that extends the learned word vector space, it contains both word features and emotion features. Therefore, no significant difference was observed between the accuracy of the emotion and word models.
+The transition in the accuracy of the emotion dictionary model confirmed the resistance of emotion-based methods for accuracy degradation, but the classification accuracy was low. An emotion dictionary with a larger vocabulary and detailed emotion features can improve the performance of emotion-based methods. Further study on the methods combining words and emotion features is necessary. In the future, models and learning methods that can achieve both accuracy and tolerance for accuracy degradation should be devised to reduce the cost required for re-training.
+6. Future Work
+Fakeddit [30] was created based on data posted on the US message board social news site Reddit. This study also shows that the proposed method is robust to concept drift for data from 2015 to 2018 extracted from Fakeddit.
+However, just as different types of social media can influence the trends of posts, they are also expected to influence trends in fake news [34]. The content of fake news changes every day, depending on global conditions and trends. Therefore, it is necessary to show that the proposed method is effective for data from different social media sites and on different dates.
+In the future, we will show that our method is independent of social media and trends. However, there are few publicly available datasets for fake news detection. To demonstrate the effectiveness of the proposed method, new data need to be collected efficiently.
+It would also be useful to elucidate changes in the trend of fake news. In this study, we based our considerations on events that were occurring during the time of the accuracy decline, but this may not be appropriate. For a more informative discussion, we plan to conduct an experiment with a model that uses an attention mechanism. Visualization of what words in a sentence the classification model is focusing on is expected to elucidate the cause of the accuracy loss.
+7. Conclusions
+In this study, we focused on concept drift in fake news. We hypothesized and verified that conventional methods based on word representations exhibit accuracy degradation resulting from changes in word fads and usage, whereas methods that utilize sentiment information of words can suppress performance degradation due to concept drift.
+The experimental results revealed that the method using sentiment expressions exhibited slight accuracy degradation, but the overall evaluation revealed that it had a higher tolerance for degradation than the method using word expressions. As the sentiment dictionary model used in this study exhibits low classification accuracy, models and training methods that can achieve both high accuracy and tolerance for accuracy degradation should be developed.
+Author Contributions Conceptualization, H.M., K.S. and T.M.; methodology, H.M., K.S. and T.M.; software, H.M.; validation, H.M., K.S. and T.M.; formal analysis, H.M., K.S. and T.M.; investigation, H.M., K.S. and T.M.; data curation, H.M.; writing—original draft preparation, H.M.; writing—review and editing, H.M.; supervision, T.M. All authors have read and agreed to the published version of the manuscript.
+Institutional Review Board Statement Not applicable.
+Informed Consent Statement Not applicable.
+Data Availability Statement Not applicable.
+Conflicts of Interest The authors declare no conflict of interest.
+Footnotes
+Disclaimer/Publisher’s Note: The statements, opinions and data contained in all publications are solely those of the individual author(s) and contributor(s) and not of MDPI and/or the editor(s). MDPI and/or the editor(s) disclaim responsibility for any injury to people or property resulting from any ideas, methods, instructions or products referred to in the content.
+Figures and Tables Generate image description Figure 1. Data handling in the study by Shaina et al. [28].
+Generate image description Figure 2. Structure of the word and emotion models.
+Generate image description Figure 3. Structure of the coupled model.
+Generate image description Figure 4. Structure of the emotion lexicon model.
+Generate image description Figure 5. Data handling in this study.
+Generate image description Figure 6. Number of data in the test data.
+Generate image description Figure 7. F-values of the coupled, sentiment dictionary, and BERT models.
+Generate image description Figure 8. F-measures of the coupled, sentiment, and word models.
+Table 1 Labeling of Fakeddit.
+Label Explanation
+True Postings with accurate information.
+Satire/Parody Postings that are not malicious but contain incorrect information.
+Misleading Content Postings that are misleading about specific issues or individuals.
+Imposter Content Postings by spoofing.
+False Connection Postings with headlines and captions that do not relate to the content.
+Manipulated Content Postings with crafted information and images.
+Table 2 Labels addressed in this study.
+Six-Value Labels Two-Value Labels Used in This Study
+True True
+Satire/Parody True
+Misleading Content False
+Imposter Content False
+False Connection True
+Manipulated Content False
+Table 3 Parameters common to each model.
+Config Value
+Batch size 16
+Output layer activation function Softmax function
+Loss function Cross-entropy loss
+Number of epochs 10
+Table 4 Parameters of Aso et al.’s model.
+Config Value
+Learning rate of the n th epoch. 1.0 × 10 − 3 × 0 . 10 [ 1 2 n ]
+Dropout rate for the LSTM layer output. 0.20
+Table 5 Parameters of the emotion lexicon model.
+Config Value
+Learning rate of the n th epoch. 1.0 × 10 − 4 × 0 . 10 [ 1 2 n ]
+Dropout rate for the LSTM layer output. 0.20
+Table 6 Parameters of the BERT model.
+Config Value
+Learning rate of the n th epoch. 1.0 × 10 − 5 × 0 . 10 [ 1 2 n ]
+Table 7 Average of the F-values of the coupled, sentiment dictionary, and BERT models.
+bert word+emo emo_lex
+0.454 0.377 0.166
+Table 8 Average of the F-values of the coupled, sentiment, and word models.
+word emo word+emo
+0.373 0.312 0.377
+Appendix A
+We show in Table A1 the F-values and the averages for each span of the graphs shown in Figure 7 and Figure 8 .
+Table A1 F-values of BERT, word models, sentiment, coupled, and sentiment dictionary models.
+span bert word emo word+emo emo_lex
+0 0.692 0.592 0.494 0.592 0.226
+1 0.703 0.592 0.476 0.585 0.239
+2 0.724 0.592 0.487 0.595 0.226
+3 0.726 0.610 0.528 0.633 0.226
+4 0.751 0.629 0.547 0.634 0.221
+5 0.616 0.498 0.432 0.503 0.178
+6 0.481 0.367 0.317 0.372 0.205
+7 0.491 0.376 0.319 0.384 0.146
+8 0.495 0.392 0.333 0.418 0.144
+9 0.520 0.403 0.323 0.408 0.155
+10 0.532 0.435 0.362 0.450 0.173
+11 0.491 0.394 0.321 0.401 0.166
+12 0.513 0.419 0.349 0.432 0.171
+13 0.543 0.444 0.369 0.451 0.173
+14 0.548 0.437 0.362 0.456 0.171
+15 0.534 0.405 0.349 0.417 0.153
+16 0.431 0.358 0.278 0.362 0.146
+17 0.420 0.344 0.278 0.352 0.141
+18 0.461 0.355 0.289 0.368 0.137
+19 0.454 0.349 0.276 0.357 0.157
+20 0.356 0.282 0.251 0.297 0.130
+21 0.328 0.280 0.230 0.288 0.144
+22 0.335 0.255 0.191 0.265 0.137
+23 0.351 0.267 0.226 0.264 0.153
+24 0.367 0.282 0.246 0.269 0.159
+25 0.390 0.312 0.262 0.305 0.130
+26 0.411 0.349 0.289 0.340 0.130
+27 0.374 0.342 0.267 0.326 0.153
+28 0.365 0.321 0.257 0.295 0.153
+29 0.356 0.294 0.246 0.301 0.141
+30 0.463 0.399 0.346 0.406 0.155
+31 0.418 0.346 0.282 0.346 0.162
+32 0.374 0.321 0.271 0.329 0.155
+33 0.413 0.342 0.273 0.348 0.159
+34 0.408 0.362 0.308 0.356 0.150
+35 0.383 0.323 0.264 0.324 0.166
+36 0.427 0.358 0.303 0.361 0.159
+37 0.443 0.378 0.314 0.388 0.166
+38 0.383 0.321 0.280 0.325 0.159
+39 0.370 0.333 0.301 0.321 0.166
+40 0.413 0.344 0.289 0.346 0.171
+41 0.420 0.333 0.294 0.341 0.169
+42 0.415 0.358 0.310 0.354 0.169
+43 0.406 0.353 0.289 0.349 0.187
+44 0.191 0.166 0.141 0.167 0.189
+45 0.148 0.141 0.118 0.140 0.178
+average 0.453 0.373 0.312 0.377 0.166
+
+References
+1. Bovet, A.; Makse, H. Influence of fake news in Twitter during the 2016 US presidential election. Nat. Commun. ; 2019; 10 , 7. [DOI: https://dx.doi.org/10.1038/s41467-018-07761-2] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/30602729]
+2. Derek, R. The misinformation machine. Science ; 2019; 363 , 348.
+3. Scientists Can Vaccinate Us against Fake News. Available online: https://www.weforum.org/agenda/2017/08/scientists-can-vaccinate-against-the-post-truth-era (accessed on 1 March 2023).
+4. FactCheck.org—A Project of The Annenberg Public Policy Center. Available online: https://www.factcheck.org/ (accessed on 1 March 2023).
+5. Soroush, V.; Deb, R.; Sinan, A. The spread of true and false news online. Science ; 2018; 359 , pp. 1146-1151.
+6. Rashkin, H.; Choi, E.; Jang, Y.; Volkova, S.; Choi, Y. Truth of varying shades: Analyzing language in fake news and aolitical fact-checking. Proceedings of the 2017 Conference on Empirical Methods in Natural Language Processing ; Copenhagen, Denmark, 7–11 September 2017; pp. 2931-2937.
+7. Kaliyar, R.; Goswami, A.; Narang, P. FakeBERT: Fake news detection in social media with a BERT-based deep learning approach. Multimed. Tools Appl. ; 2021; 80 , pp. 11765-11788. [DOI: https://dx.doi.org/10.1007/s11042-020-10183-2] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/33432264]
+8. Lu, J.; Liu, A.; Dong, F.; Gu, F.; Gama, J.; Zhang, G. Learning under concept drift: A review. IEEE Trans. Knowl. Data Eng. ; 2019; 31 , pp. 2346-2363. [DOI: https://dx.doi.org/10.1109/TKDE.2018.2876857]
+9. Ferrara, E.; Yang, Z. Quantifying the effect of sentiment on information diffusion in social media. PeerJ Comput. Sci. ; 2015; 1 , e26. [DOI: https://dx.doi.org/10.7717/peerj-cs.26]
+10. Shun, A.; Kaiyu, S.; Tomofumi, M. Detecting fake news using emotion vectors. Int. J. Comput. Softw. Eng. ; 2022; 7 , pp. 1-6.
+11. Alejandro, V.; Diana, M.; Sebastian, C.; Sharon, S.; Ada, G. Understanding the spread of fake news: An approach from the perspective of young people. Informatics ; 2018; 10 , 38.
+12. Shu, K.; Wang, S.; Liu, H. Beyond news contents: The role of social context for fake news detection. Proceedings of the Twelfth ACM International Conference on Web Search and Data Mining ; Melbourne, VIC, Australia, 11–15 February 2019; pp. 312-320.
+13. Cinyi, Z.; Reza, Z. A survey of fake news: Fundamental theories, detection methods, and opportunities. ACM Comput. Surv. ; 2021; 53 , pp. 1-40.
+14. Mohammad, H.; Reza, S.; Saeedeh, M. Convolutional neural network with margin loss for fake news detection. Inf. Process. Manag. ; 2021; 58 , 102418.
+15. Rohit, K.; Anurag, G.; Pratik, N.; Soumendu, S. FNDNet—A deep convolutional neural network for fake news detection. Cogn. Syst. Res. ; 2020; 61 , pp. 32-44.
+16. Saleh, H.; Alharbi, A.; Alsamhi, S. OPCNN-FAKE: Optimized convolutional neural network for fake news detection. IEEE Access ; 2021; 9 , pp. 129471-129489. [DOI: https://dx.doi.org/10.1109/ACCESS.2021.3112806]
+17. Jeffrey, P.; Richard, S.; Christopher, M. GloVe: Global vectors for word representation. Proceedings of the 2014 Conference on Empirical Methods in Natural Language Processing (EMNLP) ; Doha, Qatar, 25–29 October 2014; pp. 1532-1543.
+18. Seyeditabari, A.; Tabari, N.; Gholizadeh, S.; Zadrozny, W. Emotional embeddings: Refining word embeddings to capture emotional content of words. arXiv ; 2019; arXiv: 1906.00112
+19. Mohammad, M.; Turney, D. CROWDSOURCING A word–emotion associatino lexicon. Comput. Intell. ; 2013; 29 , pp. 436-465. [DOI: https://dx.doi.org/10.1111/j.1467-8640.2012.00460.x]
+20. Wang, Y. “Liar, Liar pants on fire”: A new benchmark dataset for fake news detection. Proceedings of the 55th Annual Meeting of the Association for Computational Linguistics ; Vancouver, BC, Canada, 30 July–4 August 2017; Volume 2 , pp. 422-426.
+21. Schuster, M.; Palowal, K. Bidirectional recurrent neural networks. IEEE Trans. Signal Process. ; 1997; 45 , pp. 2673-2681. [DOI: https://dx.doi.org/10.1109/78.650093]
+22. Basseville, M.; Nikiforov, V. Detection of Abrupt Changes: Theory and Application ; Prentice Hall: Englewood Cliffs, NJ, USA, 1993; Volume 104 .
+23. Gama, J.; Medas, P.; Castillo, G.; Rodrigues, P. Learning with drift detection. Proceedings of the 17th Brazilian Symposium on Artificial Intelligence ; Sao Luis, Maranhao, Brazil, 29 September–1 October 2004; Lecture Notes in Computer Science Springer: Berlin/Heidelberg, Germany, 2004; pp. 286-295.
+24. Kifer, D.; Ben-David, S.; Gehrke, J. Detecting change in data streams. Proceedings of the 30th International Conference on Very Large Databases ; Toronto, Canada, 31 August–3 September 2004; Volume 30 , pp. 180-191.
+25. Alippi, C.; Roveri, M. Just-in-time adaptive classifiers part i: Detecting nonstationary changes. IEEE Trans. Neural Netw. ; 2008; 19 , pp. 1145-1153. [DOI: https://dx.doi.org/10.1109/TNN.2008.2000082]
+26. Yu, H.; Zhang, Q.; Liu, T.; Lu, J.; Wen, Y.; Zhang, G. Meta-ADD: A meta-learning based pre-trained model for concept drift active detection. Inf. Sci. ; 2022; 608 , pp. 996-1009. [DOI: https://dx.doi.org/10.1016/j.ins.2022.07.022]
+27. Hang, Y.; Jie, L.; Anjin, L.; Bin, W.; Ruimin, L.; Guangquan, Z. Real-Time prediction system of train carriage load based on multi-stream fuzzy learning. IEEE Trans. Intell. Transp. Syst. ; 2022; 23 , pp. 15155-15165.
+28. Raza, S.; Ding, C. Fake news detection based on news content and social contexts: A transformer-based approach. Int. J. Data Sci. Anal. ; 2022; 13 , pp. 335-362. [DOI: https://dx.doi.org/10.1007/s41060-021-00302-z] [PubMed: https://www.ncbi.nlm.nih.gov/pubmed/35128038]
+29. Vaswani, A.; Shazeer, N.; Parmar, N.; Uszkoreit, J.; Jones, L.; Gomez, A.N.; Kaiser, L.; Polosukhin, I. Attention is all you need. Adv. Neural Inf. Process. Syst. ; 2017; 30 , [DOI: https://dx.doi.org/10.48550/arXiv.1706.03762]
+30. Nakamura, K.; Levy, S.; Wang, Y. {F}akeddit: A new multimodal benchmark dataset for fine-grained fake news detection. Proceedings of the 12th Conference on Language Resources and Evaluation ; Marseille, France, 11–16 May 2020; pp. 6149-6157.
+31. Devlin, J.; Chang, M.; Lee, K.; Toutanova, K. {BERT}: Pre-training of deep bidirectional transformers for language understanding. Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies ; Minneapolis, MN, USA, 2–7 June 2019; Volume 1 , pp. 4171-4186.
+32. U.S. Reassesses Threat of ISIL after ‘Bloody Friday’. Available online: https://www.politico.com/story/2015/06/us-reassesses-threat-of-isil-after-bloody-friday-119485 (accessed on 22 April 2023).
+33. Hurricane Florence. 14 September 2018; Available online: https://www.weather.gov/ilm/HurricaneFlorence (accessed on 22 April 2023).
+34. Renato, S.; Tiago, A. How concept drift can impair the classification of fake news. Anais do IX Symposium on Knowledge Discovery, Mining and Learning (KDMiLe 2021) ; SBC: Porto Alegre, Brazil, 2021; pp. 121-128.

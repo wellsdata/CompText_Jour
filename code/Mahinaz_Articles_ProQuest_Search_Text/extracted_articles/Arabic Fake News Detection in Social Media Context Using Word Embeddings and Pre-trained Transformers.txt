@@ -1,0 +1,351 @@
+Introduction The widespread of social media platforms on the internet facilitates the rapid dissemination of fake and low-quality news among people [1, 2]. Social media platforms have become more accessible, allowing people to write and share information freely [3, 4]. Authors of fake news usually create misleading news that apparently looks true, which makes the individuals puzzled to recognize them as fake. Sharing and redistributing fake news can severely harm individuals and society [5, 6]. A survey published in 2016 reported that most American citizens are puzzled due to the fake news they see every day, and just a few of them can discover them as fake news, making them a little or not puzzled [7]. However, the rapid dissemination of Fake news can harm vital sectors such as health, education, politics, and finance. For example, many investments have been discontinued in some low-income countries [8], while on the other hand, many people refused to take the COVID-19 vaccine [9], and so forth.
+Social media platforms are supposed to establish a safe place to share and post comments by implementing specific procedures that allow parties to report inappropriate behavior and block untrustworthy users [10]. However, despite the importance of such actions, they usually occur after the fake news is disseminated and become late to avoid its consequences. Therefore, there is a desperate need to develop a robust model to detect fake news in real-time and reduce its spread. Detecting fake news on social media is not a trivial task for multiple reasons: First, detecting unreliable news sources is untraceable with the high amount of traffic [8, 11, 12]. Second, fake news is intentionally written to deceive readers and convince them that this false information is correct [7]. Depending on the content only to detect fake news, it is insufficient and needs some auxiliary information [3]. Third, the way to judge whether this news is fake based on this additional information requires user engagement because they can help annotate news as fake or real when they search for the natural source of that news [7, 12, 13, 14].
+Fake news detection is often treated as a text classification problem, part of natural language processing tasks. Usually, the problem of the fake news detection model is constructed by training a deep learning model on a large corpus that contains a collection of fake and true news. Recent advances in processing natural language have quickly paved the way for processing NLP-related tasks with high performance [15]. For example, the last decade has witnessed the emergence of word embedding algorithms such as Word2vec [16] and Fast text [17], followed by the most recent deep contextualized word representation models such as Embeddings from Language Models (ELMO), Bidirectional Encoder Representations from Transformers (BERT) and Generative Pre-trained Transformer (GPT3). These models have shaped the way that we can deal with NLP tasks.
+Detecting Fake news from Arabic context is challenging issue for several reasons: 1) The word spelling can differ from one sentence to another, which changes the meaning [6, 9], 2) There are many different Arabic dialects, even in the same country, which makes it harder to understand the meaning of the sentence [11], and 3) word diacrasy can also change the meaning [14, 18], 4) Finally, the biggest challenge in fake news detection for the Arabic language is the lack of benchmark datasets [19]. Therefore, we aim to construct a corpus dedicated to Arabic fake news studies. However, the scarcity of freely available Arabic fake news texts and the deficiency of annotating the texts are considered the main challenge encountered during corpus construction.
+In this paper, we attempt to produce a fake news dataset that will be a valuable resource for fake Arabic news detection and ready for several research directions in Arabic Natural Language Processing (NLP) and Machine Learning (ML). Another challenge is in annotating the news as fake or real. Therefore, we aim to establish clear rules for annotators to follow when classifying Arabic tweets. Due to the lack of fake news datasets for the Arabic language, we collected a dataset from different sources, such as Twitter and the pre-collected unlabeled dataset [20]. We chose Twitter as the primary platform for spreading news because it is a powerful broadcast and communication tool, assisting the increase of social reach. Accordingly, the Twitter streaming API has been used to collect data from different Twitter accounts. Then, we perform data cleaning to remove unwanted texts and symbols and perform tokenization and normalization. The cleaned tweets are then labeled fake and real by six volunteers who have undergone training sessions. We used six different pre-trained word embedding techniques dedicated for understanding Arabic language: AraBERT [21], CAMeLBERT [22], ARBERT [23], MARBERT [23], AraELECTRA [24], and AraVec [25], to obtain the text representation as a numeric vector for each tweet. Then we developed different classifiers to classify the news using the most widely used classifiers, such as Neural Networks (NN), Support VECTOR Machine (SVM), Logistic Regression (LR), eXtreme Gradient Boosting (XGB), and Naïve Bayes (NB).
+The remaining paper is structured as follows: Sect. 2 introduces the related work. Section 3 presents an overview of text representation techniques. Section 4 presents the research methodology. Section 5 explains the evaluation measures used. Section 6 presents The results. Finally, Sect. 7 presents the conclusions of our study.
+Related Work Processing Arabic natural language challenges related to context understanding, diacrasy, and multi-dialects across Arab countries. In the last ten years, tremendous work has been done toward improving the Arabic NLP using the most advanced technologies, such as transformers and neural language modeling. Since this paper is about fake news detection in Arabic, we will mention only the studies related to this area.
+The focus of most published studies has been on detecting fake news written in English. It turns out that there are very few studies that deal with Arabic and other languages. Nagoudi et al. [26] indicate a lack of necessary data to detect fake Arab news. So, they researched the true stories widely spread on the internet through part of a speech tagger. The researchers achieved impressive performance using different models based on BERT (MBERT, XLMR, and ARABERT). The model received 89.23% and 89.25%, respectively, for accuracy and F-score evaluation. Saadny et al. [27] conducted a wide range of exploratory analyses on the news with satirical content to identify the linguistic traits of fake Arabic news. The main contribution to this work was that news with satirical content has distinctive characteristics at the grammatical and lexical levels. To identify satirical fake news, the researchers built several machine learning models using two datasets containing fake news in Arabic that were collected from satirical news websites and achieved an accuracy of 98.6% using their real news from CNN-Arabic and BBC-Arabic. The majority of the content in this dataset dealt with Middle Eastern politics.
+Helwe et al. [28] analyzed the credibility of online blogs and found a lack of the Arabic data set. The authors suggested a deep shared learning model evaluate the legitimacy of Arabic blogs to address this issue. On a short collection of labeled data, they trained several unreliable deep neural networks, giving each network a different perspective on the data. Finally, they claimed positive results by contrasting several techniques, including SVM and CNN, and their method received a higher F-score of 63%.
+Jardaneh et al. [12] focused on the content and user-related features of an application of sentiment analysis to create additional features to improve the performance of binary ratings. They designed four new machine learning models using Decision Tree, Random Forest, Logistic Regression, and AdaBoost. They relied on a sample of data that included 2708 tweets filtered to 1862 tweets related to the Syrian crisis. After calculating its measurement using precision, recall, accuracy, and F-score, which are assessed as 74%, 78%, 80%, and 79%, respectively, the results show exceptional performance.
+Rangel et al. [29] were concerned with using low dimensional statistical imputation to detect unreliable sources. A set of Arabic-speaking businesses used this approach, including the Arabic Credibility Group and two other businesses created by Qatar News. The methods employed received a grade of F-score (79.7%). Two well-known distributed representations provide their results (skip grams and continuous bag of words).
+Ballouli et al. [3] built a rating model that can predict the credibility of a given Arabic tweet on Twitter. A sample of 9,000 tweets was used, and information on the author's profile and timeline was extracted. The new model achieved an impressive performance of 21% over the standard F-score. On the other hand, Haouari et al. [30] dealt with searching for evidence on the allegations of Arab news. They employed machine learning to complete four tasks, employing various sets of characteristics for each assignment. The three machine learning models they employed were the support vector machine, random forest, and Naive Bayes. F-score was maintained at 83% across unique features in different models.
+Sutanto et al. [31] employed a combination of the subject- and user features to evaluate news credibility, in contrast to the articles mentioned above. There has also been a suggestion for a machine learning model that classifies false information shared on Twitter. The four modules of the suggested approach are content parsing and feature extraction, content verification, polarity assessment of user comments, and credibility rating. The sample represents a manually classified data collection of 800 Arabic news articles from Twitter. The decision tree, the support vector machine (SVM), and the Naive Bayes models were the three main models that the researchers used. The findings demonstrate that the decision tree model produced favorable outcomes because its rate was 2% higher than that of the SVM model and roughly 7% higher than that of the Naive Bayes model. Additionally, the decision tree model's false positive rate was approximately 9% lower than that of the SVM model and 10% lower than that of the Naive Bayes model. Based on the tested dataset's accuracy, recall, F-score, and precision, the decision tree model outperformed the Naive Bayes and SVM models by roughly 7% and 2%, respectively.
+Alkhair et al. [32] have developed a classifier to detect fake news utilizing machine learning-based models, were gathering data and retrieving relevant comments was done using YouTube API. The developed model has gained a 95% accuracy using the SVM algorithm. Similarly, to discuss the results of and detection methods of Arabic fake news, Hadj Ameur et al. [11] have collected tweets related to COVID-19 using the COVID-19 hashtags. They used six classifiers: eXtreme Gradient Boosting, Logistic Regression, Multilayer Perceptron, Naïve Bayes, Random Forest Bagging, and Support Vector Machine. The highest F1-score was achieved when the Logistic Regression (LR) method was used, where a score of 93.3% was recorded.
+Al-Yahya et al. [13] introduced a review of Arabic fake news detection tasks and a comparison between different models. The compared models included CNN, Gated Recurrent Units (GRU), Recurrent Neural Network (RNN), and transformer-based models (AraBERT v2, MARBERT, ArElectra, AraBERT v1, QARiB, Arbert, and AraBERT v02). The researchers obtained a 67% F-score, 96% precision, 53% accuracy, and 54% recall.
+Bsoul et al. [33] published a clickbait news dataset in Arabic for the first time. This dataset enables machine learning models to automatically categorize news headlines as "Clickbait" or "Not Clickbait." These models generated F-Score values as high as 81%, demonstrating the viability of using machine learning to identify clickbait news headlines automatically.
+On the other hand, plenty of studies discuss the same issue but for other languages. For instance, Ozbay and Alatas [34] came up with a two-step methodology to detect English fake news available on social media. In the first stage, unstructured data is converted into a structured dataset through multiple preprocessing steps, where the dataset includes news, which is represented as vectors. In the next step, twenty-three supervised Al algorithms are applied to the resulting structured dataset through text mining techniques. The researchers used three real datasets, where three decision tree algorithms were used: CVPS, WIHW, and Zero. The results revealed that 74.5% was the maximum level of accuracy obtained, along with 74.1% for precision, 78% for recall, and 75.9% for F1-score. The researchers anticipated that the proposed model would perform better when using deep learning models than classical machine learning.
+In the same context, Traylor [35] has developed a new and unique LP model whose primary purpose is to identify and detect English fake news. Several toolkits, such as Natural Language, The Text Blob, and SciPy, were used to develop that detector. The Bayesian machine learning model incorporates quote attribution to estimate the probability that an article could be false. The results showed no powerful model performance; the model's accuracy was only 69.4%. However, the researchers believed this model could evolve into an influence mining system.
+Additionally, Kaliyar [15] merged multiple datasets from Kaggle and other resources to come up with a novel dataset. The new dataset contained more than six thousand instances. The researcher used multiple deep and classical machine learning techniques and models, such as CNN, deep CNN, NB, random forest, KNN, and LSTM. Moreover, the researchers have investigated the advantages of feature extraction and the way it could impact the model. The results showed that when a cascaded model made of LSTM and CNN was used, a performance score of 97.3% was achieved; whereas, a 98.3% was recorded when very deep CNN was implemented.
+Antoun et al. [21, 24, 36] investigated the existing available methods that are used to detect fake news, Twitter bots, and news domains. Accordingly, they proposed a model based on the advancements in natural language understanding (NLU) end-to-end deep learning models to determine the stylistic variations between fake and legitimate original news articles. As for the news domains, some instances, such as religion, sports, politics, etc., were considered in the detection model. Moreover, regarding the detection of Twitter bots, unique attributes, such as the user’s location, the tweet time, the duration between tweet date and account creation, and several features, were used to identify the poster's reliability. The researchers have used five models with various parameters. The researchers targeted six English datasets to detect fake news and news domains to identify bots; while, hashtags were used to target Arabic tweets. The performance of the proposed models was assessed using F1-score, precision, and recall, where 96%, 92%, and 100%, respectively, were obtained for the mBert base; while, XLNET recorded 98% for all the performance mentioned above metrics.
+Abd Elminaam et al. [37] used different machine learning and deep learning algorithms to detect Arabic fake news and they showed that long short-term memory (LSTM) is the most effective method for detecting Arabic fake news. Harrag et al. [38] used a fact-checking task to predict whether a given news text claim is factually authentic or fake, their model can outperform the previous approaches by achieving the highest accuracy of 91%. Hawashin et al. [39] improved fake news detection performance by optimizing the feature selection phase. The results showed that such optimizing improved the detection accuracy for traditional machine learning methods.
+Shishah [40] detected Arabic fake news using a JointBERT model based on BERT architecture. The suggested model can outperform all other methods tested regarding the key assessment metrics: F1, precision, recall, and accuracy scores. Wotaifi and Dhannoon [41] proposed a hybrid Deep Neural Network model that combines both text-convolution neural network (Text-CNN) and long short-term memory (LSTM) properties to create an efficient hybrid model. The proposed model outperformed both the Text-CNN and the LSTM, whereby the accuracy of the Hybrid Deep Neural Network is 91.4%; while, the accuracy of both Text-CNN and LSTM is 85.9% and 87.8%.
+Text Representation Text representation is an essential step in classifying texts [35]. As it is well-known that the classification algorithms only accept numeric input features, the text must be transformed into a form of vector representation to facilitate the classification process, as shown in Fig. 1. The accuracy of classification algorithms is affected by how we represent text as a vector. In the literature, multiple methods can represent texts in vectors such as Bag of Words, Terms Frequency—Inverse Document Frequency (TF-IDF), or Word embedding techniques such as word2Vec [16]. Profile-based features (e.g., user's writing styles, prior conversion history, age, gender, race…etc.) and social-graph features (e.g., number of friends, followers, likes…etc.) may also be utilized to describe vectors [2] efficiently. However, because our gathered dataset does not include social or user aspects, we exclusively focus on characteristics retrieved from the textual context and their semantics, such as TF-IDF and Word Embedding. Fig. 1 [Images not available. See PDF.]
+Illustration of text classification based on text representation
+
+Bag of words and TF-IDF are word representation techniques that use the frequency of words in each document as a distributional vector [9]. Despite the widespread of these methods, they suffer from some limitations: 1) they do not provide semantic meaning for the words, 2) they do not consider the order of the words in the sentence, and 3) The word vectors are frequently sparse with large dimensional space. Recently, more sophisticated continuous vector representations of words, called word embedding, have been introduced to learn the vector representation of the word from surrounding its neighbors (i.e., the context) using neural networks such as Word2Vec [16], FastText [17] and GloVe [42]. These techniques allow words with similar meanings to have an equal vector representation.
+Wrod2Vec is a popular word embedding algorithm developed by the google team in 2013 [16]. The basic idea of word2Vec is to learn the word embedding of a standalone word from the surrounding context using neural networks [6]. Its objective function causes the words that co-occur within the same context to have relatively similar embedding. There are two versions of the word2Vec algorithm, Continuous bag of words (CBOW), which predicts the target word from the context, and Skip-gram, which predicts the context words from the center word. The basic structure of the CBOW is composed of three layers, the input layer to enter one hot encoder vector of the center word and hidden layer to hold the embedding vector, and the output layer to represent a vector of context words. Skip-Gram performs better when the training set is small.
+Additionally, uncommon terms are presented nicely. CBOW, on the other hand, is quicker and functions better with common terms. The accuracy of word2Vec algorithms relies on the size of the text corpus, and they have a notable advantage over certain older approaches in handling huge datasets [43]. In other words, as the text corpus's size grows, accuracy also grows [44].
+An adopted word2Vec algorithm for the Arabic language, called AraVec, has been introduced by Soliman et al. [25]. The AraVec has three versions built over three large text corpus domains: Twitter, WWW, and Wikipedia Arabic articles. For each domain, there are different models built using CBOW and Skip-gram. Recently, the last version of AraVec 3.01 consists of 16 different models divided into unigram and n-gram models. On the other hand, a team of researchers at Stanford University developed a new word embedding technique called Global Vectors GloVe [42]. By concentrating on co-occurring words, the GloVe is comparable to word2Vec; however, rather than locally optimizing the objective function, it combines the benefits of two models: global matrix factorization and local context window approaches.
+The third popular word embedding is the FastText algorithm, which Facebook developed in 2017 [17]. To learn the center word from the surrounding context, as in CBOW, or all the surrounding words from the center one, as in Skip-Gram, FastText slides a window over the input text. According to Santos et al. [45], the central goal of FastText embeddings is to leverage subword information and evaluate the underlying structure of words rather than learning word representations. A collection of character n-grams is used to build the embeddings, with each word represented by the sum of its n-gram vectors.
+The Bidirectional Encoder Representations from Transformers (BERT) is a text representation technique based on the transformer architecture. It substitutes the sequential nature of RNN with a considerably quicker attention-based method [46]. Transformers convert one sequence into another by removing repetition and replacing it with an attention mechanism to handle dependencies between the system's input and output. The absence of sequential dependence on the last words allows the BERT model to be trained more efficiently, boosting the efficacy of long-term modeling dependencies [46]. The success of BERT stems from its capability to apply bidirectional training of transformers on large computational resources and data and train the model from left-to-right or combined left-to-right and right-to-left training sequences. Recently, two extensions from BERT have been developed to support the Arabic language: CAMeLBERT [22] and AraBERT [21]. Both models were trained over a large corpus of Arabic text, favoring CAMeLBERT, which supports different Arabic language dialects. However, the AraBERT has been introduced by the American University of Beirut (AUB) to be close to the original BERT that achieves success in English. Several research on the AraBERT architecture goes into great depth on the training approach [21]. It is worth noting that the model was pre-trained on a huge dataset of 70 million phrases, amounting to 24 GB of text. AUB also released an enhanced version of BERT model for Arabic text called AraELECTRA [24]. Based on a BERT structure, this approach has gained a new reputation in Arabic question answering. This model was offered in two versions: the AraELECTRA-base-discriminator and the AraELECTRA-base-generator [24]. This investigation utilized the discriminator because the structure is stronger and has more concealed size and attention heads.
+Furthermore, we employed ARBERT and MARBERT influential Arabic-based transformers [23]. Both models employ BERT-based architecture with 12 attention layers, each with 12 attention heads and 768 hidden dimensions. They were evaluated on five Arabic NLP tasks and gave extremely solid findings with superior results [22]. Finally, In this paper, we used six pre-trained text representation models AraVec, AraBERT, AraELECTRA, ARBERT, MARBERT, and CAMeLBERT.
+The Proposed Research Framework The proposed Framework is illustrated in Fig. 2 and explained clearly in the subsequent sections. Four main phases lead the development of our proposed model to the best results. These four phases are data collection, text cleaning preprocessing, text representation and model building, training, and evaluation. Through these phases, the work will be divided into smaller tasks to make the work organized and easily managed. Fig. 2 [Images not available. See PDF.]
+Proposed research framework
+
+In a nutshell, we collected fake news datasets from different repositories and sources in the first phase. Apparently, there is a lack of annotated Arabic datasets for fake news due to the difficulty in processing and understanding Arabic text. Therefore, we designed two steps to alleviate this issue. First, we gathered ready-published unlabeled Arabic news datasets from [27]. This is a dataset for Arabic fake news. It is scraped from two famous news websites, Al-Hudood and Al-Ahram [27]. Second, we collected news from some unpopular Arabic news agencies on Twitter. These undesirable accounts are typical venues for spreading fake news to attract readers and followers. For this purpose, we used Twitter python API to connect to Twitter and collect tweets. We have identified three domains of news (Politics, Sport, and Economics) for collection. Then, we seek the help of volunteers to annotate these tweets, with the support of training annotation sessions. Finally, all the annotated tweets from both sources are grouped in one dataset.
+In the second phase, the collected tweets were preprocessed to clean and remove all unwanted characters, links, and symbols, in addition, to normalizing text. In the third phase, we apply different text representation techniques using a word embedding techniques and deep contextualized embedding models. Finally, the classifiers are constructed using popular machine learning classification algorithms.
+Phase 1: Corpus Construction Finding Arabic fake news datasets was difficult; even the pre-made datasets lacked sufficient data. In this paper, we gathered fake Arabic news from multiple sources. First, we gathered a pre-collected news dataset in the Arabic language [27]. The dataset contains news scrapped from two satirical news websites, Al-Hudood and Al-Ahram websites. To ensure the annotation process was made correctly, we sought help from two volunteers to review random scripts of roughly 20% of the gathered data. We noticed some errors in the annotation process; therefore, we asked volunteers to fix the problem and review all tweets. This task was tedious, cumbersome, and time-consuming, but ensuring the tweets were complete and correct was necessary. This process has resulted in around 3.64K tweets with 1185 fake news and 2456 real news, as shown in Fig. 3. Fig. 3 [Images not available. See PDF.]
+Percentage of fake and real News in Dataset A
+
+The second source of our data was Twitter. Twitter was selected since it is one of the most popular social media sites in the Arab world, particularly in the Gulf. Twitter is a powerful platform that allows users to communicate and share their thoughts. Using the Twitter streaming API, we gathered information from many unpopular Arabic news accounts. These undesirable accounts are typical venues for spreading fake news to attract readers and followers. Initially, we identified three domain types to collect tweets: politics, finance, and sport. This choice was made after carefully examining the most popular accounts attracting individuals from various segments of Arab society. To ensure that we collected tweets from Arab nations with varied dialects, we chose Arabic as the main language and user accounts from specific Arab countries. Twitter allows us to gather up to 3000 tweets from each account. We selected tweets from the timelines of 15 accounts, including tweets written in various accents (Levantine, Egyptian, and Gulf). Although we sampled tweets from users’ timelines from multiple domains, we discovered that some subjects were more prevalent than others.
+Human interference was needed to annotate the tweets accurately and determine whether they were fake or real. For this purpose, we asked a group of six Arabic native speakers (volunteers) to help manually annotate the collected tweets based on their context into two class labels: fake or real. The six annotators were graduate students with previous experience in natural language processing and machine learning. The annotators were asked to label tweets into one of three initial labels: Fake if the news is fake, Real if the news is real, and unknown when the content of fake is ambiguous, and they could not decide which is the true label. After discussing them among the volunteers, the unknown labels are then resolved as fake or real. To facilitate the annotation process, we use the rules and guidelines mentioned in [47] to help the annotators.
+To ensure that the annotation process is conducted perfectly, we first validate the capability of volunteers in performing the annotation process. Mainly, we prepared a training session for all volunteers on how to annotate tweets. Then, we prepared a set of 10 labeled tweets and made them invisible to all volunteers. Next, we asked the six volunteers to annotate these tweets as fake, unknown, or real. A high score, usually 80% correct from the complete annotation tasks, was required to consider the annotator trustworthy. Unfortunately, two volunteers scored less than 80%, so we excluded them. The second part of the annotation validation process is to measure the consensus voting for labeling each tweet, where more than half of the annotators must agree on each labeled tweet. Tweets that were annotated as "unknown" were excluded from the test. Then, we used Cohen's kappa coefficient to assess the agreement rate among annotators and the overall correctness of the annotation process. In many situations, getting all annotators to agree on a classification for a certain tweet was impossible.
+As a consequence, we determined that the annotator with the lowest inter-annotator agreement with the other annotators would be excluded. This has ended up with only three annotators. Finally, the average agreement among the three annotators was 64%, which is regarded as satisfactory in this field of study. This explains how difficult it was to distinguish bogus news in a multi-dialectal Arabic situation vs. another language like English.
+In total, we collected 10,000 tweets, but the number has been reduced to 3460 after cleaning the unrelated tweets. The annotation process has resulted in 2121 fake news and 1339 real news. Figure 4 shows the distribution of these tweets. We can see that the fake news outnumbers the real news, the unbalanced dataset. When we merge both datasets into one dataset, as shown in Fig. 5, we can see that 53% of the news is fake and 47% is real, which is considered a balanced dataset. Fig. 4 [Images not available. See PDF.]
+Percentage of fake and real news in the collected dataset
+Fig. 5 [Images not available. See PDF.]
+Percentage of fake and real news on both datasets together
+
+Figure 6 depicts the word cloud of the most frequent words in our constructed corpus. This can give insight into which words are frequent for real and fake news. We can see that some words are frequent in both types of news; for example (الحكومة) has been frequently mentioned under both labels. Such words might make confusing when deriving text representation because it appears in both contexts. Fig. 6 [Images not available. See PDF.]
+Word cloud of the collected corpus
+
+Phase 2: Text Processing, Cleaning, and Normalization In this phase, we have revised and filtered the collected tweets by first removing retweets to avoid redundancy. Then, we removed the uniform resource locator (URL) address and other unwanted emojis or symbols. We used a regular expression in Python to complete this job. Then we used the CAMeL tool1 to process the text by applying tokenization and lemmatization. The processed texts are then saved as a table with two columns of text and a fake column. The fake column contains two labels (Yes: fake news, No: real news) and is considered the target variable.
+Phase 3: Text Representation Phase The text of each piece of news is then transformed into a numeric vector using the text representation models discussed in Sect. 3. As mentioned earlier, we have used six text representation techniques, five deep contextualized word embedding models (AraBERT, AraELECTRA, ARBERT and MARBERT, and CAMeLBERT), and the remaining one (i.e., AraVec) is a word embedding model. For each one, we have used the pre-trained model; we make fine-tuning on our corpus. The transformer is trained over a large Arabic corpus during the pre-trained process, as shown in Fig. 7. The output of this process is the pre-trained transformer mode which will be used later for fine-tuning based on our collected dataset. Fig. 7 [Images not available. See PDF.]
+Pre-trained process of transformer
+
+During the fine-tuning process (see Fig. 8) of these models, numerous settings may be changed, including the optimizer, learning rate, number of epochs, and dropout value. As part of the fine-tuning procedure, we tested various optimizers, including SGD optimizer, ADAM, and AdamW. We experimented with several learning rate values, including 1e-3, 1e-4, and 1e-5. We also experimented with them with several epochs ranging from 1 to 5. To prevent wasting time and storage, the terminating conditions were carefully chosen. We have tried Dropout values of 10e-2, 25e-2, and 50e-2, with each number yielding a somewhat different outcome. Finally, we obtained six datasets from the original dataset. Each dataset represents the text representation obtained from the word embedding technique. Fig. 8 [Images not available. See PDF.]
+Fine tuning process
+
+Phase 4: Classifier Model Construction and Evaluation In this phase, the obtained text representations of tweets in line with fake features are entered into a machine learning classifier algorithm to construct Arabic fake news detection models. To accomplish this task, we used five machine learning algorithms which are: Deep Neural Networks (DNN), Support Vector Machine (SVM), Logistic Regression (LR), eXtreme Gradient Boosting (XGB), and Naïve Bayes (NB). The DNN was built over the word embedding techniques directly; whereas, the remaining algorithms were applied after getting the text representations and saved them in a separate dataset. The DNN model was placed on the top of each pre-trained model, either Transformer or AraVec. Twelve layers have been added, as shown in Fig. 9. These layers are designed based on four repetitive patterns, where each pattern contains one linear layer followed by a dropout layer and ReLU layer. In the last pattern, we replaced ReLU with the SoftMax layer. The dropout layer was added to avoid overfitting during the training process, and the linear layer to find a correlation between input vectors and output labels. The ReLU layer will reduce the computation time required for model training. Fig. 9 [Images not available. See PDF.]
+Architecture of our designed DNN model
+
+We use the CLS embedding vectors produced by the transformer for the remaining machine learning algorithms. The CLS stands for classification, and it is used to represent sentence-level classification. Besides CLS token embeddings, BERT uses positional and segment embeddings for each token. However, we used the default parameters for all machine learning algorithms. Finally, we divided the entire dataset into 70% training and 30% testing data for validation purposes.
+Validation Procedure We conducted multiple experiments to validate the constructed fake new detection models. We used five machine learning and deep learning algorithms and six text representation models during these experiments. Each text representation model was first fine-tuned and optimized by minimizing the loss function, as shown in Figs. 10, 11, 12, 13, 14 and 15. As we fine-tuned the system, we tried many configurations and parameters to get the best possible results. During fine-tuning for each model, we found that some text representation models do not have specific tokens in their pre-trained model vocabulary. For example, the word likes (ريز ويذرسبون), which is the Arabic name of a Hollywood star, was not in the ARABERT and ARBERT even though their pre-trained models were trained over a large Arabic corpus. Therefore, we chose these models' best parameters to get the best representations for the unseen tokens. The obtained text representation from each model is sent in line with a fake feature to train classifiers mentioned in Sect. 4.4. In this case, we used 70% of the data for training and 30% for testing. All detection models were trained over training data and evaluated over 30% of the data. Choosing proper evaluation metrics for classification problems is tricky because if we choose the wrong metrics, we will likely have a poor model with deceived performance. Therefore, the evaluation metrics must be selected to best capture what we believe is important about the model or predictions. In this paper, we used five evaluation metrics that focus on different aspects of classification model predictions. These metrics ensure a trade-off between the overall accuracy of the classification models. By convention, the fake new class is treated as positive, and real news class is treated as negative. The most common performance metrics are Recall and Precision . Recall measures the proportion of fake news that is correctly classified within fake news, as shown in Eq. 1. Precision is defined as the proportion of the fake news tested as fake (see Eq. 2). F1 metric, as shown in Eq. 3, is used to combine the precision and recall metrics into a single metric that can work best with imbalanced data distribution. Finally, the accuracy metric shown in Eq. 4 reflects the proportion of all correctly classified examples. In addition to the above metrics, we used area under curve ( AUC ), which estimates the area under the ROC curve formed by a set of Precision and Recall values and represented as a single value in the range [0–1]. ROC curve presents the trade-off between recall and precision. The better model with high AUC is regarded as the superior model. 1
+Recall = tp tp + fn 2
+Recall = tp tp + fn 3
+F 1 = 2 × recall × precision recall + precision 4
+Accuracy = tp + tn tp + tn + fp + fn where tp (true positive) is the number of fake news that is predicted as such. tn (true negative) is several real news that is predicted. fp (false positive) is the number of real news predicted as fake news. fn (false negative) is the number of fake news predicted as real news. [Images not available. See PDF.]
+Fig. 11 [Images not available. See PDF.]
+Loss and accuracy values for AraELECTRA
+Fig. 12 [Images not available. See PDF.]
+Loss and accuracy values for ARBERT
+Fig. 13 [Images not available. See PDF.]
+Loss and accuracy values for CAMELBERT
+Fig. 14 [Images not available. See PDF.]
+Loss and accuracy values for MARBERT
+Fig. 15 [Images not available. See PDF.]
+Loss and accuracy values for AraVec
+
+Results and Discussion This section presents and comments on the results of the multiple conducted experiments. For each combination of the text representation model and classifier, we reported the performance of our fake news detection in terms of accuracy, recall, precision, and F1-score. The complete results are presented in Table 2. However, we start discussion with training loss shown n Figs. 10, 11, 12, 13, 14 and 15, which show the loss values and accuracy of fine-tuning different pre-trained transformers. The figures show that the loss values decrease remarkably during the training process, a positive indicator of performance improvement. There is no notable decrease for ARBERT, AraVec, and CMAeLBERT, which signifies that these models are trained over many vocabularies and contexts. However, the loss values for all transformers reached a minimum value between 0.5 and 0.6, which is considered a high for such classification problem. This high value might affect the false positives and false negatives and thus reduce the credibility of the proposed detection model. We can also notice that using three epochs was sufficient to obtain a minimum loss value because we did not observe any improvement after three epochs. The accuracy curve was slightly improved during three epochs, AraELECTRA achieved the best accuracy improvement.
+When we examined the false negatives and positives to determine where and why the model's predictions were incorrect, we discovered that the model could not identify keywords to discriminate between fake and real in many circumstances. This is because numerous terms in the dataset, for example (Government: الحكومة, Citizens: المواطنين, world: العالم), are common vocabularies for both fake and real. These are the kinds of terms that result in false negatives. When we used AraBERT and ARBERT, the vocabulary files for these models gave consistent results even though some words were missing in both vocabularies. Consider the following statement:
+وجبة ماكدونالدز تحفيزية لكل نائب يحضر الجلسة حسب مقولة الي بيجيش معك تعا معو.
+You can see which terms are missing from the Arabic-based BERT vocabulary files, denoted by the boldface. Consequently, we relied on the 'stop' accuracy approach, which always leaves us just three epochs. After several trials, we opted to utilize the AdamW optimizer with no dropout value. During the training procedure, we also recorded the loss value changes.
+Tables 1 and 2 show evaluation results across all combinations of text representation techniques and classification models. As mentioned in the methodology section, we used two types of classification methods. The first one is the deep learning model (DNN) that comes after the transformer and benefits from the produced word embedding; the second is the traditional machine learning model that uses text representation known as CLS in BERT-based transformer. The classification algorithms use the produced text representation to train and test the detection model in all cases. Table 1. Evaluation results in terms of Accuracy, Recall, and Precision
+Accuracy
+Precision
+Recall
+
+Model
+LGR
+SVM
+NB
+XGB
+DNN
+LGR
+SVM
+NB
+XGB
+DNN
+LGR
+SVM
+NB
+XGB
+DNN
+
+AraBERT
+68.2
+67.4
+67.4
+69.0
+70.3*
+66.6
+65.7
+72.0*
+68.4
+71.4
+65.4*
+64.4
+50.7
+63.8
+61.6
+
+AraELECTRA
+65.4
+67.0
+67.6
+69.4*
+67.1
+62.5
+64.6
+71.9*
+69.5
+71.0
+66.6*
+66.4
+51.5
+62.6
+51.1
+
+MARBERT
+67.4
+68.5
+67.5
+70.5*
+68.8
+66.4
+67.7
+72.0*
+70.2
+66.3
+62.4
+63.6
+51.1
+65.0
+68.6*
+
+ARBERT
+66.2
+66.3
+67.3
+70.3*
+69.5
+65.1
+64.8
+71.8
+70.1
+75.0*
+61.4
+62.6
+50.5
+64.4*
+53.1
+
+CAMelBert
+69.5
+68.9
+67.4
+70.5
+72.6*
+68.3
+68.2
+71.8*
+69.7
+70.6
+66.0
+64.0
+50.7
+66.4
+72.0*
+
+AraVec
+64.6
+64.5
+62.0
+65.7
+67.5*
+61.2
+60.9
+59.3
+64.8
+66.0*
+65.5
+66.3*
+58.3
+57.3
+62.5
+
+Bold and asterisk values indicate the best results for each evaluation metric
+Table 2. Evaluation results in terms of F1 and AUC
+F1
+AUC
+
+Model
+LGR
+SVM
+NB
+XGB
+DNN
+LGR
+SVM
+NB
+XGB
+DNN
+
+AraBERT
+66.0
+65.1
+59.5
+66.0
+66.2*
+68.1
+67.2
+66.6
+68.7
+76.0*
+
+AraELECTRA
+64.5
+65.5
+60.0
+65.9*
+59.4
+65.4
+66.9
+66.8
+69.1
+70.9*
+
+MARBERT
+64.3
+65.6
+59.8
+67.5*
+67.4
+67.1
+68.2
+66.7
+70.2
+75.8*
+
+ARBERT
+63.2
+63.7
+59.3
+67.6*
+62.2
+66.0
+66.1
+66.4
+70.0
+76.8*
+
+CAMelBert
+67.1
+66.0
+59.4
+68.0
+71.3*
+69.3
+68.7
+66.5
+70.3
+79.1*
+
+AraVec
+63.3
+63.5
+58.8
+60.8
+64.2*
+64.7
+64.7
+61.8
+65.1
+72.0*
+
+Bold and asterisk values indicate the best results for each evaluation metric
+
+Table 1 shows all models’ accuracy, recall, and precision across all text representation methods. Similarly, Table 2 shows the F1-score and AUC. Recall and precision are important because they tell us some facts about false negatives and false positives. When discussing fake news detection systems, the occurrences of false negatives and false positives are critical. When news is fake, and the model predicts it to be true, it will disseminate unreliable news with bad effects on society. On the other side, if the model incorrectly predicts real news to be fake, users may lose faith in the news agency, resulting in an unreasonable loss of trust in the public. In any situation, a misleading finding will have negative effects that may cause injury and serious problems.
+We can see that using DNN with CAMeLBERT produces better accuracy and recall values than other models. At the same time, DNN with ARBERT can produce better precision than others. However, the precision of DNN with CAMelBERT is still competitive with ARBERT. Although the AraVec method is not a transformer, it achieved good performance close to other used transformers. This point needs further investigation to confirm this finding. The cells with star symbols represent the best classification model for each text representation method across each evaluation measure. There is no stable finding, but we can safely conclude that using DNN is better than other classical machine learning algorithms for AUC measures.
+Conclusion This paper presents a new large corpus of annotated fake news dataset for Arabic language and proposed a new fake news detection models based on different large Arabic language models and word embedding techniques. Different machine learning models have been developed as model heads over large language models.
+The results showed that the text representations produced by the CAMeLBERT transformer are the most accurate model. Moreover, AraVec achieved impressive performance compared to the other popular transformers. Furthermore, obtaining 100% classification is still unreachable; however, we found that using the built deep learning classifiers that come with the transformer is generally better than using classical machine learning classifiers. Finally, there is a lack of conclusion stability concerning which model works well with each text representation method.
+As future work, we will address some of this work’s limitations. Regarding the generalization of the results (i.e., external validity), an important threat is related to the datasets used in the study. To mitigate such a limitation, the authors encourage finding other and different data sets to ensure the findings of this paper. The labeling process of tweets' accuracy could affect the results achieved. For this reason, we asked six volunteers to label the data manually. To avoid bias in the experiments, volunteers were unaware of the experimental goals and the experiment classifiers and transformers. In the future, reinforcement learning must be applied to make fast decisions in real-time and make fewer errors than humans. Finally, we must consult people who specialize in Arabic to identify fake and real news and give us some information about how to formulate news linguistically.
+Footnotes 1 https://camel-tools.readthedocs.io/en/v1.2.0/
+References 1. Nasir, JA; Khan, OS; Varlamis, I. Fake news detection: a hybrid CNN-RNN based deep learning approach. Int. J. Inf. Manag. Data Insights ; 2021; 1 , 1 [DOI: https://dx.doi.org/10.1016/J.JJIMEI.2020.100007] 1533.90002 100007.
+2. Zhou, X; Zafarani, R. A survey of fake news. ACM Comput. Surv.Comput. Surv. ; 2020; 53 , 5. [DOI: https://dx.doi.org/10.1145/3395046] 1450.26007
+3. El Ballouli, R.; El-Hajj, W.; Ghandour, A.; Elbassuoni, S.; Hajj, H.; Shaban, K: CAT: Credibility analysis of arabic content on twitter. In: Proceedings of the third Arabic natural language processing workshop. pp. 62–71. (2017). https://doi.org/10.18653/V1/W17-1308
+4. Shu, K; Sliva, A; Wang, S; Tang, J; Liu, H. Fake news detection on social media: a data mining perspective. ACM SIGKDD Explor. newslett. ; 2017; 19 , 1 pp. 22-36. [DOI: https://dx.doi.org/10.1145/3137597.3137600] 0922.39004
+5. Mehta, D; Dwivedi, A; Patra, A; Anand Kumar, M. A transformer-based architecture for fake news classification. Soc. Netw. Anal. Min.Netw. Anal. Min. ; 2021; 11 , pp. 1-12. [DOI: https://dx.doi.org/10.1007/S13278-021-00738-Y] 1513.54119
+6. Nassif, AB; Darya, AM; Elnagar, A. Empirical evaluation of shallow and deep learning classifiers for arabic sentiment analysis. Trans. Asian Low-Resour. Lang. Inf. Process. ; 2021; [DOI: https://dx.doi.org/10.1145/3466171] 1245.93143
+7. Nassif, AB; Elnagar, A; Elgendy, O; Afadar, Y. Arabic fake news detection based on deep contextualized embedding models. Neural Comput. Appl.Comput. Appl. ; 2022; [DOI: https://dx.doi.org/10.1007/S00521-022-07206-4/TABLES/6] 1510.17058
+8. Najadat, H; Tawalbeh, M; Awawdeh, R. Fake news detection for Arabic headlines-articles news data using deep learning. Int. J. Electr. Comput. Eng. ; 2022; 12 , 4 pp. 3951-3959. [DOI: https://dx.doi.org/10.11591/IJECE.V12I4.PP3951-3959] 1505.81030
+9. Al-Laith, A; Mahlous, AR. Fake news detection in arabic tweets during the covid-19 pandemic common words in arabic and urdu languages view project fake news detection in arabic tweets during the covid-19 pandemic. Artic. Int. J. Adv. Comput. Sci. Appl. ; 2021; 12 , 6 2021. [DOI: https://dx.doi.org/10.14569/IJACSA.2021.0120691]
+10. Sahoo, SR; Gupta, BB. Multiple features based approach for automatic fake news detection on social networks using deep learning. Appl. Soft Comput.Comput. ; 2021; 100 , [DOI: https://dx.doi.org/10.1016/J.ASOC.2020.106983] 1476.65176 106983.
+11. Hadj Ameur, MS; Aliane, H. AraCOVID19-MFH arabic COVID-19 multi-label fake news & hate speech detection dataset. Proced. Comput. Sci. ; 2021; 189 , pp. 232-241. [DOI: https://dx.doi.org/10.1016/j.procs.2021.05.086]
+12. Jardaneh, G.; Abdelhaq, H.; Buzz, M.; Johnson, D.: "Classifying Arabic tweets based on credibility using content and user features," in:2019 IEEE Jordan international joint conference on electrical engineering and information technology, JEEIT 2019 – Proceedings, pp. 596–601. 2019. https://doi.org/10.1109/JEEIT.2019.8717386.
+13. Al-Yahya, M; Al-Khalifa, H; Al-Baity, H; Alsaeed, D; Essam, A. Arabic fake news detection: comparative study of neural networks and transformer-based approaches. Complexity ; 2021; [DOI: https://dx.doi.org/10.1155/2021/5516945] 1434.65272
+14. Himdi, H; Weir, G; Assiri, F; Al-Barhamtoshy, H. Arabic fake news detection based on textual analysis. Arab. J. Sci. Eng. ; 2022; 47 , 8 pp. 10453-10469. [DOI: https://dx.doi.org/10.1007/S13369-021-06449-Y/FIGURES/7]
+15. Kaliyar, RK; Goswami, A; Narang, P. FakeBERT: fake news detection in social media with a BERT-based deep learning approach. Multimed. Tools Appl. ; 2021; 80 , 8 pp. 11765-11788. [DOI: https://dx.doi.org/10.1007/S11042-020-10183-2/TABLES/22] 1047.81581
+16. Mikolov, T.; Chen, K.; Corrado, G.; Dean, J.: "Efficient estimation of word representations in vector space," 1st Int. Conf. Learn. Represent. ICLR 2013 - Work. Track Proc., (2013). https://doi.org/10.48550/arxiv.1301.3781.
+17. Bojanowski, P; Grave, E; Joulin, A; Mikolov, T. Enriching word vectors with subword information. Trans. Assoc. Comput. Linguist. ; 2017; 5 , pp. 135-146. [DOI: https://dx.doi.org/10.1162/TACL_A_00051/43387/ENRICHING-WORD-VECTORS-WITH-SUBWORD-INFORMATION]
+18. Shaalan, K; Siddiqui, S; Alkhatib, M; Abdel Monem, A. Challenges in arabic natural language processing. Comput. Linguist. Speech Image Process. Arab. Lang. ; 2019; [DOI: https://dx.doi.org/10.1142/9789813229396_0003]
+19. Assaf, R.; Saheb, M.; “Dataset for arabic fake news”, 15th IEEE Int. Conf. Appl. Inf. Commun. Technol. AICT, (2021). https://doi.org/10.1109/AICT52784.2021.9620228.
+20. Khalil, A; Jarrah, M; Aldwairi, M; Jaradat, M. AFND: arabic fake news dataset for the detection and classification of articles credibility. Data Br. ; 2022; 42 , [DOI: https://dx.doi.org/10.1016/J.DIB.2022.108141] 108141.
+21. Antoun W; Baly F; Hajj H: "AraBERT Transformer-based Model for arabic language understanding," (2020). https://doi.org/10.48550/arxiv.2003.00104.
+22. Inoue, G.; Alhafni, B.; Baimukan, N.; Bouamor, H.; Habash, N.: "The interplay of variant, size, and task type in arabic pre-trained language models," (2021). https://doi.org/10.48550/arxiv.2103.06678.
+23. Abdul-Mageed, M.; Elmadany, A. R.; Nagoudi, E. M. B.: "ARBERT & MARBERT: Deep bidirectional transformers for arabic," ACL-IJCNLP 2021 - 59th Annu. Meet. Assoc. Comput. Linguist. 11th Int. Jt. Conf. Nat. Lang. Process. Proc. Conf., pp. 7088–7105, (2020). https://doi.org/10.48550/arxiv.2101.01785.
+24. Antoun, W.; Baly, F.; Hajj, H.: "AraELECTRA: Pre-training text discriminators for arabic language understanding," (2020). https://doi.org/10.48550/arxiv.2012.15516.
+25. Soliman, AB; Eissa, K; El-Beltagy, SR. AraVec: a set of arabic word embedding models for use in arabic NLP. Proced. Comput. Sci. ; 2017; 117 , pp. 256-265. [DOI: https://dx.doi.org/10.1016/J.PROCS.2017.10.117] 1535.60124
+26. Moatez E.; et al.: "Machine generation and detection of arabic manipulated and fake news," in: Proceedings of the fifth arabic natural language processing workshop, pp. 69–84, Accessed: Aug. 19, (2022). [Online]. Available: https://aclanthology.org/2020.wanlp-1.7.
+27. Saadany, H.; Mohamed, E.; Orasan, C.: “Fake or real? a study of arabic satirical fake news," (2020). https://doi.org/10.48550/arxiv.2011.00452.
+28. Helwe, C.; Elbassuoni, S.; Al Zaatari, A.; El-Hajj, W.: "Assessing arabic weblog credibility via deep co-learning," in: proceedings of the fourth arabic natural language processing workshop, pp. 130–136, (2019). https://doi.org/10.18653/V1/W19-4614.
+29. Rangel, F.; Rosso, P.; Charfi, A.; Zaghouani, W.: "Detecting deceptive tweets in arabic for cyber-security," in: 2019 IEEE International Conference on Intelligence and Security Informatics, ISI 2019, pp. 86–91, (2019). https://doi.org/10.1109/ISI.2019.8823378.
+30. Haouari, F.; Sheikh Ali, Z.; Elsayed, T.: "bigIR at CLEF 2019: automatic verification of arabic claims over the web," Accessed: Aug. 30, 2022. [Online]. Available: https://reporterslab.org/fact-checking-triples-over-four-years/.
+31. Sutanto, D.; M. G.-A. J. E. A. Sci; undefined 2015, "A benchmark of classification framework for non-communicable disease prediction: a review," arpnjournals.org, vol. 10, 2015, Accessed: Aug. 19, 2022. [Online]. Available: http://www.arpnjournals.org/jeas/research_papers/rp_2015/jeas_1115_2962.pdf.
+32. Alkhair, M; Meftouh, K; Smaïli, K; Othman, N. An arabic corpus of fake news: collection, analysis and classification. Commun. Comput. Inform. Sci. ; 2019; 1108 , pp. 292-302. [DOI: https://dx.doi.org/10.1007/978-3-030-32959-4_21/COVER]
+33. Bsoul, MA; Qusef, A; Abu-Soud, S. Building an optimal dataset for arabic fake news detection. Proced. Comput. Sci. ; 2022; 201 , pp. 665-672. [DOI: https://dx.doi.org/10.1016/j.procs.2022.03.088]
+34. Ozbay, FA; Alatas, B. Fake news detection within online social media using supervised artificial intelligence algorithms. Phys. A Stat. Mech. its Appl. ; 2020; 540 , [DOI: https://dx.doi.org/10.1016/J.PHYSA.2019.123174] 1496.90114 123174.
+35. Traylor, T.; Straub, J.; Gurmeet; Snell, N: "Classifying fake news articles using natural language processing to identify in-article attribution as a supervised learning estimator," in: Proceedings - 13th ieee international conference on semantic computing, ICSC 2019, pp. 445–449, (2019). https://doi.org/10.1109/ICOSC.2019.8665593.
+36. Antoun, W.; Baly, F.; Achour, R.; Hussein, A.; Hajj, H.: "State of the art models for fake news detection tasks," in: 2020 IEEE international conference on informatics, IoT, and enabling technologies, ICIoT 2020, pp. 519–524, (2020). https://doi.org/10.1109/ICIOT48696.2020.9089487.
+37. Abd Elminaam, D. S.; Abdelaziz, A.; Essam, G.; Mohamed, S. E: AraFake: A deep learning approach for Arabic fake news detection. In: 2023 international mobile, intelligent, and ubiquitous computing conference (MIUCC) (pp. 1–8). IEEE. (2023)
+38. Harrag, F; Djahli, MK. Arabic fake news detection: a fact-checking based deep learning approach. Trans. Asian Low Resour. Lang. Inform. Process. ; 2022; 21 , 4 pp. 1-34. [DOI: https://dx.doi.org/10.1145/3501401]
+39. Hawashin, B.; Althunibat, A.; Kanan, T.; AlZu'bi, S.; Sharrab, Y.: Improving arabic fake news detection using optimized feature selection. In: 2023 international conference on information technology (ICIT) (pp. 690–694). IEEE. (2023)
+40. Shishah, W. JointBert for detecting arabic fake news. IEEE Access ; 2022; 10 , pp. 71951-71960. [DOI: https://dx.doi.org/10.1109/ACCESS.2022.3185083]
+41. Wotaifi, TA; Dhannoon, BN. An effective hybrid deep neural network for arabic fake news detection. Baghdad Sci. J. ; 2023; 20 , 4 pp. 1392-1392.1501.65098
+42. Pennington, J.; Socher, R.; Manning, C.D.:"GloVe: global vectors for word representation," in: 2014 conference on empirical methods in natural language processing (EMNLP), (2014), pp. 1532–1543, Accessed: Aug 19, (2022).
+43. Altszyler, E; Sigman, M; Ribeiro, S; Slezak, DF. Comparative study of LSA vs Word2Vec embeddings in small corpora: a case study in dreams database. Conscious. Cogn.Cogn. ; 2016; 56 , pp. 178-187. [DOI: https://dx.doi.org/10.1016/j.concog.2017.09.004]
+44. Naili, M; Chaibi, AH; Ben Ghezala, HH. "Comparative study of word embedding methods in topic segmentation". Proced. Comput Sci. ; 2017; 112 , pp. 340-349. [DOI: https://dx.doi.org/10.1016/J.PROCS.2017.08.009]
+45. Santos, I.; Nedjah, N.; De Macedo Mourelle, L.: "Sentiment analysis using convolutional neural network with fasttext embeddings. In: 2017 IEEE Latin American conference on computational intelligence, LA-CCI - Proceedings, (2017). https://doi.org/10.1109/LA-CCI.2017.8285683.
+46. Devlin, J; Chang, MW; Lee, K; Toutanova, K. "BERT: pre-training of deep bidirectional transformers for language understanding,". Hum. Lang. Technol. Proc. Conf. ; 2018; 1 , pp. 4171-4186. [DOI: https://dx.doi.org/10.48550/arxiv.1810.04805] 1201.90073
+47. Simko, J; Racsko, P; Tomlein, M; Hanakova, M; Moro, R; Bielikova, M. A study of fake news reading and annotating in social media context. New rev. hypermedia multimed. ; 2021; 27 , 1–2 pp. 97-127. [DOI: https://dx.doi.org/10.1080/13614568.2021.1889691]
