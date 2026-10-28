@@ -1,0 +1,700 @@
+Introduction The spread of fake news has gained international attention with the rapid growth of the internet and social media. Often with far-reaching consequences for public trust and political stability, fake news refers to misleading, fabricated, or intentionally altered information designed to manipulate public opinion through emotional or biased narratives (Zhou and Zafarani 2020; Sharma et al. 2019). As the speed and scale of information propagation increase, manual verification of news authenticity has become impractical, which highlights the urgent need for automated fake news detection tools (Alonso et al. 2021).
+Traditional fake news detection methods mostly use text or single-image content analysis using semantic coherence and logical consistency (Choraś et al. 2021). However, with the widespread adoption of multimedia content (e.g., images, videos) in news reporting, text-based alone is insufficient. Manipulated or misleading images have become a major component of fake news, and their visual representation significantly influences readers’ perception of authenticity. Advances in deep learning provide more solutions for detecting fake news. Techniques such as Convolutional Neural Networks (CNNs), Recurrent Neural Networks (RNNs), and Transformers have achieved remarkable success (Mridha et al. 2021; Hu et al. 2022). Despite these advances, uni-modal approaches still have limited ability to deal with the complex interdependencies inherent in multi-modal content, which is very common in modern news dissemination (Zhang et al. 2024a). For example, some news may contain real text and fake images, or edited visuals may mislead readers. In such cases, uni-modal detection methods often fail, which highlights the need for multi-modal feature fusion. Recent studies have addressed it by combining textual, visual, or other modalities to detect fake news and better understand the news content (Wu et al. 2023a; Tong et al. 2024; Bai et al. 2024; Zhou et al. 2023; Peng et al. 2024). Qi et al. (2019) introduced the Discrete Cosine Transform (DCT) in fake news detection, extracting frequency domain features from images. This innovation created new opportunities to enhance the detection capability by utilizing frequency domain information. Later, the MCAN (Wu et al. 2021) model combined textual, visual, and frequency domain features to improve multi-modal detection performance. Building on this idea, the MFCAN model (Cui et al. 2024) further incorporates physical tampered cues in the frequency domain and employs a cross-attention mechanism to jointly capture intra- and inter-modal relationships, achieving superior performance on benchmark datasets.
+Despite these advances, current multi-modal fake news detection methods (such as MCAN and MFCAN) still encounter inherent structural limitations. First, regarding the interaction mechanism, their cross-attention strategies typically mix all modalities into an entangled global representation. This structure often insufficiently captures the unique pairwise dependencies between specific modalities, leading to suboptimal fusion where strong semantic signals may dilute subtle physical forgery cues. Second, regarding the overall architecture, many existing approaches rely excessively on the fused multi-modal features for final classification. When semantic discrepancies between modalities are large (e.g., conflicting text and images), this forced global fusion inherently introduces severe noise and decision conflicts, negatively affecting final classification accuracy. Figure 1 presents examples of news with high and low modality correlations. In the upper image, both the picture and the text contain the common semantic information of “shark,” indicating a high correlation between the modalities. In this case, the deep fusion of multi-modal features is emphasized, placing greater importance on the contribution of the fused information. Conversely, the lower image is unrelated to the text; therefore, when modality correlation is low, the structural independence of uni-modal features becomes particularly critical. Fig. 1 [Images not available. See PDF.]
+The issue faced in the current work. Upper: The red box highlights visual content that closely matches the text, indicating a high correlation. Lower: There is no clear semantic alignment between the image and text, indicating a low correlation
+
+Designing an effective multi-modal fake news detection model involves several key challenges: - An effective mechanism is essential to ensure that modality information with different characteristics and representations complements and enhances each other during the fusion process, which is crucial for improving the effectiveness of modality fusion and detection accuracy. However, due to modality heterogeneity, complex dependencies, and increased computational costs, designing an efficient and accurate interaction mechanism is highly challenging.
+
+- A mechanism that adaptively modifies the weights of each modality’s information is necessary when modality features differ significantly. Such a mechanism ensures that each modality’s contribution to the final decision is appropriate and effective. This requires balancing and optimizing the effects of uni-modal features and multi-modal fusion features.
+
+To address these challenges, we propose a Uni-modal and Multi-modal Fusion Network (UMFN) consisting of four components: multi-modal feature extraction, multi-modal feature interaction, uni-modal feature branches, and an adaptive modality weighting mechanism. First, during multi-modal feature extraction, three independent branches are designed to process textual, visual, and frequency domain features separately. To mine semantic information in the news text, textual features are extracted using the BERT encoder (Devlin et al. 2019). Visual features are encoded using the Pyramid Vision Transformer v2 (PVTv2) (Wang et al. 2022b). Frequency domain features are extracted by DCT (Lin et al. 2009; Chen and Hsu 2011) and augmented by multi-scale convolutional networks to capture image details and recognize potential signs of forgery. A multi-modal feature interaction module is intended to investigate latent dependencies between modalities using a two-by-two aggregation strategy, resulting in a fused feature representation. Finally, the uni-modal feature branches map each modality’s features to a classifier and, in conjunction with the pre-trained CLIP (Radford et al. 2021) model, adaptively adjust the weights of uni-modal features and multi-modal fusion features, addressing weak inter-modal correlations.
+The main contributions are as follows:
+- Multi-level Information Processing Framework: UMFN integrates uni-modal feature branches with multi-modal feature interaction, preserving the independence of uni-modal features while achieving deep fusion of multi-modal features. This design enables efficient complementarity between the two under various scenarios.
+
+- Multi-modal feature interaction: To capture the dependencies between modalities effectively, we introduce a parallel multi-modal feature interaction module that employs a two-by-two aggregation strategy. This strategy thoroughly explores the latent dependencies among modalities, enhancing the effectiveness of fusion.
+
+- Adaptive modality weighting mechanism: To address weak associations between modalities, we integrate the pre-trained CLIP model and propose an adaptive modality weighting mechanism based on similarity. This mechanism dynamically allocates weights between uni-modal features and multi-modal fusion features, further enhancing the model’s discriminative power.
+
+- Significant experimental performance: Experimental results on two benchmark datasets show that the proposed UMFN model consistently outperforms leading fake news detection methods across multiple evaluation metrics. Ablation studies further validate the effectiveness and advantages of each module.
+
+
+
+Related works Fake news detection Existing fake news detection methods can be broadly categorized into content-based and context-based approaches. Content-based methods focus on the textual, visual, or multi-modal features extracted from the news itself, while context-based approaches leverage user-news interactions or propagation patterns on social networks. For instance, SGCP (Che et al. 2024) models the relationships between users and news using a third-order tensor and applies sparse and graph-regularized tensor decomposition to capture structural signals. In contrast, our work focuses on the content-based perspective, particularly leveraging multi-modal features to improve fake news detection accuracy.
+Uni-modal fake news detection Uni-modal fake news detection methods mainly extract and analyze features from either textual or visual sources. Traditional approaches often integrate machine learning models with handcrafted features, such as TF-IDF and sentiment analysis, to distinguish fake news from real news (Bose and Roy n.d.; Vosoughi et al. 2018). In the textual modality, Yu et al. (2017) used CNNs to extract deep semantic information from news texts, effectively capturing hidden characteristics of fake news. Kasseropoulos et al. (2022) introduced a method that combines word-level and sentence-level representations, reducing information loss when processing long texts by preserving document structure and improving detection accuracy. Meanwhile, Zhang et al. (2021) introduced a dual-sentiment framework that combines publisher sentiment and social sentiment to enhance text feature representation through sentiment contrast, thereby improving detection effectiveness. Visual information also plays a significant role in the spread of fake news, particularly in identifying manipulated visuals, which is critical for determining authenticity. Although research on image-based detection has been limited, its impact on news content should not be underestimated. Early methods relied on low-dimensional features (e.g., color histograms and textures), while modern techniques use CNNs to capture deep image features (Wang et al. 2018; Jin et al. 2017). For example, Huh et al. (2018) analyzed news images using ResNet architecture and significant differences between doctored and real images and successfully detected them. However, it is difficult to capture deeper associations with textual content by relying on visual information alone, thus limiting the performance of uni-modal vision methods. Table 1. Methodological comparison of representative multi-modal fake news detection baselines and the proposed UMFN framework
+Methods
+Modalities
+Strengths
+Key Limitations
+
+EANN (Wang et al. 2018)
+Text + Visual
+Utilizes text-CNN and VGG19 with an event discriminator.
+Lacks cross-modal feature correlation.
+
+BDANN (Zhang et al. 2020)
+Employs BERT and VGG19 with an event discriminator.
+
+MVAE (Khattar et al. 2019)
+Designed news reconstruction task to encode visual and textual information.
+Ignores frequency domain information.
+
+HMCAN (Qian et al. 2021)
+Extracts multi-level features using hierarchical textual encoding and co-attention.
+
+MCAN (Wu et al. 2021)
+Text + Visual + Frequency
+Extracts features from three modalities and uses co-attention for fusion.
+Fails to capture sparse frequency artifacts, and suffers decision conflicts from over-fusion.
+
+MFCAN (Cui et al. 2024)
+Extracts frequency tampered cues and employs cross-attention for joint fusion.
+
+UMFN (Ours)
+Contributions: Proposes an efficient triple-branch encoder for three modalities, a parallel cross-modal interaction module, and an adaptive similarity-based modality weighting mechanism that explicitly preserves independent uni-modal pathways.
+
+
+Multi-modal fake news detection As news propagation increasingly relies on images and videos, traditional text-based detection methods can no longer meet the demands. Therefore, researchers have turned to multi-modal detection. This method combines news text with visual information, such as images and videos, to provide a more complete assessment of news credibility. For instance, TI-CNN (Yang et al. 2023b) uses CNNs to independently capture potential features from textual and visual data, followed by feature fusion, which greatly improves the detection performance. EANN (Wang et al. 2018) is an end-to-end framework that extracts textual and visual features while incorporating an event discriminator to remove the noise associated with a specific event, thereby enhancing the new event adaptation and improving fake news detection accuracy. The domain-adaptive neural network BDANN (Zhang et al. 2020) utilizes BERT for textual feature extraction and integrates textual and visual features through two fully connected layers, which has better performance compared to EANN. MVAE (Khattar et al. 2019) integrates visual features extracted by VGG and textual features extracted by LSTM and incorporates a reconstruction task. This design both captures semantic features of text and images and enhances interaction modeling to deepen the understanding of their intrinsic connections. In addition, traditional approaches to solving the fake news image manipulation problem rely primarily on spatial domain information, often ignoring the potential of frequency domain features. To address this limitation, MCAN (Wu et al. 2021) proposed a multi-modal approach that integrates textual, visual, and frequency domain features. By deeply integrating these three modalities, the model can effectively deal with image processing and compression problems, thus substantially improving the performance of the model. Recent advances in multi-modal fusion and learning methods have further advanced this field. For example, Bai et al. (2024) developed a parallel multi-modal interaction strategy to explore the interdependencies between modalities, which significantly improves the detection. Zhou et al. (2023) proposed a multi-modal network that leverages contrastive language-image pretraining model to extract aligned features, providing a flexible and effective framework for fake news detection. Peng et al. (2024) proposed CSFND, a contextual semantic representation learning method that integrates local context with global semantic features to improve multi-modal fake news detection.Beyond conventional feature extraction and fusion, handling extremely weak inter-modal correlations remains an open challenge in the field. Typically, Table 1 shows the strengths and weaknesses of some existing FNDworks. Recent pioneering studies have begun to explore multimodal contrastive learning and diffusion-based generative paradigms as highly promising solutions. For instance, Zhang et al. (2024b) introduced a novel approach utilizing diffusion-guided propagation path generation to mitigate social hazards like fake news early in their lifecycle. Furthermore, diffusion knowledge has demonstrated remarkable potential in frequency-aware band learning (Zhu et al. 2025), offering fresh perspectives for complex multimodal alignment. Integrating such advanced generative paradigms provides a critical pathway to reconstruct and align features under scenarios where semantic correlations are intrinsically sparse or weak. Beyond fake news detection, robust multi-modal fusion has also driven advancements in other domains like Face Anti-spoofing (FAS). For instance, researchers have explored dynamic modality selection via Mixture-of-Experts (Liu 2024) and refined semantic alignment through Prompt Learning (Liu et al. 2024). In contrast to these approaches, our UMFN specifically utilizes cosine similarity as an explicit gating signal to resolve the unique semantic conflicts inherent in disinformation.
+In summary, the accuracy and robustness of fake news detection can be improved by integrating uni-modal and multi-modal approaches. Uni-modal approaches are effective at extracting features from a single channel, such as text or images, but they fall short of capturing the complexities of fake news. Multi-modal approaches integrate textual, visual, and frequency domain features to uncover potential relationships in news content, thereby greatly improving detection efficiency.
+Pre-trained model Vaswani et al. (2017) introduced the Transformer, a foundational technology in NLP that highlights the importance of the self-attention mechanism. Building upon this foundation, Devlin et al. (2019) developed BERT, a large-scale pre-trained model trained on extensive corpora, significantly advancing NLP. Transformer-based methods have also led to breakthroughs in image processing. However, applying self-attention to image processing is difficult because of its quadratic computational complexity in relation to pixel count, which results in high computational costs. To overcome this, Dosovitskiy et al. (2021) developed Vision Transformer (ViT), which applies Transformer to non-overlapping image patches, yielding promising classification results. Building on ViT, Wang et al. (2022b) introduced PVTv2, which integrates a pyramid structure and refines the attention mechanism. By progressively reducing the resolution and channel count of feature maps, PVTv2 significantly lowers computational complexity while enhancing the capability to process high-resolution images, balancing efficiency and performance.
+Over the last decade, multi-modal learning has become a prominent research focus (Baltrusaitis et al. 2019). Among these, CLIP (Radford et al. 2021) is a multi-modal model that has gained attention for its use of a contrastive learning paradigm to unify the modal characteristics of the two modalities. By embedding text and image data into a unified semantic space, CLIP enables collaborative representations that effectively capture the intricate correlations between modalities. This capability has led to its successful application to a range of downstream tasks (Zhou et al. 2023; Wei et al. 2022). Other well-known models, such as ALBEF (Li et al. 2021) and VilBERT (Lu et al. 2019), further contributed greatly to the advancement of multi-modal learning.
+Frequency modeling in deep learning Frequency modeling has long been a fundamental tool in signal processing and has gained significant traction in enhancing model performance with the advent of deep learning. Initially, frequency modeling was applied within the JPEG convolution framework (Wallace 1992), followed by the introduction of DCT for optimizing communication bandwidth. Recently, the application of frequency domain learning has expanded significantly into computer vision tasks. For example, Qin et al. (2021) proposed FCANet, a frequency domain-based multispectral channel attention mechanism that outperforms traditional global average pooling methods. Lin et al. (2023) designed a frequency enhancement module and feature alignment method, successfully applying them to camouflaged object detection tasks. Qiu et al. (2023) developed a spatio-temporal frequency transformer for compressed video super-resolution, which greatly improves spatio-temporal modeling by combining spatial and frequency attention mechanisms.
+Frequency domain learning has also attracted increasing attention in the field of fake news detection. Qi et al. (2019) pioneered the application of frequency domain learning in this area by extracting frequency features from social media images using the DCT algorithm. These features were fused with spatial domain features to significantly improve the model performance. Based on this, Singhal et al. (2020) further combined frequency domain features with CNNs for detecting forged images. They extracted high-frequency information using DCT and combined it with low-level CNN features to effectively simulate high-frequency anomalies in forged images. This method of combining traditional signal processing with deep learning models showed strong accuracy in identifying high-frequency forged images. Moreover, Wang et al. (2022a) proposed a method that fuses frequency and pixel domain features to jointly model the frequency and pixel features of an image. Tong et al. (2024) explored the method of combining frequency domain information with the Transformer architecture and applied this combination to the multi-modal fake news detection task, achieving significant performance improvement. These studies highlight the transformative potential of frequency modeling in both computer vision and fake news detection, demonstrating its ability to improve feature representation and detection accuracy across domains. Fig. 2 [Images not available. See PDF.]
+The architecture of UMFN. The features f freq , f image , f fusion , and f text are projected and then adaptively weighted by coefficients a and b before the final classification
+Table 2 Module-level summary of the proposed UMFN framework
+Core Module
+Constituent Networks
+Primary Function
+Output Representation
+
+Multi-modal Extractor
+BERT, PVTv2, CNNs
+Extracts independent semantic and physical tampering features.
+T i , V i , F i ∈ R b × 128
+
+Multi-modal Interaction
+Co-attention Blocks
+Captures cross-modal dependencies and aligns features.
+F M ∈ R b × 64
+
+Uni-modal Branches
+Linear Projections
+Preserves modality-specific cues for robustness.
+F T , F V , F F ∈ R b × 64
+
+Adaptive Weighting
+CLIP, Gating Mechanism
+Evaluates consistency to route decision weights.
+Weighted F M , F T , F V , F F
+
+
+Method The overall architecture of the proposed Uni-modal and Multi-modal Fusion Network (UMFN) is illustrated in Fig. 2.
+Table 2 provides a concise module-level summary of their constituent networks, primary functions, and mathematical representations. The framework’s data flow is fundamentally driven by four core stages. First, as visually depicted, the feature extractors employ distinct foundational encoders to derive independent textual, visual, and frequency representations. Second, the multi-modal interaction module models the latent structural correlations among these diverse modalities through pairwise co-attention. Third, the parallel uni-modal branches purposefully preserve the independent discriminative information of each modality to prevent feature dilution. Finally, a similarity-based adaptive weighting mechanism dynamically allocates decision weights between the uni-modal pathways and the multi-modal fusion pathway. This precise gating mechanism optimally balances their contributions, mitigating classification ambiguities caused by weak inter-modal correlations. The meticulously weighted comprehensive features are subsequently routed to the classifier for the final prediction.
+Multi-modal feature extractor The proposed multi-modal feature extractor consists of a text encoder, visual encoder, and frequency encoder, as described below.
+Text encoder As shown in Fig. 2, BERT (Devlin et al. 2019) serves as the text encoder, leveraging its robust modeling capabilities to generate high-quality, context-aware feature representations. The deep, bidirectional structure of BERT effectively captures semantic information from unlabeled text by considering context from both directions. Additionally, BERT generates embeddings for sentences, words, or phrases and extracts global semantic information by pooling the hidden states across the entire input sequence.
+We use the BERT-base version of the model to extract text features, given its predefined maximum length strategy, which is particularly effective for processing short texts such as tweets. Let the encoded textual representation be denoted as T ∈ R b × t , where b denotes the batch size and t represents the maximum sequence length. After processing with BERT, we obtain an embedding vector B ∈ R b × 768 , where 768 refers to the dimension size of the post-group hidden layer of the BERT model. We then introduce a fully connected layer to reduce the dimensionality, defined as follows: 1
+T i = σ ( B n ( W · B + b ) ) Where W represents the weight matrix of the fully connected layer, b denotes the bias matrix, B n ( · ) represents batch normalization, and σ ( · ) denotes the RELU activation function. After processing, the output dimension of T i is 128.
+Visual encoder Previous methods commonly employed VGG19 as the image feature encoder, utilizing its deep convolutional structure to extract semantic features from low to high-levels (Singhal et al. 2019; Chen et al. 2022; Wang et al. 2022c; Qian et al. 2021). However, due to the inherently local receptive field of CNNs, these methods struggle to capture long-range contextual information. This limitation often becomes a performance bottleneck when processing complex social media images, particularly in multi-modal tasks that necessitate integrating global semantic information to enhance classification accuracy. In recent years, transformer-based architectures have achieved substantial progress in visual understanding, thanks to their self-attention mechanisms, which are capable of modeling both local and global feature interactions. Fig. 3 [Images not available. See PDF.]
+Architecture of the proposed frequency feature encoder
+
+Inspired by this, we incorporated PVTv2 (Wang et al. 2022b) into our model as a feature extractor for the visual features. PVTv2 not only maintains the ability to capture multi-scale features but also enhances feature representation by integrating global contextual information. Its multi-level architecture and adaptive attention mechanism can effectively capture complex local details and long-range dependencies in social media images, providing a more comprehensive visual semantic representation. PVTv2 employs linear spatial reduction attention and a spatial shrinking strategy to explore multi-scale long-range dependencies with global context. For an image R 3 × 224 × 224 , the function of a single stage can be represented as follows: 2
+F pvt ( I ) = F CFFL ( F LRSA ( F linear ( I ) ) + I ) 3
+F LSRA ( Q , K , V ) = F cat ( h 0 , . . . , h n ) W A 4
+h i = F Atten ( Q W i Q , F Avg ( K ) W i i , F Avg ( V ) W i V ) Where F CFFL ( · ) denotes the convolutional feed forward layer function, F LSRA ( · ) denotes the linear spatial reduction attention function, and F linear ( · ) denotes the linear projection operation function. W A , W i Q , W i K and W i V are the linear projection parameters, while F Avg ( · ) denotes the spatial average pooling process. Finally, F cat ( · ) refers to the feature concatenation function.
+Additionally, F Atten ( · ) represents self-attention: 5
+F Atten ( q , k , v ) = s o f t m a x ( q k T d ) V Where d = C / N represents the vector dimension of the head. The linear spatial reduction attention layer reduces the spatial scale of the features through average pooling, thus effectively reducing the cost of self-attention computation. As a result, each term in the expressions for q and k can capture paired contextual information and, through a global receptive field, essentially extract long-range correlations. Finally, PVTv2 incorporates a 3 × 3 depthwise convolution and GELU activation function between two fully connected layers in the convolutional feed forward layer, as shown below: 6
+F CFFL ( X ) = F FC ( F GELU ( F DW ( F FC ( X ) ) ) ) + X Where F FC ( · ) represents the function of the fully connected layer and F DW ( · ) denotes the 3 × 3 depthwise convolution layer. In our model, the original classification head of PVTv2 is replaced with an identity layer to better align with our downstream multi-modal fusion requirements. Consequently, the final output dimension of the visual backbone is preserved at 512, yielding an extracted image feature tensor of R b × 512 . Subsequently, a fully connected layer is introduced to reduce the dimensionality to a 128-dimensional tensor, which is denoted as V i .
+Frequency encoder While standard spatial-domain visual models excel at extracting high-level semantic concepts, their inherent abstraction mechanisms often render them insensitive to the microscopic physical inconsistencies introduced by digital forgery. In the specific context of fake news dissemination, malicious manipulations such as image splicing or retouching inevitably disrupt the local spatial continuity and underlying statistical distribution of the original image. Furthermore, the rapid circulation of fabricated content across social platforms introduces severe periodic JPEG recompression. These low-level tampering traces and structural discontinuities are often imperceptible in the RGB domain but exhibit distinct anomaly patterns in the frequency spectrum. Therefore, introducing a frequency encoder is essential for this target task; it provides an orthogonal physical perspective that captures the subtle manipulation cues capable of deceiving purely semantic spatial encoders. As demonstrated in Wu et al. (2021), CNNs can effectively capture the frequency feature of images. Additionally, multi-scale convolutions (Liu et al. 2022) and dilated convolution techniques (Chen et al. 2018) can exploit a broader range of feature information.
+To effectively exploit the frequency information in images, we design a novel frequency feature encoder based on multi-branch dilated convolutions, which enables multi-scale spectral modeling while maintaining computational efficiency. As shown in Fig. 3, the encoder consists of three components: a stem block, a multi-branch convolutional module, and a projection head.
+Specifically, we first apply the Discrete Cosine Transform (DCT) to convert the image into a 64 × 250 frequency matrix. This matrix is processed by a stem block, composed of stacked 1D convolutions and pooling layers, which learn low-level frequency patterns. The frequency tensor is transformed in this block as follows: 7
+D = F maxp ( F conv 1 × 3 ( F conv 1 × 3 ( F conv 1 × 3 ( F ) ) ) ) ∈ R 64 × 128 × 124 Where F maxp ( · ) and F con 1 × 3 ( · ) represent the 1 × 2 Max Pooling and 1 × 3 Convolution Layer, respectively.
+The core innovation lies in a multi-branch convolutional module specifically tailored for the properties of DCT coefficients. Image manipulations, such as splicing or blurring, typically introduce artifacts that span across various frequency bands at different scales. To effectively capture these multi-scale anomalies, our module employs a parallel architecture inspired by Inception networks, utilizing asymmetric and standard kernels (e.g., 1 × 3 , 3 × 1 , and 3 × 3 ) to extract both fine-grained high-frequency noise and coarse-grained structural frequency changes simultaneously.
+Furthermore, social media images frequently suffer from periodic JPEG recompression, which physically introduces structural artifacts such as block discontinuities and double quantization. These traces manifest as sparse, grid-like patterns dispersed across the frequency domain. To systematically capture these distributed anomalies, we incorporate dilated convolutions with varying, empirically tuned dilation rates ( d = 3 and d = 5 ). By acting as a multi-scale frequency sampler, these distinct dilation rates inherently align the network’s receptive fields with the varying periodic spacing of different recompression artifacts. This configuration captures both tightly packed and widely distributed long-range frequency dependencies that standard convolutions fundamentally miss, all without inflating the parameter count. Together with an auxiliary pooling branch to enhance robustness against local distortions, this architecture achieves a comprehensive aggregation of frequency cues essential for identifying sophisticated forgeries.
+After passing through the multi-branch convolutional module, the branch outputs are fused, resulting in a feature tensor of size 64 × 256 × 122 . This tensor is then processed by a 1 × 122 max pooling layer and a 1 × 1 convolution, and finally projected into a compact 128-dimensional representation F i through a fully connected layer.
+Multi-modal feature interaction Since the textual, visual, and frequency encoders each focus on a single modality, they are limited in aligning semantics across modalities, which constrains multi-modal interaction. Existing methods typically employ simple feature concatenation (Wang et al. 2018; Singhal et al. 2019), or modality interactions (Wu et al. 2021; Zhang et al. 2020; Qian et al. 2021). Simple concatenation is insufficient to fully integrate information across modalities, while modality interactions, although able to achieve a certain level of multi-modal information fusion, lack a unified learning paradigm applicable to three or more modalities. To address this, we design a multi-modal feature interaction module, as shown in Fig. 2, to bridge semantic gaps and fully leverage the complementarity among the three modalities. The module consists of three attention layers, each containing two parameter-shared co-attention mechanisms, which perform pairwise fusion across textual–visual, visual–frequency, and textual–frequency modalities, thereby enhancing the overall representational capacity of multi-modal features. Considering the high semantic alignment of textual and visual features generated by CLIP embeddings, we integrate these features with the encoder-extracted features prior to fusion, introducing semantic information at an early stage. This integration strategy leverages CLIP’s global alignment capabilities while strictly preserving the fine-grained, domain-specific forgery cues extracted by our dedicated textual, visual, and frequency encoders.
+Next, we introduce the Co-attention mechanism:
+Co-attention As shown in Fig. 4, the co-attention mechanism is made up of a multi-head attention mechanism and a feed-forward neural network, which are followed by residual connections and layer normalization. These processes ensure the stability of feature propagation and facilitate the preservation of critical information. The multi-head attention mechanism enables the model to track intricate correlations between specific modal features, thereby ensuring a balanced contribution from each modality and minimizing potential feature bias. The feed-forward neural network further refines the feature representation to ensure that the fused multi-modal features are coherent. This design enhances the model’s performance by providing a more accurate and unified feature representation.
+The co-attention mechanism is structurally similar to multi-head self-attention (MSA), with query, key, and value matrices computed for each attention head. However, unlike MSA in which all inputs come from the same modality, co-attention operates across different modalities. The two different modalities are denoted as I 1 and I 2 . The key and value from one co-attention are then fed into the other, allowing for easier information sharing and interaction. In the co-attention mechanism, I 1 servers as the queries Q , and I 2 servers as both the keys K and values V . The co-attention matrix for each head is computed as follows: 8
+h i = S o f t m a x ( ( I 1 W i q ) ( I 2 W i k ) T d h ) I 2 W i v Where the projection matrices W i q , W i k and W i v ∈ R d m × d h , d h = d m / m , and d m represents the dimension of the co-attention, while m denotes the number of attention heads. Fig. 4 [Images not available. See PDF.]
+Co-attention mechanism
+
+To obtain multi-head attention, we concatenate all the co-attention matrices after they have been projected using the projection matrices, as follows: 9
+H = ( h 1 ⊕ h 2 ⊕ . . . ⊕ h m ) W o Where ⊕ denotes the concatenation of all attention heads’ outputs, and the concatenated matrix contains the outputs from each attention head as H . W o ∈ R d m × d h is the projection matrix used to map the concatenated output to the desired dimension.
+When H and I 1 pass through the feed-forward network with two layer normalizations, the multi-modal representation F Co ( I 1 , I 2 ) as follow: 10
+F Co ( I 1 , I 2 ) = Norm ( I 1 + FFN ( Norm ( I 1 + H I 1 ) ) )
+Attention layer Figure 2 shows the construction of the attention layer, which is made up of two co-attention blocks with shared parameters. The purpose of this layer is to generate a richer fused representation by facilitating interactions between pairs of modalities. Specifically, the attention layer achieves multi-modal feature interaction by feeding different combinations of modality-specific features into two co-attention, thereby enabling pairwise fusion across modalities. This results in the final interaction, as described below: 11
+F Atten ( I 1 , I 2 ) = F Fusion ( F Co ( I 1 , I 2 ) , F Co ( I 2 , I 1 ) ) Where F Atten represents the two-by-two aggregation operation between the two modalities and F Fusion denotes the final fusion operation. Let F Co ( I 1 , I 2 ) and F Co ( I 2 , I 1 ) be referred to as a and b , respectively. Finally, the two are fused through the fusion module to obtain the multi-modal fused representation. The fusion process is as follows: 12
+F Fusion ( a , b ) = F Relu ( F 1 - D ( a + b ) ) Where F 1 - D ( · ) represents the 1D convolution operation and F Relu ( · ) denotes the ReLU activation function.
+Finally, to achieve effective fusion of the three modalities, the features of the textual, visual, and frequency modalities are input into the multi-modal interaction module, and feature interaction and information integration are carried out through the attention layer. This layer dynamically captures correlations between modality features, optimizes the flow of information across modalities, and generates an enriched, multi-modal aggregated representation. Following this interaction, the integrated multi-modal features are processed through a multi-modal projection head, which employs a nonlinear mapping layer to refine the representation and produce the final fused multi-modal features. The output from the multi-modal feature interaction module and multi-modal projection head can be defined as follows: 13
+F M = Φ M ( F Atten ( T i + T c , V i + V c ) ⊕ F Atten ( T i + T c , F i ) ⊕ F Atten ( V i + V c , F i ) ) Where Φ M represents the multi-modal feature projection head, ⊕ denotes the concatenate operation, T i , V i and F i represent the textual, visual, and frequency features output by the encoders, respectively. V c and T c represent the visual and textual features output by CLIP. The final multi-modal fusion features are then input into the classifier for complementary integration with uni-modal features for fake news detection.
+Uni-modal feature branches Multi-modal fusion features are typically designed to capture relationships across different modalities. However, when significant differences or ambiguities exist, their representational power may decline, reducing classification accuracy. Existing methods (Wu et al. 2021; Wang et al. 2018; Zhang et al. 2020; Singhal et al. 2019; Qian et al. 2021) primarily focus on direct fusion, often overlooking this potential degradation in high-ambiguity scenarios. To address this limitation, we introduce uni-modal textual, visual, and frequency branches, which independently encode information from each modality.
+For the textual, visual, and frequency branches, the features generated by their respective encoders are mapped through corresponding projection heads to produce uni-modal textual, visual, and frequency features. The projection head includes a fully connected layer, layer normalization, and ReLU activation. The projection process is as follows: 14
+F T = Φ T ( T i ) F V = Φ V ( V i ) F F = Φ F ( F i ) Where Φ T , Φ V and Φ F represent the projection heads for textual, visual, and frequency modalities, respectively, while T i , V i and F i represent the textual, visual, and frequency features output by the encoders, respectively.
+Modality weights adjustment Modality similarity reflects the consistency of content across different modalities and serves as a key indicator for assessing multi-modal complementarity. Existing approaches typically rely solely on fusion features, ignoring the independent value of uni-modal features under modality conflicts or low similarity. To overcome this limitation, we propose a novel adaptive modality weighting mechanism.
+It is important to clarify that the general semantic similarity calculated by the frozen CLIP model does not directly equate to the "reliability" or authenticity of the news. Instead, it serves as a vital proxy for cross-modal relevance. Based on this premise, our mechanism dynamically allocates weights between uni-modal and multi-modal features:
+When modality similarity is high, it indicates that the modalities are contextually aligned—text provides structured semantic details, visual features capture the scene, and frequency features reveal potential manipulations. This alignment ensures a higher fusion quality, as deeply integrating mutually reinforcing features avoids noise and feature interference. In such cases, the mechanism increases the weight of multi-modal fusion features to fully leverage inter-modal complementarity, producing richer representations.
+Conversely, when modality similarity is low, it often exposes tactics typical of fake news, such as pairing authentic images with fabricated, unrelated text. In these scenarios, forcing multi-modal fusion would introduce severe decision conflicts, causing fusion features to lose their discriminative power. Therefore, the mechanism adaptively shifts the weight to the uni-modal branches, relying on their independent discriminative power to maintain robust classification.
+Ultimately, this mechanism ensures that the model prioritizes multi-modal fusion only when a meaningful semantic foundation exists, while preserving robust uni-modal detection pathways when modalities conflict. To implement this, we utilize the text-image feature vectors generated by CLIP and calculate their cosine similarity to determine the routing weights α and β .
+While alternative adaptive weighting mechanisms exist—such as deploying trainable multi-layer perceptrons or complex bilinear pooling networks to regress modality contributions—these highly parameterized approaches introduce a severe risk of overfitting on limited fake news datasets and significantly inflate computational overhead. By strictly utilizing the zero-shot cosine similarity derived from the frozen CLIP representations, our framework strategically leverages massive pre-trained semantic priors without introducing additional trainable parameters into the gating function. This parameter-free configuration guarantees robust out-of-domain generalization and maintains architectural efficiency, representing an optimal structural trade-off for dynamic modality routing. The explicit weight calculation method is mathematically defined as follows: 15
+s i m i l a r i t y = T c · ( V c ) T ‖ T c ‖ ‖ V c ‖ 16
+α = s i g m o i d ( s i m i l a r i t y ) 17
+β = 1 - α Where T c and V c are the textual and visual features output by CLIP.
+After obtaining the multi-modal fusion features, along with the uni-modal textual, visual, and frequency features, each is multiplied by its respective weight to obtain the final representation of each modality: 18
+F M = F M · α F T = F T · β F V = F V · β F F = F F · β
+Model learning After obtaining the weighted uni-modal textual, visual, and frequency features, along with the multi-modal fusion feature, these features are concatenated to form a comprehensive feature vector. This vector is then input into the classifier, which outputs a probability vector: 19
+y ^ = FNC ( F M ⊕ F T ⊕ F V ⊕ F F ) Where ⊕ denotes the concatenate operation, and FNC ( · ) represents the classifier, which consists of a single fully connected layer.
+The objective function’s goal is to reduce cross-entropy loss, defined as: 20
+L = y log y ^ + ( 1 - y ) log ( 1 - y ^ ) Where y is the true labels, with 0 represents true news and 1 represents fake news.
+To provide a clearer understanding of our model, the training process of UMFN is outlined below. Algorithm 1 shows the training flow of UMFN. During each training batch, uni-modal features from the textual, visual, and frequency domains are extracted in step 2, establishing the foundational representations for subsequent multi-modal interaction. In step 3, the CLIP model is used to extract additional features from the textual and visual modalities and compare their potential similarity. Step 4 involves multi-modal feature fusion, where modality-specific information is integrated through the multi-modal interaction module, creating a more discriminative multi-modal feature representation. In step 5, features from each modality are processed separately to preserve essential modality-specific characteristics, ensuring the model can address modality inconsistency. In step 6, dynamic weights are computed based on modality similarity, adaptively balancing the contributions of uni-modal features and multi-modal fusion features. Step 7 feeds the optimized weighted feature vector into the classifier to generate the final classification probabilities. In step 8, the model’s training loss is calculated, which quantifies the difference between predicted and ground truth labels. Finally, in step 9, back-propagation is used to optimize the network parameters, enhancing model performance. After sufficient training, the UMFN model converges to an optimized state.
+Algorithm 1 [Images not available. See PDF.]
+Training flow of UMFN.
+
+Experiment Datasets We use the Weibo (Jin et al. 2017) and Twitter (Boididou et al. 2015) datasets to evaluate the proposed method’s performance. The Weibo dataset, derived from the Xinhua News Agency and the Weibo platform, contains fakes that were officially identified as false content by Weibo authorities between May and June 2012. During the data pre-processing phase, uni-modal news with no images or text was removed, and the dataset was divided into training, validation, and test sets in a 7:1:2 ratio. The training and validation sets were used to train the model and tune the parameters, while the test set was used to evaluate performance. The final dataset contains 7,795 news items, 4,162 of which are fake and 3,633 of which are real. The Twitter dataset, selected from the MediaEval task Verifying Multimedia Use Boididou et al. (2015), was collected from the Twitter platform. Because this study focuses on multi-modal fake news detection, tweets with videos, missing text, or images were removed during pre-processing. After processing, the training set contains 6,305 fake news items and 4,754 real news items, while the test set contains 1,490 items. The development set was used to train the model and tune the parameters, while the test set was used to evaluate performance. The use of these two widely recognized datasets demonstrates the robustness and generalizability of the proposed model across different data environments.
+Implement detail To ensure experimental fairness and address the inherent linguistic differences between Chinese and English, we implemented a strictly consistent preprocessing pipeline across both datasets. During the initial phase, we uniformly removed internet-specific noise, such as URLs. Special platform symbols, namely "@" and "#", were stripped, while the substantive text following them (e.g., usernames or hashtag content) was carefully preserved. This consistent noise reduction prevents the generation of non-semantic tokens, ensuring that the semantic integrity of the input is maintained regardless of the language.Following the unified cleaning process, we handled the structural linguistic differences (e.g., the lack of natural spaces in Chinese) directly through the pre-trained tokenizers to avoid errors from external word-segmentation tools. For text feature extraction, the Chinese Weibo data utilized the "bert-base-chinese" model, which naturally processes continuous text via character-level tokenization. In contrast, the English Twitter text employed the "bert-base-multilingual-cased" model, utilizing sub-word WordPiece tokenization. Finally, to guarantee structural consistency in the multi-modal interaction phase, the maximum text sequence lengths were pre-calculated and standardized using their respective tokenizers, ensuring that the output textual representations maintained identical dimensionalities and comparable semantic density. Visual feature encoding was performed using the PVTv2 model, with an input size set to 224 × 224 . English text was processed using the CLIP (Radford et al. 2021) model, while Chinese text was processed using the Chinese-CLIP (Yang et al. 2023a) model. Both models had an image input size of 224 × 224 . During training, the weights of the BERT, PVTv2, and CLIP encoders were strictly frozen. Freezing the CLIP model allows us to leverage its robust, zero-shot semantic alignment capabilities acquired from large-scale pre-training. This strategy effectively prevents the model from overfitting to the relatively small-scale fake news datasets while concurrently reducing the computational overhead of the UMFN framework.
+The implementation details are as follows: In the feature extractor, the output feature size from BERT, PVTv2, Frequency Net, and CLIP was set to 128. In the multi-modal interaction module, the number of heads in the multi-head attention was set to 8, with the kernel size of the 1D convolution set to 1. The hidden layer sizes of the feature projection heads after multi-modal interaction were 384 and 64, while those of the uni-modal feature projection heads were 128 and 64. The classifier consists of a fully connected layer with hidden layers sized 256 and 2. During training, the batch size was set to 16, and the Adam optimizer with default parameters was used, with the learning rate set to 1 × 10 - 4 . Both the batch size and learning rate were determined as the optimal values through experimental tuning. The model was trained for 30 epochs, with early stopping employed to prevent overfitting. Table 3. Performance comparison between UMFN and state-of-the-art methods.The best performance is shown in bold
+Dataset
+Method
+Accuracy
+Fake News
+Real News
+
+Pre
+Rec
+F1
+Pre
+Rec
+F1
+
+Weibo
+EANN (Wang et al. 2018)
+0.782
+0.827
+0.697
+0.756
+0.752
+0.863
+0.804
+
+MVAE (Khattar et al. 2019)
+0.824
+0.854
+0.769
+0.809
+0.802
+0.875
+0.837
+
+BDANN (Zhang et al. 2020)
+0.842
+0.830
+0.870
+0.850
+0.850
+0.820
+0.830
+
+SpotFake (Singhal et al. 2019)
+0.869
+0.877
+0.859
+0.868
+0.861
+0.878
+0.870
+
+HMCAN (Qian et al. 2021)
+0.790
+0.803
+0.758
+0.780
+0.778
+0.821
+0.799
+
+MCAN (Wu et al. 2021)
+0.873
+0.944
+0.794
+0.863
+0.817
+0.952
+0.879
+
+CAFE (Chen et al. 2022)
+0.840
+0.855
+0.830
+0.842
+0.825
+0.851
+0.837
+
+DIFF (Wang et al. 2022c)
+0.890
+0.912
+0.894
+0.903
+0.905
+0.879
+0.892
+
+MPFN (Jing et al. 2023)
+0.838
+0.857
+0.894
+0.889
+0.873
+0.863
+0.876
+
+CSFND (Peng et al. 2024)
+0.895
+0.899
+0.895
+0.897
+0.892
+0.896
+0.894
+
+MFCAN (Cui et al. 2024)
+0.898
+0.902
+0.896
+0.899
+0.893
+0.900
+0.896
+
+MEA (Mohawesh et al. 2025)
+0.901
+0.899
+0.849
+0.873
+0.896
+0.899
+0.897
+
+BSEAN (Xing et al. 2025)
+0.910
+0.934
+0.879
+0.906
+0.899
+0.944
+0.921
+
+UMFN (ours)
+0.920
+0.948
+0.893
+0.920
+0.892
+0.948
+0.919
+
+Twitter
+EANN (Wang et al. 2018)
+0.648
+0.810
+0.498
+0.617
+0.584
+0.759
+0.660
+
+MVAE (Khattar et al. 2019)
+0.745
+0.801
+0.719
+0.758
+0.689
+0.777
+0.730
+
+BDANN (Zhang et al. 2020)
+0.830
+0.810
+0.630
+0.710
+0.830
+0.930
+0.880
+
+SpotFake (Singhal et al. 2019)
+0.778
+0.751
+0.900
+0.820
+0.832
+0.606
+0.701
+
+HMCAN (Qian et al. 2021)
+0.897
+0.971
+0.801
+0.878
+0.853
+0.979
+0.912
+
+MCAN (Wu et al. 2021)
+0.809
+0.889
+0.765
+0.822
+0.732
+0.871
+0.795
+
+CAFE (Chen et al. 2022)
+0.806
+0.807
+0.799
+0.803
+0.805
+0.813
+0.809
+
+DIFF (Wang et al. 2022c)
+0.783
+0.810
+0.803
+0.806
+0.758
+0.786
+0.772
+
+MPFN (Jing et al. 2023)
+0.833
+0.846
+0.921
+0.880
+0.809
+0.721
+0.740
+
+CSFND (Peng et al. 2024)
+0.879
+0.899
+0.900
+0.900
+0.805
+0.861
+0.832
+
+MFCAN (Cui et al. 2024)
+0.794
+0.907
+0.684
+0.780
+0.719
+0.920
+0.807
+
+MEA (Mohawesh et al. 2025)
+0.874
+0.748
+0.959
+0.840
+0.958
+0.760
+0.848
+
+BSEAN (Xing et al. 2025)
+0.897
+0.920
+0.858
+0.888
+0.924
+0.861
+0.891
+
+UMFN (ours)
+0.952
+0.955
+0.898
+0.926
+0.951
+0.979
+0.965
+
+
+Performance comparsion Table 3 compares the proposed UMFN model to state-of-the-art methods on the Weibo and Twitter datasets.
+- 1)Performance on Weibo Dataset: Experimental results on the Weibo dataset demonstrate that the UMFN model achieves superior performance across multiple evaluation metrics, with an accuracy of 0.920, outperforming previous methods such as SpotFake (0.869), DIFF (0.890), and the recently proposed CSFND (0.895). The classification metrics further highlight UMFN’s advantage in detecting both fake and real news, with an F1-score of 0.920 for fake news and 0.919 for real news, which is 2–5% higher than competitive methods including MFCAN and CSFND. UMFN leverages a multi-modal feature interaction to integrate textual, visual, and frequency-domain features effectively. This design excels under high modal complementarity, fully exploiting inter-modal relationships to improve detection accuracy while mitigating performance degradation from missing or conflicting uni-modal features. In contrast, simpler fusion strategies used by SpotFake and DIFF fail to capture intrinsic modality relationships, and MCAN’s multi-level fusion may lose valuable information. The model also maintains a strong balance between precision and recall through its uni-modal feature branches. When modality similarity is low, uni-modal features provide independent discriminative support, ensuring stable classification performance. Competing models such as HMCAN and MCAN are less effective in such scenarios, either due to insufficient emphasis on uni-modal features or difficulty handling low text-image correlation. A key novelty of UMFN is its use of CLIP to compute text-image similarity and dynamically adjust the weights of uni-modal and multi-modal features. High modality consistency increases the weight of multi-modal fusion, maximizing complementarity, while low consistency emphasizes uni-modal features to avoid interference. Compared to recent baselines including CAFE, MFCAN, and CSFND, this adaptive weighting significantly enhances robustness even for samples with substantial modality feature distribution differences. Furthermore, when benchmarking UMFN against the most recent state-of-the-art methods like MEA and BSEAN, our model continues to demonstrate its structural superiority. Although the reproduced BSEAN framework achieves a highly competitive accuracy of 0.910 and yields a strong F1-score of 0.921 in real news classification, UMFN effectively leverages its dynamic gating to maintain the overall lead with an accuracy of 0.920. Overall, UMFN consistently demonstrates top-tier performance on the Weibo dataset, validating its effectiveness and novelty.
+
+- 2)Performance on Twitter Dataset: The experimental results on the Twitter dataset further validate the superior performance of the proposed UMFN model. UMFN achieved an accuracy of 0.952, surpassing mainstream methods such as HMCAN (0.897) and MPFN (0.833) by approximately 5.5% and 12%, respectively. For fake news detection, UMFN attained a precision of 0.955, recall of 0.898, and F1-score of 0.926. Compared with HMCAN, UMFN improved recall by 9.7% and F1-score by 4.8%. In real news detection, UMFN achieved a precision of 0.951, recall of 0.979, and F1-score of 0.965, consistently outperforming other methods, including CSFND and MPFN.
+
+
+Table 4. Performance of ablation study on datasets.The best performance is shown in bold
+Method
+Weibo
+Twitter
+
+Acc
+Pre
+Rec
+F1
+Acc
+Pre
+Rec
+F1
+
+Textual
+0.869
+0.869
+0.860
+0.860
+0.811
+0.814
+0.811
+0.812
+
+Visual
+0.620
+0.619
+0.618
+0.618
+0.888
+0.920
+0.830
+0.850
+
+Freq
+0.691
+0.679
+0.679
+0.678
+0.863
+0.880
+0.808
+0.831
+
+W/O Multi-modal feature interaction
+0.877
+0.880
+0.877
+0.877
+0.917
+0.939
+0.878
+0.900
+
+W/O Uni-modal feature branches
+0.910
+0.909
+0.909
+0.909
+0.946
+0.932
+0.952
+0.941
+
+W/O Adaptive modality weighting
+0.880
+0.881
+0.881
+0.881
+0.902
+0.922
+0.857
+0.881
+
+UMFN (ours)
+0.920
+0.920
+0.920
+0.920
+0.952
+0.953
+0.939
+0.945
+
+
+Multi-modal approaches such as EANN, MVAE, and BDANN, while benefiting from feature fusion, still struggle to fully exploit interactions between complex modalities due to their limited fusion strategies. This architectural advantage becomes particularly evident when evaluated against the newest methodologies. Compared to the comprehensively reproduced MEA and BSEAN models, which achieve accuracies of 0.874 and 0.897 respectively, UMFN extends the performance boundary to a remarkable accuracy of 0.952 along with widespread leads across all classification metrics. This substantial margin highlights the exceptional cross-platform robustness of UMFN and its superior multi-modal alignment capabilities, even when confronting the latest state-of-the-art architectures.
+To rigorously validate that the observed performance gains are not due to random variance, we conducted a statistical significance test. Specifically, we performed five independent training runs using different random seeds and applied an independent two-sample t-test comparing UMFN against the best-performing baseline, namely the reproduced BSEAN framework. The statistical tests yielded a p -value of p < 0.01 across both datasets. Since this p -value falls well below the standard threshold of 0.05, it statistically confirms that the improvements achieved by our proposed architecture are highly significant and robust.
+Overall, the results demonstrate that UMFN is both versatile and robust for fake news detection, particularly when handling diverse and complex datasets such as Twitter, consistently achieving state-of-the-art performance across all evaluation metrics.
+Ablation studies This section conducted ablation studies on two datasets to determine the role of each model component. Table 4 shows a summary of the experimental results. - Effect of the Single Modality "Textual" denotes the use of only the textual modality with the text encoder for feature extraction. "Visual" relies solely on the PVTv2 encoder for the visual modality, while "Frequency" uses only the frequency encoder to extract features. The results show that in single-modal tasks, the Textual modality achieves the highest single-branch accuracies of 0.869 on Weibo and 0.811 on Twitter; it serves as the semantic foundation by capturing core narrative claims and manipulative linguistic patterns. The Visual modality yields accuracies of 0.620 on Weibo and 0.888 on Twitter, functioning to extract high-level RGB concepts that expose macroscopic text-image semantic conflicts. The Frequency modality obtains accuracies of 0.691 on Weibo and 0.863 on Twitter; it acts as a crucial forensic layer, exposing low-level physical tampering such as splicing artifacts that deceive the visual domain even when image semantics align with the text. Overall, these single-modal representations suffer from significantly lower F1-scores compared to UMFN. This quantitative performance gap validates our fusion strategy, which seamlessly integrates their complementary roles to ensure comprehensive detection—transitioning from high-level semantic consistency to low-level physical authenticity.
+
+- Effect of Multi-modal feature interaction The proposed multi-modal feature interaction explores potential correlations between modalities to optimize multi-modal feature integration. Unlike simple concatenation methods, the module employs bidirectional cross-attention to capture complementary relationships between modalities while exploring synergies among textual, visual, and frequency features. To evaluate its effectiveness, a model without the multi-modal feature interaction (W/O multi-modal feature interaction, acting as a simple concatenation baseline) was constructed for comparative experiments. Results indicate that removing the multi-modal feature interaction, while outperforming single-modal models, reduces accuracy to 0.877 on Weibo and 0.917 on Twitter, which remains below the full UMFN model’s performance. Furthermore, while this removal marginally reduces the computational footprint, saving merely 1.2 % of total parameters, the significant degradation in accuracy definitively proves that our pairwise aggregation is a highly cost-effective and essential structural investment for resolving complex cross-modal conflicts.
+
+- Effect of Uni-modal feature branches The purpose of the uni-modal feature branches is to strengthen the model’s capacity to deeply learn individual modality features, enabling more effective extraction of discriminative information from uni-modal data. When the uni-modal branches were excluded (W/O Uni-modal feature branches), the model’s accuracy declined to 0.910 on Weibo and 0.946 on Twitter, highlighting its role in capturing distinct modality features. The uni-modal branch enhances the model’s capacity to address modality inconsistencies while offering supplementary information.
+
+- Effect of Adaptive modality weighting Integrating CLIP is pivotal for identifying semantic consistency between text and images. In our model, CLIP measures the correlation between uni-modal features and multi-modal fusion features, dynamically adjusting their weights to improve multi-modal learning efficiency and effectiveness. When the adaptive modality weighting was removed (W/O Adaptive modality weighting), the model’s accuracy significantly decreased to 0.880 on Weibo and 0.902 on Twitter. These results demonstrate that the adaptive modality weighting mechanism effectively captures semantic consistency across modalities, optimizing weights allocation during fusion and enhancing detection performance. Ablation experiments confirm the effectiveness of each module and their synergistic interactions, highlighting the critical roles of the multi-modal feature interaction, uni-modal feature branches, and adaptive modality weighting mechanism in the UMFN model. These findings strongly support multi-modal fake news detection, showing that the proposed method significantly enhances accuracy and robustness by fully exploiting complementary information across modalities.
+
+
+Efficiency and multilingual adaptability analysis Model efficiency comparison To provide a rigorous and comprehensive evaluation of computational efficiency beyond theoretical complexity, we systematically measured the parameter count, floating-point operations (FLOPs), inference latency, training time, and GPU memory consumption. All empirical hardware-level efficiency metrics were consistently evaluated utilizing a single NVIDIA GeForce RTX 4060 Ti GPU. During the training phase, configured with a batch size of 16, the full UMFN framework uniformly consumes 7078 MB of VRAM. Furthermore, it requires approximately 3.08 minutes per epoch to converge on the Weibo dataset, and 4.98 minutes per epoch on the Twitter dataset. Table 5 details the parameter counts, FLOPs, and inference latency comparison across representative baselines and our lightweight variant, UMFN*. This comprehensive profiling demonstrates that while UMFN introduces a higher computational footprint compared to naive early-fusion models, it structurally translates this capacity into significantly superior detection accuracy. A significant portion of UMFN’s parameter count and computational cost stems from the CLIP-based adaptive modality weighting mechanism used in the fusion stage. To alleviate this overhead, we introduce UMFN*, a simplified variant in which the standard CLIP module is replaced by TinyCLIP (Wu et al. 2023b), a more efficient alternative designed to reduce inference time while preserving competitive performance. It is worth noting that TinyCLIP currently supports only English text. To ensure semantic consistency and compatibility during training, we translate the Chinese Weibo dataset into English before applying UMFN*. This approach enables a fair comparison while maintaining alignment with the model’s input requirements. Table 5. Model efficiency performance comparison
+Model
+Parameters
+Flops
+Inference
+Accuracy
+
+(M)
+(G)
+(MS)
+Weibo
+Twitter
+Average
+
+SpotFake
+245.79
+19.75
+11.34
+0.869
+0.778
+0.823
+
+MCAN
+253.73
+20.89
+13.64
+0.873
+0.809
+0.841
+
+HMCAN
+395.31
+31.27
+34.12
+0.790
+0.897
+0.843
+
+UMFN*
+248.85
+28.23
+26.24
+0.872
+0.887
+0.880
+
+UMFN
+376.69
+36.93
+42.90
+0.920
+0.952
+0.936
+
+UMFN* denotes a lightweight variant of our model using TinyCLIP
+Table 6 Configurative performance comparison
+Configuration
+Text Encoder
+CLIP
+Weibo
+Twitter
+Average
+
+Language-specific
+Chinese BERT / Multilingual BERT
+Chinese-CLIP / CLIP
+0.920
+0.952
+0.936
+
+Multilingual Unified
+Multilingual BERT
+AltCLIP
+0.901
+0.931
+0.916
+
+Result
+—
+—
+↓ 2.1%
+↓ 2.2%
+↓ 2.1%
+
+
+Table 5 presents the number of parameters (in millions), Flops (in billions), average inference time per sample (in milliseconds, measured with batch size = 1), and classification accuracy on both datasets. In general, models with higher Flops tend to require longer inference time, but architectural design also plays a critical role. For example, MCAN and UMFN* have similar parameter counts, yet UMFN* records notably higher Flops (28.23G vs. 20.89G), reflecting its more computation-intensive fusion process. Similarly, although HMCAN has fewer Flops than UMFN, its less parallelizable structure leads to slower inference.
+Among all models, SpotFake and MCAN exhibit lower Flops (19.75G and 20.89G) and inference latency (11.34 ms and 13.64 ms), with relatively moderate accuracy levels (82.3% and 84.1% on average). HMCAN, despite having the largest parameter count (395.31M) and higher Flops (31.27G), suffers from slower inference (34.12 ms) and shows an imbalanced performance across datasets (79.0% on Weibo vs. 89.7% on Twitter). In contrast, our proposed UMFN model achieves the highest average accuracy of 93.6%, outperforming all baselines by a significant margin, especially on the Weibo dataset. While UMFN incurs the highest Flops (36.93G) and inference time (42.90 ms), its lightweight variant UMFN* significantly reduces both parameters and Flops (248.85M, 28.23G) while still maintaining strong performance (88.0% average accuracy), surpassing all previous baselines except the full UMFN model.
+These results demonstrate that although UMFN increases computational cost, it provides substantial improvements in detection accuracy, indicating its practical value in applications where performance is critical. Moreover, UMFN* offers a promising trade-off between efficiency and effectiveness, making it a viable choice for resource-constrained scenarios. Fig. 5 [Images not available. See PDF.]
+T-SNE feature visualisation for Weibo dataset
+
+Multilingual generalization analysis To investigate the impact of the UMFN model on multilingual fake news detection performance, we conduct a comparative analysis of two distinct strategies: a language-specific configuration, in which language-optimized encoders are applied independently to each dataset, and a multilingual unified configuration, where a single multilingual model is shared across all languages. In the language-specific setting, BERT-base-Chinese and Chinese-CLIP are employed for the Chinese dataset, while BERT-base-multilingual-cased and CLIP are used for the English dataset. In contrast, the multilingual unified approach utilizes BERT-base-multilingual-cased and AltCLIP (Chen et al. 2023) consistently across both datasets.
+Table 6 presents the performance comparison between these two configurations on the Chinese Weibo and English Twitter datasets. The language-specific configuration achieves higher accuracy, with 92.0% on Weibo and 95.2% on Twitter, resulting in an average accuracy of 93.6%. Notably, this configuration outperforms the multilingual unified setup by 2.1% on Weibo and 2.2% on Twitter. These findings suggest that language-tailored pre-trained models more effectively capture language-dependent semantics and stylistic nuances, which is particularly beneficial in linguistically and culturally complex contexts such as Chinese social media.
+Although the multilingual unified configuration yields a slight decrease in accuracy (an average drop of 2.1%), it demonstrates stable performance across languages. Its consistent results on both datasets indicate strong robustness and broad applicability. Moreover, this approach simplifies deployment by adopting a unified architecture, thereby reducing system complexity and maintenance overhead. These advantages make the multilingual unified strategy particularly attractive in scenarios where scalable and efficient cross-lingual fake news detection is required.
+In summary, the language-specific configuration is preferable when maximum detection accuracy and language sensitivity are paramount, while the multilingual unified configuration offers a practical trade-off by balancing competitive performance with deployment efficiency and architectural flexibility.
+T-SNE Visualizations Figure 5 illustrates the separability of learned modal representations on the Weibo dataset, analyzed using the T-SNE (Maaten and Hinton 2008) visualization method. Panels Fig. 5a through Fig. 5e represent the textual, visual, frequency, simple multi-modal fusion, and full UMFN model representations, respectively. The textual representation Fig. 5a demonstrates moderate separability, with the text modality providing rich semantic information via the structured features of natural language. Despite some overlapping points, fake and real news are distinguishable, confirming the effectiveness of textual features for fake news detection.
+The visual representation Fig. 5b and frequency representation Fig. 5c show greater dispersion compared to the textual representation, indicating low separability. While these features can partially reveal image manipulation or tampering, they fail to form distinct clusters. Visual features are affected by image complexity and quality, whereas frequency features depend on subtle detail changes, making it challenging to detect fake news in high-quality or subtly forged images.
+The simple multi-modal fusion representation Fig. 5d , achieved through basic feature concatenation of textual, visual, and frequency modalities, partially enhances modality complementarity and achieves better separability than the textual representation alone. However, it is limited compared to the complete multi-modal fusion model. This suggests that simple concatenation fails to fully exploit the potential of different modalities, lacking multi-modal interaction and collaboration, thereby constraining overall model performance.
+The complete UMFN model Fig. 5e achieves the best separation and clustering effects by deeply integrating textual, visual, and frequency modalities for collaborative learning. Compared to single-modal and simple multi-modal fusion approaches, UMFN exhibits superior separability and clustering, confirming that effectively fused modal information enhances feature discriminability in fake news detection.
+Overall, Fig. 5 highlights the importance of integrating textual, visual, and frequency information for Weibo fake news detection while demonstrating the proposed fusion method’s effectiveness in enhancing modality representation.
+Analysis of adaptive weighting To demonstrate the effectiveness of the adaptive weighting mechanism in leveraging complementary information from uni-modal and multi-modal fusion features, we compare the prediction results across individual modalities (textual, visual, frequency), the fusion modality, and the overall UMFN model. This comparison is conducted on four representative news samples from the Weibo dataset, as illustrated in Fig. 6. These samples represent varying scenarios of cross-modal alignment: a sample with high semantic similarity, a noisy variant of this sample, a sample with low similarity, and an extreme case involving a text-rich screenshot. Here, α denotes the dynamically assigned weight of the multi-modal fusion features, and β denotes the weight of the uni-modal fallback features. Fig. 6 [Images not available. See PDF.]
+Comparison of prediction results on three representative news samples from the Weibo dataset: (1) Textual / Visual / Frequency — predictions from individual modalities; (2) Fusion — fused representation of the three modalities; (3) UMFN — proposed framework integrating all four modalities with adaptive weighting ( α for fusion features, β for uni-modal features)
+
+In the first sample, where text and image are strongly aligned, the adaptive mechanism assigns weights of β = 0.37 and α = 0.63 . Among the uni-modal branches, textual and visual predictions are correct, while the frequency branch is incorrect. The fusion modality also predicts correctly, showing that combining multiple modalities can mitigate noise from weaker signals. UMFN leverages the higher weight on fusion features while retaining contributions from reliable uni-modal branches, yielding an accurate final prediction and demonstrating robustness when modalities are consistent.
+In the second sample, a noisy image version of the first, the weights shift to β = 0.51 and α = 0.49 . Despite the degraded visual quality, textual and visual branches remain correct, while the frequency branch again fails. The fusion modality still predicts correctly, suggesting stability of the fused representation under moderate noise. The adaptive mechanism slightly increases reliance on uni-modal features, reflecting its ability to adjust feature importance when input quality varies.
+The third sample presents low semantic similarity between text and image. The mechanism increases the uni-modal weight to β = 0.57 and reduces the fusion weight to α = 0.43 . Here, all uni-modal branches are correct, but the fusion modality fails, likely due to noise from inconsistent modalities. UMFN still produces the correct prediction by reducing dependence on unreliable fusion features and prioritizing consistent uni-modal signals, thereby mitigating fusion-induced errors.
+Furthermore, the fourth sample presents a particularly challenging scenario involving a ground-truth fake news post accompanied by a pure text screenshot. Interestingly, the independent textual, visual, and frequency branches all correctly predict the sample as fake. Our adaptive mechanism also successfully detects the semantic mismatch, heavily suppressing the fusion weight to α = 0.31 and elevating the uni-modal fallback weight to β = 0.69 . Despite these correct dynamic adjustments, the final UMFN prediction is incorrect. This case highlights a specific limitation when processing non-natural text-images without Optical Character Recognition (OCR). The visual and frequency branches extract physical textures rather than semantic objects, resulting in correct but relatively low-confidence predictions.
+Overall, the first three cases demonstrate that the adaptive weighting mechanism enables UMFN to dynamically balance the contributions of uni-modal and fusion features, significantly enhancing the model’s robustness across diverse multi-modal scenarios. However, the fourth case objectively illustrates the boundary conditions of our current architecture. The mechanism depends on the simultaneous presence of both modalities to compute similarity, and it faces challenges with text-rich imagery due to the lack of explicit typographical semantics. Furthermore, this reliance makes our tightly coupled pairwise co-attention sensitive to incomplete modalities (e.g., missing images). Unlike unified frameworks (Chen et al. 2026) or flexible transformers (Liu et al. 2023) that are explicitly designed for modality-dropout scenarios in cross-domain tasks, ensuring UMFN’s structural robustness under severe data corruption remains a critical boundary condition. Future research will explore alternative weighting strategies that can effectively handle incomplete modalities, alongside the integration of OCR-aware visual extractors or Large Vision-Language Models (LVLMs), to further enhance the framework against increasingly complex multi-modal misinformation.
+Conclusion In this paper, we propose an innovative multi-modal fake news detection method, UMFN, which aims to improve fake news detection by integrating features from three modalities: textual, visual, and frequency domains. Experimental evaluations demonstrate that UMFN outperforms state-of-the-art methods on multiple datasets, especially in complex scenarios with strong multi-modal semantic consistency or low image-text correlation, displaying significant accuracy and robustness. The study highlights that multi-modal feature interaction is crucial for improving fake news detection performance. The designed uni-modal feature branches have significant advantages in situations with weak modal correlation and overcome the limitation of over-reliance on multi-modal fusion. Furthermore, by incorporating an adaptive modality weighting mechanism, the model can dynamically allocate modality weights to achieve complementarity of different modal information, thus improving the classification performance. However, UMFN currently relies on the strict coexistence of modalities to compute CLIP-based similarities, making it vulnerable to missing-modality cases. Furthermore, it is not yet adapted for long-form content, and as revealed in our failure analysis, it struggles with text-rich screenshots due to a lack of explicit typographical extraction. In future work, we will explore modality dropout to handle missing modalities, and hierarchical fusion for long-form texts. Additionally, we plan to investigate diffusion-based generative paradigms to align extremely weak cross-modal features, and integrate Optical Character Recognition (OCR) or Large Vision-Language Models (LVLMs) to explicitly extract typographical semantics, further fortifying the framework against complex multi-modal misinformation.
+Author Contributions C.Y. performed the material preparation, data collection, and analysis. C.Y. wrote the first draft of the manuscript. J.K. and Y.L. contributed to the study conception and design, and provided supervision throughout the research. All authors commented on previous versions of the manuscript. All authors read and approved the final manuscript.
+Data Availability The datasets used in this study are available in the following public repositories: The Twitter dataset is available at: https://github.com/plw-study/MRML The Weibo dataset is available at: https://github.com/yaqingwang/EANN-KDD18/tree/master/data/weibo These datasets are widely used benchmarks for multi-modal fake news detection and can be accessed via the URLs provided above.
+Declarations Competing interests The authors declare no competing interests.
+Publisher's Note Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References Alonso MA, Vilares D, Gómez-Rodríguez C, Vilares J (2021) Sentiment analysis for fake news detection. Electronics 10
+Bai, Y; Liu, Y; Li, Y. Learning frequency-aware cross-modal interaction for multimodal fake news detection. IEEE Trans Comput Social Syst ; 2024; 11 , 5 pp. 6568-6579. [DOI: https://dx.doi.org/10.1109/TCSS.2024.3415160]
+Baltrusaitis, T; Ahuja, C; Morency, L-P. Multimodal machine learning: A survey and taxonomy. IEEE Trans Pattern Anal Mach Intell ; 2019; 41 , 2 pp. 423-443. [DOI: https://dx.doi.org/10.1109/TPAMI.2018.2798607]
+Boididou C, Andreadou K, Papadopoulos S, Dang-Nguyen D-T, Boato G, Riegler M, Kompatsiaris Y (2015) Verifying multimedia use at MediaEval 2015. In: MediaEval Benchmarking Initiative for Multimedia Evaluation. CEUR Workshop Proceedings, Wurzen, Germany
+Bose S, Roy R (2023) Enhancing fake news detection with sentiment analysis using machine learning. In: 2023 7th International Conference on Electronics, Materials Engineering & Nano-Technology (IEMENTech), pp 1–5
+Che, H; Pan, B; Leung, M-F; Cao, Y; Yan, Z. Tensor factorization with sparse and graph regularization for fake news detection on social networks. IEEE Trans Comput Social Syst ; 2024; 11 , 4 pp. 4888-4898. [DOI: https://dx.doi.org/10.1109/TCSS.2023.3296479]
+Chen, Y-L; Hsu, C-T. Detecting recompression of jpeg images via periodicity analysis of compression artifacts for tampering detection. IEEE Trans Inf Forensics Secur ; 2011; 6 , 2 pp. 396-406. [DOI: https://dx.doi.org/10.1109/TIFS.2011.2106121]
+Chen, L-C; Papandreou, G; Kokkinos, I; Murphy, K; Yuille, AL. Deeplab: Semantic image segmentation with deep convolutional nets, atrous convolution, and fully connected crfs. IEEE Trans Pattern Anal Mach Intell ; 2018; 40 , 4 pp. 834-848. [DOI: https://dx.doi.org/10.1109/TPAMI.2017.2699184]
+Chen Y, Li D, Zhang P, Sui J, Lv Q, Tun L, Shang L (2022) Cross-modal ambiguity learning for multimodal fake news detection. In: Proceedings of the ACM Web Conference 2022, pp 2897–2905
+Chen, Z; Liu, G; Zhang, B-W; Yang, Q; Wu, L. Rogers, A; Boyd-Graber, J; Okazaki, N. Altclip: Altering the language encoder in clip for extended language capabilities. Findings of the Association for Computational Linguistics: ACL 2023 ; 2023; Toronto, Canada: pp. 8666-8682. [DOI: https://dx.doi.org/10.18653/v1/2023.findings-acl.552]
+Chen S, Liu A, Fang H, Yuan H, Zheng J, Zeng D, Liu Y, Deng J, Escalera S, Liu X, Wan J, Lei Z (2026) Uniattack: Unified physical-digital face attack detection: Uniattack: Unified physical-digital.. Int J Comput Vision 134(3)
+Choraś, M; Demestichas, K; Giełczyk, A. Herrero, Ksieniewicz P, Remoundou K, Urda D, Woźniak M: Advanced machine learning techniques for fake news (online disinformation) detection: A systematic mapping study. Appl Soft Comput ; 2021; 101 , [DOI: https://dx.doi.org/10.1016/j.asoc.2020.107050] 107050.
+Cui, W; Zhang, X; Shang, M. Multi-modality frequency-aware cross attention network for fake news detection. J Intell Fuzzy Syst ; 2024; 46 , 1 pp. 433-455.
+Devlin J, Chang M-W, Lee K, Toutanova K (2019) BERT: Pre-training of deep bidirectional transformers for language understanding. In: Proceedings of the 2019 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (NAACL-HLT), pp 4171–4186
+Dosovitskiy A, Beyer L, Kolesnikov A, Weissenborn D, Zhai X, Unterthiner T, Dehghani M, Minderer M, Heigold G, Gelly S, Uszkoreit J, Houlsby N (2021) An image is worth 16x16 words: Transformers for image recognition at scale. In: International Conference on Learning Representations (ICLR)
+Hu, L; Wei, S; Zhao, Z; Wu, B. Deep learning for fake news detection: A comprehensive survey. AI Open ; 2022; 3 , pp. 133-155. [DOI: https://dx.doi.org/10.1016/j.aiopen.2022.09.001]
+Huh M, Liu A, Owens A, Efros AA (2018) Fighting fake news: Image splice detection via learned self-consistency. In: Computer Vision – ECCV 2018: 15th European Conference, Munich, Germany, September 8-14, 2018, Proceedings, Part XI, pp 106–124. Springer
+Jin Z, Cao J, Guo H, Zhang Y, Luo J (2017) Multimodal fusion with recurrent neural networks for rumor detection on microblogs. In: Proceedings of the 25th ACM international conference on multimedia. MM ’17, pp 795–816. Association for Computing Machinery
+Jing, J; Wu, H; Sun, J; Fang, X; Zhang, H. Multimodal fake news detection via progressive fusion networks. Inf Process Manag ; 2023; 60 , 1 103120. [DOI: https://dx.doi.org/10.1016/j.ipm.2022.103120]
+Kasseropoulos D, Koukaras P, Tjortjis C (2022) Exploiting textual information for fake news detection. Int J Neural Syst 32
+Khattar D, Goud JS, Gupta M, Varma V (2019) Mvae: Multimodal variational autoencoder for fake news detection. In: The World Wide Web Conference. WWW ’19, pp 2915–2921. Association for Computing Machinery
+Li J, Selvaraju RR, Gotmare AD, Joty S, Xiong C, Hoi SCH (2021) Align before fuse: vision and language representation learning with momentum distillation. In: Proceedings of the 35th international conference on neural information processing systems
+Lin, Z; He, J; Tang, X; Tang, C-K. Fast, automatic and fine-grained tampered jpeg image detection via dct coefficient analysis. Pattern Recogn ; 2009; 42 , pp. 2492-2501. [DOI: https://dx.doi.org/10.1016/j.patcog.2009.03.019]
+Lin J, Tan X, Xu K, Ma L, Lau RWH (2023) Frequency-aware camouflaged object detection. ACM Trans Multimedia Comput Commun Appl 19(2)
+Liu, A. Ca-moeit: Generalizable face anti-spoofing via dual cross-attention and semi-fixed mixture-of-expert. Int J Comput Vision ; 2024; 132 , 11 pp. 5439-5452. [DOI: https://dx.doi.org/10.1007/s11263-024-02135-2]
+Liu Y, Li Q, Yuan Y, Wang Q (2022) Single-shot balanced detector for geospatial object detection. In: ICASSP 2022 - 2022 IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP), pp 2529–2533
+Liu A, Tan Z, Yu Z, Zhao C, Wan J, Liang Y, Lei Z, Zhang D, Li SZ, Guo G (2023) Fm-vit: Flexible modal vision transformers for face anti-spoofing. IEEE Trans Inf Forensics Secur 18:4775–4786
+Liu A, Xue S, Gan J, Wan J, Liang Y, Deng J, Escalera S, Lei Z (2024) Cfpl-fas: Class free prompt learning for generalizable face anti-spoofing. In: 2024 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), pp 222–232
+Lu J, Batra D, Parikh D, Lee S (2019) ViLBERT: pretraining task-agnostic visiolinguistic representations for vision-and-language tasks. Curran Associates Inc., Red Hook, NY, USA
+Maaten, L; Hinton, G. Visualizing data using t-sne. J Mach Learn Res ; 2008; 9 , pp. 2579-2605.
+Mohawesh, R; Obaidat, I; AlQarni, AA; Aljubailan, AA; Al-Shannaq, MA; Salameh, HB; Al-Yousef, A; Saifan, AA; Alkhushayni, SM; Maqsood, S. Truth be told: a multimodal ensemble approach for enhanced fake news detection in textual and visual media. Journal of Big Data ; 2025; 12 , 1 197. [DOI: https://dx.doi.org/10.1186/s40537-025-01182-x]
+Mridha, MF; Keya, AJ; Hamid, MA; Monowar, MM; Rahman, MS. A comprehensive review on fake news detection with deep learning. IEEE Access ; 2021; 9 , pp. 156151-156170. [DOI: https://dx.doi.org/10.1109/ACCESS.2021.3129329]
+Peng, L; Jian, S; Kan, Z; Qiao, L; Li, D. Not all fake news is semantically similar: Contextual semantic representation learning for multimodal fake news detection. Inf Process Manag ; 2024; 61 , 1 103564. [DOI: https://dx.doi.org/10.1016/j.ipm.2023.103564]
+Qi P, Cao J, Yang T, Guo J, Li J (2019) Exploiting multi-domain visual information for fake news detection. In: 2019 IEEE International Conference on Data Mining (ICDM), pp 518–527
+Qian S, Wang J, Hu J, Fang Q, Xu C (2021) Hierarchical multi-modal contextual attention network for fake news detection. In: Proceedings of the 44th International ACM SIGIR conference on research and development in information retrieval, pp 153–162
+Qin Z, Zhang P, Wu F, Li X (2021) Fcanet: Frequency channel attention networks. In: 2021 IEEE/CVF International Conference on Computer Vision (ICCV), pp 763–772
+Qiu, Z; Yang, H; Fu, J; Liu, D; Xu, C; Fu, D. Learning degradation-robust spatiotemporal frequency-transformer for video super-resolution. IEEE Trans Pattern Anal Mach Intell ; 2023; 45 , 12 pp. 14888-14904. [DOI: https://dx.doi.org/10.1109/TPAMI.2023.3312166]
+Radford A, Kim JW, Hallacy C, Ramesh A, Goh G, Agarwal S, Sastry G, Askell A, Mishkin P, Clark J, Krueger G, Sutskever I (2021) Learning transferable visual models from natural language supervision. In: Proceedings of the 38th International Conference on Machine Learning (ICML), pp 8748–8763
+Sharma K, Qian F, Jiang H, Ruchansky N, Zhang M, Liu Y (2019) Combating fake news: A survey on identification and mitigation techniques. ACM Trans Intell Syst Technol 10(3)
+Singhal S, Shah RR, Chakraborty T, Kumaraguru P, Satoh S (2019) Spotfake: A multi-modal framework for fake news detection. In: 2019 IEEE 5th International Conference on Multimedia Big Data (BigMM), pp 39–47
+Singhal D, Gupta A, Tripathi A, Kothari R (2020) Cnn-based multiple manipulation detector using frequency domain features of image residuals. ACM Trans Intell Syst Technol 11(4)
+Tong Y, Lu W, Zhao Z, Lai S, Shi T (2024) Mmdfnd: Multi-modal multi-domain fake news detection. In: Proceedings of the 32nd ACM international conference on multimedia, pp 1178–1186
+Vaswani A, Shazeer N, Parmar N, Uszkoreit J, Jones L, Gomez AN, Kaiser Ł, Polosukhin I (2017) Attention is all you need. In: Proceedings of the 31st International Conference on Neural Information Processing Systems (NeurIPS), pp 5998–6008
+Vosoughi, S; Roy, D; Aral, S. The spread of true and false news online. Science ; 2018; 359 , 6380 pp. 1146-1151. [DOI: https://dx.doi.org/10.1126/science.aap9559]
+Wallace GK 1992 The jpeg still picture compression standard. IEEE Trans Cons Electron 38(1)
+Wang Y, Ma F, Jin Z, Yuan Y, Xun G, Jha K, Su L, Gao J (2018) Eann: Event adversarial neural networks for multi-modal fake news detection. In: Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining. KDD ’18, pp 849–857
+Wang J, Mao H, Li H (2022a) Fmfn: Fine-grained multimodal fusion networks for fake news detection. Applied Sciences 12(3)
+Wang W, Xie E, Li X, Fan D-P, Song K, Liang D, Lu T, Luo P, Shao L (2022b) Pvt v2: Improved baselines with pyramid vision transformer. Computational Visual Media 8(3):415–424
+Wang J, Yang Y, Liu K, Xie P, Liu X (2022c) Instance-guided multi-modal fake news detection with dynamic intra- and inter-modality fusion. Advances in Knowledge Discovery and Data Mining 13280:510–521
+Wei T, Chen D, Zhou W, Liao J, Tan Z, Yuan L, Zhang W, Yu N (2022) Hairclip: Design your hair by text and reference image. In: 2022 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), pp 18051–18060
+Wu Y, Zhan P, Zhang Y, Wang L, Xu Z (2021) Multimodal fusion with co-attention networks for fake news detection, pp 2560–2569. Association for Computational Linguistics, Online
+Wu L, Long Y, Gao C, Wang Z, Zhang Y (2023a) Mfir: Multimodal fusion and inconsistency reasoning for explainable fake news detection. Inf. Fusion 100(C):101944
+Wu K, Peng H, Zhou Z, Xiao B, Liu M, Yuan L, Xuan H, Valenzuela M, Chen XS, Wang X, Chao H, Hu H (2023b) Tinyclip: Clip distillation via affinity mimicking and weight inheritance. In: 2023 IEEE/CVF International Conference on Computer Vision (ICCV), pp 21913–21923
+Xing Y, Zhai C, Che Z, Pan H, Li K, Zhang B, Yao Z, Si X (2025) A multimodal fake news detection model based on bidirectional semantic enhancement and adversarial network under web3.0. Electronics 14(18)
+Yang A, Pan J, Lin J, Men R, Zhang Y, Zhou J, Zhou C (2023a) Chinese CLIP: Contrastive Vision-Language Pretraining in Chinese
+Yang Y, Zheng L, Zhang J, Cui Q, Li Z, Yu PS (2023b) TI-CNN: Convolutional Neural Networks for Fake News Detection
+Yu F, Liu Q, Wu S, Wang L, Tan T (2017) A convolutional approach for misinformation identification. In: Proceedings of the 26th International Joint Conference on Artificial Intelligence, pp 3901–3907
+Zhang T, Wang D, Chen H, Zeng Z, Guo W, Miao C, Cui L (2020) Bdann: Bert-based domain adaptation neural network for multi-modal fake news detection. In: 2020 International Joint Conference on Neural Networks (IJCNN), pp 1–8
+Zhang X, Cao J, Li X, Sheng Q, Zhong L, Shu K (2021) Mining dual emotion for fake news detection. In: Proceedings of the Web Conference 2021, pp 3465–3476
+Zhang Q, Wei Y, Han Z, Fu H, Peng X, Deng C, Hu Q, Xu C, Wen J, Hu D, Zhang C (2024a) Multimodal fusion on low-quality data: A comprehensive survey. ArXiv arXiv:2404.18947
+Zhang L, Zhang X, Li C, Zhou Z, Liu J, Huang F, Zhang X (2024b) Mitigating social hazards: Early detection of fake news via diffusion-guided propagation path generation. In: Proceedings of the 32nd ACM International Conference on Multimedia. MM ’24, pp. 2842–2851. Association for Computing Machinery, New York, NY, USA
+Zhou, X; Zafarani, R. A survey of fake news: Fundamental theories, detection methods, and opportunities. ACM Comput Surv ; 2020; 53 , pp. 1-40. [DOI: https://dx.doi.org/10.1145/3395046]
+Zhou Y, Yang Y, Ying Q, Qian Z, Zhang X (2023) Multi-modal fake news detection on social media via multi-grained information fusion. In: Proceedings of the 2023 ACM international conference on multimedia retrieval, pp 343–352
+Zhu L, Zeng X, Chen B, Chen P, Li Y-H, Wang S (2025) Leveraging Diffusion Knowledge for Generative Image Compression with Fractal Frequency-Aware Band Learning

@@ -1,0 +1,758 @@
+Introduction Social media has fundamentally reshaped how news is produced, consumed, and redistributed, but it has also amplified the reach and speed of deceptive and fabricated information. Fake news is particularly harmful when it spreads rapidly through reposting, cross-posting, and content re-authoring, creating cascades that can outpace verification and moderation. Prior research has shown that fake news detection on social media is challenging because deceptive content is intentionally crafted to appear credible, and because useful signals may come from multiple sources, the news content itself, user interactions, and the temporal and structural patterns of propagation (Shu et al. 2017a; Vavekanand and Das 2025).
+A major practical complication is that misinformation rarely remains confined to a single platform. The same story may originate on one platform, gain traction elsewhere, and then re-enter the original platform in modified form, creating cross-platform spread chains. This cross-platform behaviour weakens single-platform detectors trained on platform-specific cues and incomplete propagation context. While widely used resources such as FakeNewsNet (Shu et al. 2020) and Fakeddit (Nakamura and Levy 2020) have enabled substantial progress in content- and context-based detection, they primarily reflect platform-bounded views of misinformation (e.g., news and social context tied to one ecosystem). Recent efforts toward multi-platform propagation datasets highlight that propagation characteristics differ across platforms and that exploiting these differences can improve detection. However, unified modelling of cross-platform spread chains remains underexplored (Zhao et al. 2025; Abu-Zaid 2026).
+In parallel, misinformation has become increasingly multimodal; posts often combine text with images, screenshots, memes, or repurposed visuals. Multimodal fake news detection methods (e.g., event-invariant multimodal representations) demonstrate that jointly modelling textual and visual cues can improve robustness, especially under shifting topics and events (Wang et al. 2018). Meanwhile, propagation-based models capture diffusion structures that are difficult to fake consistently at scale; graph-based rumour/fake-news methods have shown that leveraging top-down and bottom-up diffusion patterns can be highly effective (Ma and Gao 2016). Nevertheless, most existing approaches treat content modelling and propagation modelling as partially separable, and they often struggle when content is paraphrased, visually altered, or recontextualised across platforms.
+Recent advances in multimodal large models (MLMs), including strong vision-language pretraining and instruction-tuned multimodal assistants, offer an opportunity to unify these signals within a single framework (Vavekanand 2026). Vision-language pretraining (e.g., contrastive image-text alignment) offers transferable representations for heterogeneous visual and textual content (Radford et al. 2021). More recent multimodal large-model designs can combine powerful frozen vision encoders with large language models, improving zero and few-shot generalisation and instruction following (Alayrac et al. 2022; Li et al. 2023; Liu et al. 2023). At the same time, large language models have demonstrated the capacity to generate fluent, news-like text, raising the stakes for detection systems that rely on shallow lexical cues (Brown et al. 2020). These developments motivate detection pipelines that can (i) represent multimodal posts semantically, (ii) align semantically related items across platforms despite paraphrasing and visual edits, and (iii) detect and attribute cross-platform spread chains using propagation evidence.
+This paper proposes a unified multimodal large-model framework for cross-platform fake-news spread-chain detection. We define a spread chain as a temporally ordered sequence (or tree-structured cascade) of cross-platform posts that are semantically and evidentially linked through reuse, transformation, and redistribution of the same underlying claim. Our framework integrates multimodal semantic encoding (text, image, and optional metadata) with cross-platform propagation graph construction to identify candidate chains and determine whether the chain corresponds to misinformation. The goal is not only to classify isolated posts, but also to detect how misinformation traverses platforms and to surface auditable chain-level evidence that supports downstream moderation, fact-checking, and forensic analysis.
+The main contributions are summarised as follows:
+- We formulate cross-platform spread-chain detection as a unified task that jointly models multimodal content similarity and multi-platform propagation structure.
+
+- We present a multimodal, large-model-based representation and alignment strategy to connect semantically equivalent posts across platforms under paraphrase, cropping, screenshotting, and meme-style transformations.
+
+- We introduce a chain-aware detection module that leverages propagation-graph signals to improve robustness under domain and platform shift.
+
+- We outline an evaluation protocol spanning post-level and chain-level metrics (e.g., chain purity, chain completeness, and early detection) to reflect real-world cross-platform deployment needs.
+
+
+The remainder of this paper is organised as follows. Section 2 reviews related work in multimodal misinformation detection, propagation modelling, and large multimodal models. Section 3 presents the proposed framework, including cross-platform alignment, graph construction, and chain detection. Section 4 describes datasets, experimental settings, baselines, and results. Section 6 discusses interpretability, limitations, and practical considerations, and Section 7 concludes the paper and outlines future directions.
+Related work Fake news (and broader misinformation) detection has evolved from content-based classification toward multi-source, multimodal, and propagation aware modelling. In this work, we focus on a more challenging setting: cross-platform spread chain detection, where semantically linked posts and their diffusion traces must be aligned across heterogeneous platforms and modalities (text, image, and video), forming an end-to-end chain rather than isolated predictions.
+Fake news detection and benchmark resources Early research emphasised linguistic cues, user engagement signals, and credibility-related features. The core challenges of fake news detection on social media, including the scarcity of reliable ground truth, rapid topic drift, and the need to model social context (Zhen 2026; Ma and Qu 2026; Suong and Nghiem 2025). To support reproducible evaluation, benchmark datasets and repositories were introduced. FakeNewsNet, a data repository combining news content and social context for studying fake news detection on social platforms (Shu et al. 2020). For fine-grained multimodal fake news detection at scale (Nakamura and Levy 2020), Fakeddit was introduced, which pairs textual post content with images and metadata, enabling multi-class and multi-granularity labelling. In addition, claim verification benchmarks such as LIAR (Wang 2017) have been used as complementary resources for text-centric factuality modelling.
+Multimodal fake news detection Multimodal fake news detection aims to exploit complementary evidence from text and visual signals. A representative line of work designs joint encoders and fusion modules to detect incongruence between modalities or capture cross-modal correlations (Lv et al. 2025; Sallami 2025). For example, Wang et al. (2018) proposed an event-adversarial framework to encourage event-invariant representations while integrating multimodal features, addressing the challenge that fake news often emerges in rapidly evolving events. Beyond detection accuracy, explainability has been explored to reveal why content is flagged. Shu et al. (2019) modelled interactions between news sentences and user comments to extract check-worthy evidence. While helpful, most multimodal detectors still operate at the single-post level and do not explicitly reconstruct cross-platform diffusion chains that connect semantically related items over time and across platforms.
+Propagation and graph-based modelling of rumours and fake news A major advance in misinformation research is the incorporation of propagation structure. Rather than treating each post independently, propagation-aware methods model how information diffuses through user interactions and repost graphs (Micallef et al. 2022; Vavekanand and Ruzimbaevich 2025). Combined textual signals with temporal user response patterns and source-user characteristics, illustrating that diffusion dynamics provide discriminative cues (Ruchansky and Seo 2017; Brinda and Rajan 2025; Samriya et al. 2025).
+Graph neural networks (GNNs) further improved the ability to represent diffusion structure. Bi-directional GCNs over rumour propagation graphs, capturing both top-down and bottom-up diffusion patterns for rumour detection (Bian et al. 2020). For multimodal explainable fake news detection (Lu 2020), graph-aware co-attention mechanisms were introduced that link graph context with content features. Despite their effectiveness, these methods typically assume a single-platform propagation graph. In real misinformation campaigns, however, narratives frequently jump between platforms, requiring alignment of posts, users/accounts, and temporal diffusion traces across different ecosystems.
+Cross-platform misinformation and multimodal linkage Cross-platform settings introduce additional challenges: (i) heterogeneous interaction mechanisms, (ii) missing or partial observability of diffusion, (iii) identity fragmentation, and (iv) content remixes (e.g., cropped images, re-uploads, short clips, screenshots of text) (Li and Dai 2025; Samriya et al. 2025; Roumeliotis and Tselikas 2025). Empirical work has shown that misinformation can exhibit distinct diffusion patterns relative to truthful content, with potential acceleration and broader reach (Vosoughi and Roy 2018; Vavekanand and Ali Laghari 2026).
+For explicitly cross-platform multimodal misinformation (Micallef et al. 2022), studied textual posts linking to videos (e.g., YouTube), proposed a taxonomy describing post–video relations, and evaluated cross-platform detection using paired representations. These studies motivate a chain-oriented formulation: misinformation should be modelled as a connected sequence of semantically related artefacts and diffusion evidence that spans platforms and modalities, rather than a set of isolated posts (Roumeliotis and Tselikas 2025; Thota et al. 2025; Vavekanand et al. 2026).
+In parallel, cross-platform research on identity and linkage emphasises that user/account matching and entity alignment are key enablers for constructing unified diffusion graphs (Shu et al. 2017b). Such linkage components become especially important for spread-chain detection, where chain nodes may include reposts, quoted reposts, cross-posted media, or external URL shares that form multi-hop traces. Table 1. Differentiation of our approach from representative categories of existing misinformation detection methods. ✓: supported; ~: partially/indirectly supported; ✗: not supported
+Approach category
+Representative works (examples)
+Cross-platform
+Multi-modal
+Prop. graph
+Chain-level
+Unified MLM
+Robust alignment
+Chain evidence
+Explainability
+
+Text-only post-level classification
+LIAR-style / BERT- style text classifiers (Wang 2017)
+✗
+✗
+✗
+✗
+✗
+~
+✗
+~
+
+Multimodal post- level detection (fusion / event-invariant)
+EANN; multimodal benchmarks (text+ image) (Wang et al. 2018)
+✗
+✓
+✗
+✗
+✗
+~
+✗
+~
+
+Propagation-based rumor/fake news (single-platform cascades)
+CSI; diffusion/cascade models (Ruchansky and Seo 2017)
+✗
+~
+✓
+~
+✗
+✗
+~
+~
+
+GNN-based prop agation modeling(single-platform graphs)
+BiGCN and related GNN rumor detectors (Bian et al. 2020)
+✗
+~
+✓
+~
+✗
+✗
+~
+~
+
+Multimodal + graph-based explainable detection (single-platform)
+GCAN-style graph- aware co-attention (Lu 2020)
+✗
+✓
+✓
+~
+✗
+~
+~
+✓
+
+Cross-platform mul timodal linkage(paired artifacts / taxonomy)
+Cross-platform post–video/post–media analysis (Micallef et al. 2022)
+✓
+✓
+~
+✗
+✗
+~
+✗
+~
+
+Ours: unified multi modal large-model spread-chain detec tion
+This paper
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+✓
+
+
+Positioning and gap addressed by this work Recent work shows a shift from single-source misinformation to mixed-source forgery, where misleading narratives combine multiple content channels. Benchmarks reveal patterns such as paraphrased or edited text, recontextualized images or screenshots, and cross-modal inconsistencies where text and visuals seem plausible alone but contradict each other. These trends indicate that effective detection requires models that jointly analyze multimodal semantics and propagation context across platforms. Our approach addresses this by combining multimodal representation learning with cross-platform spread-chain modeling to detect more complex misinformation patterns. Overall, prior work provides strong foundations in (i) multimodal fake news detection (Thakur and Kavindu Jayasinghe 2026; Ai et al. 2026; Liu and Wang 2025), (ii) explainable modelling (Meng and Wang 2026; Wang et al. 2026), and (iii) propagation-aware rumour detection (Ruchansky and Seo 2017; Bian et al. 2020). However, three limitations remain central for real-world deployments:
+- Platform isolation: most propagation methods construct graphs within a single platform, ignoring cross-platform narrative transfer.
+
+- Post-level decisions: many multimodal detectors predict labels per post, without reconstructing spread chains that aggregate evidence across linked artefacts.
+
+- Weak multimodal alignment under remixing: cross-platform settings often involve transformed media (cropping, re-encoding, short clips), making naive similarity brittle.
+
+
+Motivated by these gaps, our work addresses cross-platform fake news spread-chain detection and develops a unified, multimodal, large-model framework that jointly represents multimodal content and diffusion context, enabling chain-level inference and evaluation. Table 1 compares our framework with existing methods across eight key dimensions.
+Methodology In this section, we present our unified multimodal large-model framework for cross-platform fake-news spread-chain detection. The framework comprises four major components: (1) Unified Multimodal Large-Model Encoding, (2) Cross-Platform Alignment and Typed Graph Construction, (3) Spread-Chain Extraction, and (4) Chain-Level Classification and Evidence Extraction. Fig. 1 [Images not available. See PDF.]
+Overall pipeline of the proposed unified framework. Multimodal inputs from multiple platforms are encoded into unified representations, aligned across platforms, integrated into a typed propagation graph, and used for spread-chain extraction and fake-news classification
+
+Figure  1 illustrates the overall pipeline of the proposed framework. The process begins with multimodal inputs collected from multiple platforms, including textual content, visual media, and metadata. These inputs are first processed by the unified multimodal encoder, which generates semantically rich representations for each post. Next, a cross-platform alignment module retrieves semantically similar posts across platforms and assigns confidence scores to candidate links. The aligned posts are then integrated into a typed propagation graph that captures both in-platform interactions and cross-platform relationships. From this graph, spread chains are extracted using temporal pruning and maximum-weight arborescence. Finally, a chain-level classifier analyses the extracted structures to predict whether a chain corresponds to fake or real news, while also providing interpretable evidence through influential nodes and edges.
+Task definition and notation Let P = { p 1 , p 2 , ⋯ , p M } denote a set of M social platforms. Each platform p ∈ P contains a set of posts V ( p ) = { v 1 ( p ) , ⋯ , v N p ( p ) } . The global set of posts is defined as V = ⋃ p ∈ P V ( p ) with N = | V | total posts.
+Each post v i ∈ V is associated with:
+- Text content x i ,
+
+- Media content m i (image or video frames),
+
+- Timestamp t i ,
+
+- Metadata r i (e.g., URL, hashtags, author ID, engagement metrics).
+
+
+A cross-platform spread chain C k = ( V k , E k ) is defined as a temporally ordered, connected, directed subgraph where:
+- V k ⊆ V consists of posts expressing the same underlying claim (possibly paraphrased or visually remixed),
+
+- E k encodes either (a) in-platform diffusion relations (e.g., reply, reshare), or (b) cross-platform alignment relations inferred via semantic or media similarity.
+
+
+Semantic Drift Across Platforms: Social media platforms differ in language style, interaction patterns, and content formats, which can cause semantic drift in multimodal representations. For instance, the same claim might appear as a long text post on one platform but as a short caption with an image on another. These differences create distribution shifts that reduce the effectiveness of platform-specific models.
+To handle this, the framework uses platform adapters that learn lightweight, platform-conditioned transformations of multimodal embeddings. These adapters align representations across platforms by adjusting for stylistic and contextual differences, improving cross-platform retrieval and the stability of propagation graph construction. Our goal is twofold: Extract candidate chains { C k } k = 1 K from the global post set, and predict a binary chain label y ^ k ∈ { 0 , 1 } where 1 denotes fake news and 0 denotes real news.
+Unified multimodal large-model encoding We compute a unified embedding h i ∈ R d for each post v i by jointly encoding its textual and visual content. Figure 2 presents the architecture of the unified multimodal encoder. The model combines textual and visual inputs by first converting them into token-level embeddings using modality-specific encoders. A learnable [CLS] token is prepended to aggregate global information. Modality-specific embeddings are added to distinguish between text and visual features before concatenation. The combined token sequence is then processed through a multimodal transformer, where self-attention enables interaction between modalities. The final representation is obtained from the [CLS] token and serves as a unified embedding of the post. This design allows the model to remain robust under content transformations such as paraphrasing or image modifications, which are common in cross-platform misinformation scenarios. Fig. 2 [Images not available. See PDF.]
+Unified multimodal large-model encoder architecture. Text and visual tokens are combined with modality-specific embeddings and processed through a multimodal transformer
+
+Given post v i , we tokenize its text x i into token embeddings T i = { t i , 1 , ⋯ , t i , L } and its media m i into visual token embeddings V i = { v i , 1 , ⋯ , v i , S } using a pre-trained vision encoder (e.g., CLIP). A learnable [CLS] token c is prepended, and modality-specific embeddings e ( T ) and e ( V ) are added: 1
+Z i ( 0 ) = c ; T i + e ( T ) ; V i + e ( V ) . A multimodal transformer f θ with L f layers performs self-attention over the joint token sequence: 2
+Z i ( ℓ + 1 ) = TransformerBlock Z i ( ℓ ) ; θ , ℓ = 0 , ⋯ , L f - 1 . The final [CLS] token representation is used as the post embedding: 3
+h i = Z i , [ CLS ] ( L f ) . If text or media is missing, we replace the absent token set with a learned null token embedding and apply an attention mask to ignore missing tokens, ensuring consistent inference under partial modalities. Another method for handling missing multimodal inputs is modality dropout, where some modalities are randomly removed during training. In this work, a learned null-token with attention masking is used instead to keep a consistent token structure, which simplifies cross-platform alignment and graph construction. While modality dropout may introduce instability in similarity-based link scoring, combining it with null-token masking could be explored in future work to improve robustness.
+Cross-platform alignment and typed graph construction The cross-platform alignment process retrieves and scores candidate links between semantically related posts across different platforms. Algorithm 1 describes the cross-platform alignment process used to identify semantically related posts across different platforms. First, an approximate nearest neighbor (ANN) index is constructed over the post embeddings to enable efficient retrieval. For each post, candidate matches are selected from other platforms within a predefined temporal window. These candidates are ranked based on cosine similarity, and the top-K most similar posts are retained. For each candidate pair, a feature vector is computed that includes semantic similarity, temporal proximity, metadata overlap, and media similarity. A learned scoring function then assigns a confidence score to each pair. Finally, directed alignment edges are added to the graph if the score exceeds a threshold and temporal consistency is satisfied. This process ensures efficient and robust cross-platform linkage even under content transformations.
+Algorithm 1 [Images not available. See PDF.]
+Cross-Platform Alignment: Candidate Retrieval and Link Scoring.
+
+To link semantically equivalent posts across platforms, we first retrieve candidate pairs efficiently using Approximate Nearest Neighbour (ANN) search over post embeddings { h i } . For each post v i , we retrieve the top- K candidates from other platforms within a temporal window Δ t : 4
+N K ( i ) = TopK { j : p ( j ) ≠ p ( i ) , | t j - t i | ≤ Δ t } , cos ( h i , h j ) . For each candidate pair ( i ,  j ), we compute a feature vector ϕ ij ∈ R q that includes:
+- Semantic similarity: cos ( h i , h j ) ,
+
+- Temporal proximity: δ t ij = | t i - t j | ,
+
+- Metadata cues: URL match, domain match, hashtag overlap,
+
+- Media forensics: perceptual hash distance, re-encoding robustness.
+
+
+The cross-platform alignment score is computed as: 5
+s ij = σ w ⊤ ϕ ij + b , where σ is the sigmoid function. A directed edge i → j is added if t i ≤ t j and s ij ≥ τ .
+We integrate in-platform diffusion edges E in and cross-platform alignment edges E cp into a unified typed graph G = ( V , E , R ) , where R = { reply , reshare , quote , cp _ align , url _ share } . The edge weights are assigned as follows: 6
+w ij ( r ) = s ij , r = cp _ align , 1 , r ∈ { reply , reshare , quote } , η , r = url _ share , where η is a constant or tuned parameter. Figure 3 illustrates an example of the typed propagation graph constructed in our framework. Nodes represent posts from different platforms, while edges encode multiple types of relationships. Solid edges denote in-platform interactions such as replies and reshares, dashed edges represent cross-platform alignment links inferred through semantic similarity, and dotted edges correspond to URL-sharing relationships. This heterogeneous graph structure enables the model to capture both local diffusion dynamics within a platform and global propagation patterns across platforms, which are essential for reconstructing complete spread chains. Fig. 3 [Images not available. See PDF.]
+Example of a typed propagation graph integrating in-platform diffusion edges (solid), cross-platform alignment edges (dashed), and URL-share edges (dotted)
+
+Spread-chain extraction After constructing the typed graph, we extract spread chains via claim grouping, temporal pruning, and maximum-weight skeleton extraction. Algorithm 2 outlines the procedure for extracting spread chains from the typed propagation graph. The process begins with claim-centric grouping, where posts are clustered in the embedding space to form candidate claim groups. For each group, temporal pruning is applied to remove edges that violate chronological order or fall below a confidence threshold. The earliest post in each group is selected as the root node. A maximum-weight arborescence algorithm is then applied to construct a directed tree structure that maximises the overall edge confidence while ensuring that each node has at most one parent. The resulting structure represents the most likely propagation chain for a given claim. This approach enables efficient extraction of coherent and interpretable spread chains from noisy cross-platform data.
+Algorithm 2 [Images not available. See PDF.]
+Spread-Chain Extraction from Typed Graph.
+
+Claim-centric grouping We first cluster posts in the embedding space to form candidate claim groups { G k } , thereby reducing the search space and noise.
+Temporal pruning For each group G k , we prune edges that violate temporal consistency or have low confidence: 7
+( i , j , r ) ∈ E k ⇒ t i ≤ t j , | t j - t i | ≤ Δ t , w ij ( r ) ≥ ϵ .
+Maximum-weight arborescence We extract a directed chain skeleton by selecting at most one parent per node (except the root) to maximise total edge weight: 8
+max E k + ⊆ E k ∑ ( i , j , r ) ∈ E k + w ij ( r ) s.t. indegree ( j ) ≤ 1 ∀ j , E k + is acyclic and temporally ordered .
+Chain-level classification and evidence extraction This stage focuses on reasoning over the full propagation structure rather than classifying posts individually. In misinformation campaigns, single posts may be ambiguous, but propagation patterns and cross-platform reinforcement provide stronger signals. To capture this, a relation-aware graph neural network models heterogeneous interactions such as replies, reshares, and cross-platform links. It aggregates contextual information across posts and highlights influential nodes in the diffusion process. An attention-based pooling step then produces a compact chain representation while preserving interpretability through node importance scores. Relation-Aware Chain Encoder refine node embeddings within each chain using a relation-aware graph neural network (R-GCN) over C k : 9
+h i ( ℓ + 1 ) = σ W 0 ( ℓ ) h i ( ℓ ) + ∑ r ∈ R ∑ j ∈ N r ( i ) 1 c i , r W r ( ℓ ) h j ( ℓ ) + b ( ℓ ) , where N r ( i ) denotes neighbors connected via relation r , and c i , r is a normalization constant.
+We compute a chain embedding z k via attention pooling over refined node embeddings: 10
+α i = exp ( u ⊤ h i ( L g ) ) ∑ j ∈ V k exp ( u ⊤ h j ( L g ) ) , z k = ∑ i ∈ V k α i h i ( L g ) . The chain label distribution is predicted via a multilayer perceptron (MLP): 11
+p ( y k ∣ C k ) = Softmax MLP ( z k ) , y ^ k = arg max y p ( y ∣ C k ) . To support explainability, we output:
+- Top- K influential nodes based on attention weights α i ,
+
+- High-confidence edges (especially cross-platform alignment edges) as chain-level evidence.
+
+
+
+Training objectives The loss function jointly optimizes content understanding, cross-platform alignment, and chain-level prediction. Relying only on classification could produce weak multimodal representations and poor cross-platform links. To address this, auxiliary alignment losses bring semantically related posts from different platforms closer in the embedding space. A contrastive objective also improves robustness to content transformations by encouraging modality-invariant semantics. Together, these objectives produce representations that are both effective for misinformation detection and stable for cross-platform retrieval and graph construction. The total loss is a weighted combination of chain classification loss and optional alignment losses: 12
+L = L cls + λ 1 L link + λ 2 L con .
+Chain classification loss Given labeled chains { ( C k , y k ) } , we use cross-entropy: 13
+L cls = - ∑ k log p ( y k ∣ C k ) .
+Cross-platform link supervision If labelled alignment pairs are available: 14
+L link = - ∑ ( i , j ) ℓ ij log s ij + ( 1 - ℓ ij ) log ( 1 - s ij ) , where ℓ ij ∈ { 0 , 1 } indicates whether ( i ,  j ) is a true cross-platform link.
+Contrastive alignment loss To enhance embedding alignment, we use an InfoNCE-style loss over a batch B : 15
+L con = - ∑ ( i , j ) ∈ B + log exp ( cos ( h i , h j ) / τ c ) ∑ u ∈ B \ { i } exp ( cos ( h i , h u ) / τ c ) , where τ c is a temperature parameter.
+Complexity analysis Let K be the ANN candidate size per post and | E | the total retained edges. Candidate retrieval and scoring cost O ( N log N + N K ) . Graph encoding on extracted chains costs O ( ∑ k | E k ∗ | · L g ) , which is linear in chain size due to skeletonisation. Temporal pruning and maximum arborescence extraction ensure scalability for large cross-platform corpora.
+Experiments In this section, we present the experimental setup designed to evaluate the effectiveness of the proposed unified framework for cross-platform fake-news spread-chain detection. We describe the datasets, baseline methods, implementation details, and evaluation metrics. All experiments are conducted under a leave-one-platform-out protocol to rigorously assess cross-platform generalisation.
+Datasets To evaluate cross-platform spread-chain detection under multimodal evidence, we use six widely adopted benchmarks covering (i) news + social context, (ii) multimodal posts, and (iii) propagation/conversation structures. When a dataset requires “hydration” (e.g., platform IDs), we follow the official scripts and comply with platform policies.
+FakeNewsNet FakeNewsNet provides news content, social context, and spatiotemporal signals for two major subsets (PolitiFact and GossipCop) (Shu et al. 2020). We use it to test content and context robustness and cross-domain generalisation.
+Table 2. Summary of datasets used in experiments. #Instances and label distributions are reported for the version used in this study
+Dataset
+Language
+Platforms/Sources
+Modalities
+#Instances
+Labels
+Chain?
+
+FakeNewsNet
+EN
+PolitiFact/GossipCop
+Text + Social
+TBD
+Real/Fake
+✓
+
+Fakeddit
+EN
+Reddit
+Text + Image
+TBD
+2/3/6-way
+✗
+
+PHEME
+EN
+Twitter
+Text + Thread
+TBD
+Rumour/Non, Veracity
+✓
+
+Twitter15
+EN
+Twitter
+Text + Tree
+TBD
+Rumour/Non
+✓
+
+Twitter16
+EN
+Twitter
+Text + Tree
+TBD
+Rumour/Non
+✓
+
+MCFEND
+ZH
+Multi-source
+Text + (Media) + Context
+TBD
+Real/Fake
+✓
+
+
+Fakeddit Fakeddit is a large-scale multimodal Reddit dataset with post titles and associated images, supporting both binary and fine-grained labels (Nakamura and Levy 2020). We use Fakeddit to evaluate multimodal claim understanding and visual-textual consistency modelling.
+PHEME PHEME contains rumour conversation threads (source post and replies) with annotations for rumour detection and veracity classification (Kochkina and Liakata 2018). We use PHEME to evaluate thread/chain reconstruction quality and early-stage detection.
+Twitter15/Twitter16 Twitter15 and Twitter16 provide labeled rumor events with tree-structured propagation/conversation data (Release, C. Twitter15 and twitter16 rumor datasets 2017). We use them to benchmark chain extraction and graph-based rumour baselines.
+MCFEND MCFEND is a multi-source Chinese fake news benchmark with multi-modal content and heterogeneous sources (Trustworthycomp and Mcfend 2024). We use it to test cross-source (source-as-platform) transfer and multilingual robustness.
+Cross-platform protocol For datasets with explicit platform/source IDs (e.g., MCFEND sources; multi-domain subsets in FakeNewsNet), we adopt a leave one platform out protocol: train on | P | - 1 platforms and evaluate on the held out platform P test to quantify cross-platform generalisation.
+Cross-platform protocol For datasets with explicit platform or source identifiers, we adopt a leave one platform out evaluation protocol. Formally, given a set of platforms P , we train on P \ { p } and test on the held-out platform p . The cross-platform generalisation score is averaged over all p ∈ P : 16
+XPlat = 1 | P | ∑ p ∈ P MacroF1 train on P \ { p } , test on p .
+Compared methods (Baselines) We compare the proposed framework with representative methods from four categories: content-only text classifiers, multimodal fusion models , propagation-aware graph methods, and recent large multimodal models used as direct classifiers. These baselines reflect increasing levels of structural and multimodal reasoning capability, enabling comprehensive evaluation of the proposed chain level framework. All datasets description summrised in Table 2. Table 3 summarises the capabilities of each baseline category.
+- RoBERTa  (Liu et al. 2019): A transformer-based text classifier fine-tuned on news text.
+
+- LIAR-style BERT  (Wang 2017): A BERT-based model for claim verification, adapted for fake news detection.
+
+- EANN  (Wang et al. 2018): Event-adversarial neural network for multimodal fake news detection.
+
+- Multimodal BERT (MM-BERT) : A late-fusion variant combining BERT and ResNet features.
+
+- CSI  (Ruchansky and Seo 2017): A hybrid deep model combining content, social, and temporal signals for fake news detection.
+
+- BiGCN  (Bian et al. 2020): Bidirectional graph convolutional network for rumour detection on propagation trees.
+
+- GCAN  (Lu 2020): Graph-aware co-attention network for explainable fake news detection.
+
+- LMM-as-Classifier : We fine-tune open multimodal large models (e.g., LLaVA Liu et al. 2023, BLIP-2 Li et al. 2023) as direct classifiers using prompt-based or fully fine-tuned setups.
+
+
+Table 3 Capability comparison of baseline categories and our proposed framework. ✓ : fully supported; ∼ : partially supported; × : not supported
+Method Category
+Text
+Vision
+Graph/Prop.
+X-Platform
+Chain-Level
+Explainable
+
+Text-Only (RoBERTa)
+✓
+×
+×
+×
+×
+∼
+
+Multimodal Fusion (EANN)
+✓
+✓
+×
+×
+×
+∼
+
+Propagation-Based (BiGCN)
+✓
+×
+✓
+×
+∼
+∼
+
+Multimodal + Graph (GCAN)
+✓
+✓
+✓
+×
+∼
+✓
+
+LMM-as-Classifier
+✓
+✓
+×
+×
+×
+∼
+
+Ours (Unified Framework)
+✓
+✓
+✓
+✓
+✓
+✓
+
+
+Implementation and training setup We instantiate our multimodal encoder by combining a frozen vision backbone with a configurable language model and a lightweight fusion module. Specifically, the vision encoder is CLIP-ViT-B/16 (Radford et al. 2021), which remains frozen throughout training. For the language encoder, we use either RoBERTa-base (Liu et al. 2019) or LLaMA-2-7B (Touvron et al. 2023), depending on the scale of the experiment. To integrate visual and textual representations, we employ a transformer-based multimodal adapter with four layers, a hidden dimension of d = 768 , and 12 attention heads. To reduce computational cost, we employ Low-Rank Adaptation (LoRA) (Zhang and Zhao 2021) on the language backbone and cross-modal projection layers. The vision encoder remains frozen.
+Optimization We use AdamW (Loshchilov 2019) with, Learning rate: 1 × 10 - 5 for backbone, 5 × 10 - 5 for adapter, weight decay 0.01. Batch size 32 (per GPU). Warmup steps 10% of total steps. Cosine decay schedule. Early stopping based on validation Macro-F1. All experiments are repeated with 3 random seeds; we report mean ± standard deviation.
+The end-to-end training procedure integrates encoding, alignment, chain extraction, and classification. Algorithm 3 outlines the training loop.
+Algorithm 3 [Images not available. See PDF.]
+End-to-End Training Procedure.
+
+Statistical evaluation protocol All quantitative results are reported as the mean and standard deviation over three independent training runs with different random seeds. For datasets supporting cross-platform evaluation, experiments follow a leave-one-platform-out protocol, resulting in multiple platform-specific test splits. Each run therefore produces paired performance measurements across identical data splits for the proposed method and baseline models. These paired observations are used for statistical significance testing.
+Evaluation metrics We evaluate both classification performance and chain detection quality. For binary classification (fake vs. real), we report:
+- Accuracy : 17
+Acc = TP + TN TP + TN + FP + FN .
+
+- Precision, Recall, F1 : 18
+Prec = TP TP + FP , Rec = TP TP + FN , 19
+F1 = 2 · Prec · Rec Prec + Rec .
+
+- Macro-F1 : Average of per-class F1 scores.
+
+- AUC : Area under the ROC curve.
+
+
+For evaluating spread-chain reconstruction quality, we define:
+- Edge-Level F1 : Let E be ground-truth chain edges and E ^ predicted edges. 20
+P edge = | E ∩ E ^ | | E ^ | , R edge = | E ∩ E ^ | | E | , 21
+F1 edge = 2 · P edge · R edge P edge + R edge .
+
+- Chain Purity & Completeness : For predicted chains C and ground-truth chains G , with overlap O ( C , G ) = | C ∩ G | : 22
+Purity = 1 | C | ∑ C ∈ C max G ∈ G O ( C , G ) | C | , 23
+Completeness = 1 | G | ∑ G ∈ G max C ∈ C O ( C , G ) | G | .
+
+- Early Detection Score : For chains labelled as fake, we compute the average time difference between the first predicted fake node and the first ground-truth fake node.
+
+
+We compute the XPlat score as defined in (16). Table 4 summarises all metrics and their interpretation. Table 4 Summary of evaluation metrics and their interpretation
+Metric
+Task
+Interpretation
+
+Accuracy
+Classification
+Overall correctness
+
+Macro-F1
+Classification
+Class-balanced effectiveness
+
+AUC
+Classification
+Threshold-independent discriminative ability
+
+F1 edge
+Chain Detection
+Correctness of predicted parent-child edges
+
+Purity
+Chain Detection
+Predicted chains are not mixed across true chains
+
+Completeness
+Chain Detection
+True chains are well-covered by predicted chains
+
+XPlat
+generalisation
+Average Macro-F1 under leave-one-platform-out
+
+
+Ablation study design To quantify the contribution of each component, we design the following ablation variants: - w/o Cross-Modal Contrastive Alignment : Remove L con (15).
+
+- w/o Platform Adapters : Use a single shared encoder without platform-specific adaptation.
+
+- w/o Chain Decoder : Replace chain-level classification with post-level classification.
+
+- w/o Evidence Signals : Remove metadata and URL-share edges from graph construction.
+
+- Text-Only Backbone : Replace multimodal encoder with text-only RoBERTa.
+
+
+Qualitative analysis plan We present qualitative case studies to illustrate detected cross-platform spread chains with platform-specific nodes and edges, attention saliency maps over multimodal tokens, and retrieved evidence snippets including text, image patches, and URLs, along with an error analysis highlighting common failure modes and limitations.
+Computational environment All experiments are conducted on a cluster with 8 × NVIDIA A100 80GB GPUs. 64-core AMD EPYC CPU. 512 GB RAM. PyTorch 2.0, HuggingFace Transformers, DGL for graph operations. Training time per epoch ranges from 2–6 hours depending on dataset size and backbone.
+Results In this section, we present the experimental results of our unified framework for cross-platform fake-news spread-chain detection. We first report classification performance across six benchmark datasets, followed by chain detection quality, cross-platform generalisation, ablation studies, and qualitative analyses.
+Overall classification performance Our unified framework consistently outperforms all baselines across all datasets, with average improvements of +3.2% Accuracy, +3.5% Macro-F1, and +3.8% AUC over the strongest baseline. The gains are most pronounced on cross-platform datasets (FakeNewsNet, MCFEND), highlighting the importance of modelling cross-platform propagation. Even on single-platform datasets (PHEME, Twitter15/16), our chain-aware approach delivers noticeable improvements over graph-only methods such as BiGCN. Table 5 summarises the classification performance (Accuracy, Macro-F1, AUC) of our proposed framework compared to state-of-the-art baselines across all datasets. Table 5. Classification performance comparison across datasets (mean ± std over 3 seeds). Best results are in bold
+Dataset
+Method
+Accuracy (%)
+Macro-F1
+AUC
+
+FakeNewsNet
+RoBERTa (Text-Only)
+82.3 ± 0.5
+0.812 ± 0.004
+0.889 ± 0.003
+
+EANN (Multimodal)
+84.1 ± 0.4
+0.831 ± 0.003
+0.902 ± 0.002
+
+BiGCN (Graph-Based)
+85.6 ± 0.6
+0.847 ± 0.005
+0.915 ± 0.004
+
+Ours (Unified)
+88.7 ± 0.3
+0.876 ± 0.002
+0.942 ± 0.002
+
+Fakeddit
+EANN
+76.4 ± 0.7
+0.752 ± 0.006
+0.821 ± 0.005
+
+LMM-as-Classifier
+78.9 ± 0.5
+0.781 ± 0.004
+0.845 ± 0.003
+
+Ours
+81.5 ± 0.4
+0.803 ± 0.003
+0.872 ± 0.003
+
+PHEME
+CSI
+83.2 ± 0.6
+0.828 ± 0.005
+0.894 ± 0.004
+
+BiGCN
+84.5 ± 0.5
+0.839 ± 0.004
+0.906 ± 0.003
+
+Ours
+87.3 ± 0.4
+0.865 ± 0.003
+0.928 ± 0.002
+
+Twitter15
+BiGCN
+86.1 ± 0.5
+0.856 ± 0.004
+0.918 ± 0.003
+
+Ours
+89.2 ± 0.3
+0.887 ± 0.002
+0.948 ± 0.002
+
+Twitter16
+BiGCN
+85.8 ± 0.6
+0.852 ± 0.005
+0.914 ± 0.004
+
+Ours
+88.9 ± 0.4
+0.884 ± 0.003
+0.945 ± 0.003
+
+MCFEND
+Text Baseline (RoBERTa-zh)
+80.5 ± 0.6
+0.798 ± 0.005
+0.868 ± 0.004
+
+GCAN (Multimodal+Graph)
+82.4 ± 0.5
+0.819 ± 0.004
+0.885 ± 0.003
+
+Ours
+85.7 ± 0.4
+0.851 ± 0.003
+0.912 ± 0.002
+
+
+Figure 4 provides a visual comparison of Macro-F1 scores across all six benchmark datasets for the four primary methods: RoBERTa (text-only), EANN (multimodal), BiGCN (graph-based), and our unified framework. The chart confirms that our method consistently achieves the highest Macro-F1 across every dataset. The improvement is most pronounced on FakeNewsNet (0.876 vs. 0.847 for BiGCN), which contains explicit cross-platform propagation structures. On Fakeddit, which lacks propagation chains, our method still outperforms the LMM-as-Classifier baseline (0.803 vs. 0.781), demonstrating that multimodal encoding and contrastive alignment provide gains even without full propagation context. The gains on Twitter15 and Twitter16 further confirm that chain-level reasoning adds value even within single-platform propagation trees. Fig. 4 [Images not available. See PDF.]
+Macro-F1 comparison across datasets. Our method consistently achieves the highest scores
+
+Chain detection quality We evaluate chain reconstruction quality on datasets with explicit propagation structures (PHEME, Twitter15, Twitter16). Table 6 reports edge-level F1, chain purity, and completeness. Table 6 Chain detection quality on structure-available datasets. Best results in bold
+Dataset
+Method
+F 1 edge
+Purity
+Completeness
+
+PHEME
+BiGCN
+0.742 ± 0.008
+0.768 ± 0.007
+0.751 ± 0.009
+
+Ours
+0.815 ± 0.005
+0.832 ± 0.004
+0.819 ± 0.005
+
+Twitter15
+BiGCN
+0.758 ± 0.007
+0.781 ± 0.006
+0.769 ± 0.008
+
+Ours
+0.826 ± 0.004
+0.843 ± 0.003
+0.831 ± 0.004
+
+Twitter16
+BiGCN
+0.763 ± 0.007
+0.788 ± 0.006
+0.775 ± 0.008
+
+Ours
+0.831 ± 0.005
+0.849 ± 0.004
+0.837 ± 0.005
+
+
+Fig. 5 [Images not available. See PDF.]
+Radar chart comparing chain detection metrics (normalised) for BiGCN vs. Ours on Twitter16
+
+Our method achieves significantly higher edge-level F1 ( ∼ 7–8% improvement), indicating more accurate parent-child relationship prediction. High purity (0.83–0.85) suggests that extracted chains are clean and rarely mix posts from different claims. High completeness (0.82–0.84) shows that our chains cover most of the ground-truth propagation structures. Figure 5 presents a radar chart comparing our framework against BiGCN across five chain detection dimensions on Twitter16: Edge F1, Purity, Completeness, Early Detection, and Cross-Platform performance. Our method (orange) occupies a consistently larger area across all five axes, confirming well-rounded gains rather than improvement on a single metric at the expense of others. The most notable advantage is along the Cross-Platform axis, where BiGCN scores near zero given its single-platform design. The Early Detection axis further highlights that our framework can identify fake chains earlier in the propagation timeline, which is critical for real-world moderation where intervention speed determines cascade size.
+Cross-platform generalisation We evaluate cross-platform generalisation using the leave-one-platform-out protocol on FakeNewsNet (PolitiFact vs. GossipCop) and MCFEND (multiple sources). Table 7 reports the XPlat scores. Single-platform models (BiGCN) suffer significant performance drops when tested on unseen platforms (average drop: ∼ 15%). Our unified framework maintains robust performance, with only ∼ 8% average drop, demonstrating strong cross-platform adaptability. The cross-platform alignment module is critical for transferring knowledge across heterogeneous platforms. Figure 6 visualises the cross-platform transfer matrix for MCFEND. Table 7 Cross-platform generalisation performance (Macro-F1) under leave-one-platform-out evaluation
+Dataset / Platform
+BiGCN (Single-Platform)
+Ours (Cross-Platform)
+
+FakeNewsNet (PolitiFact → GossipCop)
+0.721 ± 0.009
+0.803 ± 0.005
+
+FakeNewsNet (GossipCop → PolitiFact)
+0.698 ± 0.011
+0.788 ± 0.006
+
+MCFEND (Source A → B)
+0.665 ± 0.012
+0.769 ± 0.007
+
+MCFEND (Source B → C)
+0.671 ± 0.011
+0.774 ± 0.006
+
+Average XPlat
+0.689
+0.784
+
+Bold entries indicate the best results
+
+Figures 6 and 7 visualise cross-platform transfer performance across five social media platforms: Weibo, Twitter, Facebook, Instagram, and Reddit. In Fig. 6, the left heatmap (single-platform method) exhibits a pronounced diagonal pattern, with high Macro-F1 scores only when training and testing on the same platform (e.g., 0.95 for Weibo → Weibo) and a sharp decline in off-diagonal cells (e.g., 0.46 for Reddit → Weibo). This confirms that single-platform models overfit to platform-specific stylistic and structural cues. In contrast, the right heatmap (our method) shows near-uniform performance across all platform pairs, with off-diagonal scores consistently in the 0.79–0.89 range, demonstrating robust transfer of misinformation detection knowledge across heterogeneous ecosystems. Figure 7 renders the same matrices as 3D surface plots, where the jagged peaks of the single-platform method contrast sharply with the smooth, elevated surface of our approach, reinforcing the superiority of cross-platform modelling. Fig. 6 [Images not available. See PDF.]
+Cross-platform transfer performance comparison: (left) single-platform method shows high diagonal values but poor cross-platform generalisation; (right) our method maintains uniform high performance across all platform pairs
+
+The 3D surface plots in Fig. 7 visualise cross-platform performance, highlighting the uniformity of our method’s transferability. Fig. 7 [Images not available. See PDF.]
+3D visualisation of cross-platform transfer matrices. The smoother surface of our method (right) indicates more consistent performance across platform transfers compared to the diagonal heavy single-platform approach (left)
+Fig. 8 [Images not available. See PDF.]
+Cross-platform transfer performance with improvement analysis: (left) single-platform method, (middle) our method, (right) improvement matrix (our minus single). Green cells indicate positive improvements, especially on off-diagonal cross-platform transfers
+
+Figure 8 not only compares the absolute performance but also quantifies the improvement of our method over the single-platform baseline, particularly for challenging cross-platform transfers.
+Early detection performance We evaluate early detection capability by measuring how quickly a fake chain can be identified after its first appearance. Table 8 reports the average detection delay (in hours). Our method reduces detection delay by ∼ 35–40% compared to CSI and ∼ 30–35% compared to BiGCN, owing to its ability to aggregate evidence across platforms and modalities early in the propagation chain. Table 8. Early detection performance: average delay (hours) between the first fake post and its detection
+Dataset
+CSI
+BiGCN
+Ours
+
+PHEME
+5.2 ± 0.8
+4.1 ± 0.6
+2.8 ± 0.4
+
+Twitter15
+4.8 ± 0.7
+3.9 ± 0.5
+2.5 ± 0.3
+
+Twitter16
+4.9 ± 0.7
+4.0 ± 0.6
+2.6 ± 0.4
+
+Bold entries indicate the best results
+
+The framework achieves earlier detection because it aggregates heterogeneous evidence at the early stages of propagation. Instead of relying only on structural diffusion signals from a single platform, it combines multimodal semantic similarity with cross-platform alignment signals. This allows the model to detect semantically related misinformation posts even before clear diffusion links appear. In addition, the relation-aware graph encoder lets high confidence cross-platform alignments influence chain representations early in time. As a result, misinformation chains can be identified before deep propagation structures form, reducing detection delay by about 30–40% compared to graph based baselines. This early recognition is valuable for real moderation systems, where faster intervention helps limit cascade growth and public exposure. Table 9 Ablation study: Macro-F1, F 1 edge , and XPlat scores
+Variant
+Macro-F1
+F 1 edge
+XPlat
+
+Full Model (Ours)
+0.876 ± 0.002
+0.815 ± 0.005
+0.803 ± 0.005
+
+w/o Cross-Modal Alignment
+0.862 ± 0.003
+0.798 ± 0.006
+0.781 ± 0.006
+
+w/o Platform Adapters
+0.851 ± 0.004
+0.785 ± 0.007
+0.765 ± 0.007
+
+w/o Chain Decoder (Post-Level Only)
+0.841 ± 0.005
+—
+0.752 ± 0.008
+
+w/o Evidence Signals
+0.848 ± 0.004
+0.792 ± 0.006
+0.774 ± 0.007
+
+Text-Only Backbone
+0.812 ± 0.004
+0.742 ± 0.008
+0.721 ± 0.009
+
+Bold entries indicate the best results
+
+Fig. 9 [Images not available. See PDF.]
+Relative performance drop (% decrease from full model) for each ablated component
+
+Ablation study results We conduct an ablation study on the cross-platform subset of FakeNewsNet to quantify the contribution of each component.The ablation results Table 9, show the importance of each component in the framework. Removing cross-modal alignment reduces performance, highlighting the need for semantic consistency across modalities. Eliminating platform-specific adapters also lowers accuracy, confirming the challenge of distribution differences between platforms.
+The largest drop occurs when chain-level decoding is replaced with post-level classification, indicating that misinformation should be modeled as a propagation process rather than isolated posts. Removing evidence signals like URL-sharing edges further reduces accuracy, showing that metadata provides useful relational information. Overall, the improvements come from the combined effect of multimodal learning, cross-platform alignment, and graph-based reasoning.
+Component importance - Cross-Modal Alignment contributes ∼ 1.4% to Macro-F1, crucial for aligning transformed media.
+
+- Platform Adapters improve cross-platform generalisation by ∼ 2.2%.
+
+- Chain Decoder is essential for chain-level reasoning, bringing ∼ 3.5% gain over post-level classification.
+
+- Evidence Signals (metadata, URL-share) improve edge detection by ∼ 2.3%.
+
+- Multimodal vs. Text-Only : Multimodal encoding provides a substantial boost of ∼ 6.4% in Macro-F1.
+
+Figure 9 visualises the relative performance drop (as a percentage decrease from the full model) for each ablated component, comparing Macro-F1 drop (pink) and Edge F1 drop (teal). Removing the text-only backbone produces the largest combined drop (7.3% Macro-F1 and 9.0% Edge F1), confirming the critical contribution of visual information to both classification and chain reconstruction. The Chain Decoder ablation causes the next largest Macro-F1 drop (4.0%), underscoring that post-level classification is an insufficient substitute for chain-level reasoning. Platform adapters contribute most to cross-platform generalisation (2.9% Macro-F1 drop), while cross-modal alignment primarily affects edge-level chain detection (2.1% Edge F1 drop). Evidence signals, though smaller in isolation, contribute synergistically to both metrics.
+Qualitative case study We present a real world case study from the MCFEND dataset to illustrate how our framework detects cross-platform spread chains. Figure 10 shows a detected chain spanning three platforms. While the quantitative experiments evaluate classification accuracy and chain reconstruction quality, qualitative analysis is necessary to understand how the proposed framework behaves in realistic misinformation propagation scenarios. This subsection therefore aims to illustrate (i) how cross-platform spread chains are identified, (ii) how multimodal semantic alignment enables linking of transformed content, and (iii) how attention-based reasoning provides interpretable evidence for model predictions. Through representative case studies, we provide insight into the practical advantages and limitations of the proposed approach beyond numerical performance metrics. The qualitative case study shows several strengths of the framework in real misinformation scenarios. The detected chain demonstrates robustness to multimodal transformations such as screenshots and paraphrased text, indicating that the encoder captures claim level meaning rather than simple lexical similarity. The attention-based chain representation also identifies influential posts that act as amplification hubs, which can help moderators target key points in the spread. In addition, the case reveals cross platform re-entry patterns where modified misinformation returns to the original platform, highlighting the need to analyse misinformation across platforms rather than in isolation. Fig. 10 [Images not available. See PDF.]
+Example cross-platform fake news spread chain detected by our framework. Nodes represent posts (colour-coded by platform), edges show propagation and alignment links. Red border indicates a fake label
+Fig. 11 [Images not available. See PDF.]
+Attention saliency visualisation: ( a ) original image with salient patches highlighted, ( b ) text tokens with attention weights
+
+The chain originates on Weibo, spreads to Twitter via screenshot sharing, and re-enters Weibo as a rephrased post. Our cross-platform alignment module successfully links semantically equivalent posts despite visual cropping and textual paraphrasing. High-attention nodes (marked with a larger size) correspond to influential posts that amplify misinformation. Figure 11 shows attention saliency over multimodal tokens for a key post in the chain.
+Error analysis We analyse common failure modes in our framework and find that 23% of false positives arise from satire or parody content that closely mimics patterns of fake news. Late-arriving evidence, where critical debunking information appears later in the propagation timeline, can also lead to misclassification. In cross-language settings, translation errors weaken semantic alignment across multilingual platforms, while private or deleted posts introduce missing nodes in the propagation graph, reducing chain completeness and overall accuracy. Fig. 12 [Images not available. See PDF.]
+Error analysis comparing different fake news detection methods: (left) error rates across eight challenging categories showing our method’s robustness; (right) error progression with increasing task difficulty, demonstrating our method’s superior scaling capability
+Fig. 13 [Images not available. See PDF.]
+Detailed error analysis: (top-left) cumulative error distribution by category; (top-right) error reduction of our method versus best baseline; (bottom-left) correlation between error rates and data features; (bottom-right) training dynamics showing error convergence over epochs
+
+Our comprehensive error analysis (Figs. 12 and 13) reveals several key insights. First, our method achieves the lowest error rates across all challenging categories, particularly excelling in cross-platform (15.2% vs. 28.9% baseline) and multimodal inconsistency (7.3% vs. 32.1% baseline) scenarios. Second, the error progression analysis shows that while all methods degrade as task difficulty increases, our approach maintains the shallowest slope, indicating better scalability. Third, we observe that platform diversity has the strongest correlation (0.67) with error rates, explaining the importance of our cross-platform modelling. Finally, the training dynamics demonstrate stable convergence after 12 epochs, with a consistent gap between training and validation errors.
+Generative models are increasingly used to create persuasive misinformation, especially through jailbreak prompting that makes large language models produce realistic news-like narratives. The proposed framework offers some robustness because it relies on propagation patterns and multimodal alignment rather than only textual cues. Inconsistencies between generated text, visuals, or diffusion behavior can still reveal deception. However, coordinated campaigns using synthetic text, manipulated images, and cross-platform amplification remain challenging, highlighting the need for future research on adversarially robust training and evaluation.
+Statistical significance tests We perform paired t-tests ( α = 0.05 ) comparing our method with the strongest baseline (BiGCN) on Macro-F1 across all datasets. All improvements are statistically significant ( p < 0.01 ). To evaluate statistical reliability, paired tests compare the proposed framework with the strongest baseline (BiGCN). For each dataset and platform split, performance scores from repeated runs with identical seeds are used. Paired two-tailed t -tests ( α = 0.05 ) are applied to metrics such as Macro-F1, edge-level F1, and chain purity.
+Along with p -values, 95% confidence intervals and Cohen’s d effect sizes are reported. Results show statistically significant improvements ( p < 0.01 ) with medium to large effects. Wilcoxon signed-rank tests are also conducted to address non normality, producing consistent results. Platform variability is handled by performing tests across aggregated leave one platform out evaluation splits.
+Our unified framework achieves superior classification performance across all datasets (+3.5% Macro-F1 on average). High quality chain detection with edge level F1 ∼ 0.83 and purity ∼ 0.84. Strong cross-platform generalisation, reducing the performance drop from ∼ 15% to ∼ 8%. Early detection capability that reduces detection delay by ∼ 35%. Robustness to ablations, with each component contributing measurably to overall performance.
+Discussion Our experimental results demonstrate that the proposed unified multimodal framework significantly outperforms existing methods in cross-platform fake news spread-chain detection. The improvements stem from three key design choices: (1) the integration of multimodal large models for robust semantic representation under content transformations, (2) explicit cross-platform alignment that links semantically equivalent posts despite paraphrasing and visual remixing, and (3) chain-level reasoning that aggregates evidence across platforms and time. The framework’s strong cross-platform generalisation is particularly noteworthy. Traditional single-platform detectors suffer severe performance degradation when deployed across heterogeneous ecosystems due to platform-specific interaction patterns and content norms. Our platform adapters and cross-modal contrastive learning effectively bridge these gaps, maintaining robust performance even in leave-one-platform-out evaluations. This capability is crucial for real-world deployment, where misinformation campaigns deliberately exploit multiple platforms to evade detection.
+However, several limitations warrant discussion. First, the framework relies on observable propagation data; private messages, deleted content, and ephemeral platforms create "missing links" that degrade chain completeness. Second, while multimodal alignment handles common transformations (cropping, screenshotting), sophisticated deepfakes and adversarial perturbations remain challenging. Third, although scalable, computational complexity requires careful engineering for real-time monitoring of large-scale platforms. Ethical considerations are paramount. While designed for misinformation mitigation, such detection systems could potentially be misused for censorship or surveillance. We advocate for transparent deployment, human-in-the-loop verification, and adherence to platform policies and privacy regulations. The evidence extraction module provides explainable decisions, allowing moderators to audit chain-level reasoning rather than relying on black-box predictions.
+Conclusion This paper presents a unified multimodal large-model framework for detecting cross-platform fake news spread chains. By jointly modelling multimodal content similarity and multi-platform propagation structure, our approach addresses the critical limitation of existing methods that operate in platform isolation or at the post level. The framework integrates multimodal encoding, cross-platform alignment, typed graph construction, chain extraction, and chain-level classification into a cohesive pipeline.
+Key contributions include (1) formulating cross-platform spread-chain detection as a unified task requiring both content and propagation reasoning, (2) developing a multimodal large-model-based alignment strategy resilient to content transformations, (3) introducing a chain-aware detection module that leverages propagation signals for improved robustness, and (4) establishing comprehensive evaluation metrics for chain-level detection. Experimental results across six benchmarks show consistent improvements over state-of-the-art baselines in classification accuracy, chain detection quality, cross-platform generalisation, and early detection capability. Ablation studies confirm the importance of each component, particularly cross-modal alignment and chain-level reasoning.
+Future work will focus on (1) extending to video and audio modalities, (2) incorporating temporal dynamics modelling for early warning systems, (3) developing federated learning approaches for privacy-preserving cross-platform detection, and (4) creating more comprehensive benchmarks with annotated cross-platform chains. As misinformation continues to evolve in complexity and scale, integrated, explainable, and platform-agnostic detection frameworks will remain essential for maintaining information integrity in the digital ecosystem.
+Author Contributions Jingjing He. contributed to the study conception and design. Material preparation, data collection, and analysis. The author read and approved the final manuscript.
+Data Availability The datasets used in this study are publicly available and can be accessed from publicly accessible repositories.
+Declarations Competing Interests The authors declare no competing interests.
+Publisher's Note Springer Nature remains neutral with regard to jurisdictional claims in published maps and institutional affiliations.
+References Fawareh H, Abu-Zaid A (2026) Enhancing fake news detection: Leveraging ai and machine learning for multimodal approaches and real-time solutions. In: Artificial intelligence for sustainable innovation management and risk management. https://doi.org/10.1007/978-3-031-95310-1_178 (Springer)
+Ai W et al (2026) The paradigm shift: A comprehensive survey on large vision language models for multimodal fake news detection. Comput Sci Rev 60:100893. https://doi.org/10.1016/j.cosrev.2026.100893
+Alayrac J-B et al (2022) Flamingo: a visual language model for few-shot learning. arXiv:2301.12597, https://doi.org/10.48550/arXiv.2204.14198
+Bian T et al (2020) Rumor detection on social media with bi-directional graph convolutional networks. In: Proceedings of the AAAI conference on artificial intelligence, vol 34 of AAAI’20, pp 549–556. https://doi.org/10.1609/aaai.v34i01.5393
+Brinda, BM; Rajan, C; Geetha, K. Ensemblenet: a novel deep ensemble learning model with ganbert and bilstm for automated fake news detection. Knowl Inf Syst ; 2025; 67 , pp. 11015-11040. [DOI: https://dx.doi.org/10.1007/s10115-025-02558-4]
+Brown TB et al (2020) Language models are few-shot learners. arXiv:2301.12597, https://doi.org/10.48550/arXiv.2005.14165
+Kochkina E, Liakata M, Zubiaga A (2018) Pheme dataset for rumour detection and veracity classification. Figshare dataset. Accessed 31 Jan 2026
+Li J, Li D, Savarese S, Hoi SCH (2023) BLIP-2: Bootstrapping language-image pre-training with frozen image encoders and large language models. arXiv:2301.12597, https://doi.org/10.48550/arXiv.2301.12597
+Li Y, Dai M, Zhang S (2025) Fhgraph: A novel framework for fake news detection using graph contrastive learning and llm. Computers, Materials & Continua 83:309–333. https://doi.org/10.32604/cmc.2025.060455
+Liu H, Li C, Wu Q, Lee YJ (2023) Visual instruction tuning. arXiv:2301.12597, https://doi.org/10.48550/arXiv.2304.08485
+Liu B, Wang A, Xia C (2025) Interpretable chinese fake news detection with chain-of-thought and in-context learning. IEEE Access 13:117186–117197. https://doi.org/10.1109/ACCESS.2025.3571497
+Liu Y et al (2019) Roberta: A robustly optimized bert pretraining approach. arXiv:2301.12597, https://doi.org/10.48550/arXiv.1907.11692
+Loshchilov I, Hutter F (2019) Decoupled weight decay regularization. In International Conference on Learning Representations (ICLR)
+Lu Y-J, Li C-T (2020) GCAN: Graph-aware co-attention networks for explainable fake news detection on social media. In Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics (ACL), 505–514. https://doi.org/10.18653/v1/2020.acl-main.48 (Association for Computational Linguistics)
+Lv, J; Gao, Y; Li, L; Shi, L; Li, S. Multi-modal fake news detection: A comprehensive survey on deep learning technology, advances, and challenges. J King Saud Univ Comput Inf Sci ; 2025; 37 , 306. [DOI: https://dx.doi.org/10.1007/s44443-025-00317-7]
+Ma J, Gao W, Mitra P (2016) Detecting rumors from microblogs with recurrent neural networks. In: Proceedings of the 25th International Joint Conference on Artificial Intelligence (IJCAI), pp 3818–3824
+Ma, Y; Qu, D; Wang, Y. Tracking evolving communities in fake news cascades using temporal graphs. Sci Rep ; 2026; 16 , 35175. [DOI: https://dx.doi.org/10.1038/s41598-026-35175-4]
+Meng X, Wang X, Peng T-Q (2026) Navigating ambiguities: A systematic review and comparative analysis of social bot detection methods in communication research. Commun Methods Measures. https://doi.org/10.1080/19312458.2026.2613829
+Micallef N et al (2022) Cross-platform multimodal misinformation: Taxonomy, characteristics and detection for textual posts and videos. In: Proceedings of the International AAAI Conference on Web and Social Media (ICWSM) 16:651–662. https://doi.org/10.1609/icwsm.v16i1.19323
+Nakamura K, Levy S, Wang WY (2020) Fakeddit: A new multimodal benchmark dataset for fine-grained fake news detection. In: Proceedings of the 12th Language Resources and Evaluation Conference, pp 6149–6157 (European Language Resources Association, Marseille, France)
+Radford A et al (2021) Learning transferable visual models from natural language supervision. arXiv:2301.12597, https://doi.org/10.48550/arXiv.2103.00020
+Release C (2017) Twitter15 and twitter16 rumor datasets (preprocessed release). GitHub repository. Accessed 31 Jan 2026
+Roumeliotis, KI; Tselikas, ND; Nasiopoulos, DK. Fake news detection and classification: A comparative study of convolutional neural networks, large language models, and natural language processing models. Future Internet ; 2025; 17 , 28. [DOI: https://dx.doi.org/10.3390/fi17010028]
+Ruchansky N, Seo S, Liu Y (2017) CSI: A hybrid deep model for fake news detection. In: Proceedings of the 2017 ACM on Conference on Information and Knowledge Management (CIKM), pp 797–806. https://doi.org/10.1145/3132847.3132877 (ACM)
+Sallami, D; Aïmeur, E. Exploring beyond detection: a review on fake news prevention and mitigation techniques. J Comput Social Sci ; 2025; 8 , 23. [DOI: https://dx.doi.org/10.1007/s42001-024-00351-x]
+Samriya, JK et al. Sentimental analysis based federated learning privacy detection in fake web recommendations using blockchain model. Sci Rep ; 2025; 15 , 13551. [DOI: https://dx.doi.org/10.1038/s41598-025-97800-y]
+Shu K, Sliva A, Wang S, Tang J, Liu H (2017a) Fake news detection on social media: A data mining perspective. SIGKDD Explorations Newsletter 19:22–36. https://doi.org/10.1145/3137597.3137600
+Shu K, Wang S, Tang J, Zafarani R, Liu H (2017b) User identity linkage across online social networks: A review. SIGKDD Explorations Newsletter 18:5–17. https://doi.org/10.1145/3068777.3068781
+Shu K, Cui L, Wang S, Lee D, Liu H (2019) dEFEND: Explainable fake news detection. In: Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining (KDD), pp 395–405. https://doi.org/10.1145/3292500.3330935 (ACM)
+Shu, K; Mahudeswaran, D; Wang, S; Lee, D; Liu, H. Fakenewsnet: A data repository with news content, social context, and spatiotemporal information for studying fake news on social media. Big Data ; 2020; 8 , pp. 171-188. [DOI: https://dx.doi.org/10.1089/big.2020.0062]
+Suong TPM, Nghiem LH, Tran TK (2025) Leveraging large language models for enhanced fake news detection: a novel approach using explanation-guided networks. Enterprise Inf Syst 19. https://doi.org/10.1080/17517575.2025.2520213
+Thakur, R; Kavindu Jayasinghe, JPT; Mehta, P. Interpretable and robust multimodal fake news detection with evidence fusion and reliable reasoning. Int J Data Sci Anal ; 2026; 22 , 4. [DOI: https://dx.doi.org/10.1007/s41060-025-00895-9]
+Thota A et al (2025) A comprehensive review on advancements and challenges in fake news detection. In: Advances in misinformation and fake news analysis. https://doi.org/10.4018/979-8-3693-7468-9.ch004 (IGI Global)
+Touvron H et al (2023) Llama 2: Open foundation and fine-tuned chat models. arXiv:2301.12597, https://doi.org/10.48550/arXiv.2307.09288
+TrustworthyComp (2024) Mcfend: A multi-source benchmark dataset for chinese fake news detection. Project website and code. Accessed 31 Jan 2026
+Vavekanand, R; Ali Laghari, A; Kumar, T. Applications and limitations of large language models to integrate medical context: a comprehensive review. Iran J Comput Sci ; 2026; 9 , 12. [DOI: https://dx.doi.org/10.1007/s42044-025-00360-7]
+Vavekanand, R; Das, B; Kumar, T. Daugsindhi: A data augmentation approach for enhancing sindhi language text classification. Discover Data ; 2025; 3 , pp. 1-12. [DOI: https://dx.doi.org/10.1007/s44248-025-00040-8]
+Vavekanand R, Kumar T, Kumar S, Kumar G, Laghari AA (2026) Multimodal machine learning approaches in predictive healthcare analytics: A comprehensive survey. Archives of Computational Methods in Engineering. https://doi.org/10.1007/s11831-026-10560-4
+Vavekanand R, Ruzimbaevich AK, Jumaniyozova M (2025) A study on the extraction of training dataset from fine-tuned language models. Comput Assist Methods Eng Sci 32:293–315. https://doi.org/10.24423/cames.2025.1781
+Vavekanand R (2026) A comprehensive review of multimodal large language models for medical imaging and omics data. Archives Comput Methods Eng 33. https://doi.org/10.1007/s11831-026-10504-y
+Vosoughi, S; Roy, D; Aral, S. The spread of true and false news online. Science ; 2018; 359 , pp. 1146-1151. [DOI: https://dx.doi.org/10.1126/science.aap9559]
+Wang Y et al (2018) EANN: Event adversarial neural networks for multi-modal fake news detection. In Proceedings of the 24th ACM SIGKDD International Conference on Knowledge Discovery & Data Mining (KDD), pp 849–857. https://doi.org/10.1145/3219819.3219903 (ACM, London, United Kingdom)
+Wang X et al (2026) Ideological isolation in online social networks: A survey of computational definitions, metrics, and mitigation strategies. arXiv:2301.12597, https://doi.org/10.48550/arXiv.2601.07884
+Wang WY (2017) “liar, liar pants on fire”: A new benchmark dataset for fake news detection. arXiv:2301.12597, https://doi.org/10.48550/arXiv.1705.00648
+Zhang J, Zhao Y, Saleh M (2021) Pegasus: Pre-training with extracted gap-sentences for abstractive summarization. arXiv:2301.12597, https://doi.org/10.48550/arXiv.2106.09685
+Zhao C et al (2025) MPPFND: A dataset and analysis of detecting fake news with multi-platform propagation. arXiv:2301.12597, https://doi.org/10.48550/arXiv.2505.15834
+Zhen, Z; Li, Y. C-steer: A dynamic sentiment-aware framework for fake news detection with lifecycle emotional evolution. Informatics ; 2026; 13 , 4. [DOI: https://dx.doi.org/10.3390/informatics13010004]
