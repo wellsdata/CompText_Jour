@@ -1,0 +1,212 @@
+---
+title: "Content analysis"
+author: "Rob Wells"
+date: "2026-10-20"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(janitor)
+```
+
+#First example
+Daria's analysis of Aleksandr Dugin, "Putin's Brain"
+```{r}
+dugin <- read_csv("dugin_articles_df.csv") |> 
+  clean_names()
+
+```
+# classify sentences by Putin
+AI Gemini assisted with this code
+```{r}
+dugin1 <- dugin %>% 
+  mutate(category = case_when(str_detect(sentence, regex("Putin", ignore_case = TRUE)) ~ "Putin",
+                              str_detect(sentence, "fascist") ~ "polarized_term",
+                                str_detect(sentence, "brain") ~ "polarized_term",
+                                                     TRUE~ "")) 
+```
+
+
+# Revised so it will capture Putin and fascist in a sentence
+Checks each term independently
+AI Gemini assisted with this code. See prompt below
+```{r}
+dugin <- dugin |> 
+  mutate(
+    # Check each condition independently
+    has_putin = if_else(str_detect(sentence, regex("Putin", ignore_case = TRUE)), "Putin", NA_character_),
+    has_polar = if_else(str_detect(sentence, regex("fascist|beard|brain", ignore_case = TRUE)), "polarized_term", NA_character_)
+  ) %>%
+  # Combine non-NA terms into a single string separated by commas
+  unite("category", has_putin, has_polar, sep = ", ", na.rm = TRUE)
+```
+
+
+## Content analysis!
+
+```{r}
+dugin |> 
+  count(category)
+
+
+```
+
+#Second example
+
+```{r}
+#import df created from sequence below
+
+lynch <- read.csv("articles_oct_19.csv")
+```
+
+#### Categorize decades
+
+```{r}
+lynch_decade <- lynch %>% 
+  mutate(decade = case_when(
+         year < 1870 ~ "pre1870",
+        year >= 1870 & year <=1879 ~ "1870s",
+         year >= 1880 & year <=1889 ~ "1880s",
+         year >= 1890 & year <=1899 ~ "1890s",
+        year >= 1900 & year <=1909 ~ "1900s",
+        year >= 1910 & year <=1919 ~ "1910s",
+        year >= 1920 & year <=1929 ~ "1920s",
+        year >= 1930 ~ "post1930s"
+         ))
+
+```
+
+
+# Content analysis - count the decades
+
+```{r}
+lynch_decade |> 
+  count(decade)
+
+
+```
+
+### Classify articles by U.S. regions
+
+```{r}
+# lynch_decade %>% 
+#   count(newspaper_state)
+lynch_decade <- lynch_decade %>% 
+  mutate(region=newspaper_state) %>% 
+  mutate(region = case_when(region=="South Carolina" ~ "South",
+                            region=="Texas" ~ "South",
+                            region=="Louisiana" ~ "South",
+                            region=="Tennessee" ~ "South",
+                            region=="Mississippi" ~ "South",
+                            region=="Arkansas" ~ "South",
+                            region=="Alabama" ~ "South",
+                            region=="Georgia" ~ "South",
+                            region=="Virginia" ~ "South",
+                            region=="Florida" ~ "South",
+                            region=="North Carolina" ~ "South",
+                            region=="Maryland" ~ "Border",
+                            region=="Delaware" ~ "Border",
+                            region=="West Virginia" ~ "Border",
+                            region=="Kentucky" ~ "Border",
+                            region=="Missouri" ~ "Border",
+                            region=="Maine" ~ "North",
+                            region=="New York" ~ "North",
+                            region=="New Hampshire" ~ "North",
+                            region=="Vermont" ~ "North",
+                            region=="Massassachusetts" ~ "North",
+                            region=="Connecticut" ~ "North",
+                            region=="Rhode Island" ~ "North",
+                            region=="Pennsylvania" ~ "North",
+                            region=="New Jersey" ~ "North",
+                            region=="Ohio" ~ "North",
+                            region=="Indiana" ~ "North",
+                            region=="Kansas" ~ "North",
+                            region=="Michigan" ~ "North",
+                             region=="Wisconsin" ~ "North",
+                             region=="Minnesota" ~ "North",
+                             region=="Iowa" ~ "North",
+                             region=="California" ~ "North",
+                             region=="Nevada" ~ "North",
+                             region=="Oregon" ~ "North",
+                            region=="Illinois" ~ "North",
+                            region=="Nebraska" ~ "Misc",
+                            region=="Colorado" ~ "Misc",
+                            region=="North Dakota" ~ "Misc",
+                            region=="South Dakota" ~ "Misc",
+                            region=="Montana" ~ "Misc",
+                            region=="Washington" ~ "Misc",
+                            region=="Idaho" ~ "Misc",
+                            region=="Wyoming" ~ "Misc",
+                            region=="Utah" ~ "Misc",
+                            region=="Oklahoma" ~ "Misc",
+                            region=="New Mexico" ~ "Misc",
+                            region=="Arizona" ~ "Misc",
+                            region=="Alaska" ~ "Misc",
+                            region=="Hawaii" ~ "Misc",
+                            region=="District of Columbia" ~ "Misc",
+                            region=="Virgin Islands" ~ "Misc",
+                                                     TRUE~region)) 
+
+
+```
+
+# Visualize by Region
+
+```{r}
+lynch_decade |> 
+  distinct(filename, .keep_all = TRUE) |> 
+  count(region) |> 
+  ggplot(aes(x = region, y = n, fill=n)) +
+  ylab("Count of newspapers by region") +
+  xlab("") +
+  geom_col() +
+  labs(title = "Regional Grouping of Newspapers in Lynching Coverage",
+       subtitle = "Newspapers from Chronicling America, LOC",
+       caption = "n=6,448 newspapers. Graphic by Rob Wells, 10/20/2026")
+
+
+```
+
+
+
+
+#AI Gemini prompt:
+
+i want to make sure if Putin and fascist are in the same article that they will both display in the category column separated by a comma. not sure this will do that.
+dugin1<- dugin %>% 
+  mutate(category = case_when(str_detect(sentence, regex("Putin", ignore_case = TRUE)) ~ "Putin",
+                              str_detect(sentence, "fascist") ~ "polarized_term",
+                                str_detect(sentence, "beard") ~ "polarized_term",
+                                                     TRUE~ ""))  
+                                                     
+#Response
+You are correct—case_when() will not work for this because it stops evaluating as soon as it finds its first TRUE condition. If a sentence contains both "Putin" and "fascist", case_when() will only assign "Putin" and skip the rest.
+
+To capture multiple non-exclusive conditions and combine them into a comma-separated list, you can check each condition separately and combine the results using c_across() and unite(), or construct a helper vector.
+
+Here are the best ways to achieve this in standard dplyr / stringr:
+
+Option 1: Clean & Standard dplyr Approach (Recommended)
+You can build a small inline helper or combine logical evaluations into a list/vector, then paste them together.
+
+R
+library(dplyr)
+library(stringr)
+library(tidyr)
+
+dugin1 <- dugin %>%
+  mutate(
+    # Check each condition independently
+    has_putin = if_else(str_detect(sentence, regex("Putin", ignore_case = TRUE)), "Putin", NA_character_),
+    has_polar = if_else(str_detect(sentence, regex("fascist|beard", ignore_case = TRUE)), "polarized_term", NA_character_)
+  ) %>%
+  # Combine non-NA terms into a single string separated by commas
+  unite("category", has_putin, has_polar, sep = ", ", na.rm = TRUE)
+How it works:
+
+If both match, category becomes "Putin, polarized_term".
+
+If only one matches, category is just "Putin" or "polarized_term".
+
+If neither matches, na.rm = TRUE leaves category as an empty string "".
