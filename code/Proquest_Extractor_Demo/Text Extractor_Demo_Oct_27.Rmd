@@ -1,0 +1,178 @@
+---
+title: "Text Extraction Demo"
+author: "Wells"
+date: "2026-10-27"
+output: html_document
+---
+
+#Text Extractor
+
+This notebook takes a large block of text from Proquest, containing 500 peer-reviewed articles, and extracts them to individual text files and builds a dataframe.
+
+Extract the full text of each ProQuest article into its own .txt file
+Each article starts with a line of underscores followed by "Document X of 500". For every article, the text from "Full text:" up to
+(but not including) "Subject:" is saved to extracted_articles/<headline>.txt
+
+You begin by putting the ProQuest article data into the "source_demo" folder. 
+It must be in raw text format and have a .txt extension.
+
+This is based on 2019 code developed by Austin Wilkins and Rob Wells for a project investigating media coverage of Chinese companies.
+It has been streamlined and modified by Google Gemini 3, Oct 27 2026.
+
+
+
+
+# Load libraries
+
+```{r}
+#install.packages("devtools")
+library(tidyverse)
+library(devtools)
+library(tidytext)
+library(readxl)
+```
+#streamlined
+
+# Function 1 - Safe Filename, Clean filenames so they don't break 
+```{r}
+
+safe_filename <- function(x, max_chars = 150) {
+  x %>%
+    str_replace_all('[\\\\/:*?"<>|\\r\\n\\t]', " ") %>%
+    str_squish() %>%
+    str_sub(1, max_chars) %>%
+    str_remove("[ .]+$")
+}
+```
+
+
+#Function 2 - Extract a single article from text lines
+```{r}
+
+
+extract_one <- function(lines) {
+  doc_idx <- str_which(lines, "^\\s*Document \\d+ of \\d+")[1]
+  if (is.na(doc_idx)) return(NULL)
+  
+  doc_num <- as.integer(str_match(lines[doc_idx], "Document (\\d+) of")[, 2])
+
+  title_idx <- str_which(lines, "^Title:\\s*")[1]
+  headline <- if (!is.na(title_idx)) {
+    str_remove(lines[title_idx], "^Title:\\s*")
+  } else {
+    after <- tail(lines, -doc_idx)
+    after[str_trim(after) != ""][1]
+  }
+  headline <- str_squish(headline)
+
+  year_idx <- str_which(lines, "^Publication year:\\s*")[1]
+  year <- if (is.na(year_idx)) NA_character_ else {
+    str_squish(str_remove(lines[year_idx], "^Publication year:\\s*"))
+  }
+
+  ft_start <- str_which(lines, regex("^Full text:", ignore_case = TRUE))[1]
+  if (is.na(ft_start)) {
+    return(tibble(article_nmbr = doc_num, Year = year, headline = headline,
+                  status = "no full text", body = list(NULL)))
+  }
+
+  subj <- str_which(lines, regex("^Subject:", ignore_case = TRUE))
+  ft_end <- subj[subj > ft_start][1]
+  status <- "ok"
+  
+  if (is.na(ft_end)) {
+    ft_end <- length(lines) + 1
+    status <- "ok (no Subject: line, took text to end of article)"
+  }
+
+  body <- lines[ft_start:(ft_end - 1)]
+  body[1] <- str_remove(body[1], regex("^Full text:\\s*", ignore_case = TRUE))
+
+  keep <- which(str_trim(body) != "")
+  body <- if (length(keep)) body[min(keep):max(keep)] else character(0)
+
+  tibble(article_nmbr = doc_num, Year = year, headline = headline,
+         status = status, body = list(body))
+}
+
+```
+
+#Function 3 - Process text File, core processor for any given text file
+```{r}
+
+process_text_file <- function(file_path, out_dir) {
+  TEXT <- tibble(Text = read_lines(file_path)) %>%
+    mutate(Text = str_remove(Text, "\\s+$"),
+           is_sep = str_detect(Text, "^_{20,}$"),
+           newarticle = cumsum(is_sep)) %>%
+    filter(newarticle > 0, !is_sep)
+#Function 2 - Extract a single article from text lines
+  TEXT %>%
+    group_split(newarticle) %>%
+    map_dfr(~ extract_one(.x$Text))
+}
+```
+
+#Function 4 - Master wrapper: handles single files or entire folders automatically
+Name your input and output directories here: 
+input is "source_demo"
+output is "extracted_demo"
+
+```{r}
+make_TidyTexts <- function(target = "source_demo", out_dir = "extracted_demo") {
+  dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
+
+  # Determine if target is a specific file or a folder to batch-process
+  files <- if (dir.exists(target)) {
+    list.files(path = target, pattern = "\\.txt$", full.names = TRUE)
+  } else if (file.exists(target)) {
+    target
+  } else {
+    stop("Target '", target, "' is neither a valid file nor directory.")
+  }
+
+  if (length(files) == 0) stop("No .txt files found to process.")
+
+  # Process all target files and bind results
+  #Function 3 - Process text File
+  all_articles <- map_dfr(files, function(f) {
+    message("Processing: ", basename(f))
+    process_text_file(f, out_dir) %>% mutate(source_file = basename(f))
+  })
+
+  # Function 1 - Safe Filename, Clean filenames so they don't break 
+  # Handle duplicate headlines & assign unique safe filenames cleanly
+  all_articles <- all_articles %>%
+    mutate(
+      file_base = safe_filename(headline),
+      file_base = if_else(is.na(file_base) | file_base == "", paste("Document", article_nmbr), file_base)
+    ) %>%
+    group_by(file_base) %>%
+    mutate(file_base = if (n() > 1) paste0(file_base, " (Doc ", article_nmbr, ")") else file_base) %>%
+    ungroup() %>%
+    mutate(file = if_else(str_starts(status, "ok"), file.path(out_dir, paste0(file_base, ".txt")), NA_character_))
+
+  # Write out valid article text files
+  to_write <- all_articles %>% filter(!is.na(file))
+  walk2(to_write$body, to_write$file, ~ write_lines(.x, .y))
+
+  # Build and save index
+  index <- all_articles %>%
+    mutate(n_lines = map_int(body, length)) %>%
+    select(source_file, article_nmbr, Year, headline, file, status, n_lines)
+
+  index_name = if (dir.exists(target)) "_master_index.csv" else paste0("_index_", sub("\\.txt$", "", basename(target)), ".csv")
+  index_path <- file.path(out_dir, index_name)
+  write_csv(index, index_path)
+
+  message("\nDone! ", sum(str_starts(index$status, "ok")), " of ", nrow(index), 
+          " articles written to ", out_dir, "/ (Index saved as ", index_name, ")")
+
+  invisible(index)
+}
+```
+
+# Execute the code
+```{r}
+index <- make_TidyTexts("source_demo")
+```
