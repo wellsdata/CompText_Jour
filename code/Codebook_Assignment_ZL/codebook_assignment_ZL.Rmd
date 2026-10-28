@@ -1,0 +1,281 @@
+---
+title: "Codebook Assignment"
+author: "Zirong Li"
+date: "2026-10-24"
+output: html_document
+---
+
+# Research Questions
+
+Data: 208 articles from the pilot corpus random subsample of U.S. news about AI and health (Nexis Uni, November 30, 2022–September 30, 2026).
+
+(I took my RQ3: "What forms of evidence (exemplars, statistics, studies) and whose voices support these depictions?" to do this practice)
+- **RQ1:** What forms of evidence (exemplars, studies, statistics) does AI-and-health coverage use?
+- **RQ2:** Whose voices (clinicians, researchers, companies, government, users or families) are quoted in this coverage?
+
+# Codebook
+
+Each paragraph of the article body is coded, and an article counts for a category if at least one of its paragraphs does. Codes 1 and 2 are multi-select: a paragraph can contain several kinds of evidence and voices.
+
+**Table 1. Codes and categories**
+
+| Code | RQ | Categories |
+|:-----------------------|:-----------------------|:-----------------------|
+| 1\. Evidence | RQ1 | Exemplar; study; statistic (multi-select) |
+| 2\. Voice | RQ2 | Clinician; researcher; company; government; user or family (multi-select) |
+| 3\. Period | RQ1, RQ2 | 2022–23; 2024; 2025; 2026 |
+
+**Table 2. Category definitions and keyword rules**
+
+| Category | Definition | Keyword rule |
+|:-----------------------|:-----------------------|:-----------------------|
+| Exemplar | A specific person's case used to illustrate the issue | A person introduced with an age ("16-year-old"), or a widely covered case: Adam Raine, Sewell Setzer (mother Megan Garcia), Zane Shamblin, Stein-Erik Soelberg (mother Suzanne Adams), Juliana Peralta, NEDA's Tessa chatbot, the sodium bromide (bromism) case, the Belgian man and the Chai chatbot |
+| Study | Research cited as evidence | study, studies, researchers found, published in, journal of, medical journal, clinical trial |
+| Statistic | Numbers describing many people | percent, %, survey, poll |
+| Clinician | A health professional is quoted | doctor, physician, psychiatrist, psychologist, therapist, nurse, clinician |
+| Researcher | An academic or scientist is quoted | researcher, professor, scientist |
+| Company | A tech or health company is quoted | spokesperson, spokesman, spokeswoman, CEO, chief executive |
+| Government | An official or regulator is quoted | senator, lawmaker, legislator, governor, attorney general, FDA, regulator |
+| User or family | A chatbot user or a relative is quoted | user, patient, mother, father, parent, son, daughter, wife, husband, widow |
+
+| Period \| Publication year \| 2022–23 (from Nov 30, 2022); 2024; 2025; 2026 (to Sep 30) \|
+
+*Note.* A voice counts only when its keyword appears in the same paragraph as said, says, told or according to. These are rough first-draft rules.
+
+# Code
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(striprtf)
+```
+
+## Reformat .RTF files
+
+```{r}
+input_folder <- "./rtf/"
+output_folder <- "./file_raw_text/"
+
+if (!dir.exists(output_folder)) {
+  dir.create(output_folder)
+}
+
+rtf_files <- list.files(path = input_folder, pattern = "\\.RTF$", full.names = TRUE)
+
+for (file in rtf_files) {
+  file_name <- tools::file_path_sans_ext(basename(file))
+  rtf_content <- read_rtf(file)
+  output_file <- file.path(output_folder, paste0(file_name, ".txt"))
+  writeLines(rtf_content, output_file)
+}
+
+length(rtf_files)
+```
+
+## Create the index
+
+```{r}
+files <- list.files("./file_raw_text", pattern = "*.txt") %>%
+  as.data.frame() |>
+  rename(filename = 1)
+
+metadata <- read_csv("./metadata_208.csv") |>
+  clean_names() |>
+  mutate(filename = paste0(tools::file_path_sans_ext(file), ".txt"))
+
+final_index <- metadata |>
+  inner_join(files, c("filename")) |>
+  mutate(filepath = paste0("./file_raw_text/", filename))
+
+# Fact check: should be 0
+metadata |>
+  anti_join(files, c("filename")) |>
+  nrow()
+```
+
+## Text compiler
+
+```{r include=FALSE}
+create_article_text <- function(row_value) {
+  temp <- final_index %>%
+    slice(row_value)
+  temp_filename <- temp$filename
+  articles_df_temp <- read_lines(temp$filepath) %>%
+    as_tibble() %>%
+    mutate(filename = temp_filename)
+  articles_df <<- articles_df %>%
+    bind_rows(articles_df_temp)
+}
+
+articles_df <- tibble()
+row_values <- 1:nrow(final_index)
+lapply(row_values, create_article_text)
+
+articles_df <- articles_df %>%
+  select(filename, sentence = value) %>%
+  inner_join(final_index)
+```
+
+## Keep the body text only
+
+```{r}
+body_df <- articles_df |>
+  mutate(sentence = str_squish(sentence)) |>
+  group_by(filename) |>
+  mutate(
+    line       = row_number(),
+    body_start = which(sentence == "Body")[1],
+    body_end   = which(str_detect(sentence, "^Load-Date"))[1]
+  ) |>
+  filter(line > body_start, line < body_end) |>
+  ungroup() |>
+  filter(!is.na(sentence), sentence != "") |>
+  select(-line, -body_start, -body_end)
+
+# check: should be 208 articles
+body_df |> distinct(filename) |> nrow()
+```
+
+## Code 1: Evidence (multi-select)
+
+```{r}
+famous_cases <- "Adam Raine|Sewell Setzer|Megan Garcia|Zane Shamblin|Soelberg|Suzanne Adams|Juliana Peralta|National Eating Disorders Association|NEDA|bromism|sodium bromide|Belgian man|Belgian father|Chai app"
+
+coded <- body_df |>
+  mutate(
+    has_exemplar = if_else(str_detect(sentence, famous_cases) |
+                             str_detect(sentence, "\\d+-year-old"), "exemplar", NA_character_),
+    has_study = if_else(str_detect(sentence, regex("study|studies|researchers found|published in|journal of|medical journal|clinical trial", ignore_case = TRUE)), "study", NA_character_),
+    has_statistic = if_else(str_detect(sentence, regex("percent|%|survey|\\bpolls?\\b", ignore_case = TRUE)), "statistic", NA_character_)
+  ) |>
+  unite("evidence", has_exemplar, has_study, has_statistic, sep = ", ", na.rm = TRUE)
+```
+
+## Code 2: Voice (multi-select)
+
+```{r}
+attribution <- regex("said|says|told|according to", ignore_case = TRUE)
+
+coded <- coded |>
+  mutate(
+    has_clinician = if_else(str_detect(sentence, regex("doctor|physician|psychiatrist|psychologist|therapist|nurse|clinician", ignore_case = TRUE)) &
+                              str_detect(sentence, attribution), "clinician", NA_character_),
+    has_researcher = if_else(str_detect(sentence, regex("researcher|professor|scientist", ignore_case = TRUE)) &
+                               str_detect(sentence, attribution), "researcher", NA_character_),
+    has_company = if_else(str_detect(sentence, regex("spokesperson|spokesman|spokeswoman|chief executive", ignore_case = TRUE)) |
+                            str_detect(sentence, "CEO"), "company", NA_character_),
+    has_company = if_else(str_detect(sentence, attribution), has_company, NA_character_),
+    has_government = if_else(str_detect(sentence, regex("senator|lawmaker|legislator|governor|attorney general|regulator", ignore_case = TRUE)) |
+                               str_detect(sentence, "FDA"), "government", NA_character_),
+    has_government = if_else(str_detect(sentence, attribution), has_government, NA_character_),
+    has_user_family = if_else(str_detect(sentence, regex("user|patient|mother|father|parent|daughter|wife|husband|widow|his son|her son|their son", ignore_case = TRUE)) &
+                                str_detect(sentence, attribution), "user_family", NA_character_)
+  ) |>
+  unite("voice", has_clinician, has_researcher, has_company, has_government, has_user_family, sep = ", ", na.rm = TRUE)
+```
+
+## Code 3: Period
+
+```{r}
+coded <- coded |>
+  mutate(year = year(as.Date(date))) |>
+  mutate(period = case_when(
+    year == 2022 | year == 2023 ~ "2022-23",
+    year == 2024 ~ "2024",
+    year == 2025 ~ "2025",
+    year == 2026 ~ "2026"
+  ))
+```
+
+# Content analysis
+
+### Paragraphs by evidence and voice
+
+```{r}
+coded |>
+  filter(evidence != "") |>
+  count(evidence, sort = TRUE)
+
+coded |>
+  filter(voice != "") |>
+  count(voice, sort = TRUE)
+
+# Paragraphs that contain both evidence and a voice
+coded |>
+  filter(evidence != "", voice != "") |>
+  count(evidence, voice, sort = TRUE)
+```
+
+### Articles by category
+
+```{r}
+articles_coded <- coded |>
+  group_by(filename, period) |>
+  summarize(
+    exemplar    = sum(str_detect(evidence, "exemplar")) > 0,
+    study       = sum(str_detect(evidence, "study")) > 0,
+    statistic   = sum(str_detect(evidence, "statistic")) > 0,
+    clinician   = sum(str_detect(voice, "clinician")) > 0,
+    researcher  = sum(str_detect(voice, "researcher")) > 0,
+    company     = sum(str_detect(voice, "company")) > 0,
+    government  = sum(str_detect(voice, "government")) > 0,
+    user_family = sum(str_detect(voice, "user_family")) > 0
+  ) |>
+  ungroup()
+
+# Number of articles in each category
+articles_coded |>
+  summarize(
+    exemplar    = sum(exemplar),
+    study       = sum(study),
+    statistic   = sum(statistic),
+    clinician   = sum(clinician),
+    researcher  = sum(researcher),
+    company     = sum(company),
+    government  = sum(government),
+    user_family = sum(user_family)
+  )
+
+# Number of articles in each category, by period
+articles_coded |>
+  group_by(period) |>
+  summarize(
+    articles    = n(),
+    exemplar    = sum(exemplar),
+    study       = sum(study),
+    statistic   = sum(statistic),
+    clinician   = sum(clinician),
+    researcher  = sum(researcher),
+    company     = sum(company),
+    government  = sum(government),
+    user_family = sum(user_family)
+  )
+```
+
+### Relevant articles only
+
+```{r}
+# Articles hand-screened as relevant to AI and health (q1_relevant = 1)
+articles_coded |>
+  inner_join(metadata, c("filename")) |>
+  filter(q1_relevant == 1) |>
+  summarize(
+    articles    = n(),
+    exemplar    = sum(exemplar),
+    study       = sum(study),
+    statistic   = sum(statistic),
+    clinician   = sum(clinician),
+    researcher  = sum(researcher),
+    company     = sum(company),
+    government  = sum(government),
+    user_family = sum(user_family)
+  )
+```
+
+# Memo
+
+I applied three codes to 208 randomly sampled Nexis Uni articles from my AI-and-health search. For RQ1, statistics were the most common form of evidence (88 articles), followed by studies (58) and exemplars (16). For RQ2, users or family members were quoted most often (65 articles), then researchers and companies (38 each), clinicians (27) and government (20). Every category peaked in 2025, and no exemplar appeared before 2024.
+
+When evidence and a voice appeared in the same paragraph, the most common pair was a study with a researcher quoted (10 paragraphs). Statistics came slightly more often from companies (5) than from researchers (4).
+
+A spot check shows the keyword rules are rough. Only 43 of the 208 articles are relevant to AI and health, so many hits are off-topic: percentages in stock stories, ages of people in dating or prison stories, and "patient" or "parent" in unrelated quotes. Within the 43 relevant articles, studies (23) and statistics (20) were common, but exemplars were rare (5), and three of them came from suicide lawsuits against OpenAI (Adam Raine, Zane Shamblin). Next, I will apply the codes only to relevant articles, tighten the keywords and check them against hand coding.
