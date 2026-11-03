@@ -1,11 +1,114 @@
 ---
 title: "AI Classifier"
 author: "Rob Wells and his pal Claude"
-date: 04-18-2025
+date: 11-02-2026
 output: pdf_document
 ---
 
-This exercise is an introduction to using AI to classify content. We're using the ellmer package: <https://ellmer.tidyverse.org/>
+This exercise uses Ollama with the R Ellmer package to do basic content analysis
+
+Ollama background
+Ollama itself is not an AI model. Rather, it is an open-source framework and tool that lets you run and serve various AI models (like Meta's Llama 3, Mistral, Google's Gemma, or Qwen) locally on your own computer.   
+LocalChat.app
+
+Whether using Ollama is a good choice depends on your technical setup and use case.   
+LocalChat.app
+What Makes Ollama Great (The Pros)
+
+    100% Free and Private: Everything runs on your machine. Your data, prompts, and documents never leave your computer or get sent to third-party cloud servers.
+
+    Offline Functionality: Once a model is downloaded, you can use it without an internet connection.   
+    LocalChat.app
+
+    Simple Model Management: Installing and trying new models is as easy as running a single terminal command (e.g., ollama run llama3).
+
+    Developer-Friendly API: It runs a background server with an OpenAI-compatible API, making it simple to plug local models into coding tools, private scripts, or custom web apps.   
+    Elephas
+
+The Main Drawbacks & Limitations
+1. Heavy Hardware Requirements
+
+    RAM & VRAM Constraints: Running AI models locally requires significant unified memory (Mac) or VRAM (NVIDIA GPUs).
+
+        A small model (~7B parameters) needs 8GB to 16GB of RAM/VRAM.
+
+        Medium-to-large models (~70B parameters) require 32GB to 64GB+ of dedicated memory.
+
+    Running models on CPU alone is usually too slow for real-time conversation.
+
+2. Model Capabilities vs. Cloud APIs
+
+    Quality Ceiling: Even the best open-source models you can run locally on standard hardware (like Llama 3 or Qwen 2.5) generally fall short of top-tier cloud models (like GPT-4o, Claude 3.5 Sonnet, or Gemini Pro) in complex reasoning, coding, and large context windows.
+
+    Storage Footprint: Each downloaded model takes up between 4 GB and 40+ GB of hard drive space.
+
+3. No Built-in Visual Chat Interface (Out of the Box)
+
+    Ollama operates primarily as a Command Line Tool (CLI).   
+    LocalChat.app
+
+    If you want a ChatGPT-like graphical interface, you must pair it with a third-party app (such as Open WebUI, Jan.ai, or LM Studio).
+
+Alternatives to Consider
+
+    LM Studio or Jan.ai: If you want an all-in-one desktop application with a clean, visual chat interface out of the box (no terminal required).   
+    LocalChat.app
+
+    Cloud APIs (OpenAI, Anthropic, Google): If you don't have powerful GPU hardware or need top-tier reasoning capabilities for complex tasks.
+
+
+The Ollama platform supports a variety of open-source language models for local inference. Here are some commonly available **Ollama model examples**:
+
+### 🧠 Popular Models:
+1. **Llama 3**  
+   - Optimized for general-purpose tasks (e.g., code generation, reasoning).
+   - Variants like `llama3-8b`, `llama3-70b`.
+
+2. **Mistral**  
+   - Strong performance in logic/math and coding (`mistral:7b`, `mistral-7b-instruct`).
+
+3. **Phi-2 / Phi-1.5**  
+   - Lightweight, efficient models for low-resource devices (e.g., `phi:2`, `phi-1.5`).
+
+4. **Gemma**  
+   - Google-developed model (`gemma:7b`, `gemma-instruct`).
+
+5. **CodeLlama**  
+   - Specialized in code generation/deployment (`codellama:7b`, `codellama-instruct`).
+
+6. **Mixtral**  
+   - Efficient dense attention for complex tasks (`mixtral-8x7b`).
+
+---
+
+### 🔧 Usage Tips:
+- **Check Installed Models**:  
+  ```bash
+  ollama list
+  ```
+  *(Displays available models in your Ollama instance)*.
+
+- **Install New Models**:  
+  ```bash
+  ollama pull <model-name>
+  ```
+
+- **Run a Model**:  
+  ```bash
+  ollama run <model-name>
+  ```
+
+---
+
+### 🌐 Documentation & Updates:
+For the latest list of models and detailed specs, refer to [Ollama's GitHub](https://github.com/ollama/ollama) or official docs ([ollama.ai](https://ollama.ai)). You can also 
+explore via `ollama list` for installed models!
+
+Need help installing a specific model or tuning parameters? Let me know! 😊
+
+
+
+We're using the ellmer package: <https://ellmer.tidyverse.org/>
 
 Background on ellmer
 
@@ -16,39 +119,80 @@ Anthropic’s Claude: chat_claude(). AWS Bedrock: chat_bedrock(). Azure OpenAI: 
 Google's chat_gemini() is great for large prompts because it has a much larger context window than other models. It allows up to 1 million tokens (about 8 average length English novels) and has a generous free tier. By contrast, other LLMS allow 32,000 tokens or 128,000 tokens in their context windows. One warning: your data is used to improve the model.
 
 For Gemini models, a token is equivalent to about 4 characters. 100 tokens is equal to about 60-80 English words.
-
-And so we will use chat_gemini()
-
+  
+  And so we will use chat_gemini()
+  
 ```{r include=FALSE}
-#install.packages("ellmer")
-library(ellmer)
-library(tidyverse)
-library(glue)
-library(janitor)
+  
+  #install.packages("ellmer")
+  library(ellmer)
+  library(tidyverse)
+  library(glue)
+  library(janitor)
+```
+
+#Accessing Ollama
+
+Needs to install from command line
+curl -fsSL https://ollama.com/install.sh | sh
+
+
+
+Mac:Users robwells$ ollama
+Large language model runner
+
+Usage:
+  ollama [flags]
+  ollama [command]
+
+Available Commands:
+  serve        Start Ollama
+  create       Create a model
+  show         Show information for a model
+  run          Run a model
+  stop         Stop a running model
+  pull         Pull a model from a registry
+  push         Push a model to a registry
+  signin       Sign in to ollama.com
+  signout      Sign out from ollama.com
+  list         List models
+  ps           List running models
+  cp           Copy a model
+  rm           Remove a model
+  launch       Launch the Ollama menu or an integration
+  help         Help about any command
+
+Flags:
+  -h, --help         help for ollama
+      --nowordwrap   Don't wrap words to the next line automatically
+      --verbose      Show timings for response
+  -v, --version      Show version information
+
+Use "ollama [command] --help" for more information about a command.
+
+See which models are running
+ollama list
+
+Run a model
+ollama run qwen3.5:4b
+
+
+```{r echo=FALSE}
+chat <- chat_ollama(model = "qwen3.5:4b")
+
+?chat_ollama
 
 ```
 
-# API Key
 
-Google Studio, create API Key
-
---You may need to use your personal gmail account. --Do not activate billing. We are just using the free tier of Gemini --Create API key here: <https://aistudio.google.com/app/apikey>
-
-# Important! DO NOT STORE YOUR API Key in GitHub!
-
-```{r echo=FALSE}
-
-#Sys.setenv(GOOGLE_API_KEY = "XXXX")
-
-
-```
-
-```{r echo=FALSE}
-chat <- chat_gemini()
 
 #Prompt
+```{r}
 chat$chat("Please tell me three jokes about data journalists. You can be mean if you want")
 ```
+
+#stopped nov 3
+
 
 # -----------------------------------------------------------------------------------------------------------
 
@@ -161,7 +305,7 @@ combined_text_with_filenames <- paste(articles_for_analysis$article_data,
 
 ```{r echo=FALSE}
 # Update system prompt to request the specific format you want
-chat <- chat_gemini(
+chat <- chat_google_gemini(
   system_prompt = "You are an academic researcher performing context analysis on selected Newsweek articles. Analyze each article and classify it based on these criteria:
   
   1. If an article contains two or more mentions of President Richard Nixon, classify it as 'nixon'
@@ -267,7 +411,8 @@ nixon_list <- lapply(file_paths1, readLines)
 # process the results to a single file, separated by file name
 
 ```{r echo=FALSE}
-write_combined_files <- function(file_list, file_paths, output_file, width = 60) {
+
+write_combined_files <- function(file_list, file_paths, output_file) {
   # Open connection to output file
   con <- file(output_file, "w")
   
@@ -279,47 +424,8 @@ write_combined_files <- function(file_list, file_paths, output_file, width = 60)
     # Write the separator with filename
     writeLines(paste0("=== FILE: ", filename, " ==="), con)
     
-    # Get the content of the file
-    content <- file_list[[i]]
-    
-    # Process each line to wrap text at the specified width
-    for (line in content) {
-      # Skip empty lines
-      if (nchar(line) == 0) {
-        writeLines("", con)
-        next
-      }
-      
-      # If the line is shorter than width, write it as is
-      if (nchar(line) <= width) {
-        writeLines(line, con)
-      } else {
-        # Split the line into words
-        words <- unlist(strsplit(line, "\\s+"))
-        current_line <- ""
-        
-        # Rebuild the line word by word
-        for (word in words) {
-          # If adding this word would exceed the width
-          if (nchar(current_line) + nchar(word) + 1 > width && nchar(current_line) > 0) {
-            # Write the current line and start a new one
-            writeLines(current_line, con)
-            current_line <- word
-          } else if (nchar(current_line) == 0) {
-            # Start with this word
-            current_line <- word
-          } else {
-            # Add the word to the current line
-            current_line <- paste(current_line, word)
-          }
-        }
-        
-        # Write the last line if there's anything left
-        if (nchar(current_line) > 0) {
-          writeLines(current_line, con)
-        }
-      }
-    }
+    # Write the content of the file
+    writeLines(file_list[[i]], con)
     
     # Add a blank line between files (except after the last file)
     if (i < length(file_list)) {
@@ -333,35 +439,44 @@ write_combined_files <- function(file_list, file_paths, output_file, width = 60)
   # Return a message
   message(paste("Successfully wrote", length(file_list), "files to", output_file))
 }
+
 write_combined_files(nixon_list, file_paths1, "combined_nixon_files.txt")
 ```
 
-Now, open a Google Sheet, import nixon_ai_verification.csv, read the articles and rate the responses
+**Follow these instructions**
+
+
+1) Open combined_nixon_files.txt.
+2) Next, create a Google Sheet, import nixon_ai_verification.csv
+3) Read the articles in combined_nixon_files.txt 
+4) Rate the responses on nixon_ai_verification: ai_correct;	ai_wrong;	unsure
+5) Now, discuss!
+
+
+
 
 # Second AI prompt
 
 ```{r echo=FALSE}
 # Update system prompt to request the specific format you want
-chat <- chat_gemini(
+chat <- chat_google_gemini(
   system_prompt = "You are an academic researcher performing context analysis on selected Newsweek articles. Analyze each article and classify it based on these criteria:
   
   1. If an article contains two or more mentions of 'Richard Nixon' or 'President Nixon', classify it as 'nixon'
   2. If an article contains two or more mentions of vote or voter registration, classify it as 'voter_turnout'
   3. If an article contains two or more mentions the Vietnam War or references to Vietnamese or Vietcong, classify it as 'vietnam'
-  4. If an article has adjectives that criticize Democrats, classify it as 'democrat_critique'. Name the adjectives in the explanations column.
+  4. If an article has adjectives that criticize Democrats, classify it as 'democrat_critique'
   5. If an article meets multiple criteria, assign multiple categories separated by semicolons
   6. If an article meets none of the criteria, classify it as 'other'
   
-  Provide a brief explanation or example of the material you found that meets the criteria in prompts 1-6. 
-  
-  Return ONLY a CSV-formatted result with exactly three columns:
-  filename,category, explanation
+  Return ONLY a CSV-formatted result with exactly two columns:
+  filename,category
   
   For example:
-  filename,category, explanation
-  article1.txt,nixon, three mentions of nixon
-  article2.txt,voter_turnout, two mentions of voters
-  article3.txt,nixon;voter_turnout, two mentions of nixon, four of voters
+  filename,category
+  article1.txt,nixon
+  article2.txt,voter_turnout
+  article3.txt,nixon;voter_turnout
   article4.txt,other
   
   No additional text, explanations, or summary counts."
@@ -593,25 +708,25 @@ process_llm_response_to_df <- function(response) {
     )
   }
 }
-result_df2 <- process_llm_response_to_df(response)
+result_df2 <- process_llm_response_to_df(response2)
 ```
 
-
+#vietnam
 
 ```{r echo=FALSE}
-vote <- result_df2 |> 
-  filter(str_detect(category, "voter_turnout")) |> 
+viet <- result_df2 |> 
+  filter(str_detect(category, "vietnam")) |> 
   mutate(path = paste0("./perspective_extracted/",filename)) |> 
   mutate(ai_correct = " ",
          ai_wrong = " ",
          unsure = " ",
          notes = " ")
 
-write.csv(vote, "vote_ai_verification.csv")
+write.csv(viet, "viet_ai_verification.csv")
 
 
-file_paths1 <- vote$path
-vote_list <- lapply(file_paths1, readLines)
+file_paths1 <- viet$path
+viet_list <- lapply(file_paths1, readLines)
 ```
 
 # process the results to a single file, separated by file name
@@ -646,7 +761,7 @@ write_combined_files <- function(file_list, file_paths, output_file) {
   message(paste("Successfully wrote", length(file_list), "files to", output_file))
 }
 
-write_combined_files(vote_list, file_paths1, "combined_vote_files.txt")
+write_combined_files(viet_list, file_paths1, "combined_viet_files.txt")
 ```
 
 # Token usage and pricing
@@ -661,7 +776,7 @@ We are not using the paid tier. Do not activate billing.
 tokens <- token_usage()
 
 
-chat <- chat_gemini()
+chat <- chat_google_gemini()
 
 #Prompt
 chat$chat(paste0("How much will it cost me with my token usage so far using gemini 2.0 flash. My input token use is: ", tokens$input, "and my output token use is: ", tokens$output))
