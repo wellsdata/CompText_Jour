@@ -70,6 +70,12 @@ Google Studio, create API Key
 
 "Authentication works a little differently depending on the provider. A few popular ones (including OpenAI and Anthropic) require you to obtain an API key. We recommend you save it in an **environment variable** rather than using it directly in your code."
 
+```{r}
+usethis::edit_r_environ()
+```
+
+
+
 ```{r echo=FALSE}
 
 #Run this once and delete the API key in this chunk after that
@@ -78,12 +84,26 @@ Google Studio, create API Key
 
 ```
 
+#Gemini
 ```{r echo=FALSE}
 chat <- chat_google_gemini()
 
 ?chat_google_gemini
 
+chat$chat("Hello world")
 ```
+
+#Groq
+```{r}
+chat <- chat_groq()
+
+?chat_groq
+
+chat$chat("Hello world")
+```
+
+
+
 
 #Prompt
 
@@ -168,7 +188,7 @@ articles_text <-  rio::import("https://www.dropbox.com/scl/fi/0xej3ebt6kuiwxa0cz
 
 ```{r echo=FALSE}
 
-llm_text <- articles_text[1:1000, ]
+llm_text <- articles_text[1:500, ]
 
 llm_text <- llm_text |> 
   mutate(sentence = gsub("\n", " ", sentence)) |> 
@@ -240,8 +260,18 @@ combined_text_with_filenames <- paste(articles_for_analysis$article_data,
 
 ### The AI prompt
 
+```{r}
+chat <- chat_openai(
+  model = "openai/gpt-oss-20b",
+  base_url = "https://openrouter.ai/api/v1", # (if routing via OpenRouter)
+  params = params(max_tokens = 4096)
+)
+
+```
+
+
 ```{r echo=FALSE}
-chat <- chat_google_gemini(
+chat <- chat_groq(
   system_prompt = "You are an academic researcher performing context analysis on selected Newsweek articles. Analyze each article and classify it based on these criteria:
   
   1. If an article contains two or more mentions of President Richard Nixon, classify it as 'nixon'
@@ -334,7 +364,7 @@ We're building a spreadsheet for export just with the Nixon results
 
 ```{r echo=FALSE}
 nixon1 <- result_df |> 
-  filter(str_detect(category, "nixon")) |> 
+#  filter(str_detect(category, "nixon")) |> 
   mutate(path = paste0("./perspective_extracted/",filename)) |> 
   mutate(ai_correct = " ",
          ai_wrong = " ",
