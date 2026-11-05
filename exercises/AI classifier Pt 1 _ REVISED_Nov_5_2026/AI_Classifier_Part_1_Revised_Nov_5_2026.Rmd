@@ -1,0 +1,325 @@
+---
+title: "AI Classifier Part 1 REVISION"
+author: "Rob Wells"
+date: 11-05-2026
+output: pdf_document
+---
+
+#Introduction to content analysis with AI
+
+This exercise is an introduction to using AI to conduct content analysis. We're using the ellmer package: <https://ellmer.tidyverse.org/>
+
+It uses an OpenAI API key that I provided to students separately.
+
+Significant parts of this code were developed using the Claude AI model.
+
+# API Key
+
+#READ THIS CAREFULLY AND EMAIL ME IF YOU'RE UNSURE ABOUT ANYTHING
+
+I have sent you the API key via email. It has \$10 of credits which is enough for everyone to do this assignment, and then some. **Important! DO NOT STORE YOUR API Key in GitHub!**
+
+You're going to edit the .r_environ -- like we did in class -- and insert the OPENAI_API_KEY = "XXXXXX" code I emailed to you.
+
+Then save .r_environ and close it
+
+1)  Open .r_environ file
+2)  Paste OPENAI_API_KEY = "XXXXXX" code I emailed to you
+3)  Save .r_environ file and close it.
+4)  Restart R
+5)  Reload the libraries on Line 40
+6)  **make sure the API key is not displayed on this document**
+
+### This opens the r_environ
+
+```{r}
+usethis::edit_r_environ()
+```
+
+```{r include=FALSE}
+  #install.packages("ellmer")
+  library(ellmer)
+  library(tidyverse)
+  library(glue)
+  library(janitor)
+  
+```
+
+# Verify LLM is working. DO NOT CHANGE THE MODEL. YOU'RE ONLY USING gpt-5-nano
+
+```{r echo=FALSE}
+chat <- chat_openai(model="gpt-5-nano")
+
+chat$chat("Hello World")
+?chat_openai
+
+```
+
+### Verify the model is gpt-5-nano
+
+```{r}
+chat$get_model()
+```
+
+# -----------------------------------------------------------------------------------------------------------
+
+#Content Analysis with AI\
+\# -----------------------------------------------------------------------------------------------------------
+
+### Import and Clean Data
+
+Articles by Newsweek columnist Raymond Moley
+
+```{r echo = F}
+#136596 rows of text
+articles_df <-  read_csv("articles_df.csv") |> 
+    mutate(year = year(published_date),
+           date = published_date)
+```
+
+### Load a very small subset: 10 articles
+
+```{r echo=FALSE}
+
+llm_text <- articles_df |> 
+  filter(!is.na(sentence)) |> 
+  slice(1:1000)
+
+llm_text <- llm_text |> 
+  mutate(sentence = gsub("\n", " ", sentence)) |> 
+  mutate(sentence = gsub("\\s+", " ", sentence))
+
+```
+
+### Industrial strength cleaning and processing
+
+--Articles put into a single string of text, no punctuation or spaces
+
+```{r echo=FALSE}
+process_articles <- function(df) {
+  # First group by article identifiers and concatenate sentences
+  # Using filename as the identifier, but you might need to use other columns
+  compiled_df <- df %>%
+    group_by(filename) %>%
+    summarize(
+      sentence = paste(na.omit(sentence), collapse = " "),
+      # consolidating metadata into single row per article
+      title = first(title),
+      date = first(date),
+      year = first(year),
+      filename = first(filename)
+    )
+  
+  # lowercase words (preserving spaces)
+  compiled_df <- compiled_df %>%
+    mutate(sentence = tolower(sentence))
+  
+  return(compiled_df)
+}
+
+# Apply the function to your dataframe
+processed_llm_text <- process_articles(llm_text)
+
+# Prepare data with filenames and content
+articles_for_analysis <- processed_llm_text %>%
+  select(filename, sentence) %>%
+  mutate(article_data = paste("FILENAME:", filename, "\nCONTENT:", sentence))
+
+# Combine with clear separators
+combined_text_with_filenames <- paste(articles_for_analysis$article_data, 
+                                    collapse = "\n\n---ARTICLE SEPARATOR---\n\n")
+```
+
+### The AI prompt
+
+```{r echo=FALSE}
+chat <- chat_openai(
+  model="gpt-5-nano", 
+  system_prompt = "
+  You are an academic researcher performing context analysis on selected articles. 
+  
+  Analyze each article and classify it based on these criteria:
+  
+1. If an article contains two or more mentions of any of the following terms, classify it as 'women':
+   - Xinjiang women
+   - Uyghur women
+   - Muslim women
+
+2. If an article contains two or more mentions of any of the following terms, classify it as 'counter':
+   - terror*
+   - extrem*
+   - radical*
+
+An article can belong to both categories.
+
+
+  Return ONLY a CSV-formatted result with exactly two columns:
+  filename,category
+  
+  For example:
+  filename,category
+  filename,counter
+  filename2,counter;women
+  filename3,women
+  
+  No additional text, explanations, or summary counts."
+)
+
+# Send to the LLM
+response <- chat$chat(combined_text_with_filenames)
+```
+
+### Process first response
+
+We're taking the chat response and putting it into a dataframe
+
+```{r echo=FALSE}
+process_llm_response_to_df <- function(response) {
+  # Extract lines
+  lines <- strsplit(response, "\n")[[1]]
+  
+  # Remove markdown code block markers if present
+  lines <- lines[!grepl("^```", lines)]
+  
+  # Initialize vectors for data
+  filenames <- c()
+  categories <- c()
+  
+  # Flag to track if we're processing data (after header)
+  header_found <- FALSE
+  
+  for (line in lines) {
+    # Skip empty lines
+    if (trimws(line) == "") next
+    
+    # Skip row numbers or other artifacts (lines with asterisks)
+    if (grepl("\\*\\*", line)) next
+    
+    # Check if this is the header line
+    if (grepl("filename,category", line, ignore.case = TRUE)) {
+      header_found <- TRUE
+      next
+    }
+    
+    # Process data lines (only after header is found)
+    if (header_found) {
+      parts <- strsplit(line, ",")[[1]]
+      if (length(parts) >= 2) {
+        filenames <- c(filenames, parts[1])
+        categories <- c(categories, paste(parts[2:length(parts)], collapse=","))
+      }
+    }
+  }
+  
+  # Create and return the dataframe
+  if (length(filenames) > 0) {
+    data.frame(
+      filename = filenames,
+      category = categories,
+      stringsAsFactors = FALSE
+    )
+  } else {
+    # Return empty dataframe with correct structure if no data found
+    data.frame(
+      filename = character(0),
+      category = character(0),
+      stringsAsFactors = FALSE
+    )
+  }
+}
+
+result_df <- process_llm_response_to_df(response)
+
+result_df
+
+```
+
+### Validate results
+
+We're building a spreadsheet for export just with the results
+
+```{r echo=FALSE}
+processed1 <- result_df |> 
+  mutate(ai_correct = " ",
+         ai_wrong = " ",
+         unsure = " ",
+         notes = " ")
+
+instructions <- tibble(
+  filename = c(
+    " ",
+"If an article contains two or more mentions of any of the following terms, classify it as 'women':",
+"   - Xinjiang women",
+"   - Uyghur women",
+"   - Muslim women",
+"If an article contains two or more mentions of any of the following terms, classify it as 'counter':",
+   "- terror*",
+   "- extrem*",
+   "- radical*",
+"An article can belong to both categories."
+
+  ) |> str_wrap(width = 60)
+)
+
+# 2. Append the instructions to the bottom of your dataset
+spreadsheet <- bind_rows(processed1, instructions)
+
+write.csv(spreadsheet, "spreadsheet_ai_verification.csv")
+
+
+file_paths1 <- processed1$path
+processed_list <- lapply(file_paths1, read_lines)
+```
+
+### Process AI results
+
+Capture the articles and put them into a single text file, separated by file name
+
+```{r}
+# 1. Group by filename, combine sentences into a single text block per file
+file_blocks <- llm_text %>%
+  group_by(filename) %>%
+  summarize(file_content = paste(sentence, collapse = "\n"), .groups = "drop") %>%
+  pull(file_content)
+
+# 2. Define the separator (two rows of asterisks)
+separator <- "\n\n**********\n**********\n\n"
+
+# 3. Collapse all file blocks together with the separator
+combined_output <- paste(file_blocks, collapse = separator)
+
+# 4. Write the final string to output.txt
+writeLines(combined_output, "output.txt")
+```
+
+**Follow these instructions**
+
+1)  Open combined_nixon_files.txt.
+2)  Next, create a Google Sheet, import spreadsheet_ai_verification.csv
+3)  Read the articles in output.txt
+4)  Rate the responses on spreadsheet_ai_verification: ai_correct; ai_wrong; unsure
+5)  Now, discuss!
+
+# -----------------------------------------------------------------------------------------------------------
+
+# Your Turn
+
+1)  Copy this tutorial and experiment with 20 articles from your research
+2)  Construction a simple prompt with two variables
+3)  Validate the data
+
+# -----------------------------------------------------------------------------------------------------------
+
+### FYI, cost of the AI usage
+
+```{r echo=FALSE}
+token_usage()
+```
+
+# Further reading
+
+Jeremy Howard’s posit::conf(2023) keynote: [A hacker’s guide to open source LLMs](https://youtu.be/sYliwvml9Es?si=mQeECyj6yLfegFi_)
+
+More from Google on counting tokens, using python: <https://ai.google.dev/gemini-api/docs/tokens?lang=python>
+
+Learn more about the possibilities of AI analysis of video, audio: <https://ai.google.dev/gemini-api/docs/long-context>
