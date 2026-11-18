@@ -1,54 +1,17 @@
 ---
 title: "Hosting a GitHub Page"
 author: "Rob Wells"
-date: "6-1-2026"
+date: "11-18-2026"
 format:
   html:
     theme: cosmo
+    embed-resources: true
 ---
-
-```{r}
-#| message: false
-#| warning: false
-
-#install.packages("sentimentr")
-library(tidyverse)
-library(sentimentr)
-library(tidyr)
-```
-
-# Example dataframe
-
-```{r}
-reviews <- tibble(
-  id = 1:4,
-  text = c(
-    "The food was not good, but the service was extremely friendly.",
-    "I barely enjoyed the movie, although the actors were talented.",
-    "I am a vampire and I'm going to kill you and suck out your blood.",
-    "I am excited that you are so happy."
-  )
-)
-```
-
-# 1. Split into sentences and calculate sentiment at the sentence level
-
-```{r}
-sentence_sentiment <- reviews %>%
-  get_sentences() %>%
-  sentiment_by(by = c("id")) # Summarizes back to row/document level if desired
-
-```
-
-```{r}
-head(sentence_sentiment)
-```
 
 # Hosting a GitHub Page - R Cheat Sheet
 
-This exercise will allow you to create a basic web page which will be required for the Investigate Your Community final project option.
 
-For this exercise, you will create a page with your one paragraph story idea. You will then host it on your GitHub page.
+For this exercise, you will create a sample web page and then host it on your GitHub page.
 
 ## Styled Text
 
@@ -68,17 +31,17 @@ We can **bold** or *italic* text.
 
 We can create bulleted lists.
 
-- bullet one
-- bullet two
-- bullet three
+-   bullet one
+-   bullet two
+-   bullet three
 
 ## Code blocks
 
 We can also add special code inside of code blocks -- the gray sections where we write code -- that control how they render in our html document. These output options let us do things like:
 
-- Show or hide the code when we render our html document (echo: true or false)
-- Prevent the code from actually running when we render our html document (eval: true or false)
-- Hide warnings from outputing when we render our html document (warning: true or false)
+-   Show or hide the code when we render our html document (echo: true or false)
+-   Prevent the code from actually running when we render our html document (eval: true or false)
+-   Hide warnings from outputing when we render our html document (warning: true or false)
 
 There's a [full guide here](https://quarto.org/docs/computations/execution-options.html#output-options).
 
@@ -100,7 +63,6 @@ First, create H1 headers
 
 ```{r eval=FALSE, include=TRUE}
 
-
 # You will write your code in chunks but not execute the data. Use {r eval=FALSE, include=TRUE} in the header so the page will render without running the actual code.
 income_vacancy %>% 
   ggplot(aes(x = community)) +
@@ -119,41 +81,64 @@ income_vacancy %>%
 
 ## Set up for hosting
 
-- Create a new folder in your repository called "docs" (if one isn't there already)
-- Rename this document as "index.qmd"
-- Move "index.qmd" into the "docs" folder
+- Create a new folder in your repository called `docs` (if one isn't there already).
+- Rename your Quarto document to `index.qmd`.
+- Move `index.qmd` into the `docs` folder. *(Note: If your code loads any local data or images, you will need to update their file paths to start with `../`, e.g., `../data.csv`.)*
 
-## Render this document as an html page
+## Render this document as an HTML page
 
-- Make sure this document is named "index.qmd" and is in the "docs" folder
-- Click Render button. It will create an html version of this page, called "index.html"
-- Use GitHub Desktop to push your files to your your github repository on the web.
-- Access the URL from your Github repository.
+- Make sure `index.qmd` is open from inside the `docs` folder.
+- Click the **Render** button. This will create `index.html` (and a supporting `index_files` folder) inside `docs`.
+- Open **GitHub Desktop**. Make sure all new and modified files inside `docs` (both `index.html` and `index_files`) are checked.
+- Write a commit message, click **Commit to main**, and click **Push origin**.
 
-## Host html on GitHub
+## Turn on GitHub Pages
 
-- Go to your github repository on the web, such as https://github.com/djnf-data-2026/casey-mann
-- Click on Settings on the top right.
-- Scroll down to the Pages section of Settings.
-- Change the Branch to /docs and click save.
+- Go to your repository on GitHub in your web browser (e.g., `https://github.com/djnf-data-2026/xxxx`).
+- Click **Settings** in the top repository menu bar.
+- In the left sidebar, click **Pages**.
+- Under **Build and deployment > Branch**:
+  1. Change the first dropdown from **None** to **main**.
+  2. Change the second dropdown from **/ (root)** to **/docs**.
+  3. Click **Save**.
 
-#### To see your file hosted:
+## View your live site
 
-- Back to your GitHub repo on the web: such as https://github.com/djnf-data-2026/casey-mann
-- Click on Settings, then Pages
-- Under GitHub Pages, you should see "Your site is live at https://djnf-data-2026.github.io/casey-mann/"
-- Click that URL
-- If it works, email it to robwells\@umd.edu
+- Wait 1–2 minutes for GitHub to build your page, then refresh the **Settings > Pages** page.
+- At the top, you should see a box saying: **"Your site is live at `https://djnf-data-2026.github.io/xxxx/`"**
+- Click that link to view your hosted page.
+-   If it works, email it to robwells\@umd.edu
+
+
+## Troubleshooting
+
+- **"404 File not found" error:**
+  - Make sure your repository is set to public. Settings | General --> scroll down to "Danger Zone" at the end and your repository is set for `This repository is currently public.`
+  - Make sure your rendered file is named `index.html` (all lowercase) and is located **inside** the `docs` folder—not in the main repository folder.
+  -Make sure the folder is `docs` (all lowercase) and is located in the main repository (root) folder.
+  -Make sure the R code is `index.qmd`
+  - Double-check that you pushed your changes in GitHub Desktop (look at your repo on GitHub.com to verify `docs/index.html` is visible there).
+  - Verify that **Settings > Pages** is set to **main** and **/docs** (and that you clicked **Save**).
+
+- **My page loads, but looks like plain text with missing charts or styling:**
+  - You likely pushed `index.html` without the supporting `index_files` folder. Open GitHub Desktop, check any remaining files inside `docs/index_files`, commit them, and click **Push origin**.
+  - *(Alternative fix)* Add `embed-resources: true` under `format: html:` in your `index.qmd` YAML header, re-render, and push the updated `index.html`. I have added this change to the header on this document.
+
+- **The "Your site is live" banner hasn't appeared yet, or my recent edits aren't showing up:**
+  - GitHub Pages usually takes **1–2 minutes** to rebuild after a push. Wait a moment and do a hard refresh in your browser (**Cmd + Shift + R** on Mac, **Ctrl + Shift + R** on Windows).
+  - You can check build progress by clicking the **Actions** tab in your GitHub repository—a yellow dot means it is still building, a green checkmark means it is live, and a red X means the build failed.
+  
+  
 
 ## REVEL IN YOUR NERD POWERS
 
 # Part 2: Embedding Images
 
-- create a folder in your repository's main branch, call it images
+-   create a folder in your repository's main branch, call it images
 
-- find any .jpeg, .jpg or .png file and insert it into that folder.
+-   find any .jpeg, .jpg or .png file and insert it into that folder.
 
-- In a QMD file, display the image as follows:
+-   In a QMD file, display the image as follows:
 
 \#![CAPTION FOR YOUR PHOTO](images/your_link_here.png)
 
@@ -210,3 +195,42 @@ The embed code is in the video share feature
 This is a very basic starter but it will get you to the finish line on Saturday. Good luck!
 
 --30--
+
+# Test web page with code
+
+```{r}
+#| message: false
+#| warning: false
+
+#install.packages("sentimentr")
+library(tidyverse)
+library(sentimentr)
+library(tidyr)
+```
+
+# Example dataframe
+
+```{r}
+reviews <- tibble(
+  id = 1:4,
+  text = c(
+    "The food was not good, but the service was extremely friendly.",
+    "I barely enjoyed the movie, although the actors were talented.",
+    "I am a vampire and I'm going to kill you and suck out your blood.",
+    "I am excited that you are so happy."
+  )
+)
+```
+
+# 1. Split into sentences and calculate sentiment at the sentence level
+
+```{r}
+sentence_sentiment <- reviews %>%
+  get_sentences() %>%
+  sentiment_by(by = c("id")) # Summarizes back to row/document level if desired
+
+```
+
+```{r}
+head(sentence_sentiment)
+```
