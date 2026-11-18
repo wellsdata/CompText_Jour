@@ -1,0 +1,150 @@
+---
+title: "Data cleaning exercises Part 2"
+author: "Rob Wells"
+date: "2026-11-17"
+---
+
+This codebook will help you extract just the structured text from Nexis Uni and exclude the metadata that is causing fits with your sentiment analysis, topic models etc.
+
+
+```{r include: false}
+#| include: false
+# 1. Load the relevant software libraries
+
+library(tidyverse)
+library(tidytext)
+library(rio)
+library(googlesheets4)
+library(janitor)
+```
+### Import large DF from a Google Drive
+```{r}
+gs4_deauth()
+text <- read_sheet(
+  "https://docs.google.com/spreadsheets/d/1y7oTIJ8vpxswZMjlWG65mqnssJl_g3dwssC_wiCeylQ/edit?usp=sharing",
+  col_types = "c" # Adjust letters to match your exact column order (n = numeric, c = character)
+) |>
+  clean_names() |>
+  as.data.frame()
+
+```
+
+
+# Clean and extract just the body text
+Thanks to Zirong for this idea
+
+```{r}
+#set your beginning and end points here
+begin <- "Body"
+end <- "End of Document"
+
+text_clean <- text |> 
+  mutate(sentence = str_squish(sentence)) |> 
+  group_by(filename) |>
+  mutate(
+    line       = row_number(),
+    # body starts after the "Body" line (defaults to 0 if "Body" isn't found)
+    body_start = coalesce(which(sentence == begin)[1], 0L),
+    # body ends at "End of Document" (or end of group if not found)
+    body_end   = coalesce(which(str_detect(sentence, regex(end, ignore_case = TRUE)))[1], n() + 1L)
+  ) |>
+  filter(line > body_start, line < body_end) |>
+  ungroup() |>
+  filter(!is.na(sentence), sentence != "") |>
+  # cuts any leftover boilerplate lines inside the body
+  filter(!str_detect(sentence, regex(paste(
+    "^Link to (image|the original story)",
+    "^Access PDF version",
+    "^Click here for updates",
+    "^ABSTRACT$",
+    "^Dive Brief:?$",
+    "^\\[Sign up for",
+    "^For the latest news, weather",
+    "^Correction",
+    "^Update \\d",
+    "^_+$",
+    "^Photo:",
+    "^TM & ©",
+    "Copyright|All rights reserved",
+    sep = "|"), ignore_case = TRUE))) |>
+  # drop short byline lines like "By Deidre McPhillips, CNN"
+  filter(!(str_detect(sentence, "^By [A-Z]") & str_length(sentence) < 60)) |>
+  # strip the Newstex prefix and any URLs sequentially on 'sentence'
+  mutate(
+    sentence = str_remove(sentence, "^.*Delivered by Newstex\\)\\s*"),
+    sentence = str_remove_all(sentence, "https?://\\S+|www\\.\\S+")
+  ) |>
+  select(-line, -body_start, -body_end)
+
+```
+
+
+
+#validate
+```{r}
+text |> 
+  distinct(filename) |> 
+  count()
+
+text_clean |> 
+  distinct(filename) |> 
+  count()
+
+```
+
+
+
+
+#----------------------------------------
+# Older tutorial
+#----------------------------------------
+```{r}
+#2. Import the data
+
+RawChinaData <- read_csv("https://raw.githubusercontent.com/wellsdata/CompText_Jour/refs/heads/main/data/ChinaFDI-LAT_tidy.csv")
+
+```
+
+```{r}
+# 3. Use code to count the number of unique articles in the dataset
+
+RawChinaData |>
+  select(article_nmbr) |> 
+  n_distinct()
+
+```
+
+#Cleaning junk
+
+```{r}
+#4. Remove useless metadata such as "Los Angeles Times" and "ISSN". See sample code below
+China_cleaned <- RawChinaData %>%
+  mutate(text = str_squish(text)) %>% #gets rid of leading and trailing spaces + double spaces
+  mutate(text = tolower(text)) %>%
+  mutate(text = str_replace(text, "startofarticle", "")) %>%
+  mutate(text = gsub("issn:\\s+\\S+", "", text)) %>%
+ mutate(text = str_remove_all(text, "https?://\\S+")) |> 
+  mutate(text = str_remove_all(text, "\\d{2}\\s+[a-z]{3,9}\\s+\\d{4}(?:[:;,\\.\\s]+[a-z]\\.\\d+)?")) %>%
+  mutate(text = str_remove_all(text, "[:;,\\.\\[\\]]")) %>%
+  mutate(text = str_replace_all(text, c(
+    "copyright" = "",
+    "database: proquest central" = "",
+    "language of publication: english" = "",
+    "document url:\\s+\\S+" = "",
+    "proquest document id:\\s+\\S+" = "",
+    "publication subject:\\s+\\S+" = "",
+    "publication date:\\s+\\S+" = "",
+    "pages:\\s+\\S+" = "",
+    "publication info" = "",
+    "last updated:\\s+\\S+" = "",
+    "interest periodicals--united states" = "",
+    "https://+/docview/\\d+\\?accountid=\\d+" =""
+  ))) %>%
+  mutate(text = str_replace_all(text, c(
+    "search.proquest.com" = "",
+    "los angeles times" = "",
+    "los angeles" = "",
+    "calif" = ""))) 
+
+```
+

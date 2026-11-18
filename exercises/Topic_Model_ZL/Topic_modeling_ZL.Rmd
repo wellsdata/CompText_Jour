@@ -1,0 +1,399 @@
+---
+title: "Topic Modeling: News Coverage of Lay Use of AI Chatbots for Health"
+author: "Zirong Li"
+date: '2026-11-14'
+output: html_document
+---
+
+#--------------------------------------------- \# Topic Modeling: pilot sample #---------------------------------------------
+
+This notebook imports 806 Nexis Uni news articles (Pilot sample of U.S. news about AI and health, with my screening labels), keeps the 700-article random sample, and runs LDA topic modeling with the LADAL method, adapted from Rob Wells's demo code: <https://ladal.edu.au/tutorials/topic/topic.html>
+
+Load up the packages if you haven't already....
+
+```{r}
+#  install.packages("here")
+#  install.packages("tidytext")
+#  install.packages("quanteda")
+#  install.packages("tm")
+#  install.packages("topicmodels")
+#  install.packages("reshape2")
+#  install.packages("ggplot2")
+#  install.packages("wordcloud")
+#  install.packages("pals")
+#  install.packages("SnowballC")
+#  install.packages("lda")
+#  install.packages("ldatuning")
+#  install.packages("kableExtra")
+#  install.packages("DT")
+#  install.packages("flextable")
+#  install.packages("remotes")
+#  remotes::install_github("rlesur/klippy")
+# install.packages("rio")
+# install.packages("readtext")
+# install.packages("formattable")
+# 
+# remotes::install_github("nikita-moor/ldatuning")
+
+```
+
+```{r include=FALSE}
+# set options
+options(stringsAsFactors = F)         # no automatic data transformation
+options("scipen" = 100, "digits" = 4) # suppress math annotation
+# load packages
+here::here()
+library(tidyverse)
+library(tidytext)
+library(rio)
+library(readtext)
+#topic modeling
+library(quanteda)
+library(tm)
+library(topicmodels)
+library(lda)
+library(ldatuning)
+# from tutorial packages
+library(DT)
+library(knitr) 
+library(kableExtra) 
+library(reshape2)
+library(ggplot2)
+library(wordcloud)
+library(pals)
+library(SnowballC)
+library(flextable)
+
+```
+
+### Import Data
+
+
+#rsw comment - it would be useful to understand how you categorized as article as focal or not. a sentence or two explaining that method would be good.
+
+
+```{r}
+# import 806 articles (Nexis Uni full text + screening labels)
+articles <- read_csv(here::here("806_articles_fulltext.csv"))
+
+# keep the 700-article probability sample
+sample700 <- articles %>% 
+  filter(in700 == TRUE)
+
+# subset the 40 relevant (focal) articles
+relevant <- sample700 %>% 
+  filter(focal == TRUE)
+
+# subset the 660 irrelevant articles
+irrelevant <- sample700 %>% 
+  filter(focal == FALSE)
+
+#quick check
+nrow(sample700)    # should be 700
+nrow(relevant)     # should be 40
+nrow(irrelevant)   # should be 660
+count(sample700, period, focal)
+```
+
+# Topic Modeling all 700 articles
+
+### Process into corpus object
+
+```{r}
+textdata <- sample700 %>% 
+  select(doc_id, text, year, period, focal) %>% 
+  as.data.frame()
+```
+
+### Remove stopwords, clean corpus
+
+```{r}
+# 1. Standard stopwords plus common news words
+english_stopwords <- c(stopwords("en"), 
+                       "said", "says", "also", "can", "will", "one", "new", "like", "just")
+
+# 2. Build corpus
+corpus <- Corpus(DataframeSource(textdata))
+
+# 3. Clean in correct sequence
+processedCorpus <- tm_map(corpus, content_transformer(tolower))
+processedCorpus <- tm_map(processedCorpus, removePunctuation, preserve_intra_word_dashes = TRUE)
+processedCorpus <- tm_map(processedCorpus, removeNumbers)
+
+
+# Remove stopwords BEFORE stemming
+processedCorpus <- tm_map(processedCorpus, removeWords, english_stopwords)
+
+# Stem documents after removing stopwords
+processedCorpus <- tm_map(processedCorpus, stemDocument, language = "en")
+processedCorpus <- tm_map(processedCorpus, stripWhitespace)
+```
+
+```{r tm3a}
+#DTM: rows correspond to the documents in the corpus. Columns correspond to the terms in the documents. Cells correspond to the weights of the terms. (Girder)
+# compute document term matrix with terms >= minimumFrequency
+minimumFrequency <- 5
+DTM <- DocumentTermMatrix(processedCorpus, control = list(bounds = list(global = c(minimumFrequency, Inf))))
+
+# have a look at the number of documents and terms in the matrix
+dim(DTM)
+# due to vocabulary pruning, we have empty rows in our DTM
+# LDA does not like this. So we remove those docs from the
+# DTM and the metadata
+sel_idx <- slam::row_sums(DTM) > 0
+DTM <- DTM[sel_idx, ]
+textdata <- textdata[sel_idx, ]
+dim(DTM)
+
+```
+
+## Topic proportions over time {.unnumbered}
+
+```{r}
+# append period labels for aggregation (in time order)
+textdata$period_label <- factor(textdata$period,
+                                levels = c("P1", "P2", "P3", "P4"),
+                                labels = c("2022.12-2023", "2024", "2025", "2026.1-2026.9"))
+```
+
+Articles per period
+
+```{r}
+articles_periods <- textdata %>% 
+  distinct(doc_id, .keep_all = TRUE) %>% 
+  count(period_label) %>% 
+  mutate(pct_total = (n/sum(n))) %>% 
+  mutate(pct_total = formattable::percent(pct_total)) %>% 
+  arrange(desc(period_label))
+
+articles_periods %>%
+  kbl(caption = "Pilot Sample Articles by Period (n=699, 11/14/2026)", font_size = 30) %>%
+  kable_classic(full_width = F, html_font = "Cambria") %>% 
+  column_spec(1, bold = T, border_right = T) %>%
+  column_spec(2, width = "5em") %>% 
+  column_spec(3, width = "5em", background = "yellow") 
+
+#Fact check 699 articles
+#sum(articles_periods$n) # yes, it is 699
+```
+
+```{r tm12}
+# number of topics
+K <- 6
+# set random number generator seed
+set.seed(9161)
+#Latent Dirichlet Allocation, LDA
+topicModel2 <- LDA(DTM, K, method="Gibbs", control=list(iter = 500, verbose = 25, alpha = 0.2))
+tmResult <- posterior(topicModel2)
+theta <- tmResult$topics
+beta <- tmResult$terms
+topicNames <- apply(terms(topicModel2, 10), 2, paste, collapse = " ")  # reset topicnames
+```
+
+### Mean topic proportions per period
+
+```{r}
+# Step 1: Check dimensions
+n_theta <- nrow(theta)
+n_textdata <- length(textdata$period_label)
+
+cat("Number of rows in theta: ", n_theta, "\n")
+cat("Number of documents in textdata: ", n_textdata, "\n")
+
+# Check if textdata contains all the documents in theta
+common_ids <- intersect(rownames(theta), textdata$doc_id)
+
+# Filter textdata to include only the documents present in theta
+textdata_filtered <- textdata[textdata$doc_id %in% common_ids, ]
+
+# Check dimensions after filtering
+n_textdata_filtered <- nrow(textdata_filtered)
+cat("Number of documents in filtered textdata: ", n_textdata_filtered, "\n")
+
+# Ensure the lengths match now
+if (n_theta != n_textdata_filtered) {
+  stop("The number of rows in 'theta' still does not match the length of 'textdata_filtered$period_label'.")
+}
+
+# Align rownames of theta with filtered textdata
+theta_aligned <- theta[rownames(theta) %in% textdata_filtered$doc_id, ]
+
+# Optional: Verify the order of documents
+if (!all(rownames(theta_aligned) == textdata_filtered$doc_id)) {
+  # If the order doesn't match, reorder one to match the other
+  textdata_filtered <- textdata_filtered[match(rownames(theta_aligned), textdata_filtered$doc_id), ]
+}
+
+# Ensure they are now aligned and can be combined
+if (!all(rownames(theta_aligned) == textdata_filtered$doc_id)) {
+  stop("The document IDs still do not match. Please check the data alignment.")
+}
+
+# Step 2: Combine data
+topic_data <- data.frame(theta_aligned, period_label = textdata_filtered$period_label)
+
+# Step 3: Aggregate data
+topic_proportion_per_period <- aggregate(. ~ period_label, data = topic_data, FUN = mean)
+
+# set topic names to aggregated columns
+colnames(topic_proportion_per_period)[2:(K+1)] <- topicNames
+# reshape data frame
+vizDataFrame <- melt(topic_proportion_per_period, id.vars = "period_label")
+```
+
+#Examine topic names
+
+```{r}
+#enframe(): Converts a named list into a dataframe.
+topics <- enframe(topicNames, name = "number", value = "text") %>% 
+  unnest(cols = c(text)) 
+  
+topics
+```
+
+### Review the topics and determine a 1-2 word label after reading the source documents.
+
+The function below lists the 20 articles that load most on a topic, with headline, outlet, and whether the article is relevant (focal = TRUE).
+
+```{r}
+top_articles_for <- function(topic_n) {
+  as.data.frame(theta) %>% 
+    rownames_to_column(var = "doc_id") %>% 
+    rename(topic = all_of(as.character(topic_n))) %>% 
+    top_n(20, topic) %>% 
+    arrange(desc(topic)) %>% 
+    left_join(sample700 %>% select(doc_id, focal, headline, outlet), by = "doc_id") %>% 
+    select(doc_id, focal, headline, outlet, topic)
+}
+```
+
+#### Topic 1
+
+```{r}
+top_articles_for(1)
+```
+
+#### Topic 2
+
+```{r}
+top_articles_for(2)
+```
+
+#### Topic 3
+
+```{r}
+top_articles_for(3)
+```
+
+#### Topic 4
+
+```{r}
+top_articles_for(4)
+```
+
+#### Topic 5
+
+```{r}
+top_articles_for(5)
+```
+
+#### Topic 6
+
+```{r}
+top_articles_for(6)
+```
+
+Topic 1 business_markets: compani year busi data market industri tech billion product invest\
+Topic 2 medical_ai: health use patient medic care research data system doctor help\
+Topic 3 chatbot_use_risks: use student chatgpt chatbot peopl human question inform openai school\
+Topic 4 lifestyle_entertainment: time get make work peopl thing look year want way\
+Topic 5 tech_products: googl use featur app model search user appl watch imag\
+Topic 6 politics_public_affairs: state trump american presid center public includ
+
+
+#rsw comment - great improvement to my version!
+
+```{r}
+#add categories
+# one label per topic, in topic order (edit after reading the articles)
+topic_labels <- c("business_markets", "medical_ai", "chatbot_use_risks", 
+                  "lifestyle_entertainment", "tech_products", "politics_public_affairs")
+
+vizDataFrame <- vizDataFrame %>% 
+  mutate(category = case_when(
+    variable == topicNames[1] ~ topic_labels[1],
+    variable == topicNames[2] ~ topic_labels[2],
+    variable == topicNames[3] ~ topic_labels[3],
+    variable == topicNames[4] ~ topic_labels[4],
+    variable == topicNames[5] ~ topic_labels[5],
+    variable == topicNames[6] ~ topic_labels[6]
+    ))
+
+```
+
+# Relevant and Irrelevant Topics
+
+Mean topic proportion in relevant articles (lay use of GenAI chatbots for health is the central subject) and irrelevant articles. A topic with a much higher share in relevant articles is a relevant topic.
+
+```{r}
+# number of relevant and irrelevant articles in the model
+table(textdata$focal)
+
+# mean topic proportion by group
+topic_by_focal <- aggregate(theta, by = list(focal = textdata$focal), mean)
+colnames(topic_by_focal)[2:(K+1)] <- topic_labels
+
+# table: one row per topic
+relevance_table <- topic_by_focal %>% 
+  pivot_longer(-focal, names_to = "topic", values_to = "mean_proportion") %>% 
+  mutate(focal = if_else(focal, "relevant", "irrelevant")) %>% 
+  pivot_wider(names_from = focal, values_from = mean_proportion) %>% 
+  mutate(difference = relevant - irrelevant) %>% 
+  arrange(desc(difference))
+
+relevance_table %>%
+  kbl(caption = "Mean Topic Proportion in Relevant vs. Irrelevant Articles", digits = 3) %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```
+
+#Figure: Relevant vs. irrelevant topics
+
+```{r}
+relevance_table %>% 
+  pivot_longer(c(relevant, irrelevant), names_to = "group", values_to = "mean_proportion") %>% 
+  mutate(topic = fct_reorder(topic, difference)) %>% 
+  ggplot(aes(x = mean_proportion, y = topic, fill = group)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values = c("relevant" = "lightblue", "irrelevant" = "lightpink"), name = NULL) +
+  labs(title = "Which Topics Do Relevant Articles Use?",
+       subtitle = "Relevant = lay use of GenAI chatbots for health is the central subject",
+       x = "mean topic proportion", y = NULL,
+       caption = "Pilot sample, n=699. Graphic by Zirong Li, 11-15-2026")
+```
+
+#Figure: Topics in AI and health news by period
+
+```{r}
+# plot topic proportions per period as bar plot
+ggplot(vizDataFrame, aes(x=period_label, y=value, fill=category)) + 
+  geom_bar(stat = "identity") + ylab("proportion") + xlab("period") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_fill_manual(values=c("#2a78d6",
+                             "#eb6834",
+                             "#1baf7a",
+                             "#eda100",
+                             "#e87ba4",
+                             "#6250d6"),
+                    name = "topic") +
+  labs(title = "Common Narratives in U.S. News Coverage of AI and Health",
+       subtitle = "Six probable topics in the Pilot sample. n=699",
+       caption = "Aggregate mean topic proportions per period. Graphic by Zirong Li, 11-15-2026")
+```
+
+# Summary
+
+I ran an LDA topic model (K = 6) on the 699 articles in my Pilot sample, drawn from a broad AI-and-health search in Nexis Uni. Only 40 of them are relevant to my project after screening: lay people’s use of GenAI chatbots for health is the central subject. I compared each topic’s average share in the relevant and irrelevant articles.
+
+One topic is clearly relevant. Chatbot use and risks makes up 42% of the relevant articles but 17% of the others. Its top articles cover ChatGPT and teen mental health, a California law on companion chatbots, and lawsuits against OpenAI, the same harm stories I found when reading the full articles. Medical AI is partly relevant (22% vs. 15%), but it covers clinical tools for doctors, not lay users. Four topics are irrelevant: business and markets, tech products, politics, and lifestyle and entertainment (horoscopes, recipes, reviews), most of which never mention generative AI.
+
+The benefit is a quick map of a large sample. The model shows where the noise in my search comes from, which will help me revise the search string before collecting the full corpus. The shortfalls are clear. The chatbot topic mixes health stories with campus stories about AI and cheating as an example, so it does not show the rise in relevant coverage from 2023 to 2026 that I found by reading. Some relevant articles fall into unrelated topics. Topics are word patterns, not frames. They cannot show the roles, attribution, or advice my research questions ask about, so I still need the codebook.
